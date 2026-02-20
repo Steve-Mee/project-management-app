@@ -3,8 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:my_project_management_app/generated/app_localizations.dart';
 import 'package:my_project_management_app/core/auth/permissions.dart';
-import '../../core/providers/ai/index.dart';
-import '../../core/providers.dart';
+// ai providers are pulled from the general barrel to avoid duplicate definitions
+import '../../core/providers.dart' show aiChatProvider, hasPermissionProvider;
 import '../../models/chat_message_model.dart';
 
 /// AI Chat screen - chat interface for AI interactions

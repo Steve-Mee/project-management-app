@@ -2,6 +2,22 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/providers.dart';
 import '../../core/services/app_logger.dart';
 import '../../models/task_model.dart';
+import 'package:my_project_management_app/core/repository/task_repository.dart';
+import 'package:my_project_management_app/core/services/notification_service.dart';
+
+/// Repository provider for tasks
+final taskRepositoryProvider = FutureProvider<TaskRepository>((ref) async {
+  final repository = TaskRepository();
+  await repository.initialize();
+  return repository;
+});
+
+/// Provider for notification service
+final notificationServiceProvider = Provider<NotificationService>((ref) {
+  final service = NotificationService();
+  service.initialize();
+  return service;
+});
 
 /// Task state notifier for managing tasks
 class TaskNotifier extends AsyncNotifier<List<Task>> {
@@ -28,9 +44,8 @@ class TaskNotifier extends AsyncNotifier<List<Task>> {
       var tasks = repository.getTasksForProject(projectId);
 
       if (tasks.isEmpty) {
-        final projectRepository =
-            await ref.read(projectRepositoryProvider.future);
-        final project = projectRepository.getProjectById(projectId);
+        final projectRepository = ref.read(projectRepositoryProvider);
+        final project = await projectRepository.getProjectById(projectId);
         final legacyTitles = project?.tasks ?? const <String>[];
         if (legacyTitles.isNotEmpty) {
           tasks = List.generate(legacyTitles.length, (index) {
@@ -179,7 +194,7 @@ class TaskNotifier extends AsyncNotifier<List<Task>> {
       }
 
       // Keep legacy titles list in sync for UI counters.
-      final projectRepository = await ref.read(projectRepositoryProvider.future);
+      final projectRepository = ref.read(projectRepositoryProvider);
       final titles = tasks.map((task) => task.title).toList();
       await projectRepository.updateTasks(projectId, titles);
     } catch (e, st) {
@@ -188,7 +203,7 @@ class TaskNotifier extends AsyncNotifier<List<Task>> {
   }
 
   Future<void> _syncTaskNotification(Task task) async {
-    final enabled = ref.read(notificationsEnabledProvider);
+    final enabled = ref.read(notificationsProvider);
     if (!enabled) {
       return;
     }
@@ -206,7 +221,7 @@ class TaskNotifier extends AsyncNotifier<List<Task>> {
   }
 
   Future<void> _rescheduleNotifications(List<Task> tasks) async {
-    final enabled = ref.read(notificationsEnabledProvider);
+    final enabled = ref.read(notificationsProvider);
     if (!enabled) {
       return;
     }

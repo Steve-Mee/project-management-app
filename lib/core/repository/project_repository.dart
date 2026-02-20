@@ -5,9 +5,10 @@ import 'package:my_project_management_app/core/services/project_members_service.
 import 'package:my_project_management_app/core/services/app_logger.dart';
 import 'package:uuid/uuid.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../providers/project_providers.dart'; // For IProjectRepository interface
 
 /// Repository for managing project persistence using Hive
-class ProjectRepository {
+class ProjectRepository implements IProjectRepository {
   static const String _boxName = 'projects';
   static final Uuid _uuid = Uuid();
   static final RegExp _uuidRegex = RegExp(
@@ -74,6 +75,7 @@ class ProjectRepository {
   }
 
   /// Add a new project to Hive
+  @override
   Future<void> addProject(
     ProjectModel project, {
     String? userId,
@@ -103,7 +105,8 @@ class ProjectRepository {
   }
 
   /// Get all projects from Hive
-  List<ProjectModel> getAllProjects() {
+  @override
+  Future<List<ProjectModel>> getAllProjects() async {
     final projects = <ProjectModel>[];
     try {
       final entries = _projectsBox.toMap().entries.toList();
@@ -127,7 +130,8 @@ class ProjectRepository {
   }
 
   /// Get a single project by ID
-  ProjectModel? getProjectById(String id) {
+  @override
+  Future<ProjectModel?> getProjectById(String id) async {
     try {
       final data = _projectsBox.get(id);
       if (data != null) {
@@ -151,6 +155,7 @@ class ProjectRepository {
   }
 
   /// Update project progress
+  @override
   Future<void> updateProgress(
     String projectId,
     double newProgress, {
@@ -192,6 +197,7 @@ class ProjectRepository {
   }
 
   /// Update a project's tasks list
+  @override
   Future<void> updateTasks(
     String projectId,
     List<String> tasks, {
@@ -319,6 +325,7 @@ class ProjectRepository {
 
   /// General update method for project with change history logging
   /// Updates any fields and adds change entry to history for compliance
+  @override
   Future<void> updateProject(
     String projectId,
     ProjectModel updatedProject, {

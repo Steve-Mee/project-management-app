@@ -49,7 +49,7 @@ void main() {
     final project = await createProject();
     await repository.addProject(project);
 
-    final projects = repository.getAllProjects();
+    final projects = await repository.getAllProjects();
     expect(projects.length, 1);
     expect(projects.first.id, project.id);
   });
@@ -59,7 +59,7 @@ void main() {
     await repository.addProject(project);
 
     await repository.updateProgress(project.id, 0.6);
-    final updated = repository.getProjectById(project.id);
+    final updated = await repository.getProjectById(project.id);
 
     expect(updated, isNotNull);
     expect(updated!.progress, 0.6);
@@ -70,7 +70,7 @@ void main() {
     await repository.addProject(project);
 
     await repository.updateTasks(project.id, const ['Task A', 'Task B']);
-    final updated = repository.getProjectById(project.id);
+    final updated = await repository.getProjectById(project.id);
 
     expect(updated, isNotNull);
     expect(updated!.tasks, const ['Task A', 'Task B']);
@@ -81,7 +81,7 @@ void main() {
     await repository.addProject(project);
 
     await repository.deleteProject(project.id);
-    final projects = repository.getAllProjects();
+    final projects = await repository.getAllProjects();
 
     expect(projects, isEmpty);
   });

@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
@@ -27,20 +28,67 @@ import 'features/auth/login_screen.dart';
 import 'models/project_model.dart';
 import 'models/task_model.dart';
 
+/// Initializes environment variables from .env file
+/// Loads dotenv for development. In production, uses secure storage if available
+/// Future expansions: Add more env vars like OPENAI_API_KEY, etc.
+Future<Map<String, String>> initEnv() async {
+  String url;
+  String anonKey;
+  
+  if (!kReleaseMode) {
+    // Debug mode: load from .env file
+    await dotenv.load();
+    url = dotenv.env['SUPABASE_URL'] ?? '';
+    anonKey = dotenv.env['SUPABASE_ANON_KEY'] ?? '';
+  } else {
+    // Release mode: Use secure storage for production security
+    const storage = FlutterSecureStorage();
+    url = await storage.read(key: 'SUPABASE_URL') ?? '';
+    anonKey = await storage.read(key: 'SUPABASE_ANON_KEY') ?? '';
+    if (url.isEmpty || anonKey.isEmpty) {
+      // Fallback to .env if secure storage is empty
+      await dotenv.load();
+      url = dotenv.env['SUPABASE_URL'] ?? '';
+      anonKey = dotenv.env['SUPABASE_ANON_KEY'] ?? '';
+    }
+  }
+  
+  if (url.isEmpty) {
+    throw Exception('SUPABASE_URL not found');
+  }
+  if (anonKey.isEmpty) {
+    throw Exception('SUPABASE_ANON_KEY not found');
+  }
+  
+  // Future expansions: Add more env vars here
+  // String openaiKey = dotenv.env['OPENAI_API_KEY'] ?? '';
+  
+  return {
+    'url': url,
+    'anonKey': anonKey,
+    // 'openaiKey': openaiKey,
+  };
+}
+
+
+
 /// Main entry point of the application
 /// Initializes Riverpod for state management and ScreenUtil for responsive design
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  
+  // Initialize environment variables
+  final env = await initEnv();
+  
+  // Future expansions: Add more env vars here, e.g., OPENAI_API_KEY
+  // String openaiKey = env['openaiKey']!;
+  
   if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
     await windowManager.ensureInitialized();
   }
-  if (!kReleaseMode) {
-    await dotenv.load(fileName: ".env");
-  }
   await Supabase.initialize(
-    url: 'https://tyykfdmcoeuhytcnajoe.supabase.co',
-    anonKey:
-        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR5eWtmZG1jb2V1aHl0Y25ham9lIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzA0NzAyMjIsImV4cCI6MjA4NjA0NjIyMn0.kQh0tml62L9fMAc8I15tOxFydSi7GRzrBtIdon9DYrU',
+    url: env['url']!,
+    anonKey: env['anonKey']!,
   );
   Hive.registerAdapter(ProjectModelAdapter());
   Hive.registerAdapter(TaskStatusAdapter());
@@ -130,7 +178,7 @@ class _AppLifecycleHandler extends WidgetsBindingObserver {
     try {
       await HiveInitializer.backupHive();
       final projectRepository =
-          await _container.read(projectRepositoryProvider.future);
+          _container.read(projectRepositoryProvider);
       await projectRepository.close();
 
         final taskRepository =

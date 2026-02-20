@@ -6,45 +6,96 @@ import '../providers/ai/ai_usage_provider.dart';
 import '../../models/chat_message_model.dart';
 import '../../models/project_plan.dart';
 
-/// State class for AI chat
+/// State class for AI chat with rate limiting
 class AiChatState {
   final List<ChatMessage> messages;
   final bool isLoading;
   final String? error;
+  final DateTime? lastRequestTime;
+  final int requestCountInWindow;
+  final Duration rateLimitWindow;
 
   const AiChatState({
     this.messages = const [],
     this.isLoading = false,
     this.error,
+    this.lastRequestTime,
+    this.requestCountInWindow = 0,
+    this.rateLimitWindow = const Duration(minutes: 1),
   });
 
   AiChatState copyWith({
     List<ChatMessage>? messages,
     bool? isLoading,
     String? error,
+    DateTime? lastRequestTime,
+    int? requestCountInWindow,
+    Duration? rateLimitWindow,
   }) {
     return AiChatState(
       messages: messages ?? this.messages,
       isLoading: isLoading ?? this.isLoading,
       error: error,
+      lastRequestTime: lastRequestTime ?? this.lastRequestTime,
+      requestCountInWindow: requestCountInWindow ?? this.requestCountInWindow,
+      rateLimitWindow: rateLimitWindow ?? this.rateLimitWindow,
     );
+  }
+
+  /// Check if rate limit is exceeded
+  /// TODO: Make rate limits configurable
+  bool get isRateLimited {
+    if (lastRequestTime == null) return false;
+    final now = DateTime.now();
+    final timeSinceLastRequest = now.difference(lastRequestTime!);
+
+    if (timeSinceLastRequest > rateLimitWindow) {
+      return false; // Window expired, reset counter
+    }
+
+    // TODO: Make max requests per window configurable (currently 10 per minute)
+    return requestCountInWindow >= 10;
+  }
+
+  /// Get remaining time until rate limit resets
+  Duration get timeUntilReset {
+    if (lastRequestTime == null) return Duration.zero;
+    final resetTime = lastRequestTime!.add(rateLimitWindow);
+    final remaining = resetTime.difference(DateTime.now());
+    return remaining.isNegative ? Duration.zero : remaining;
   }
 }
 
-/// Notifier for managing AI chat state
+/// Notifier for managing AI chat state with rate limiting
+/// TODO: Add exponential backoff for rate limits
+/// TODO: Add request queuing for burst handling
+/// TODO: Add different rate limits for different AI operations
 class AiChatNotifier extends Notifier<AiChatState> {
   @override
   AiChatState build() {
     return const AiChatState();
   }
 
-  /// Send a message and get AI response using modular helpers
+  /// Send a message and get AI response with rate limiting
   Future<void> sendMessage(
     String userMessage, {
     String? promptOverride,
     String? projectId,
   }) async {
     if (userMessage.trim().isEmpty) return;
+
+    // Check rate limit
+    if (state.isRateLimited) {
+      final remainingTime = state.timeUntilReset;
+      state = state.copyWith(
+        error: 'Rate limit exceeded. Please wait ${remainingTime.inSeconds} seconds.',
+      );
+      AppLogger.event('ai_rate_limit_exceeded', details: {
+        'remainingTime': remainingTime.inSeconds,
+        'requestCount': state.requestCountInWindow,
+      });
+      return;
+    }
 
     // Add user message
     final userMsg = ChatMessage(
@@ -54,10 +105,16 @@ class AiChatNotifier extends Notifier<AiChatState> {
       timestamp: DateTime.now(),
     );
 
+    // Update rate limiting state
+    final now = DateTime.now();
+    final newRequestCount = _calculateNewRequestCount(now);
+
     state = state.copyWith(
       messages: [...state.messages, userMsg],
       isLoading: true,
       error: null,
+      lastRequestTime: now,
+      requestCountInWindow: newRequestCount,
     );
 
     try {
@@ -90,6 +147,18 @@ class AiChatNotifier extends Notifier<AiChatState> {
         error: 'Failed to get AI response: ${e.toString()}',
       );
     }
+  }
+
+  /// Calculate new request count based on current window
+  int _calculateNewRequestCount(DateTime now) {
+    if (state.lastRequestTime == null) return 1;
+
+    final timeSinceLastRequest = now.difference(state.lastRequestTime!);
+    if (timeSinceLastRequest > state.rateLimitWindow) {
+      return 1; // Window expired, reset to 1
+    }
+
+    return state.requestCountInWindow + 1;
   }
 
   /// Modular method for AI API calls using AiPlanningHelpers

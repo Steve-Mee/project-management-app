@@ -281,12 +281,12 @@ class _ProjectsInitializerState extends ConsumerState<ProjectsInitializer> {
   Future<void> _initializeProjects() async {
     try {
       // Get the repository instance
-      final repository = await ref.read(projectRepositoryProvider.future);
+      final repository = ref.read(projectRepositoryProvider);
       
       // Initialize the projects notifier with the repository
       await ref.read(projectsProvider.notifier).initialize(repository);
 
-      final notificationsEnabled = ref.read(notificationsEnabledProvider);
+      final notificationsEnabled = ref.read(notificationsProvider);
       if (notificationsEnabled) {
         final taskRepository = await ref.read(taskRepositoryProvider.future);
         final notificationService = ref.read(notificationServiceProvider);

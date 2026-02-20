@@ -1513,7 +1513,7 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen>
     }
 
     try {
-      final repo = await ref.read(projectRepositoryProvider.future);
+      final repo = ref.read(projectRepositoryProvider);
       await repo.addSharedUser(projectId, username);
       ref.read(projectsProvider.notifier).refresh();
     } catch (_) {
@@ -1559,7 +1559,7 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen>
     }
 
     try {
-      final repo = await ref.read(projectRepositoryProvider.future);
+      final repo = ref.read(projectRepositoryProvider);
       await repo.addSharedGroup(projectId, groupId);
       ref.read(projectsProvider.notifier).refresh();
     } catch (_) {
@@ -1570,7 +1570,7 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen>
   Future<void> _removeSharedUser(String projectId, String username) async {
     final l10n = AppLocalizations.of(context)!;
     try {
-      final repo = await ref.read(projectRepositoryProvider.future);
+      final repo = ref.read(projectRepositoryProvider);
       await repo.removeSharedUser(projectId, username);
       ref.read(projectsProvider.notifier).refresh();
     } catch (_) {
@@ -1581,7 +1581,7 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen>
   Future<void> _removeSharedGroup(String projectId, String groupId) async {
     final l10n = AppLocalizations.of(context)!;
     try {
-      final repo = await ref.read(projectRepositoryProvider.future);
+      final repo = ref.read(projectRepositoryProvider);
       await repo.removeSharedGroup(projectId, groupId);
       ref.read(projectsProvider.notifier).refresh();
     } catch (_) {

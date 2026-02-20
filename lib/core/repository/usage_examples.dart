@@ -119,7 +119,7 @@ class _ProjectManagementPageState extends ConsumerState<ProjectManagementPage> {
 
   Future<void> _initializeProjects() async {
     final repository =
-        await ref.read(projectRepositoryProvider.future);
+        ref.read(projectRepositoryProvider);
     await ref
         .read(projectsProvider.notifier)
         .initialize(repository);

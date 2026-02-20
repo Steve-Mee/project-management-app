@@ -7,7 +7,6 @@ import 'package:my_project_management_app/generated/app_localizations.dart';
 import 'package:my_project_management_app/core/auth/permissions.dart';
 import 'package:my_project_management_app/core/repository/hive_initializer.dart';
 import '../../core/providers.dart';
-import '../../core/providers/ai/index.dart';
 import '../../core/services/project_transfer_service.dart';
 import '../../features/dashboard/customize_dashboard_screen.dart';
 import '../../core/config/ai_config.dart' as ai_config;
@@ -30,7 +29,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final consentEnabled = ref.watch(privacyConsentProvider);
-    final notificationsEnabled = ref.watch(notificationsEnabledProvider);
+    final notificationsEnabled = ref.watch(notificationsProvider);
     final themeMode = ref.watch(themeModeProvider);
     final useProjectFiles = ref.watch(useProjectFilesProvider);
     final locale = ref.watch(localeProvider);
@@ -220,7 +219,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             value: notificationsEnabled,
             onChanged: (value) {
               ref
-                  .read(notificationsEnabledProvider.notifier)
+                  .read(notificationsProvider.notifier)
                   .setEnabled(value);
             },
             title: Text(l10n.settingsNotificationsTitle),
@@ -462,12 +461,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           ),
           usersAsync.when(
             data: (users) {
-              final roleNames = authRepoAsync.maybeWhen(
-                data: (repo) => {
-                  for (final role in repo.getRoles()) role.id: role.name,
-                },
-                orElse: () => const <String, String>{},
-              );
+              // authRepositoryProvider is synchronous so treat it directly
+              final authRepo = ref.read(authRepositoryProvider);
+              final roleNames = {
+                for (final role in authRepo.getRoles()) role.id: role.name,
+              };
               if (users.isEmpty) {
                 return ListTile(
                   title: Text(l10n.settingsNoUsersFound),
@@ -612,7 +610,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     setState(() {
       _isExporting = true;
     });
-    final projectRepository = await ref.read(projectRepositoryProvider.future);
+    final projectRepository = ref.read(projectRepositoryProvider);
     final taskRepository = await ref.read(taskRepositoryProvider.future);
     final service = ProjectTransferService();
 
@@ -734,7 +732,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     setState(() {
       _isImporting = true;
     });
-    final projectRepository = await ref.read(projectRepositoryProvider.future);
+    final projectRepository = ref.read(projectRepositoryProvider);
     final taskRepository = await ref.read(taskRepositoryProvider.future);
     final service = ProjectTransferService();
 

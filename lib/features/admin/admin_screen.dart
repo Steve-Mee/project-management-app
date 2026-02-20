@@ -31,43 +31,33 @@ class _AdminScreenState extends ConsumerState<AdminScreen> {
       );
     }
 
-    final repoAsync = ref.watch(authRepositoryProvider);
-    return repoAsync.when(
-      loading: () => Scaffold(
-        appBar: AppBar(title: Text(l10n.adminPanelTitle)),
-        body: const Center(child: CircularProgressIndicator()),
-      ),
-      error: (error, _) => Scaffold(
-        appBar: AppBar(title: Text(l10n.adminPanelTitle)),
-        body: Center(child: Text(error.toString())),
-      ),
-      data: (repo) {
-        final roles = repo.getRoles();
-        final groups = repo.getGroups();
-        final roleNames = {for (final role in roles) role.id: role.name};
-        return Scaffold(
-          appBar: AppBar(title: Text(l10n.adminPanelTitle)),
-          body: ListView(
-            padding: const EdgeInsets.all(16),
-            children: [
-              _buildSectionHeader(
-                context,
-                l10n.rolesTitle,
-                onAdd: () => _promptCreateRole(context, roles),
-              ),
-              const SizedBox(height: 8),
-              if (roles.isEmpty)
-                Text(l10n.noRolesFound)
-              else
-                for (final role in roles)
-                  ListTile(
-                    title: Text(role.name),
-                    subtitle: Text(
-                      l10n.permissionsCount(role.permissions.length),
-                    ),
-                    trailing: IconButton(
-                      icon: const Icon(Icons.tune),
-                      tooltip: l10n.editPermissionsTooltip,
+    final repo = ref.watch(authRepositoryProvider);
+    final roles = repo.getRoles();
+    final groups = repo.getGroups();
+    final roleNames = {for (final role in roles) role.id: role.name};
+    return Scaffold(
+      appBar: AppBar(title: Text(l10n.adminPanelTitle)),
+      body: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          _buildSectionHeader(
+            context,
+            l10n.rolesTitle,
+            onAdd: () => _promptCreateRole(context, roles),
+          ),
+          const SizedBox(height: 8),
+          if (roles.isEmpty)
+            Text(l10n.noRolesFound)
+          else
+            for (final role in roles)
+              ListTile(
+                title: Text(role.name),
+                subtitle: Text(
+                  l10n.permissionsCount(role.permissions.length),
+                ),
+                trailing: IconButton(
+                  icon: const Icon(Icons.tune),
+                  tooltip: l10n.editPermissionsTooltip,
                       onPressed: () => _promptEditPermissions(context, role),
                     ),
                   ),
@@ -102,8 +92,6 @@ class _AdminScreenState extends ConsumerState<AdminScreen> {
             ],
           ),
         );
-      },
-    );
   }
 
   Widget _buildSectionHeader(
@@ -167,7 +155,7 @@ class _AdminScreenState extends ConsumerState<AdminScreen> {
         ? 'role_${roleIdBase}_${DateTime.now().millisecondsSinceEpoch}'
         : 'role_$roleIdBase';
 
-    final repo = await ref.read(authRepositoryProvider.future);
+    final repo = ref.read(authRepositoryProvider);
     await repo.upsertRole(
       RoleDefinition(id: roleId, name: name, permissions: const []),
     );
@@ -226,7 +214,7 @@ class _AdminScreenState extends ConsumerState<AdminScreen> {
       return;
     }
 
-    final repo = await ref.read(authRepositoryProvider.future);
+    final repo = ref.read(authRepositoryProvider);
     await repo.upsertRole(role.copyWith(permissions: selected.toList()));
     setState(() {});
   }
@@ -303,7 +291,7 @@ class _AdminScreenState extends ConsumerState<AdminScreen> {
     }
 
     final groupId = name.toLowerCase().replaceAll(' ', '_');
-    final repo = await ref.read(authRepositoryProvider.future);
+    final repo = ref.read(authRepositoryProvider);
     await repo.upsertGroup(
       GroupDefinition(
         id: groupId,
@@ -352,7 +340,7 @@ class _AdminScreenState extends ConsumerState<AdminScreen> {
       return;
     }
 
-    final repo = await ref.read(authRepositoryProvider.future);
+    final repo = ref.read(authRepositoryProvider);
     await repo.addUserToGroup(group.id, username);
     setState(() {});
   }
@@ -383,7 +371,7 @@ class _AdminScreenState extends ConsumerState<AdminScreen> {
                           tooltip: l10n.removeGroupMemberTooltip,
                           onPressed: () async {
                             final repo =
-                                await ref.read(authRepositoryProvider.future);
+                                ref.read(authRepositoryProvider);
                             await repo.removeUserFromGroup(group.id, member);
                             if (!dialogContext.mounted) {
                               return;

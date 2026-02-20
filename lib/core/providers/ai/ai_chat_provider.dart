@@ -11,40 +11,84 @@ class AiChatState {
   final List<ChatMessage> messages;
   final bool isLoading;
   final String? error;
+  final bool isRateLimited;
+  final DateTime? rateLimitResetTime;
 
   const AiChatState({
     this.messages = const [],
     this.isLoading = false,
     this.error,
+    this.isRateLimited = false,
+    this.rateLimitResetTime,
   });
 
   AiChatState copyWith({
     List<ChatMessage>? messages,
     bool? isLoading,
     String? error,
+    bool? isRateLimited,
+    DateTime? rateLimitResetTime,
   }) {
     return AiChatState(
       messages: messages ?? this.messages,
       isLoading: isLoading ?? this.isLoading,
       error: error,
+      isRateLimited: isRateLimited ?? this.isRateLimited,
+      rateLimitResetTime: rateLimitResetTime ?? this.rateLimitResetTime,
     );
   }
 }
 
-/// Notifier for managing AI chat state
+/// Notifier for managing AI chat state with modular rate limiting
 class AiChatNotifier extends Notifier<AiChatState> {
+  // Rate limiting configuration
+  static const int _maxRequestsPerMinute = 10; // Configurable limit
+  static const Duration _rateLimitWindow = Duration(minutes: 1);
+  
+  final List<DateTime> _requestTimestamps = [];
+  
   @override
   AiChatState build() {
     return const AiChatState();
   }
 
-  /// Send a message and get AI response using modular helpers
+  /// Check if rate limit is exceeded
+  bool _isRateLimited() {
+    final now = DateTime.now();
+    // Remove timestamps outside the window
+    _requestTimestamps.removeWhere((timestamp) => 
+      now.difference(timestamp) > _rateLimitWindow);
+    
+    return _requestTimestamps.length >= _maxRequestsPerMinute;
+  }
+
+  /// Get time until rate limit resets
+  DateTime? _getRateLimitResetTime() {
+    if (_requestTimestamps.isEmpty) return null;
+    final oldestRequest = _requestTimestamps.first;
+    return oldestRequest.add(_rateLimitWindow);
+  }
+
+  /// Send a message and get AI response using modular helpers with rate limiting
   Future<void> sendMessage(
     String userMessage, {
     String? promptOverride,
     String? projectId,
   }) async {
     if (userMessage.trim().isEmpty) return;
+
+    // Check rate limiting
+    if (_isRateLimited()) {
+      state = state.copyWith(
+        error: 'Rate limit exceeded. Please wait before sending another message.',
+        isRateLimited: true,
+        rateLimitResetTime: _getRateLimitResetTime(),
+      );
+      return;
+    }
+
+    // Record this request
+    _requestTimestamps.add(DateTime.now());
 
     // Add user message
     final userMsg = ChatMessage(
@@ -78,6 +122,8 @@ class AiChatNotifier extends Notifier<AiChatState> {
       state = state.copyWith(
         messages: [...state.messages, aiMsg],
         isLoading: false,
+        isRateLimited: false, // Clear rate limit on success
+        rateLimitResetTime: null,
       );
 
       // Log token usage from metadata
@@ -242,4 +288,11 @@ class UseProjectFilesNotifier extends Notifier<bool> {
 final useProjectFilesProvider =
     NotifierProvider<UseProjectFilesNotifier, bool>(
   UseProjectFilesNotifier.new,
+);
+
+/// Temporary helper controlling the AI help level used in various UI forms.
+/// Stored in-memory rather than in settings, so multiple screens can override
+/// independently.
+final aiHelpLevelProvider = StateProvider<ai_config.HelpLevel>(
+  (ref) => ai_config.HelpLevel.basis,
 );

@@ -31,12 +31,12 @@ class FakeProjectRepository extends ProjectRepository {
   }
 
   @override
-  List<ProjectModel> getAllProjects() {
+  Future<List<ProjectModel>> getAllProjects() async {
     return _store.values.toList();
   }
 
   @override
-  ProjectModel? getProjectById(String id) {
+  Future<ProjectModel?> getProjectById(String id) async {
     return _store[id];
   }
 

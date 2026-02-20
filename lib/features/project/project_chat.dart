@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:my_project_management_app/core/providers.dart';
+import 'package:my_project_management_app/core/providers/auth_providers.dart' show currentUserProvider;
+import 'package:my_project_management_app/core/providers/project_providers.dart' show projectsProvider;
 import 'package:my_project_management_app/models/project_model.dart';
 
 /// Model for chat messages
