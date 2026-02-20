@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 // settings repository is used by the theme notifier to persist the theme mode
-import 'package:my_project_management_app/core/repository/settings_repository.dart';
 import 'auth_providers.dart';
 
 

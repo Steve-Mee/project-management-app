@@ -5,7 +5,7 @@ import 'dart:typed_data';
 import 'package:crypto/crypto.dart';
 import 'package:encrypt/encrypt.dart';
 import 'package:file_picker/file_picker.dart';
-import 'package:my_project_management_app/core/repository/project_repository.dart';
+import 'package:my_project_management_app/core/providers/project_providers.dart';
 import 'package:my_project_management_app/core/repository/task_repository.dart';
 import 'package:my_project_management_app/models/project_model.dart';
 import 'package:my_project_management_app/models/task_model.dart';
@@ -22,7 +22,7 @@ class ProjectTransferResult {
 
 class ProjectTransferService {
   Future<ProjectTransferResult?> exportData({
-    required ProjectRepository projectRepository,
+    required IProjectRepository projectRepository,
     required TaskRepository taskRepository,
     required String password,
   }) async {
@@ -36,7 +36,7 @@ class ProjectTransferService {
       throw 'Export password is required.';
     }
 
-    final projects = projectRepository.getAllProjects();
+    final projects = await projectRepository.getAllProjects();
     final tasks = taskRepository.getAllTasks();
 
     final projectsCsv = _buildProjectsCsv(projects);
@@ -58,11 +58,11 @@ class ProjectTransferService {
   }
 
   Future<ProjectTransferResult?> importData({
-    required ProjectRepository projectRepository,
+    required IProjectRepository projectRepository,
     required TaskRepository taskRepository,
   }) async {
-    final originalProjectsById = <String, ProjectModel>{};
-    final originalTasksById = <String, Task>{};
+    final originalProjectsById = <String, ProjectModel?>{};
+    final originalTasksById = <String, Task?>{};
     final importedProjectIds = <String>[];
     final importedTaskIds = <String>[];
     try {
@@ -101,10 +101,8 @@ class ProjectTransferService {
       };
 
       for (final project in projects) {
-        final existing = projectRepository.getProjectById(project.id);
-        if (existing != null) {
-          originalProjectsById[project.id] = existing;
-        }
+        final existing = await projectRepository.getProjectById(project.id);
+        originalProjectsById[project.id] = existing;
         await projectRepository.addProject(project);
         importedProjectIds.add(project.id);
       }
@@ -145,10 +143,10 @@ class ProjectTransferService {
   }
 
   Future<void> _rollbackImport({
-    required ProjectRepository projectRepository,
+    required IProjectRepository projectRepository,
     required TaskRepository taskRepository,
-    required Map<String, ProjectModel> originalProjectsById,
-    required Map<String, Task> originalTasksById,
+    required Map<String, ProjectModel?> originalProjectsById,
+    required Map<String, Task?> originalTasksById,
     required List<String> importedProjectIds,
     required List<String> importedTaskIds,
   }) async {

@@ -304,7 +304,7 @@ class PrivacyConsentNotifier extends Notifier<bool> {
     // stored in settings repository
     final settingsAsync = ref.watch(settingsRepositoryProvider);
     return settingsAsync.maybeWhen(
-      data: (s) => s.getAiConsentEnabled() ?? false,
+      data: (s) => s.getAiConsentEnabled(),
       orElse: () => false,
     );
   }

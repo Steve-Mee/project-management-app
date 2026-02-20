@@ -31,6 +31,19 @@ abstract class IProjectRepository {
   Future<void> updateTasks(String projectId, List<String> tasks, {String? userId, Map<String, dynamic>? metadata});
   Future<void> deleteProject(String projectId, {String? userId});
   Future<ProjectModel?> getProjectById(String id);
+  
+  /// Close repository resources (e.g., Hive boxes)
+  Future<void> close();
+  
+  // Sharing helpers
+  Future<void> addSharedUser(String projectId, String username, {String? userId, Map<String, dynamic>? metadata});
+  Future<void> removeSharedUser(String projectId, String username, {String? userId, Map<String, dynamic>? metadata});
+  Future<void> addSharedGroup(String projectId, String groupId, {String? userId, Map<String, dynamic>? metadata});
+  Future<void> removeSharedGroup(String projectId, String groupId, {String? userId, Map<String, dynamic>? metadata});
+
+  // Directory and plan updates
+  Future<void> updateDirectoryPath(String projectId, String? directoryPath, {String? userId, Map<String, dynamic>? metadata});
+  Future<void> updatePlanJson(String projectId, String? planJson, {String? userId, Map<String, dynamic>? metadata});
   // TODO: Add pagination methods: getProjectsPaginated(int page, int limit)
   // TODO: Add filtering methods: getProjectsByStatus(String status)
 }
@@ -176,6 +189,22 @@ class ProjectsNotifier extends Notifier<AsyncValue<List<ProjectModel>>> {
     });
   }
 
+  /// Update project's directory path
+  Future<void> updateDirectoryPath(String projectId, String? directoryPath) async {
+    state = const AsyncValue.loading();
+    state = await AsyncValue.guard(() async {
+      final userId = ref.read(authProvider).username ?? 'system';
+      await _repository.updateDirectoryPath(
+        projectId,
+        directoryPath,
+        userId: userId,
+        metadata: {'action': 'update_directory_path'},
+      );
+      AppLogger.event('project_directory_updated', details: {'id': projectId});
+      return _loadProjects();
+    });
+  }
+
   /// Update project with change tracking
   Future<void> updateProject(
     String projectId,
@@ -232,6 +261,38 @@ class ProjectsNotifier extends Notifier<AsyncValue<List<ProjectModel>>> {
       final userId = ref.read(authProvider).username ?? 'system';
       await _repository.deleteProject(projectId, userId: userId);
       AppLogger.event('project_deleted', details: {'id': projectId});
+      return _loadProjects();
+    });
+  }
+
+  /// Update a project's tasks list via repository
+  Future<void> updateTasks(String projectId, List<String> tasks) async {
+    state = const AsyncValue.loading();
+    state = await AsyncValue.guard(() async {
+      final userId = ref.read(authProvider).username ?? 'system';
+      await _repository.updateTasks(
+        projectId,
+        tasks,
+        userId: userId,
+        metadata: {'action': 'update_tasks'},
+      );
+      AppLogger.event('project_tasks_updated', details: {'id': projectId});
+      return _loadProjects();
+    });
+  }
+
+  /// Update project's plan JSON
+  Future<void> updatePlanJson(String projectId, String? planJson) async {
+    state = const AsyncValue.loading();
+    state = await AsyncValue.guard(() async {
+      final userId = ref.read(authProvider).username ?? 'system';
+      await _repository.updatePlanJson(
+        projectId,
+        planJson,
+        userId: userId,
+        metadata: {'action': 'update_plan_json'},
+      );
+      AppLogger.event('project_plan_updated', details: {'id': projectId});
       return _loadProjects();
     });
   }

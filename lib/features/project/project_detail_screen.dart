@@ -9,7 +9,6 @@ import 'package:my_project_management_app/generated/app_localizations.dart';
 import 'package:my_project_management_app/core/auth/permissions.dart';
 import '../../core/providers.dart';
 import '../../core/services/project_file_service.dart';
-import '../../core/providers/task_provider.dart';
 import '../../core/providers/sub_task_provider.dart';
 import '../../models/project_meta.dart';
 import '../../models/project_model.dart';

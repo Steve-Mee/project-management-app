@@ -72,6 +72,7 @@ dependencies:
   google_fonts: ^8.0.1
   animate_do: ^4.2.0
 
+  intl: any
 dev_dependencies:
   flutter_test:
     sdk: flutter

@@ -7,6 +7,7 @@ export 'providers/auth_providers.dart';
 export 'providers/project_providers.dart';
 export 'providers/theme_providers.dart';
 export 'providers/dashboard_providers.dart';
+export 'providers/navigation_providers.dart';
 
 // Keep AI-related exports in a dedicated barrel so they share a single canonical path
 export 'providers/ai/index.dart';

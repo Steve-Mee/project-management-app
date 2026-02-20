@@ -36,7 +36,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     final settingsAsync = ref.watch(settingsRepositoryProvider);
     final authState = ref.watch(authProvider);
     final usersAsync = ref.watch(authUsersProvider);
-    final authRepoAsync = ref.watch(authRepositoryProvider);
+    
     final canManageUsers =
       ref.watch(hasPermissionProvider(AppPermissions.manageUsers));
     final canManageRoles =

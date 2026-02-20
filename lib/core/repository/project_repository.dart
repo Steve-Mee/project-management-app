@@ -239,6 +239,7 @@ class ProjectRepository implements IProjectRepository {
   }
 
   /// Update a project's directory path
+  @override
   Future<void> updateDirectoryPath(
     String projectId,
     String? directoryPath, {
@@ -280,6 +281,7 @@ class ProjectRepository implements IProjectRepository {
   }
 
   /// Update a project's plan JSON
+  @override
   Future<void> updatePlanJson(
     String projectId,
     String? planJson, {
@@ -388,6 +390,7 @@ class ProjectRepository implements IProjectRepository {
   }
 
   /// Delete a project by ID
+  @override
   Future<void> deleteProject(
     String projectId, {
     String? userId,
@@ -420,6 +423,7 @@ class ProjectRepository implements IProjectRepository {
     }
   }
 
+  @override
   Future<void> addSharedUser(
     String projectId,
     String username, {
@@ -467,6 +471,7 @@ class ProjectRepository implements IProjectRepository {
     }
   }
 
+  @override
   Future<void> removeSharedUser(
     String projectId,
     String username, {
@@ -512,6 +517,7 @@ class ProjectRepository implements IProjectRepository {
     }
   }
 
+  @override
   Future<void> addSharedGroup(
     String projectId,
     String groupId, {
@@ -559,6 +565,7 @@ class ProjectRepository implements IProjectRepository {
     }
   }
 
+  @override
   Future<void> removeSharedGroup(
     String projectId,
     String groupId, {
@@ -735,6 +742,7 @@ class ProjectRepository implements IProjectRepository {
   }
 
   /// Close the Hive box (call on app shutdown)
+  @override
   Future<void> close() async {
     await _projectsBox.compact();
     await _projectsBox.close();
