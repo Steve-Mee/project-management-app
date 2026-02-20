@@ -1,0 +1,1081 @@
+{
+  "@@locale": "nl",
+  "appTitle": "Project Management App",
+  "@appTitle": {
+    "description": "Auto-generated description for appTitle."
+  },
+  "menuLabel": "Menu",
+  "@menuLabel": {
+    "description": "Auto-generated description for menuLabel."
+  },
+  "loginTitle": "Inloggen",
+  "@loginTitle": {
+    "description": "Auto-generated description for loginTitle."
+  },
+  "usernameLabel": "Gebruikersnaam",
+  "@usernameLabel": {
+    "description": "Auto-generated description for usernameLabel."
+  },
+  "passwordLabel": "Wachtwoord",
+  "@passwordLabel": {
+    "description": "Auto-generated description for passwordLabel."
+  },
+  "loginButton": "Inloggen",
+  "@loginButton": {
+    "description": "Auto-generated description for loginButton."
+  },
+  "createAccount": "Account aanmaken",
+  "@createAccount": {
+    "description": "Auto-generated description for createAccount."
+  },
+  "logoutTooltip": "Uitloggen",
+  "@logoutTooltip": {
+    "description": "Auto-generated description for logoutTooltip."
+  },
+  "closeAppTooltip": "App sluiten",
+  "@closeAppTooltip": {
+    "description": "Auto-generated description for closeAppTooltip."
+  },
+  "settingsTitle": "Instellingen",
+  "@settingsTitle": {
+    "description": "Auto-generated description for settingsTitle."
+  },
+  "settingsDisplaySection": "Weergave",
+  "@settingsDisplaySection": {
+    "description": "Auto-generated description for settingsDisplaySection."
+  },
+  "settingsDarkModeTitle": "Donkere modus",
+  "@settingsDarkModeTitle": {
+    "description": "Auto-generated description for settingsDarkModeTitle."
+  },
+  "settingsDarkModeSubtitle": "Schakel tussen licht en donker",
+  "@settingsDarkModeSubtitle": {
+    "description": "Auto-generated description for settingsDarkModeSubtitle."
+  },
+  "settingsFollowSystemTitle": "Volg systeemthema",
+  "@settingsFollowSystemTitle": {
+    "description": "Auto-generated description for settingsFollowSystemTitle."
+  },
+  "settingsFollowSystemSubtitle": "Gebruik het thema van je toestel",
+  "@settingsFollowSystemSubtitle": {
+    "description": "Auto-generated description for settingsFollowSystemSubtitle."
+  },
+  "settingsLanguageTitle": "Taal",
+  "@settingsLanguageTitle": {
+    "description": "Auto-generated description for settingsLanguageTitle."
+  },
+  "settingsLanguageSubtitle": "Kies de taal van de app",
+  "@settingsLanguageSubtitle": {
+    "description": "Auto-generated description for settingsLanguageSubtitle."
+  },
+  "settingsNotificationsSection": "Notificaties",
+  "@settingsNotificationsSection": {
+    "description": "Auto-generated description for settingsNotificationsSection."
+  },
+  "settingsNotificationsTitle": "Notificaties",
+  "@settingsNotificationsTitle": {
+    "description": "Auto-generated description for settingsNotificationsTitle."
+  },
+  "settingsNotificationsSubtitle": "Meldingen voor updates en reminders",
+  "@settingsNotificationsSubtitle": {
+    "description": "Auto-generated description for settingsNotificationsSubtitle."
+  },
+  "settingsPrivacySection": "Privacy",
+  "@settingsPrivacySection": {
+    "description": "Auto-generated description for settingsPrivacySection."
+  },
+  "settingsLocalFilesConsentTitle": "Toestemming lokale bestanden",
+  "@settingsLocalFilesConsentTitle": {
+    "description": "Auto-generated description for settingsLocalFilesConsentTitle."
+  },
+  "settingsLocalFilesConsentSubtitle": "Sta toe dat de app lokale projectbestanden leest voor AI-context.",
+  "@settingsLocalFilesConsentSubtitle": {
+    "description": "Auto-generated description for settingsLocalFilesConsentSubtitle."
+  },
+  "settingsUseProjectFilesTitle": "Gebruik project bestanden",
+  "@settingsUseProjectFilesTitle": {
+    "description": "Auto-generated description for settingsUseProjectFilesTitle."
+  },
+  "settingsUseProjectFilesSubtitle": "Voeg lokale bestanden toe aan AI prompts",
+  "@settingsUseProjectFilesSubtitle": {
+    "description": "Auto-generated description for settingsUseProjectFilesSubtitle."
+  },
+  "settingsProjectsSection": "Projecten",
+  "@settingsProjectsSection": {
+    "description": "Auto-generated description for settingsProjectsSection."
+  },
+  "settingsLogoutTitle": "Uitloggen",
+  "@settingsLogoutTitle": {
+    "description": "Auto-generated description for settingsLogoutTitle."
+  },
+  "settingsLogoutSubtitle": "Beëindig je huidige sessie",
+  "@settingsLogoutSubtitle": {
+    "description": "Auto-generated description for settingsLogoutSubtitle."
+  },
+  "settingsExportTitle": "Exporteer projecten",
+  "@settingsExportTitle": {
+    "description": "Auto-generated description for settingsExportTitle."
+  },
+  "settingsExportSubtitle": "Exporteer projecten naar een bestand",
+  "@settingsExportSubtitle": {
+    "description": "Auto-generated description for settingsExportSubtitle."
+  },
+  "settingsImportTitle": "Importeer projecten",
+  "@settingsImportTitle": {
+    "description": "Auto-generated description for settingsImportTitle."
+  },
+  "settingsImportSubtitle": "Importeer projecten uit een bestand",
+  "@settingsImportSubtitle": {
+    "description": "Auto-generated description for settingsImportSubtitle."
+  },
+  "settingsUsersSection": "Gebruikers",
+  "@settingsUsersSection": {
+    "description": "Auto-generated description for settingsUsersSection."
+  },
+  "settingsCurrentUserTitle": "Huidige gebruiker",
+  "@settingsCurrentUserTitle": {
+    "description": "Auto-generated description for settingsCurrentUserTitle."
+  },
+  "settingsNotLoggedIn": "Niet ingelogd",
+  "@settingsNotLoggedIn": {
+    "description": "Auto-generated description for settingsNotLoggedIn."
+  },
+  "settingsNoUsersFound": "Geen gebruikers gevonden.",
+  "@settingsNoUsersFound": {
+    "description": "Auto-generated description for settingsNoUsersFound."
+  },
+  "settingsLocalUserLabel": "Lokale gebruiker",
+  "@settingsLocalUserLabel": {
+    "description": "Auto-generated description for settingsLocalUserLabel."
+  },
+  "settingsDeleteTooltip": "Verwijderen",
+  "@settingsDeleteTooltip": {
+    "description": "Auto-generated description for settingsDeleteTooltip."
+  },
+  "settingsLoadUsersFailed": "Kon gebruikers niet laden",
+  "@settingsLoadUsersFailed": {
+    "description": "Auto-generated description for settingsLoadUsersFailed."
+  },
+  "settingsAddUserTitle": "Gebruiker toevoegen",
+  "@settingsAddUserTitle": {
+    "description": "Auto-generated description for settingsAddUserTitle."
+  },
+  "settingsAddUserSubtitle": "Voeg een extra account toe",
+  "@settingsAddUserSubtitle": {
+    "description": "Auto-generated description for settingsAddUserSubtitle."
+  },
+  "logoutDialogTitle": "Uitloggen",
+  "@logoutDialogTitle": {
+    "description": "Auto-generated description for logoutDialogTitle."
+  },
+  "logoutDialogContent": "Weet je zeker dat je wilt uitloggen?",
+  "@logoutDialogContent": {
+    "description": "Auto-generated description for logoutDialogContent."
+  },
+  "cancelButton": "Annuleren",
+  "@cancelButton": {
+    "description": "Auto-generated description for cancelButton."
+  },
+  "logoutButton": "Uitloggen",
+  "@logoutButton": {
+    "description": "Auto-generated description for logoutButton."
+  },
+  "loggedOutMessage": "Je bent uitgelogd.",
+  "@loggedOutMessage": {
+    "description": "Auto-generated description for loggedOutMessage."
+  },
+  "exportCompleteMessage": "Export voltooid: {projectsPath}, {tasksPath}",
+  "@exportCompleteMessage": {
+    "placeholders": {
+      "projectsPath": {},
+      "tasksPath": {}
+    },
+    "description": "Auto-generated description for exportCompleteMessage."
+  },
+  "exportFailedMessage": "Export mislukt: {error}",
+  "@exportFailedMessage": {
+    "placeholders": {
+      "error": {}
+    },
+    "description": "Auto-generated description for exportFailedMessage."
+  },
+  "exportPasswordTitle": "Export versleutelen",
+  "@exportPasswordTitle": {
+    "description": "Auto-generated description for exportPasswordTitle."
+  },
+  "exportPasswordSubtitle": "Stel een wachtwoord in om de exportbestanden te versleutelen.",
+  "@exportPasswordSubtitle": {
+    "description": "Auto-generated description for exportPasswordSubtitle."
+  },
+  "exportPasswordMismatch": "Wachtwoorden komen niet overeen.",
+  "@exportPasswordMismatch": {
+    "description": "Auto-generated description for exportPasswordMismatch."
+  },
+  "importSelectFilesMessage": "Selecteer een CSV en JSON bestand.",
+  "@importSelectFilesMessage": {
+    "description": "Auto-generated description for importSelectFilesMessage."
+  },
+  "importCompleteMessage": "Import voltooid: {projectsPath}, {tasksPath}",
+  "@importCompleteMessage": {
+    "placeholders": {
+      "projectsPath": {},
+      "tasksPath": {}
+    },
+    "description": "Auto-generated description for importCompleteMessage."
+  },
+  "importFailedMessage": "Import mislukt: {error}",
+  "@importFailedMessage": {
+    "placeholders": {
+      "error": {}
+    },
+    "description": "Auto-generated description for importFailedMessage."
+  },
+  "importFailedTitle": "Import mislukt",
+  "@importFailedTitle": {
+    "description": "Auto-generated description for importFailedTitle."
+  },
+  "addUserDialogTitle": "Gebruiker toevoegen",
+  "@addUserDialogTitle": {
+    "description": "Auto-generated description for addUserDialogTitle."
+  },
+  "saveButton": "Opslaan",
+  "@saveButton": {
+    "description": "Auto-generated description for saveButton."
+  },
+  "userAddedMessage": "Gebruiker toegevoegd.",
+  "@userAddedMessage": {
+    "description": "Auto-generated description for userAddedMessage."
+  },
+  "invalidUserMessage": "Ongeldige gebruiker.",
+  "@invalidUserMessage": {
+    "description": "Auto-generated description for invalidUserMessage."
+  },
+  "deleteUserDialogTitle": "Gebruiker verwijderen",
+  "@deleteUserDialogTitle": {
+    "description": "Auto-generated description for deleteUserDialogTitle."
+  },
+  "deleteUserDialogContent": "Weet je zeker dat je {username} wilt verwijderen?",
+  "@deleteUserDialogContent": {
+    "placeholders": {
+      "username": {}
+    },
+    "description": "Auto-generated description for deleteUserDialogContent."
+  },
+  "deleteButton": "Verwijderen",
+  "@deleteButton": {
+    "description": "Auto-generated description for deleteButton."
+  },
+  "userDeletedMessage": "Gebruiker verwijderd: {username}",
+  "@userDeletedMessage": {
+    "placeholders": {
+      "username": {}
+    },
+    "description": "Auto-generated description for userDeletedMessage."
+  },
+  "projectsTitle": "Projecten",
+  "@projectsTitle": {
+    "description": "Auto-generated description for projectsTitle."
+  },
+  "newProjectButton": "Nieuw project",
+  "@newProjectButton": {
+    "description": "Auto-generated description for newProjectButton."
+  },
+  "noProjectsYet": "Nog geen projecten",
+  "@noProjectsYet": {
+    "description": "Auto-generated description for noProjectsYet."
+  },
+  "noProjectsFound": "Geen projecten gevonden",
+  "@noProjectsFound": {
+    "description": "Auto-generated description for noProjectsFound."
+  },
+  "loadingMoreProjects": "Meer projecten laden...",
+  "@loadingMoreProjects": {
+    "description": "Auto-generated description for loadingMoreProjects."
+  },
+  "sortByLabel": "Sorteren op",
+  "@sortByLabel": {
+    "description": "Auto-generated description for sortByLabel."
+  },
+  "projectSortName": "Naam",
+  "@projectSortName": {
+    "description": "Auto-generated description for projectSortName."
+  },
+  "projectSortProgress": "Voortgang",
+  "@projectSortProgress": {
+    "description": "Auto-generated description for projectSortProgress."
+  },
+  "projectSortPriority": "Prioriteit",
+  "@projectSortPriority": {
+    "description": "Auto-generated description for projectSortPriority."
+  },
+  "allLabel": "Alles",
+  "@allLabel": {
+    "description": "Auto-generated description for allLabel."
+  },
+  "loadProjectsFailed": "Kon projecten niet laden.",
+  "@loadProjectsFailed": {
+    "description": "Auto-generated description for loadProjectsFailed."
+  },
+  "projectSemanticsLabel": "Project {title}",
+  "@projectSemanticsLabel": {
+    "placeholders": {
+      "title": {}
+    },
+    "description": "Auto-generated description for projectSemanticsLabel."
+  },
+  "statusSemanticsLabel": "Status {status}",
+  "@statusSemanticsLabel": {
+    "placeholders": {
+      "status": {}
+    },
+    "description": "Auto-generated description for statusSemanticsLabel."
+  },
+  "newProjectDialogTitle": "Nieuw project",
+  "@newProjectDialogTitle": {
+    "description": "Auto-generated description for newProjectDialogTitle."
+  },
+  "projectNameLabel": "Projectnaam",
+  "@projectNameLabel": {
+    "description": "Auto-generated description for projectNameLabel."
+  },
+  "descriptionLabel": "Beschrijving",
+  "@descriptionLabel": {
+    "description": "Auto-generated description for descriptionLabel."
+  },
+  "urgencyLabel": "Urgentie",
+  "@urgencyLabel": {
+    "description": "Auto-generated description for urgencyLabel."
+  },
+  "urgencyLow": "Laag",
+  "@urgencyLow": {
+    "description": "Auto-generated description for urgencyLow."
+  },
+  "urgencyMedium": "Normaal",
+  "@urgencyMedium": {
+    "description": "Auto-generated description for urgencyMedium."
+  },
+  "urgencyHigh": "Hoog",
+  "@urgencyHigh": {
+    "description": "Auto-generated description for urgencyHigh."
+  },
+  "projectCreatedMessage": "Project aangemaakt: {name}",
+  "@projectCreatedMessage": {
+    "placeholders": {
+      "name": {}
+    },
+    "description": "Auto-generated description for projectCreatedMessage."
+  },
+  "projectDetailsTitle": "Projectdetails",
+  "@projectDetailsTitle": {
+    "description": "Auto-generated description for projectDetailsTitle."
+  },
+  "aiChatWithProjectFilesTooltip": "AI chat met projectbestanden",
+  "@aiChatWithProjectFilesTooltip": {
+    "description": "Auto-generated description for aiChatWithProjectFilesTooltip."
+  },
+  "moreOptionsLabel": "Meer opties",
+  "@moreOptionsLabel": {
+    "description": "Auto-generated description for moreOptionsLabel."
+  },
+  "tasksTitle": "Taken",
+  "@tasksTitle": {
+    "description": "Auto-generated description for tasksTitle."
+  },
+  "tasksTab": "Taken",
+  "@tasksTab": {
+    "description": "Auto-generated description for tasksTab."
+  },
+  "detailsTab": "Details",
+  "@detailsTab": {
+    "description": "Auto-generated description for detailsTab."
+  },
+  "tasksLoadFailed": "Kon taken niet laden.",
+  "@tasksLoadFailed": {
+    "description": "Auto-generated description for tasksLoadFailed."
+  },
+  "projectOverviewTitle": "Projectoverzicht",
+  "@projectOverviewTitle": {
+    "description": "Auto-generated description for projectOverviewTitle."
+  },
+  "tasksLoading": "Taken laden...",
+  "@tasksLoading": {
+    "description": "Auto-generated description for tasksLoading."
+  },
+  "taskStatisticsTitle": "Taakstatistieken",
+  "@taskStatisticsTitle": {
+    "description": "Auto-generated description for taskStatisticsTitle."
+  },
+  "totalLabel": "Totaal",
+  "@totalLabel": {
+    "description": "Auto-generated description for totalLabel."
+  },
+  "completedLabel": "Voltooid",
+  "@completedLabel": {
+    "description": "Auto-generated description for completedLabel."
+  },
+  "inProgressLabel": "Bezig",
+  "@inProgressLabel": {
+    "description": "Auto-generated description for inProgressLabel."
+  },
+  "remainingLabel": "Resterend",
+  "@remainingLabel": {
+    "description": "Auto-generated description for remainingLabel."
+  },
+  "completionPercentLabel": "{percent}% voltooid",
+  "@completionPercentLabel": {
+    "placeholders": {
+      "percent": {}
+    },
+    "description": "Auto-generated description for completionPercentLabel."
+  },
+  "burndownChartTitle": "Burndown-grafiek",
+  "@burndownChartTitle": {
+    "description": "Auto-generated description for burndownChartTitle."
+  },
+  "chartPlaceholderTitle": "Grafiek placeholder",
+  "@chartPlaceholderTitle": {
+    "description": "Auto-generated description for chartPlaceholderTitle."
+  },
+  "chartPlaceholderSubtitle": "fl_chart integratie komt binnenkort",
+  "@chartPlaceholderSubtitle": {
+    "description": "Auto-generated description for chartPlaceholderSubtitle."
+  },
+  "workflowsTitle": "Workflows",
+  "@workflowsTitle": {
+    "description": "Auto-generated description for workflowsTitle."
+  },
+  "noWorkflowsAvailable": "Nog geen workflow-items beschikbaar.",
+  "@noWorkflowsAvailable": {
+    "description": "Auto-generated description for noWorkflowsAvailable."
+  },
+  "taskStatusTodo": "Te doen",
+  "@taskStatusTodo": {
+    "description": "Auto-generated description for taskStatusTodo."
+  },
+  "taskStatusInProgress": "Bezig",
+  "@taskStatusInProgress": {
+    "description": "Auto-generated description for taskStatusInProgress."
+  },
+  "taskStatusReview": "Review",
+  "@taskStatusReview": {
+    "description": "Auto-generated description for taskStatusReview."
+  },
+  "taskStatusDone": "Gereed",
+  "@taskStatusDone": {
+    "description": "Auto-generated description for taskStatusDone."
+  },
+  "workflowStatusActive": "Actief",
+  "@workflowStatusActive": {
+    "description": "Auto-generated description for workflowStatusActive."
+  },
+  "workflowStatusPending": "In afwachting",
+  "@workflowStatusPending": {
+    "description": "Auto-generated description for workflowStatusPending."
+  },
+  "noTasksYet": "Nog geen taken",
+  "@noTasksYet": {
+    "description": "Auto-generated description for noTasksYet."
+  },
+  "projectTimeTitle": "Projecttijd",
+  "@projectTimeTitle": {
+    "description": "Auto-generated description for projectTimeTitle."
+  },
+  "urgencyValue": "Urgentie: {value}",
+  "@urgencyValue": {
+    "placeholders": {
+      "value": {}
+    },
+    "description": "Auto-generated description for urgencyValue."
+  },
+  "trackedTimeValue": "Gewerkte tijd: {value}",
+  "@trackedTimeValue": {
+    "placeholders": {
+      "value": {}
+    },
+    "description": "Auto-generated description for trackedTimeValue."
+  },
+  "hourShort": "u",
+  "@hourShort": {
+    "description": "Auto-generated description for hourShort."
+  },
+  "minuteShort": "m",
+  "@minuteShort": {
+    "description": "Auto-generated description for minuteShort."
+  },
+  "secondShort": "s",
+  "@secondShort": {
+    "description": "Auto-generated description for secondShort."
+  },
+  "searchTasksHint": "Zoek taken...",
+  "@searchTasksHint": {
+    "description": "Auto-generated description for searchTasksHint."
+  },
+  "searchAttachmentsHint": "Zoek bijlagen...",
+  "@searchAttachmentsHint": {
+    "description": "Auto-generated description for searchAttachmentsHint."
+  },
+  "clearSearchTooltip": "Zoekopdracht wissen",
+  "@clearSearchTooltip": {
+    "description": "Auto-generated description for clearSearchTooltip."
+  },
+  "projectMapTitle": "Projectmap",
+  "@projectMapTitle": {
+    "description": "Auto-generated description for projectMapTitle."
+  },
+  "linkProjectMapButton": "Projectmap koppelen",
+  "@linkProjectMapButton": {
+    "description": "Auto-generated description for linkProjectMapButton."
+  },
+  "projectDataLoading": "Projectgegevens laden...",
+  "@projectDataLoading": {
+    "description": "Auto-generated description for projectDataLoading."
+  },
+  "projectDataLoadFailed": "Kon projectgegevens niet laden.",
+  "@projectDataLoadFailed": {
+    "description": "Auto-generated description for projectDataLoadFailed."
+  },
+  "currentMapLabel": "Huidige map: {path}",
+  "@currentMapLabel": {
+    "placeholders": {
+      "path": {}
+    },
+    "description": "Auto-generated description for currentMapLabel."
+  },
+  "noProjectMapLinked": "Nog geen map gekoppeld. Koppel een map om bestanden in te lezen.",
+  "@noProjectMapLinked": {
+    "description": "Auto-generated description for noProjectMapLinked."
+  },
+  "projectNotAvailable": "Project niet beschikbaar.",
+  "@projectNotAvailable": {
+    "description": "Auto-generated description for projectNotAvailable."
+  },
+  "enableConsentInSettings": "Schakel toestemming in bij Settings.",
+  "@enableConsentInSettings": {
+    "description": "Auto-generated description for enableConsentInSettings."
+  },
+  "projectMapLinked": "Projectmap gekoppeld.",
+  "@projectMapLinked": {
+    "description": "Auto-generated description for projectMapLinked."
+  },
+  "privacyWarningTitle": "Privacy waarschuwing",
+  "@privacyWarningTitle": {
+    "description": "Auto-generated description for privacyWarningTitle."
+  },
+  "privacyWarningContent": "Waarschuwing: Gevoelige data kan worden gelezen.",
+  "@privacyWarningContent": {
+    "description": "Auto-generated description for privacyWarningContent."
+  },
+  "continueButton": "Doorgaan",
+  "@continueButton": {
+    "description": "Auto-generated description for continueButton."
+  },
+  "attachFilesTooltip": "Bestanden koppelen",
+  "@attachFilesTooltip": {
+    "description": "Auto-generated description for attachFilesTooltip."
+  },
+  "moreAttachmentsLabel": "+{count}",
+  "@moreAttachmentsLabel": {
+    "placeholders": {
+      "count": {}
+    },
+    "description": "Auto-generated description for moreAttachmentsLabel."
+  },
+  "aiAssistantLabel": "AI Assistent",
+  "@aiAssistantLabel": {
+    "description": "Auto-generated description for aiAssistantLabel."
+  },
+  "welcomeBack": "Welkom terug! 👋",
+  "@welcomeBack": {
+    "description": "Auto-generated description for welcomeBack."
+  },
+  "projectsOverviewSubtitle": "Hier is een overzicht van je actieve projecten",
+  "@projectsOverviewSubtitle": {
+    "description": "Auto-generated description for projectsOverviewSubtitle."
+  },
+  "recentWorkflowsTitle": "Recente workflows",
+  "@recentWorkflowsTitle": {
+    "description": "Auto-generated description for recentWorkflowsTitle."
+  },
+  "recentWorkflowsLoading": "Recente workflows laden...",
+  "@recentWorkflowsLoading": {
+    "description": "Auto-generated description for recentWorkflowsLoading."
+  },
+  "recentWorkflowsLoadFailed": "Kon recente workflows niet laden.",
+  "@recentWorkflowsLoadFailed": {
+    "description": "Auto-generated description for recentWorkflowsLoadFailed."
+  },
+  "retryButton": "Opnieuw proberen",
+  "@retryButton": {
+    "description": "Auto-generated description for retryButton."
+  },
+  "noRecentTasks": "Geen recente taken beschikbaar.",
+  "@noRecentTasks": {
+    "description": "Auto-generated description for noRecentTasks."
+  },
+  "unknownProject": "Onbekend project",
+  "@unknownProject": {
+    "description": "Auto-generated description for unknownProject."
+  },
+  "projectTaskStatusSemantics": "Project {projectName}, taak {taskTitle}, status {statusLabel}, {timeLabel}",
+  "@projectTaskStatusSemantics": {
+    "placeholders": {
+      "projectName": {},
+      "taskTitle": {},
+      "statusLabel": {},
+      "timeLabel": {}
+    },
+    "description": "Auto-generated description for projectTaskStatusSemantics."
+  },
+  "taskStatusSemantics": "Taak {taskTitle} {statusLabel}",
+  "@taskStatusSemantics": {
+    "placeholders": {
+      "taskTitle": {},
+      "statusLabel": {}
+    },
+    "description": "Auto-generated description for taskStatusSemantics."
+  },
+  "timeJustNow": "Zojuist",
+  "@timeJustNow": {
+    "description": "Auto-generated description for timeJustNow."
+  },
+  "timeMinutesAgo": "{minutes} min geleden",
+  "@timeMinutesAgo": {
+    "placeholders": {
+      "minutes": {}
+    },
+    "description": "Auto-generated description for timeMinutesAgo."
+  },
+  "timeHoursAgo": "{hours} uur geleden",
+  "@timeHoursAgo": {
+    "placeholders": {
+      "hours": {}
+    },
+    "description": "Auto-generated description for timeHoursAgo."
+  },
+  "timeDaysAgo": "{days} dagen geleden",
+  "@timeDaysAgo": {
+    "placeholders": {
+      "days": {}
+    },
+    "description": "Auto-generated description for timeDaysAgo."
+  },
+  "timeWeeksAgo": "{weeks} weken geleden",
+  "@timeWeeksAgo": {
+    "placeholders": {
+      "weeks": {}
+    },
+    "description": "Auto-generated description for timeWeeksAgo."
+  },
+  "timeMonthsAgo": "{months} maanden geleden",
+  "@timeMonthsAgo": {
+    "placeholders": {
+      "months": {}
+    },
+    "description": "Auto-generated description for timeMonthsAgo."
+  },
+  "projectProgressChartSemantics": "Project voortgangsgrafiek voor {projectName}. Voltooid {completedPercent} procent, resterend {pendingPercent} procent.",
+  "@projectProgressChartSemantics": {
+    "placeholders": {
+      "projectName": {},
+      "completedPercent": {},
+      "pendingPercent": {}
+    },
+    "description": "Auto-generated description for projectProgressChartSemantics."
+  },
+  "progressLabel": "Voortgang",
+  "@progressLabel": {
+    "description": "Auto-generated description for progressLabel."
+  },
+  "completedPercentLabel": "Voltooid: {percent}%",
+  "@completedPercentLabel": {
+    "placeholders": {
+      "percent": {}
+    },
+    "description": "Auto-generated description for completedPercentLabel."
+  },
+  "pendingPercentLabel": "Resterend: {percent}%",
+  "@pendingPercentLabel": {
+    "placeholders": {
+      "percent": {}
+    },
+    "description": "Auto-generated description for pendingPercentLabel."
+  },
+  "noDescription": "Geen beschrijving",
+  "@noDescription": {
+    "description": "Auto-generated description for noDescription."
+  },
+  "closeButton": "Sluiten",
+  "@closeButton": {
+    "description": "Auto-generated description for closeButton."
+  },
+  "burndownProgressTitle": "Burndown voortgang",
+  "@burndownProgressTitle": {
+    "description": "Auto-generated description for burndownProgressTitle."
+  },
+  "actualProgressLabel": "Werkelijke voortgang",
+  "@actualProgressLabel": {
+    "description": "Auto-generated description for actualProgressLabel."
+  },
+  "idealTrendLabel": "Ideale trend",
+  "@idealTrendLabel": {
+    "description": "Auto-generated description for idealTrendLabel."
+  },
+  "statusLabel": "Status",
+  "@statusLabel": {
+    "description": "Auto-generated description for statusLabel."
+  },
+  "burndownChartSemantics": "Burndown grafiek voor {projectName}. Werkelijke punten: {actualPoints}. Ideale punten: {idealPoints}.",
+  "@burndownChartSemantics": {
+    "placeholders": {
+      "projectName": {},
+      "actualPoints": {},
+      "idealPoints": {}
+    },
+    "description": "Auto-generated description for burndownChartSemantics."
+  },
+  "aiChatSemanticsLabel": "AI chat",
+  "@aiChatSemanticsLabel": {
+    "description": "Auto-generated description for aiChatSemanticsLabel."
+  },
+  "aiAssistantTitle": "AI Project Assistent",
+  "@aiAssistantTitle": {
+    "description": "Auto-generated description for aiAssistantTitle."
+  },
+  "clearChatTooltip": "Chat wissen",
+  "@clearChatTooltip": {
+    "description": "Auto-generated description for clearChatTooltip."
+  },
+  "noMessagesLabel": "Geen berichten",
+  "@noMessagesLabel": {
+    "description": "Auto-generated description for noMessagesLabel."
+  },
+  "aiEmptyTitle": "Start een gesprek met de AI assistent",
+  "@aiEmptyTitle": {
+    "description": "Auto-generated description for aiEmptyTitle."
+  },
+  "aiEmptySubtitle": "Vraag bijvoorbeeld: \"Genereer stappenplan voor project: webshop\"",
+  "@aiEmptySubtitle": {
+    "description": "Auto-generated description for aiEmptySubtitle."
+  },
+  "useProjectFilesLabel": "Gebruik project bestanden",
+  "@useProjectFilesLabel": {
+    "description": "Auto-generated description for useProjectFilesLabel."
+  },
+  "typeMessageHint": "Type een bericht...",
+  "@typeMessageHint": {
+    "description": "Auto-generated description for typeMessageHint."
+  },
+  "projectFilesReadFailed": "Kon projectbestanden niet lezen.",
+  "@projectFilesReadFailed": {
+    "description": "Auto-generated description for projectFilesReadFailed."
+  },
+  "aiResponseFailedTitle": "AI antwoord mislukt",
+  "@aiResponseFailedTitle": {
+    "description": "Auto-generated description for aiResponseFailedTitle."
+  },
+  "sendMessageTooltip": "Bericht versturen",
+  "@sendMessageTooltip": {
+    "description": "Auto-generated description for sendMessageTooltip."
+  },
+  "loginMissingCredentials": "Vul gebruikersnaam en wachtwoord in.",
+  "@loginMissingCredentials": {
+    "description": "Auto-generated description for loginMissingCredentials."
+  },
+  "loginFailedMessage": "Inloggen mislukt. Controleer je gegevens.",
+  "@loginFailedMessage": {
+    "description": "Auto-generated description for loginFailedMessage."
+  },
+  "registerTitle": "Registreren",
+  "@registerTitle": {
+    "description": "Auto-generated description for registerTitle."
+  },
+  "languageLabel": "Taal",
+  "@languageLabel": {
+    "description": "Auto-generated description for languageLabel."
+  },
+  "languageSystem": "Systeemstandaard",
+  "@languageSystem": {
+    "description": "Auto-generated description for languageSystem."
+  },
+  "languageEnglish": "Engels",
+  "@languageEnglish": {
+    "description": "Auto-generated description for languageEnglish."
+  },
+  "languageDutch": "Nederlands",
+  "@languageDutch": {
+    "description": "Auto-generated description for languageDutch."
+  },
+  "languageSpanish": "Spaans",
+  "@languageSpanish": {
+    "description": "Auto-generated description for languageSpanish."
+  },
+  "languageFrench": "Frans",
+  "@languageFrench": {
+    "description": "Auto-generated description for languageFrench."
+  },
+  "languageGerman": "Duits",
+  "@languageGerman": {
+    "description": "Auto-generated description for languageGerman."
+  },
+  "languagePortuguese": "Portugees",
+  "@languagePortuguese": {
+    "description": "Auto-generated description for languagePortuguese."
+  },
+  "languageItalian": "Italiaans",
+  "@languageItalian": {
+    "description": "Auto-generated description for languageItalian."
+  },
+  "languageArabic": "Arabisch",
+  "@languageArabic": {
+    "description": "Auto-generated description for languageArabic."
+  },
+  "languageChinese": "Chinees",
+  "@languageChinese": {
+    "description": "Auto-generated description for languageChinese."
+  },
+  "languageJapanese": "Japans",
+  "@languageJapanese": {
+    "description": "Auto-generated description for languageJapanese."
+  },
+  "languageKorean": "Koreaans",
+  "@languageKorean": {
+    "description": "Auto-generated description for languageKorean."
+  },
+  "languageRussian": "Russisch",
+  "@languageRussian": {
+    "description": "Auto-generated description for languageRussian."
+  },
+  "languageHindi": "Hindi",
+  "@languageHindi": {
+    "description": "Auto-generated description for languageHindi."
+  },
+  "repeatPasswordLabel": "Herhaal wachtwoord",
+  "@repeatPasswordLabel": {
+    "description": "Auto-generated description for repeatPasswordLabel."
+  },
+  "passwordRulesTitle": "Wachtwoordregels",
+  "@passwordRulesTitle": {
+    "description": "Auto-generated description for passwordRulesTitle."
+  },
+  "passwordRuleMinLength": "Minimaal 8 tekens",
+  "@passwordRuleMinLength": {
+    "description": "Auto-generated description for passwordRuleMinLength."
+  },
+  "passwordRuleHasLetter": "Bevat een letter",
+  "@passwordRuleHasLetter": {
+    "description": "Auto-generated description for passwordRuleHasLetter."
+  },
+  "passwordRuleHasDigit": "Bevat een cijfer",
+  "@passwordRuleHasDigit": {
+    "description": "Auto-generated description for passwordRuleHasDigit."
+  },
+  "passwordRuleMatches": "Wachtwoorden komen overeen",
+  "@passwordRuleMatches": {
+    "description": "Auto-generated description for passwordRuleMatches."
+  },
+  "registerButton": "Registreren",
+  "@registerButton": {
+    "description": "Auto-generated description for registerButton."
+  },
+  "registrationIssueUsernameMissing": "gebruikersnaam ontbreekt",
+  "@registrationIssueUsernameMissing": {
+    "description": "Auto-generated description for registrationIssueUsernameMissing."
+  },
+  "registrationIssueMinLength": "minimaal 8 tekens",
+  "@registrationIssueMinLength": {
+    "description": "Auto-generated description for registrationIssueMinLength."
+  },
+  "registrationIssueLetter": "minstens 1 letter",
+  "@registrationIssueLetter": {
+    "description": "Auto-generated description for registrationIssueLetter."
+  },
+  "registrationIssueDigit": "minstens 1 cijfer",
+  "@registrationIssueDigit": {
+    "description": "Auto-generated description for registrationIssueDigit."
+  },
+  "registrationIssueNoMatch": "wachtwoorden komen niet overeen",
+  "@registrationIssueNoMatch": {
+    "description": "Auto-generated description for registrationIssueNoMatch."
+  },
+  "registrationFailedWithIssues": "Registratie mislukt: {issues}.",
+  "@registrationFailedWithIssues": {
+    "placeholders": {
+      "issues": {}
+    },
+    "description": "Auto-generated description for registrationFailedWithIssues."
+  },
+  "accountCreatedMessage": "Account aangemaakt. Log nu in.",
+  "@accountCreatedMessage": {
+    "description": "Auto-generated description for accountCreatedMessage."
+  },
+  "registerFailedMessage": "Registreren mislukt.",
+  "@registerFailedMessage": {
+    "description": "Auto-generated description for registerFailedMessage."
+  },
+  "accessDeniedMessage": "Toegang geweigerd.",
+  "@accessDeniedMessage": {
+    "description": "Message shown when a user lacks permission."
+  },
+  "adminPanelTitle": "Beheerpaneel",
+  "@adminPanelTitle": {
+    "description": "Title for the admin panel screen."
+  },
+  "adminPanelSubtitle": "Beheer rollen, groepen en machtigingen.",
+  "@adminPanelSubtitle": {
+    "description": "Subtitle for the admin panel entry."
+  },
+  "rolesTitle": "Rollen",
+  "@rolesTitle": {
+    "description": "Header for roles section."
+  },
+  "noRolesFound": "Geen rollen gevonden.",
+  "@noRolesFound": {
+    "description": "Shown when no roles exist."
+  },
+  "permissionsCount": "Machtigingen: {count}",
+  "@permissionsCount": {
+    "placeholders": {
+      "count": {}
+    },
+    "description": "Displays the number of permissions on a role."
+  },
+  "editPermissionsTooltip": "Machtigingen bewerken",
+  "@editPermissionsTooltip": {
+    "description": "Tooltip for editing permissions."
+  },
+  "groupsTitle": "Groepen",
+  "@groupsTitle": {
+    "description": "Header for groups section."
+  },
+  "noGroupsFound": "Geen groepen gevonden.",
+  "@noGroupsFound": {
+    "description": "Shown when no groups exist."
+  },
+  "roleLabel": "Rol",
+  "@roleLabel": {
+    "description": "Label for a role selection."
+  },
+  "groupAddTitle": "Groep toevoegen",
+  "@groupAddTitle": {
+    "description": "Title for adding a group."
+  },
+  "groupNameLabel": "Groepsnaam",
+  "@groupNameLabel": {
+    "description": "Label for the group name input."
+  },
+  "groupLabel": "Groep",
+  "@groupLabel": {
+    "description": "Label for a group chip or field."
+  },
+  "addGroupMemberTitle": "Lid toevoegen aan {groupName}",
+  "@addGroupMemberTitle": {
+    "placeholders": {
+      "groupName": {}
+    },
+    "description": "Title for adding a member to a specific group."
+  },
+  "addGroupMemberTooltip": "Lid toevoegen",
+  "@addGroupMemberTooltip": {
+    "description": "Tooltip for adding a group member."
+  },
+  "groupMembersTitle": "Groepsleden: {groupName}",
+  "@groupMembersTitle": {
+    "placeholders": {
+      "groupName": {}
+    },
+    "description": "Title for the group members dialog."
+  },
+  "noGroupMembers": "Geen groepsleden.",
+  "@noGroupMembers": {
+    "description": "Shown when a group has no members."
+  },
+  "removeGroupMemberTooltip": "Lid verwijderen",
+  "@removeGroupMemberTooltip": {
+    "description": "Tooltip for removing a group member."
+  },
+  "roleCreateTitle": "Rol maken",
+  "@roleCreateTitle": {
+    "description": "Title for creating a role."
+  },
+  "roleNameLabel": "Rolnaam",
+  "@roleNameLabel": {
+    "description": "Label for the role name input."
+  },
+  "permissionsTitle": "Machtigingen",
+  "@permissionsTitle": {
+    "description": "Title for permissions selection dialog."
+  },
+  "settingsBackupTitle": "Back-up maken",
+  "@settingsBackupTitle": {
+    "description": "Title for manual Hive backup action."
+  },
+  "settingsBackupSubtitle": "Een lokale back-up van Hive-gegevens opslaan.",
+  "@settingsBackupSubtitle": {
+    "description": "Subtitle for manual Hive backup action."
+  },
+  "settingsRestoreTitle": "Back-up herstellen",
+  "@settingsRestoreTitle": {
+    "description": "Title for restoring Hive backup."
+  },
+  "settingsRestoreSubtitle": "Lokale gegevens vervangen door een back-upbestand.",
+  "@settingsRestoreSubtitle": {
+    "description": "Subtitle for restoring Hive backup."
+  },
+  "backupSuccessMessage": "Back-up opgeslagen: {path}",
+  "@backupSuccessMessage": {
+    "description": "Shown after a backup file is created.",
+    "placeholders": {
+      "path": {}
+    }
+  },
+  "backupFailedMessage": "Back-up mislukt: {error}",
+  "@backupFailedMessage": {
+    "description": "Shown when backup fails.",
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "restoreSuccessMessage": "Back-up hersteld. Herstart de app om gegevens opnieuw te laden.",
+  "@restoreSuccessMessage": {
+    "description": "Shown after a successful restore."
+  },
+  "restoreFailedMessage": "Herstellen mislukt: {error}",
+  "@restoreFailedMessage": {
+    "description": "Shown when restore fails.",
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "restoreConfirmTitle": "Back-up herstellen?",
+  "@restoreConfirmTitle": {
+    "description": "Title for restore confirmation dialog."
+  },
+  "restoreConfirmContent": "Dit overschrijft lokale gegevens.",
+  "@restoreConfirmContent": {
+    "description": "Content for restore confirmation dialog."
+  },
+  "restoreConfirmButton": "Herstellen",
+  "@restoreConfirmButton": {
+    "description": "Button label for confirming restore."
+  },
+  "settingsBackupLastRunLabel": "Laatste back-up",
+  "@settingsBackupLastRunLabel": {
+    "description": "Label for last backup timestamp."
+  },
+  "backupNeverMessage": "Nooit",
+  "@backupNeverMessage": {
+    "description": "Shown when no backup has been created yet."
+  },
+  "backupNowButton": "Nu back-up maken",
+  "@backupNowButton": {
+    "description": "Button label to trigger a backup immediately."
+  },
+  "settingsBackupPathLabel": "Back-upbestand",
+  "@settingsBackupPathLabel": {
+    "description": "Label for last backup file path."
+  },
+  "backupNoFileMessage": "Nog geen back-upbestand",
+  "@backupNoFileMessage": {
+    "description": "Shown when no backup file path is available."
+  }
+}

@@ -1,0 +1,1085 @@
+{
+  "@@locale": "zh",
+  "appTitle": "项目管理应用",
+  "@appTitle": {
+    "description": "Auto-generated description for appTitle."
+  },
+  "loginTitle": "登录",
+  "@loginTitle": {
+    "description": "Auto-generated description for loginTitle."
+  },
+  "menuLabel": "菜单",
+  "@menuLabel": {
+    "description": "Auto-generated description for menuLabel."
+  },
+  "usernameLabel": "用户名",
+  "@usernameLabel": {
+    "description": "Auto-generated description for usernameLabel."
+  },
+  "passwordLabel": "密码",
+  "@passwordLabel": {
+    "description": "Auto-generated description for passwordLabel."
+  },
+  "loginButton": "登录",
+  "@loginButton": {
+    "description": "Auto-generated description for loginButton."
+  },
+  "createAccount": "创建账号",
+  "@createAccount": {
+    "description": "Auto-generated description for createAccount."
+  },
+  "logoutTooltip": "退出登录",
+  "@logoutTooltip": {
+    "description": "Auto-generated description for logoutTooltip."
+  },
+  "closeAppTooltip": "关闭应用",
+  "@closeAppTooltip": {
+    "description": "Auto-generated description for closeAppTooltip."
+  },
+  "settingsTitle": "设置",
+  "@settingsTitle": {
+    "description": "Auto-generated description for settingsTitle."
+  },
+  "settingsDisplaySection": "显示",
+  "@settingsDisplaySection": {
+    "description": "Auto-generated description for settingsDisplaySection."
+  },
+  "settingsDarkModeTitle": "深色模式",
+  "@settingsDarkModeTitle": {
+    "description": "Auto-generated description for settingsDarkModeTitle."
+  },
+  "settingsDarkModeSubtitle": "在浅色与深色之间切换",
+  "@settingsDarkModeSubtitle": {
+    "description": "Auto-generated description for settingsDarkModeSubtitle."
+  },
+  "settingsFollowSystemTitle": "跟随系统主题",
+  "@settingsFollowSystemTitle": {
+    "description": "Auto-generated description for settingsFollowSystemTitle."
+  },
+  "settingsFollowSystemSubtitle": "使用设备主题",
+  "@settingsFollowSystemSubtitle": {
+    "description": "Auto-generated description for settingsFollowSystemSubtitle."
+  },
+  "settingsLanguageTitle": "语言",
+  "@settingsLanguageTitle": {
+    "description": "Auto-generated description for settingsLanguageTitle."
+  },
+  "settingsLanguageSubtitle": "选择应用语言",
+  "@settingsLanguageSubtitle": {
+    "description": "Auto-generated description for settingsLanguageSubtitle."
+  },
+  "settingsNotificationsSection": "通知",
+  "@settingsNotificationsSection": {
+    "description": "Auto-generated description for settingsNotificationsSection."
+  },
+  "settingsNotificationsTitle": "通知",
+  "@settingsNotificationsTitle": {
+    "description": "Auto-generated description for settingsNotificationsTitle."
+  },
+  "settingsNotificationsSubtitle": "更新和提醒",
+  "@settingsNotificationsSubtitle": {
+    "description": "Auto-generated description for settingsNotificationsSubtitle."
+  },
+  "settingsPrivacySection": "隐私",
+  "@settingsPrivacySection": {
+    "description": "Auto-generated description for settingsPrivacySection."
+  },
+  "settingsLocalFilesConsentTitle": "本地文件权限",
+  "@settingsLocalFilesConsentTitle": {
+    "description": "Auto-generated description for settingsLocalFilesConsentTitle."
+  },
+  "settingsLocalFilesConsentSubtitle": "允许应用读取本地项目文件用于AI上下文。",
+  "@settingsLocalFilesConsentSubtitle": {
+    "description": "Auto-generated description for settingsLocalFilesConsentSubtitle."
+  },
+  "settingsUseProjectFilesTitle": "使用项目文件",
+  "@settingsUseProjectFilesTitle": {
+    "description": "Auto-generated description for settingsUseProjectFilesTitle."
+  },
+  "settingsUseProjectFilesSubtitle": "将本地文件加入AI提示词",
+  "@settingsUseProjectFilesSubtitle": {
+    "description": "Auto-generated description for settingsUseProjectFilesSubtitle."
+  },
+  "settingsProjectsSection": "项目",
+  "@settingsProjectsSection": {
+    "description": "Auto-generated description for settingsProjectsSection."
+  },
+  "settingsLogoutTitle": "退出登录",
+  "@settingsLogoutTitle": {
+    "description": "Auto-generated description for settingsLogoutTitle."
+  },
+  "settingsLogoutSubtitle": "结束当前会话",
+  "@settingsLogoutSubtitle": {
+    "description": "Auto-generated description for settingsLogoutSubtitle."
+  },
+  "settingsExportTitle": "导出项目",
+  "@settingsExportTitle": {
+    "description": "Auto-generated description for settingsExportTitle."
+  },
+  "settingsExportSubtitle": "将项目导出到文件",
+  "@settingsExportSubtitle": {
+    "description": "Auto-generated description for settingsExportSubtitle."
+  },
+  "settingsImportTitle": "导入项目",
+  "@settingsImportTitle": {
+    "description": "Auto-generated description for settingsImportTitle."
+  },
+  "settingsImportSubtitle": "从文件导入项目",
+  "@settingsImportSubtitle": {
+    "description": "Auto-generated description for settingsImportSubtitle."
+  },
+  "settingsUsersSection": "用户",
+  "@settingsUsersSection": {
+    "description": "Auto-generated description for settingsUsersSection."
+  },
+  "settingsCurrentUserTitle": "当前用户",
+  "@settingsCurrentUserTitle": {
+    "description": "Auto-generated description for settingsCurrentUserTitle."
+  },
+  "settingsNotLoggedIn": "未登录",
+  "@settingsNotLoggedIn": {
+    "description": "Auto-generated description for settingsNotLoggedIn."
+  },
+  "settingsNoUsersFound": "未找到用户。",
+  "@settingsNoUsersFound": {
+    "description": "Auto-generated description for settingsNoUsersFound."
+  },
+  "settingsLocalUserLabel": "本地用户",
+  "@settingsLocalUserLabel": {
+    "description": "Auto-generated description for settingsLocalUserLabel."
+  },
+  "settingsDeleteTooltip": "删除",
+  "@settingsDeleteTooltip": {
+    "description": "Auto-generated description for settingsDeleteTooltip."
+  },
+  "settingsLoadUsersFailed": "加载用户失败",
+  "@settingsLoadUsersFailed": {
+    "description": "Auto-generated description for settingsLoadUsersFailed."
+  },
+  "settingsAddUserTitle": "添加用户",
+  "@settingsAddUserTitle": {
+    "description": "Auto-generated description for settingsAddUserTitle."
+  },
+  "settingsAddUserSubtitle": "添加额外账号",
+  "@settingsAddUserSubtitle": {
+    "description": "Auto-generated description for settingsAddUserSubtitle."
+  },
+  "logoutDialogTitle": "退出登录",
+  "@logoutDialogTitle": {
+    "description": "Auto-generated description for logoutDialogTitle."
+  },
+  "logoutDialogContent": "确定要退出登录吗？",
+  "@logoutDialogContent": {
+    "description": "Auto-generated description for logoutDialogContent."
+  },
+  "cancelButton": "取消",
+  "@cancelButton": {
+    "description": "Auto-generated description for cancelButton."
+  },
+  "logoutButton": "退出登录",
+  "@logoutButton": {
+    "description": "Auto-generated description for logoutButton."
+  },
+  "loggedOutMessage": "已退出登录。",
+  "@loggedOutMessage": {
+    "description": "Auto-generated description for loggedOutMessage."
+  },
+  "exportCompleteMessage": "导出完成: {projectsPath}, {tasksPath}",
+  "@exportCompleteMessage": {
+    "placeholders": {
+      "projectsPath": {},
+      "tasksPath": {}
+    },
+    "description": "Auto-generated description for exportCompleteMessage."
+  },
+  "exportFailedMessage": "导出失败: {error}",
+  "@exportFailedMessage": {
+    "placeholders": {
+      "error": {}
+    },
+    "description": "Auto-generated description for exportFailedMessage."
+  },
+  "exportPasswordTitle": "加密导出",
+  "@exportPasswordTitle": {
+    "description": "Auto-generated description for exportPasswordTitle."
+  },
+  "exportPasswordSubtitle": "设置密码以加密导出文件。",
+  "@exportPasswordSubtitle": {
+    "description": "Auto-generated description for exportPasswordSubtitle."
+  },
+  "exportPasswordMismatch": "密码不匹配。",
+  "@exportPasswordMismatch": {
+    "description": "Auto-generated description for exportPasswordMismatch."
+  },
+  "importSelectFilesMessage": "请选择CSV和JSON文件。",
+  "@importSelectFilesMessage": {
+    "description": "Auto-generated description for importSelectFilesMessage."
+  },
+  "importCompleteMessage": "导入完成: {projectsPath}, {tasksPath}",
+  "@importCompleteMessage": {
+    "placeholders": {
+      "projectsPath": {},
+      "tasksPath": {}
+    },
+    "description": "Auto-generated description for importCompleteMessage."
+  },
+  "importFailedMessage": "导入失败: {error}",
+  "@importFailedMessage": {
+    "placeholders": {
+      "error": {}
+    },
+    "description": "Auto-generated description for importFailedMessage."
+  },
+  "importFailedTitle": "导入失败",
+  "@importFailedTitle": {
+    "description": "Auto-generated description for importFailedTitle."
+  },
+  "addUserDialogTitle": "添加用户",
+  "@addUserDialogTitle": {
+    "description": "Auto-generated description for addUserDialogTitle."
+  },
+  "saveButton": "保存",
+  "@saveButton": {
+    "description": "Auto-generated description for saveButton."
+  },
+  "userAddedMessage": "用户已添加。",
+  "@userAddedMessage": {
+    "description": "Auto-generated description for userAddedMessage."
+  },
+  "invalidUserMessage": "无效用户。",
+  "@invalidUserMessage": {
+    "description": "Auto-generated description for invalidUserMessage."
+  },
+  "deleteUserDialogTitle": "删除用户",
+  "@deleteUserDialogTitle": {
+    "description": "Auto-generated description for deleteUserDialogTitle."
+  },
+  "deleteUserDialogContent": "确定要删除 {username} 吗？",
+  "@deleteUserDialogContent": {
+    "placeholders": {
+      "username": {}
+    },
+    "description": "Auto-generated description for deleteUserDialogContent."
+  },
+  "deleteButton": "删除",
+  "@deleteButton": {
+    "description": "Auto-generated description for deleteButton."
+  },
+  "userDeletedMessage": "用户已删除: {username}",
+  "@userDeletedMessage": {
+    "placeholders": {
+      "username": {}
+    },
+    "description": "Auto-generated description for userDeletedMessage."
+  },
+  "projectsTitle": "项目",
+  "@projectsTitle": {
+    "description": "Auto-generated description for projectsTitle."
+  },
+  "newProjectButton": "新建项目",
+  "@newProjectButton": {
+    "description": "Auto-generated description for newProjectButton."
+  },
+  "noProjectsYet": "暂无项目",
+  "@noProjectsYet": {
+    "description": "Auto-generated description for noProjectsYet."
+  },
+  "noProjectsFound": "未找到项目",
+  "@noProjectsFound": {
+    "description": "Auto-generated description for noProjectsFound."
+  },
+  "loadingMoreProjects": "正在加载更多项目...",
+  "@loadingMoreProjects": {
+    "description": "Auto-generated description for loadingMoreProjects."
+  },
+  "sortByLabel": "排序",
+  "@sortByLabel": {
+    "description": "Auto-generated description for sortByLabel."
+  },
+  "projectSortName": "名称",
+  "@projectSortName": {
+    "description": "Auto-generated description for projectSortName."
+  },
+  "projectSortProgress": "进度",
+  "@projectSortProgress": {
+    "description": "Auto-generated description for projectSortProgress."
+  },
+  "projectSortPriority": "优先级",
+  "@projectSortPriority": {
+    "description": "Auto-generated description for projectSortPriority."
+  },
+  "allLabel": "全部",
+  "@allLabel": {
+    "description": "Auto-generated description for allLabel."
+  },
+  "loadProjectsFailed": "加载项目失败。",
+  "@loadProjectsFailed": {
+    "description": "Auto-generated description for loadProjectsFailed."
+  },
+  "projectSemanticsLabel": "项目 {title}",
+  "@projectSemanticsLabel": {
+    "placeholders": {
+      "title": {}
+    },
+    "description": "Auto-generated description for projectSemanticsLabel."
+  },
+  "statusSemanticsLabel": "状态 {status}",
+  "@statusSemanticsLabel": {
+    "placeholders": {
+      "status": {}
+    },
+    "description": "Auto-generated description for statusSemanticsLabel."
+  },
+  "newProjectDialogTitle": "新建项目",
+  "@newProjectDialogTitle": {
+    "description": "Auto-generated description for newProjectDialogTitle."
+  },
+  "projectNameLabel": "项目名称",
+  "@projectNameLabel": {
+    "description": "Auto-generated description for projectNameLabel."
+  },
+  "descriptionLabel": "描述",
+  "@descriptionLabel": {
+    "description": "Auto-generated description for descriptionLabel."
+  },
+  "urgencyLabel": "紧急度",
+  "@urgencyLabel": {
+    "description": "Auto-generated description for urgencyLabel."
+  },
+  "urgencyLow": "低",
+  "@urgencyLow": {
+    "description": "Auto-generated description for urgencyLow."
+  },
+  "urgencyMedium": "中",
+  "@urgencyMedium": {
+    "description": "Auto-generated description for urgencyMedium."
+  },
+  "urgencyHigh": "高",
+  "@urgencyHigh": {
+    "description": "Auto-generated description for urgencyHigh."
+  },
+  "projectCreatedMessage": "项目已创建: {name}",
+  "@projectCreatedMessage": {
+    "placeholders": {
+      "name": {}
+    },
+    "description": "Auto-generated description for projectCreatedMessage."
+  },
+  "projectDetailsTitle": "项目详情",
+  "@projectDetailsTitle": {
+    "description": "Auto-generated description for projectDetailsTitle."
+  },
+  "aiChatWithProjectFilesTooltip": "使用项目文件的AI聊天",
+  "@aiChatWithProjectFilesTooltip": {
+    "description": "Auto-generated description for aiChatWithProjectFilesTooltip."
+  },
+  "moreOptionsLabel": "更多选项",
+  "@moreOptionsLabel": {
+    "description": "Auto-generated description for moreOptionsLabel."
+  },
+  "tasksTitle": "任务",
+  "@tasksTitle": {
+    "description": "Auto-generated description for tasksTitle."
+  },
+  "tasksTab": "任务",
+  "@tasksTab": {
+    "description": "Auto-generated description for tasksTab."
+  },
+  "detailsTab": "详情",
+  "@detailsTab": {
+    "description": "Auto-generated description for detailsTab."
+  },
+  "tasksLoadFailed": "加载任务失败。",
+  "@tasksLoadFailed": {
+    "description": "Auto-generated description for tasksLoadFailed."
+  },
+  "projectOverviewTitle": "项目概览",
+  "@projectOverviewTitle": {
+    "description": "Auto-generated description for projectOverviewTitle."
+  },
+  "tasksLoading": "正在加载任务...",
+  "@tasksLoading": {
+    "description": "Auto-generated description for tasksLoading."
+  },
+  "taskStatisticsTitle": "任务统计",
+  "@taskStatisticsTitle": {
+    "description": "Auto-generated description for taskStatisticsTitle."
+  },
+  "totalLabel": "总计",
+  "@totalLabel": {
+    "description": "Auto-generated description for totalLabel."
+  },
+  "completedLabel": "已完成",
+  "@completedLabel": {
+    "description": "Auto-generated description for completedLabel."
+  },
+  "inProgressLabel": "进行中",
+  "@inProgressLabel": {
+    "description": "Auto-generated description for inProgressLabel."
+  },
+  "remainingLabel": "剩余",
+  "@remainingLabel": {
+    "description": "Auto-generated description for remainingLabel."
+  },
+  "completionPercentLabel": "完成 {percent}%",
+  "@completionPercentLabel": {
+    "placeholders": {
+      "percent": {}
+    },
+    "description": "Auto-generated description for completionPercentLabel."
+  },
+  "burndownChartTitle": "燃尽图",
+  "@burndownChartTitle": {
+    "description": "Auto-generated description for burndownChartTitle."
+  },
+  "chartPlaceholderTitle": "图表占位符",
+  "@chartPlaceholderTitle": {
+    "description": "Auto-generated description for chartPlaceholderTitle."
+  },
+  "chartPlaceholderSubtitle": "fl_chart 集成即将到来",
+  "@chartPlaceholderSubtitle": {
+    "description": "Auto-generated description for chartPlaceholderSubtitle."
+  },
+  "workflowsTitle": "工作流",
+  "@workflowsTitle": {
+    "description": "Auto-generated description for workflowsTitle."
+  },
+  "noWorkflowsAvailable": "没有可用的工作流项目。",
+  "@noWorkflowsAvailable": {
+    "description": "Auto-generated description for noWorkflowsAvailable."
+  },
+  "taskStatusTodo": "待办",
+  "@taskStatusTodo": {
+    "description": "Auto-generated description for taskStatusTodo."
+  },
+  "taskStatusInProgress": "进行中",
+  "@taskStatusInProgress": {
+    "description": "Auto-generated description for taskStatusInProgress."
+  },
+  "taskStatusReview": "评审",
+  "@taskStatusReview": {
+    "description": "Auto-generated description for taskStatusReview."
+  },
+  "taskStatusDone": "完成",
+  "@taskStatusDone": {
+    "description": "Auto-generated description for taskStatusDone."
+  },
+  "workflowStatusActive": "活动",
+  "@workflowStatusActive": {
+    "description": "Auto-generated description for workflowStatusActive."
+  },
+  "workflowStatusPending": "待处理",
+  "@workflowStatusPending": {
+    "description": "Auto-generated description for workflowStatusPending."
+  },
+  "noTasksYet": "暂无任务",
+  "@noTasksYet": {
+    "description": "Auto-generated description for noTasksYet."
+  },
+  "projectTimeTitle": "项目时间",
+  "@projectTimeTitle": {
+    "description": "Auto-generated description for projectTimeTitle."
+  },
+  "urgencyValue": "紧急度: {value}",
+  "@urgencyValue": {
+    "placeholders": {
+      "value": {}
+    },
+    "description": "Auto-generated description for urgencyValue."
+  },
+  "trackedTimeValue": "已记录时间: {value}",
+  "@trackedTimeValue": {
+    "placeholders": {
+      "value": {}
+    },
+    "description": "Auto-generated description for trackedTimeValue."
+  },
+  "hourShort": "时",
+  "@hourShort": {
+    "description": "Auto-generated description for hourShort."
+  },
+  "minuteShort": "分",
+  "@minuteShort": {
+    "description": "Auto-generated description for minuteShort."
+  },
+  "secondShort": "秒",
+  "@secondShort": {
+    "description": "Auto-generated description for secondShort."
+  },
+  "searchTasksHint": "搜索任务...",
+  "@searchTasksHint": {
+    "description": "Auto-generated description for searchTasksHint."
+  },
+  "searchAttachmentsHint": "搜索附件...",
+  "@searchAttachmentsHint": {
+    "description": "Auto-generated description for searchAttachmentsHint."
+  },
+  "clearSearchTooltip": "清除搜索",
+  "@clearSearchTooltip": {
+    "description": "Auto-generated description for clearSearchTooltip."
+  },
+  "projectMapTitle": "项目文件夹",
+  "@projectMapTitle": {
+    "description": "Auto-generated description for projectMapTitle."
+  },
+  "linkProjectMapButton": "链接项目文件夹",
+  "@linkProjectMapButton": {
+    "description": "Auto-generated description for linkProjectMapButton."
+  },
+  "projectDataLoading": "正在加载项目数据...",
+  "@projectDataLoading": {
+    "description": "Auto-generated description for projectDataLoading."
+  },
+  "projectDataLoadFailed": "加载项目数据失败。",
+  "@projectDataLoadFailed": {
+    "description": "Auto-generated description for projectDataLoadFailed."
+  },
+  "currentMapLabel": "当前文件夹: {path}",
+  "@currentMapLabel": {
+    "placeholders": {
+      "path": {}
+    },
+    "description": "Auto-generated description for currentMapLabel."
+  },
+  "noProjectMapLinked": "未链接文件夹。请链接文件夹以读取文件。",
+  "@noProjectMapLinked": {
+    "description": "Auto-generated description for noProjectMapLinked."
+  },
+  "projectNotAvailable": "项目不可用。",
+  "@projectNotAvailable": {
+    "description": "Auto-generated description for projectNotAvailable."
+  },
+  "enableConsentInSettings": "请在设置中启用权限。",
+  "@enableConsentInSettings": {
+    "description": "Auto-generated description for enableConsentInSettings."
+  },
+  "projectMapLinked": "项目文件夹已链接。",
+  "@projectMapLinked": {
+    "description": "Auto-generated description for projectMapLinked."
+  },
+  "privacyWarningTitle": "隐私提示",
+  "@privacyWarningTitle": {
+    "description": "Auto-generated description for privacyWarningTitle."
+  },
+  "privacyWarningContent": "警告: 可能会读取敏感数据。",
+  "@privacyWarningContent": {
+    "description": "Auto-generated description for privacyWarningContent."
+  },
+  "continueButton": "继续",
+  "@continueButton": {
+    "description": "Auto-generated description for continueButton."
+  },
+  "attachFilesTooltip": "添加附件",
+  "@attachFilesTooltip": {
+    "description": "Auto-generated description for attachFilesTooltip."
+  },
+  "moreAttachmentsLabel": "+{count}",
+  "@moreAttachmentsLabel": {
+    "placeholders": {
+      "count": {}
+    },
+    "description": "Auto-generated description for moreAttachmentsLabel."
+  },
+  "aiAssistantLabel": "AI助手",
+  "@aiAssistantLabel": {
+    "description": "Auto-generated description for aiAssistantLabel."
+  },
+  "welcomeBack": "欢迎回来！👋",
+  "@welcomeBack": {
+    "description": "Auto-generated description for welcomeBack."
+  },
+  "projectsOverviewSubtitle": "这是你的活动项目概览",
+  "@projectsOverviewSubtitle": {
+    "description": "Auto-generated description for projectsOverviewSubtitle."
+  },
+  "recentWorkflowsTitle": "最近工作流",
+  "@recentWorkflowsTitle": {
+    "description": "Auto-generated description for recentWorkflowsTitle."
+  },
+  "recentWorkflowsLoading": "正在加载最近的工作流...",
+  "@recentWorkflowsLoading": {
+    "description": "Auto-generated description for recentWorkflowsLoading."
+  },
+  "recentWorkflowsLoadFailed": "加载最近工作流失败。",
+  "@recentWorkflowsLoadFailed": {
+    "description": "Auto-generated description for recentWorkflowsLoadFailed."
+  },
+  "retryButton": "重试",
+  "@retryButton": {
+    "description": "Auto-generated description for retryButton."
+  },
+  "noRecentTasks": "暂无最近任务。",
+  "@noRecentTasks": {
+    "description": "Auto-generated description for noRecentTasks."
+  },
+  "unknownProject": "未知项目",
+  "@unknownProject": {
+    "description": "Auto-generated description for unknownProject."
+  },
+  "projectTaskStatusSemantics": "项目 {projectName}，任务 {taskTitle}，状态 {statusLabel}，{timeLabel}",
+  "@projectTaskStatusSemantics": {
+    "placeholders": {
+      "projectName": {},
+      "taskTitle": {},
+      "statusLabel": {},
+      "timeLabel": {}
+    },
+    "description": "Auto-generated description for projectTaskStatusSemantics."
+  },
+  "taskStatusSemantics": "任务 {taskTitle} {statusLabel}",
+  "@taskStatusSemantics": {
+    "placeholders": {
+      "taskTitle": {},
+      "statusLabel": {}
+    },
+    "description": "Auto-generated description for taskStatusSemantics."
+  },
+  "timeJustNow": "刚刚",
+  "@timeJustNow": {
+    "description": "Auto-generated description for timeJustNow."
+  },
+  "timeMinutesAgo": "{minutes} 分钟前",
+  "@timeMinutesAgo": {
+    "placeholders": {
+      "minutes": {}
+    },
+    "description": "Auto-generated description for timeMinutesAgo."
+  },
+  "timeHoursAgo": "{hours} 小时前",
+  "@timeHoursAgo": {
+    "placeholders": {
+      "hours": {}
+    },
+    "description": "Auto-generated description for timeHoursAgo."
+  },
+  "timeDaysAgo": "{days} 天前",
+  "@timeDaysAgo": {
+    "placeholders": {
+      "days": {}
+    },
+    "description": "Auto-generated description for timeDaysAgo."
+  },
+  "timeWeeksAgo": "{weeks} 周前",
+  "@timeWeeksAgo": {
+    "placeholders": {
+      "weeks": {}
+    },
+    "description": "Auto-generated description for timeWeeksAgo."
+  },
+  "timeMonthsAgo": "{months} 个月前",
+  "@timeMonthsAgo": {
+    "placeholders": {
+      "months": {}
+    },
+    "description": "Auto-generated description for timeMonthsAgo."
+  },
+  "projectProgressChartSemantics": "项目 {projectName} 的进度图。完成 {completedPercent}% ，待处理 {pendingPercent}% 。",
+  "@projectProgressChartSemantics": {
+    "placeholders": {
+      "projectName": {},
+      "completedPercent": {},
+      "pendingPercent": {}
+    },
+    "description": "Auto-generated description for projectProgressChartSemantics."
+  },
+  "progressLabel": "进度",
+  "@progressLabel": {
+    "description": "Auto-generated description for progressLabel."
+  },
+  "completedPercentLabel": "完成: {percent}%",
+  "@completedPercentLabel": {
+    "placeholders": {
+      "percent": {}
+    },
+    "description": "Auto-generated description for completedPercentLabel."
+  },
+  "pendingPercentLabel": "待处理: {percent}%",
+  "@pendingPercentLabel": {
+    "placeholders": {
+      "percent": {}
+    },
+    "description": "Auto-generated description for pendingPercentLabel."
+  },
+  "noDescription": "无描述",
+  "@noDescription": {
+    "description": "Auto-generated description for noDescription."
+  },
+  "closeButton": "关闭",
+  "@closeButton": {
+    "description": "Auto-generated description for closeButton."
+  },
+  "burndownProgressTitle": "燃尽进度",
+  "@burndownProgressTitle": {
+    "description": "Auto-generated description for burndownProgressTitle."
+  },
+  "actualProgressLabel": "实际进度",
+  "@actualProgressLabel": {
+    "description": "Auto-generated description for actualProgressLabel."
+  },
+  "idealTrendLabel": "理想趋势",
+  "@idealTrendLabel": {
+    "description": "Auto-generated description for idealTrendLabel."
+  },
+  "statusLabel": "状态",
+  "@statusLabel": {
+    "description": "Auto-generated description for statusLabel."
+  },
+  "burndownChartSemantics": "项目 {projectName} 的燃尽图。实际点: {actualPoints}。理想点: {idealPoints}。",
+  "@burndownChartSemantics": {
+    "placeholders": {
+      "projectName": {},
+      "actualPoints": {},
+      "idealPoints": {}
+    },
+    "description": "Auto-generated description for burndownChartSemantics."
+  },
+  "aiChatSemanticsLabel": "AI聊天",
+  "@aiChatSemanticsLabel": {
+    "description": "Auto-generated description for aiChatSemanticsLabel."
+  },
+  "aiAssistantTitle": "AI项目助手",
+  "@aiAssistantTitle": {
+    "description": "Auto-generated description for aiAssistantTitle."
+  },
+  "clearChatTooltip": "清空聊天",
+  "@clearChatTooltip": {
+    "description": "Auto-generated description for clearChatTooltip."
+  },
+  "noMessagesLabel": "没有消息",
+  "@noMessagesLabel": {
+    "description": "Auto-generated description for noMessagesLabel."
+  },
+  "aiEmptyTitle": "开始与AI助手对话",
+  "@aiEmptyTitle": {
+    "description": "Auto-generated description for aiEmptyTitle."
+  },
+  "aiEmptySubtitle": "例如: \"为项目生成计划: 网店\"",
+  "@aiEmptySubtitle": {
+    "description": "Auto-generated description for aiEmptySubtitle."
+  },
+  "useProjectFilesLabel": "使用项目文件",
+  "@useProjectFilesLabel": {
+    "description": "Auto-generated description for useProjectFilesLabel."
+  },
+  "typeMessageHint": "输入消息...",
+  "@typeMessageHint": {
+    "description": "Auto-generated description for typeMessageHint."
+  },
+  "projectFilesReadFailed": "读取项目文件失败。",
+  "@projectFilesReadFailed": {
+    "description": "Auto-generated description for projectFilesReadFailed."
+  },
+  "aiResponseFailedTitle": "AI响应失败",
+  "@aiResponseFailedTitle": {
+    "description": "Auto-generated description for aiResponseFailedTitle."
+  },
+  "sendMessageTooltip": "发送消息",
+  "@sendMessageTooltip": {
+    "description": "Auto-generated description for sendMessageTooltip."
+  },
+  "loginMissingCredentials": "请输入用户名和密码。",
+  "@loginMissingCredentials": {
+    "description": "Auto-generated description for loginMissingCredentials."
+  },
+  "loginFailedMessage": "登录失败。请检查凭据。",
+  "@loginFailedMessage": {
+    "description": "Auto-generated description for loginFailedMessage."
+  },
+  "registerTitle": "注册",
+  "@registerTitle": {
+    "description": "Auto-generated description for registerTitle."
+  },
+  "languageLabel": "语言",
+  "@languageLabel": {
+    "description": "Auto-generated description for languageLabel."
+  },
+  "languageSystem": "系统默认",
+  "@languageSystem": {
+    "description": "Auto-generated description for languageSystem."
+  },
+  "languageEnglish": "英语",
+  "@languageEnglish": {
+    "description": "Auto-generated description for languageEnglish."
+  },
+  "languageDutch": "荷兰语",
+  "@languageDutch": {
+    "description": "Auto-generated description for languageDutch."
+  },
+  "languageSpanish": "西班牙语",
+  "@languageSpanish": {
+    "description": "Auto-generated description for languageSpanish."
+  },
+  "languageFrench": "法语",
+  "@languageFrench": {
+    "description": "Auto-generated description for languageFrench."
+  },
+  "languageGerman": "德语",
+  "@languageGerman": {
+    "description": "Auto-generated description for languageGerman."
+  },
+  "languagePortuguese": "葡萄牙语",
+  "@languagePortuguese": {
+    "description": "Auto-generated description for languagePortuguese."
+  },
+  "languageItalian": "意大利语",
+  "@languageItalian": {
+    "description": "Auto-generated description for languageItalian."
+  },
+  "languageArabic": "阿拉伯语",
+  "@languageArabic": {
+    "description": "Auto-generated description for languageArabic."
+  },
+  "languageChinese": "中文",
+  "@languageChinese": {
+    "description": "Auto-generated description for languageChinese."
+  },
+  "languageJapanese": "日语",
+  "@languageJapanese": {
+    "description": "Auto-generated description for languageJapanese."
+  },
+  "languageKorean": "韩语",
+  "@languageKorean": {
+    "description": "Auto-generated description for languageKorean."
+  },
+  "languageRussian": "俄语",
+  "@languageRussian": {
+    "description": "Auto-generated description for languageRussian."
+  },
+  "languageHindi": "印地语",
+  "@languageHindi": {
+    "description": "Auto-generated description for languageHindi."
+  },
+  "repeatPasswordLabel": "重复密码",
+  "@repeatPasswordLabel": {
+    "description": "Auto-generated description for repeatPasswordLabel."
+  },
+  "passwordRulesTitle": "密码规则",
+  "@passwordRulesTitle": {
+    "description": "Auto-generated description for passwordRulesTitle."
+  },
+  "passwordRuleMinLength": "至少8个字符",
+  "@passwordRuleMinLength": {
+    "description": "Auto-generated description for passwordRuleMinLength."
+  },
+  "passwordRuleHasLetter": "包含一个字母",
+  "@passwordRuleHasLetter": {
+    "description": "Auto-generated description for passwordRuleHasLetter."
+  },
+  "passwordRuleHasDigit": "包含一个数字",
+  "@passwordRuleHasDigit": {
+    "description": "Auto-generated description for passwordRuleHasDigit."
+  },
+  "passwordRuleMatches": "密码一致",
+  "@passwordRuleMatches": {
+    "description": "Auto-generated description for passwordRuleMatches."
+  },
+  "registerButton": "注册",
+  "@registerButton": {
+    "description": "Auto-generated description for registerButton."
+  },
+  "registrationIssueUsernameMissing": "缺少用户名",
+  "@registrationIssueUsernameMissing": {
+    "description": "Auto-generated description for registrationIssueUsernameMissing."
+  },
+  "registrationIssueMinLength": "至少8个字符",
+  "@registrationIssueMinLength": {
+    "description": "Auto-generated description for registrationIssueMinLength."
+  },
+  "registrationIssueLetter": "至少1个字母",
+  "@registrationIssueLetter": {
+    "description": "Auto-generated description for registrationIssueLetter."
+  },
+  "registrationIssueDigit": "至少1个数字",
+  "@registrationIssueDigit": {
+    "description": "Auto-generated description for registrationIssueDigit."
+  },
+  "registrationIssueNoMatch": "密码不一致",
+  "@registrationIssueNoMatch": {
+    "description": "Auto-generated description for registrationIssueNoMatch."
+  },
+  "registrationFailedWithIssues": "注册失败: {issues}。",
+  "@registrationFailedWithIssues": {
+    "placeholders": {
+      "issues": {}
+    },
+    "description": "Auto-generated description for registrationFailedWithIssues."
+  },
+  "accountCreatedMessage": "账号已创建。请登录。",
+  "@accountCreatedMessage": {
+    "description": "Auto-generated description for accountCreatedMessage."
+  },
+  "registerFailedMessage": "注册失败。",
+  "@registerFailedMessage": {
+    "description": "Auto-generated description for registerFailedMessage."
+  },
+  "accessDeniedMessage": "访问被拒绝。",
+  "@accessDeniedMessage": {
+    "description": "Message shown when a user lacks permission."
+  },
+  "adminPanelTitle": "管理员面板",
+  "@adminPanelTitle": {
+    "description": "Title for the admin panel screen."
+  },
+  "adminPanelSubtitle": "管理角色、群组和权限",
+  "@adminPanelSubtitle": {
+    "description": "Subtitle for the admin panel entry."
+  },
+  "rolesTitle": "角色",
+  "@rolesTitle": {
+    "description": "Header for roles section."
+  },
+  "noRolesFound": "未找到角色。",
+  "@noRolesFound": {
+    "description": "Shown when no roles exist."
+  },
+  "permissionsCount": "权限：{count}",
+  "@permissionsCount": {
+    "placeholders": {
+      "count": {}
+    },
+    "description": "Displays the number of permissions on a role."
+  },
+  "editPermissionsTooltip": "编辑权限",
+  "@editPermissionsTooltip": {
+    "description": "Tooltip for editing permissions."
+  },
+  "groupsTitle": "群组",
+  "@groupsTitle": {
+    "description": "Header for groups section."
+  },
+  "noGroupsFound": "未找到群组。",
+  "@noGroupsFound": {
+    "description": "Shown when no groups exist."
+  },
+  "roleLabel": "角色",
+  "@roleLabel": {
+    "description": "Label for a role selection."
+  },
+  "groupAddTitle": "添加群组",
+  "@groupAddTitle": {
+    "description": "Title for adding a group."
+  },
+  "groupNameLabel": "群组名称",
+  "@groupNameLabel": {
+    "description": "Label for the group name input."
+  },
+  "groupLabel": "群组",
+  "@groupLabel": {
+    "description": "Label for a group chip or field."
+  },
+  "addGroupMemberTitle": "将成员添加到 {groupName}",
+  "@addGroupMemberTitle": {
+    "placeholders": {
+      "groupName": {}
+    },
+    "description": "Title for adding a member to a specific group."
+  },
+  "addGroupMemberTooltip": "添加成员",
+  "@addGroupMemberTooltip": {
+    "description": "Tooltip for adding a group member."
+  },
+  "groupMembersTitle": "群组成员：{groupName}",
+  "@groupMembersTitle": {
+    "placeholders": {
+      "groupName": {}
+    },
+    "description": "Title for the group members dialog."
+  },
+  "noGroupMembers": "该群组没有成员。",
+  "@noGroupMembers": {
+    "description": "Shown when a group has no members."
+  },
+  "removeGroupMemberTooltip": "移除成员",
+  "@removeGroupMemberTooltip": {
+    "description": "Tooltip for removing a group member."
+  },
+  "roleCreateTitle": "创建角色",
+  "@roleCreateTitle": {
+    "description": "Title for creating a role."
+  },
+  "roleNameLabel": "角色名称",
+  "@roleNameLabel": {
+    "description": "Label for the role name input."
+  },
+  "permissionsTitle": "权限",
+  "@permissionsTitle": {
+    "description": "Title for permissions selection dialog."
+  },
+  "settingsBackupTitle": "创建备份",
+  "@settingsBackupTitle": {
+    "description": "Title for manual Hive backup action."
+  },
+  "settingsBackupSubtitle": "保存 Hive 数据的本地备份。",
+  "@settingsBackupSubtitle": {
+    "description": "Subtitle for manual Hive backup action."
+  },
+  "settingsRestoreTitle": "恢复备份",
+  "@settingsRestoreTitle": {
+    "description": "Title for restoring Hive backup."
+  },
+  "settingsRestoreSubtitle": "用备份文件替换本地数据。",
+  "@settingsRestoreSubtitle": {
+    "description": "Subtitle for restoring Hive backup."
+  },
+  "backupSuccessMessage": "备份已保存：{path}",
+  "@backupSuccessMessage": {
+    "description": "Shown after a backup file is created.",
+    "placeholders": {
+      "path": {}
+    }
+  },
+  "backupFailedMessage": "备份失败：{error}",
+  "@backupFailedMessage": {
+    "description": "Shown when backup fails.",
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "restoreSuccessMessage": "备份已恢复。请重启应用以重新加载数据。",
+  "@restoreSuccessMessage": {
+    "description": "Shown after a successful restore."
+  },
+  "restoreFailedMessage": "恢复失败：{error}",
+  "@restoreFailedMessage": {
+    "description": "Shown when restore fails.",
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "restoreConfirmTitle": "恢复备份？",
+  "@restoreConfirmTitle": {
+    "description": "Title for restore confirmation dialog."
+  },
+  "restoreConfirmContent": "这将覆盖本地数据。",
+  "@restoreConfirmContent": {
+    "description": "Content for restore confirmation dialog."
+  },
+  "restoreConfirmButton": "恢复",
+  "@restoreConfirmButton": {
+    "description": "Button label for confirming restore."
+  },
+  "settingsBackupLastRunLabel": "上次备份",
+  "@settingsBackupLastRunLabel": {
+    "description": "Label for last backup timestamp."
+  },
+  "backupNeverMessage": "从未",
+  "@backupNeverMessage": {
+    "description": "Shown when no backup has been created yet."
+  },
+  "backupNowButton": "立即备份",
+  "@backupNowButton": {
+    "description": "Button label to trigger a backup immediately."
+  },
+  "settingsBackupPathLabel": "备份文件",
+  "@settingsBackupPathLabel": {
+    "description": "Label for last backup file path."
+  },
+  "backupNoFileMessage": "尚无备份文件",
+  "@backupNoFileMessage": {
+    "description": "Shown when no backup file path is available."
+  }
+}
+  "aiUsageTitle": "AI Usage",
+  "@aiUsageTitle": {
+    "description": "Title for the AI usage overview screen."
+  },

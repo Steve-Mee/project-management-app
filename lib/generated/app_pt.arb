@@ -1,0 +1,1089 @@
+{
+  "@@locale": "pt",
+  "appTitle": "Aplicativo de gestao de projetos",
+  "@appTitle": {
+    "description": "Auto-generated description for appTitle."
+  },
+  "loginTitle": "Entrar",
+  "@loginTitle": {
+    "description": "Auto-generated description for loginTitle."
+  },
+  "menuLabel": "Menu",
+  "@menuLabel": {
+    "description": "Auto-generated description for menuLabel."
+  },
+  "usernameLabel": "Usuario",
+  "@usernameLabel": {
+    "description": "Auto-generated description for usernameLabel."
+  },
+  "passwordLabel": "Senha",
+  "@passwordLabel": {
+    "description": "Auto-generated description for passwordLabel."
+  },
+  "loginButton": "Entrar",
+  "@loginButton": {
+    "description": "Auto-generated description for loginButton."
+  },
+  "createAccount": "Criar conta",
+  "@createAccount": {
+    "description": "Auto-generated description for createAccount."
+  },
+  "logoutTooltip": "Sair",
+  "@logoutTooltip": {
+    "description": "Auto-generated description for logoutTooltip."
+  },
+  "closeAppTooltip": "Fechar app",
+  "@closeAppTooltip": {
+    "description": "Auto-generated description for closeAppTooltip."
+  },
+  "settingsTitle": "Configuracoes",
+  "@settingsTitle": {
+    "description": "Auto-generated description for settingsTitle."
+  },
+  "settingsDisplaySection": "Tela",
+  "@settingsDisplaySection": {
+    "description": "Auto-generated description for settingsDisplaySection."
+  },
+  "settingsDarkModeTitle": "Modo escuro",
+  "@settingsDarkModeTitle": {
+    "description": "Auto-generated description for settingsDarkModeTitle."
+  },
+  "settingsDarkModeSubtitle": "Alternar entre claro e escuro",
+  "@settingsDarkModeSubtitle": {
+    "description": "Auto-generated description for settingsDarkModeSubtitle."
+  },
+  "settingsFollowSystemTitle": "Seguir tema do sistema",
+  "@settingsFollowSystemTitle": {
+    "description": "Auto-generated description for settingsFollowSystemTitle."
+  },
+  "settingsFollowSystemSubtitle": "Usar o tema do dispositivo",
+  "@settingsFollowSystemSubtitle": {
+    "description": "Auto-generated description for settingsFollowSystemSubtitle."
+  },
+  "settingsLanguageTitle": "Idioma",
+  "@settingsLanguageTitle": {
+    "description": "Auto-generated description for settingsLanguageTitle."
+  },
+  "settingsLanguageSubtitle": "Escolher idioma do app",
+  "@settingsLanguageSubtitle": {
+    "description": "Auto-generated description for settingsLanguageSubtitle."
+  },
+  "settingsNotificationsSection": "Notificacoes",
+  "@settingsNotificationsSection": {
+    "description": "Auto-generated description for settingsNotificationsSection."
+  },
+  "settingsNotificationsTitle": "Notificacoes",
+  "@settingsNotificationsTitle": {
+    "description": "Auto-generated description for settingsNotificationsTitle."
+  },
+  "settingsNotificationsSubtitle": "Atualizacoes e lembretes",
+  "@settingsNotificationsSubtitle": {
+    "description": "Auto-generated description for settingsNotificationsSubtitle."
+  },
+  "settingsPrivacySection": "Privacidade",
+  "@settingsPrivacySection": {
+    "description": "Auto-generated description for settingsPrivacySection."
+  },
+  "settingsLocalFilesConsentTitle": "Permissao de arquivos locais",
+  "@settingsLocalFilesConsentTitle": {
+    "description": "Auto-generated description for settingsLocalFilesConsentTitle."
+  },
+  "settingsLocalFilesConsentSubtitle": "Permitir que o app leia arquivos locais do projeto para contexto de IA.",
+  "@settingsLocalFilesConsentSubtitle": {
+    "description": "Auto-generated description for settingsLocalFilesConsentSubtitle."
+  },
+  "settingsUseProjectFilesTitle": "Usar arquivos do projeto",
+  "@settingsUseProjectFilesTitle": {
+    "description": "Auto-generated description for settingsUseProjectFilesTitle."
+  },
+  "settingsUseProjectFilesSubtitle": "Adicionar arquivos locais aos prompts de IA",
+  "@settingsUseProjectFilesSubtitle": {
+    "description": "Auto-generated description for settingsUseProjectFilesSubtitle."
+  },
+  "settingsProjectsSection": "Projetos",
+  "@settingsProjectsSection": {
+    "description": "Auto-generated description for settingsProjectsSection."
+  },
+  "settingsLogoutTitle": "Sair",
+  "@settingsLogoutTitle": {
+    "description": "Auto-generated description for settingsLogoutTitle."
+  },
+  "settingsLogoutSubtitle": "Encerrar a sessao atual",
+  "@settingsLogoutSubtitle": {
+    "description": "Auto-generated description for settingsLogoutSubtitle."
+  },
+  "settingsExportTitle": "Exportar projetos",
+  "@settingsExportTitle": {
+    "description": "Auto-generated description for settingsExportTitle."
+  },
+  "settingsExportSubtitle": "Exportar projetos para um arquivo",
+  "@settingsExportSubtitle": {
+    "description": "Auto-generated description for settingsExportSubtitle."
+  },
+  "settingsImportTitle": "Importar projetos",
+  "@settingsImportTitle": {
+    "description": "Auto-generated description for settingsImportTitle."
+  },
+  "settingsImportSubtitle": "Importar projetos de um arquivo",
+  "@settingsImportSubtitle": {
+    "description": "Auto-generated description for settingsImportSubtitle."
+  },
+  "settingsUsersSection": "Usuarios",
+  "@settingsUsersSection": {
+    "description": "Auto-generated description for settingsUsersSection."
+  },
+  "settingsCurrentUserTitle": "Usuario atual",
+  "@settingsCurrentUserTitle": {
+    "description": "Auto-generated description for settingsCurrentUserTitle."
+  },
+  "settingsNotLoggedIn": "Nao conectado",
+  "@settingsNotLoggedIn": {
+    "description": "Auto-generated description for settingsNotLoggedIn."
+  },
+  "settingsNoUsersFound": "Nenhum usuario encontrado.",
+  "@settingsNoUsersFound": {
+    "description": "Auto-generated description for settingsNoUsersFound."
+  },
+  "settingsLocalUserLabel": "Usuario local",
+  "@settingsLocalUserLabel": {
+    "description": "Auto-generated description for settingsLocalUserLabel."
+  },
+  "settingsDeleteTooltip": "Excluir",
+  "@settingsDeleteTooltip": {
+    "description": "Auto-generated description for settingsDeleteTooltip."
+  },
+  "settingsLoadUsersFailed": "Falha ao carregar usuarios",
+  "@settingsLoadUsersFailed": {
+    "description": "Auto-generated description for settingsLoadUsersFailed."
+  },
+  "settingsAddUserTitle": "Adicionar usuario",
+  "@settingsAddUserTitle": {
+    "description": "Auto-generated description for settingsAddUserTitle."
+  },
+  "settingsAddUserSubtitle": "Adicionar uma conta extra",
+  "@settingsAddUserSubtitle": {
+    "description": "Auto-generated description for settingsAddUserSubtitle."
+  },
+  "logoutDialogTitle": "Sair",
+  "@logoutDialogTitle": {
+    "description": "Auto-generated description for logoutDialogTitle."
+  },
+  "logoutDialogContent": "Deseja realmente sair?",
+  "@logoutDialogContent": {
+    "description": "Auto-generated description for logoutDialogContent."
+  },
+  "cancelButton": "Cancelar",
+  "@cancelButton": {
+    "description": "Auto-generated description for cancelButton."
+  },
+  "logoutButton": "Sair",
+  "@logoutButton": {
+    "description": "Auto-generated description for logoutButton."
+  },
+  "loggedOutMessage": "Voce saiu.",
+  "@loggedOutMessage": {
+    "description": "Auto-generated description for loggedOutMessage."
+  },
+  "exportCompleteMessage": "Exportacao concluida: {projectsPath}, {tasksPath}",
+  "@exportCompleteMessage": {
+    "placeholders": {
+      "projectsPath": {},
+      "tasksPath": {}
+    },
+    "description": "Auto-generated description for exportCompleteMessage."
+  },
+  "exportFailedMessage": "Exportacao falhou: {error}",
+  "@exportFailedMessage": {
+    "placeholders": {
+      "error": {}
+    },
+    "description": "Auto-generated description for exportFailedMessage."
+  },
+  "exportPasswordTitle": "Criptografar exportacao",
+  "@exportPasswordTitle": {
+    "description": "Auto-generated description for exportPasswordTitle."
+  },
+  "exportPasswordSubtitle": "Defina uma senha para criptografar os arquivos de exportacao.",
+  "@exportPasswordSubtitle": {
+    "description": "Auto-generated description for exportPasswordSubtitle."
+  },
+  "exportPasswordMismatch": "As senhas nao correspondem.",
+  "@exportPasswordMismatch": {
+    "description": "Auto-generated description for exportPasswordMismatch."
+  },
+  "importSelectFilesMessage": "Selecione um arquivo CSV e JSON.",
+  "@importSelectFilesMessage": {
+    "description": "Auto-generated description for importSelectFilesMessage."
+  },
+  "importCompleteMessage": "Importacao concluida: {projectsPath}, {tasksPath}",
+  "@importCompleteMessage": {
+    "placeholders": {
+      "projectsPath": {},
+      "tasksPath": {}
+    },
+    "description": "Auto-generated description for importCompleteMessage."
+  },
+  "importFailedMessage": "Importacao falhou: {error}",
+  "@importFailedMessage": {
+    "placeholders": {
+      "error": {}
+    },
+    "description": "Auto-generated description for importFailedMessage."
+  },
+  "importFailedTitle": "Importacao falhou",
+  "@importFailedTitle": {
+    "description": "Auto-generated description for importFailedTitle."
+  },
+  "addUserDialogTitle": "Adicionar usuario",
+  "@addUserDialogTitle": {
+    "description": "Auto-generated description for addUserDialogTitle."
+  },
+  "saveButton": "Salvar",
+  "@saveButton": {
+    "description": "Auto-generated description for saveButton."
+  },
+  "userAddedMessage": "Usuario adicionado.",
+  "@userAddedMessage": {
+    "description": "Auto-generated description for userAddedMessage."
+  },
+  "invalidUserMessage": "Usuario invalido.",
+  "@invalidUserMessage": {
+    "description": "Auto-generated description for invalidUserMessage."
+  },
+  "deleteUserDialogTitle": "Excluir usuario",
+  "@deleteUserDialogTitle": {
+    "description": "Auto-generated description for deleteUserDialogTitle."
+  },
+  "deleteUserDialogContent": "Deseja realmente excluir {username}?",
+  "@deleteUserDialogContent": {
+    "placeholders": {
+      "username": {}
+    },
+    "description": "Auto-generated description for deleteUserDialogContent."
+  },
+  "deleteButton": "Excluir",
+  "@deleteButton": {
+    "description": "Auto-generated description for deleteButton."
+  },
+  "userDeletedMessage": "Usuario excluido: {username}",
+  "@userDeletedMessage": {
+    "placeholders": {
+      "username": {}
+    },
+    "description": "Auto-generated description for userDeletedMessage."
+  },
+  "projectsTitle": "Projetos",
+  "@projectsTitle": {
+    "description": "Auto-generated description for projectsTitle."
+  },
+  "newProjectButton": "Novo projeto",
+  "@newProjectButton": {
+    "description": "Auto-generated description for newProjectButton."
+  },
+  "noProjectsYet": "Ainda nao ha projetos",
+  "@noProjectsYet": {
+    "description": "Auto-generated description for noProjectsYet."
+  },
+  "noProjectsFound": "Nenhum projeto encontrado",
+  "@noProjectsFound": {
+    "description": "Auto-generated description for noProjectsFound."
+  },
+  "loadingMoreProjects": "Carregando mais projetos...",
+  "@loadingMoreProjects": {
+    "description": "Auto-generated description for loadingMoreProjects."
+  },
+  "sortByLabel": "Ordenar por",
+  "@sortByLabel": {
+    "description": "Auto-generated description for sortByLabel."
+  },
+  "projectSortName": "Nome",
+  "@projectSortName": {
+    "description": "Auto-generated description for projectSortName."
+  },
+  "projectSortProgress": "Progresso",
+  "@projectSortProgress": {
+    "description": "Auto-generated description for projectSortProgress."
+  },
+  "projectSortPriority": "Prioridade",
+  "@projectSortPriority": {
+    "description": "Auto-generated description for projectSortPriority."
+  },
+  "allLabel": "Todos",
+  "@allLabel": {
+    "description": "Auto-generated description for allLabel."
+  },
+  "loadProjectsFailed": "Falha ao carregar projetos.",
+  "@loadProjectsFailed": {
+    "description": "Auto-generated description for loadProjectsFailed."
+  },
+  "projectSemanticsLabel": "Projeto {title}",
+  "@projectSemanticsLabel": {
+    "placeholders": {
+      "title": {}
+    },
+    "description": "Auto-generated description for projectSemanticsLabel."
+  },
+  "statusSemanticsLabel": "Status {status}",
+  "@statusSemanticsLabel": {
+    "placeholders": {
+      "status": {}
+    },
+    "description": "Auto-generated description for statusSemanticsLabel."
+  },
+  "newProjectDialogTitle": "Novo projeto",
+  "@newProjectDialogTitle": {
+    "description": "Auto-generated description for newProjectDialogTitle."
+  },
+  "projectNameLabel": "Nome do projeto",
+  "@projectNameLabel": {
+    "description": "Auto-generated description for projectNameLabel."
+  },
+  "descriptionLabel": "Descricao",
+  "@descriptionLabel": {
+    "description": "Auto-generated description for descriptionLabel."
+  },
+  "urgencyLabel": "Urgencia",
+  "@urgencyLabel": {
+    "description": "Auto-generated description for urgencyLabel."
+  },
+  "urgencyLow": "Baixa",
+  "@urgencyLow": {
+    "description": "Auto-generated description for urgencyLow."
+  },
+  "urgencyMedium": "Media",
+  "@urgencyMedium": {
+    "description": "Auto-generated description for urgencyMedium."
+  },
+  "urgencyHigh": "Alta",
+  "@urgencyHigh": {
+    "description": "Auto-generated description for urgencyHigh."
+  },
+  "projectCreatedMessage": "Projeto criado: {name}",
+  "@projectCreatedMessage": {
+    "placeholders": {
+      "name": {}
+    },
+    "description": "Auto-generated description for projectCreatedMessage."
+  },
+  "projectDetailsTitle": "Detalhes do projeto",
+  "@projectDetailsTitle": {
+    "description": "Auto-generated description for projectDetailsTitle."
+  },
+  "aiChatWithProjectFilesTooltip": "Chat de IA com arquivos do projeto",
+  "@aiChatWithProjectFilesTooltip": {
+    "description": "Auto-generated description for aiChatWithProjectFilesTooltip."
+  },
+  "moreOptionsLabel": "Mais opcoes",
+  "@moreOptionsLabel": {
+    "description": "Auto-generated description for moreOptionsLabel."
+  },
+  "tasksTitle": "Tarefas",
+  "@tasksTitle": {
+    "description": "Auto-generated description for tasksTitle."
+  },
+  "tasksTab": "Tarefas",
+  "@tasksTab": {
+    "description": "Auto-generated description for tasksTab."
+  },
+  "detailsTab": "Detalhes",
+  "@detailsTab": {
+    "description": "Auto-generated description for detailsTab."
+  },
+  "tasksLoadFailed": "Falha ao carregar tarefas.",
+  "@tasksLoadFailed": {
+    "description": "Auto-generated description for tasksLoadFailed."
+  },
+  "projectOverviewTitle": "Resumo do projeto",
+  "@projectOverviewTitle": {
+    "description": "Auto-generated description for projectOverviewTitle."
+  },
+  "tasksLoading": "Carregando tarefas...",
+  "@tasksLoading": {
+    "description": "Auto-generated description for tasksLoading."
+  },
+  "taskStatisticsTitle": "Estatisticas de tarefas",
+  "@taskStatisticsTitle": {
+    "description": "Auto-generated description for taskStatisticsTitle."
+  },
+  "totalLabel": "Total",
+  "@totalLabel": {
+    "description": "Auto-generated description for totalLabel."
+  },
+  "completedLabel": "Concluidas",
+  "@completedLabel": {
+    "description": "Auto-generated description for completedLabel."
+  },
+  "inProgressLabel": "Em andamento",
+  "@inProgressLabel": {
+    "description": "Auto-generated description for inProgressLabel."
+  },
+  "remainingLabel": "Restantes",
+  "@remainingLabel": {
+    "description": "Auto-generated description for remainingLabel."
+  },
+  "completionPercentLabel": "{percent}% concluido",
+  "@completionPercentLabel": {
+    "placeholders": {
+      "percent": {}
+    },
+    "description": "Auto-generated description for completionPercentLabel."
+  },
+  "burndownChartTitle": "Grafico burndown",
+  "@burndownChartTitle": {
+    "description": "Auto-generated description for burndownChartTitle."
+  },
+  "chartPlaceholderTitle": "Espaco reservado para grafico",
+  "@chartPlaceholderTitle": {
+    "description": "Auto-generated description for chartPlaceholderTitle."
+  },
+  "chartPlaceholderSubtitle": "Integracao do fl_chart em breve",
+  "@chartPlaceholderSubtitle": {
+    "description": "Auto-generated description for chartPlaceholderSubtitle."
+  },
+  "workflowsTitle": "Fluxos de trabalho",
+  "@workflowsTitle": {
+    "description": "Auto-generated description for workflowsTitle."
+  },
+  "noWorkflowsAvailable": "Nenhum item de fluxo disponivel.",
+  "@noWorkflowsAvailable": {
+    "description": "Auto-generated description for noWorkflowsAvailable."
+  },
+  "taskStatusTodo": "A fazer",
+  "@taskStatusTodo": {
+    "description": "Auto-generated description for taskStatusTodo."
+  },
+  "taskStatusInProgress": "Em andamento",
+  "@taskStatusInProgress": {
+    "description": "Auto-generated description for taskStatusInProgress."
+  },
+  "taskStatusReview": "Revisao",
+  "@taskStatusReview": {
+    "description": "Auto-generated description for taskStatusReview."
+  },
+  "taskStatusDone": "Concluido",
+  "@taskStatusDone": {
+    "description": "Auto-generated description for taskStatusDone."
+  },
+  "workflowStatusActive": "Ativo",
+  "@workflowStatusActive": {
+    "description": "Auto-generated description for workflowStatusActive."
+  },
+  "workflowStatusPending": "Pendente",
+  "@workflowStatusPending": {
+    "description": "Auto-generated description for workflowStatusPending."
+  },
+  "noTasksYet": "Ainda nao ha tarefas",
+  "@noTasksYet": {
+    "description": "Auto-generated description for noTasksYet."
+  },
+  "projectTimeTitle": "Tempo do projeto",
+  "@projectTimeTitle": {
+    "description": "Auto-generated description for projectTimeTitle."
+  },
+  "urgencyValue": "Urgencia: {value}",
+  "@urgencyValue": {
+    "placeholders": {
+      "value": {}
+    },
+    "description": "Auto-generated description for urgencyValue."
+  },
+  "trackedTimeValue": "Tempo registrado: {value}",
+  "@trackedTimeValue": {
+    "placeholders": {
+      "value": {}
+    },
+    "description": "Auto-generated description for trackedTimeValue."
+  },
+  "hourShort": "h",
+  "@hourShort": {
+    "description": "Auto-generated description for hourShort."
+  },
+  "minuteShort": "min",
+  "@minuteShort": {
+    "description": "Auto-generated description for minuteShort."
+  },
+  "secondShort": "s",
+  "@secondShort": {
+    "description": "Auto-generated description for secondShort."
+  },
+  "searchTasksHint": "Buscar tarefas...",
+  "@searchTasksHint": {
+    "description": "Auto-generated description for searchTasksHint."
+  },
+  "searchAttachmentsHint": "Buscar anexos...",
+  "@searchAttachmentsHint": {
+    "description": "Auto-generated description for searchAttachmentsHint."
+  },
+  "clearSearchTooltip": "Limpar busca",
+  "@clearSearchTooltip": {
+    "description": "Auto-generated description for clearSearchTooltip."
+  },
+  "projectMapTitle": "Pasta do projeto",
+  "@projectMapTitle": {
+    "description": "Auto-generated description for projectMapTitle."
+  },
+  "linkProjectMapButton": "Vincular pasta do projeto",
+  "@linkProjectMapButton": {
+    "description": "Auto-generated description for linkProjectMapButton."
+  },
+  "projectDataLoading": "Carregando dados do projeto...",
+  "@projectDataLoading": {
+    "description": "Auto-generated description for projectDataLoading."
+  },
+  "projectDataLoadFailed": "Falha ao carregar dados do projeto.",
+  "@projectDataLoadFailed": {
+    "description": "Auto-generated description for projectDataLoadFailed."
+  },
+  "currentMapLabel": "Pasta atual: {path}",
+  "@currentMapLabel": {
+    "placeholders": {
+      "path": {}
+    },
+    "description": "Auto-generated description for currentMapLabel."
+  },
+  "noProjectMapLinked": "Nenhuma pasta vinculada. Vincule uma pasta para ler arquivos.",
+  "@noProjectMapLinked": {
+    "description": "Auto-generated description for noProjectMapLinked."
+  },
+  "projectNotAvailable": "Projeto nao disponivel.",
+  "@projectNotAvailable": {
+    "description": "Auto-generated description for projectNotAvailable."
+  },
+  "enableConsentInSettings": "Ative a permissao nas configuracoes.",
+  "@enableConsentInSettings": {
+    "description": "Auto-generated description for enableConsentInSettings."
+  },
+  "projectMapLinked": "Pasta do projeto vinculada.",
+  "@projectMapLinked": {
+    "description": "Auto-generated description for projectMapLinked."
+  },
+  "privacyWarningTitle": "Aviso de privacidade",
+  "@privacyWarningTitle": {
+    "description": "Auto-generated description for privacyWarningTitle."
+  },
+  "privacyWarningContent": "Aviso: dados sensiveis podem ser lidos.",
+  "@privacyWarningContent": {
+    "description": "Auto-generated description for privacyWarningContent."
+  },
+  "continueButton": "Continuar",
+  "@continueButton": {
+    "description": "Auto-generated description for continueButton."
+  },
+  "attachFilesTooltip": "Anexar arquivos",
+  "@attachFilesTooltip": {
+    "description": "Auto-generated description for attachFilesTooltip."
+  },
+  "moreAttachmentsLabel": "+{count}",
+  "@moreAttachmentsLabel": {
+    "placeholders": {
+      "count": {}
+    },
+    "description": "Auto-generated description for moreAttachmentsLabel."
+  },
+  "aiAssistantLabel": "Assistente de IA",
+  "@aiAssistantLabel": {
+    "description": "Auto-generated description for aiAssistantLabel."
+  },
+  "welcomeBack": "Bem-vindo de volta! 👋",
+  "@welcomeBack": {
+    "description": "Auto-generated description for welcomeBack."
+  },
+  "projectsOverviewSubtitle": "Aqui esta um resumo dos seus projetos ativos",
+  "@projectsOverviewSubtitle": {
+    "description": "Auto-generated description for projectsOverviewSubtitle."
+  },
+  "recentWorkflowsTitle": "Fluxos recentes",
+  "@recentWorkflowsTitle": {
+    "description": "Auto-generated description for recentWorkflowsTitle."
+  },
+  "recentWorkflowsLoading": "Carregando fluxos recentes...",
+  "@recentWorkflowsLoading": {
+    "description": "Auto-generated description for recentWorkflowsLoading."
+  },
+  "recentWorkflowsLoadFailed": "Falha ao carregar fluxos recentes.",
+  "@recentWorkflowsLoadFailed": {
+    "description": "Auto-generated description for recentWorkflowsLoadFailed."
+  },
+  "retryButton": "Tentar novamente",
+  "@retryButton": {
+    "description": "Auto-generated description for retryButton."
+  },
+  "noRecentTasks": "Nenhuma tarefa recente disponivel.",
+  "@noRecentTasks": {
+    "description": "Auto-generated description for noRecentTasks."
+  },
+  "unknownProject": "Projeto desconhecido",
+  "@unknownProject": {
+    "description": "Auto-generated description for unknownProject."
+  },
+  "projectTaskStatusSemantics": "Projeto {projectName}, tarefa {taskTitle}, status {statusLabel}, {timeLabel}",
+  "@projectTaskStatusSemantics": {
+    "placeholders": {
+      "projectName": {},
+      "taskTitle": {},
+      "statusLabel": {},
+      "timeLabel": {}
+    },
+    "description": "Auto-generated description for projectTaskStatusSemantics."
+  },
+  "taskStatusSemantics": "Tarefa {taskTitle} {statusLabel}",
+  "@taskStatusSemantics": {
+    "placeholders": {
+      "taskTitle": {},
+      "statusLabel": {}
+    },
+    "description": "Auto-generated description for taskStatusSemantics."
+  },
+  "timeJustNow": "Agora mesmo",
+  "@timeJustNow": {
+    "description": "Auto-generated description for timeJustNow."
+  },
+  "timeMinutesAgo": "Ha {minutes} min",
+  "@timeMinutesAgo": {
+    "placeholders": {
+      "minutes": {}
+    },
+    "description": "Auto-generated description for timeMinutesAgo."
+  },
+  "timeHoursAgo": "Ha {hours} h",
+  "@timeHoursAgo": {
+    "placeholders": {
+      "hours": {}
+    },
+    "description": "Auto-generated description for timeHoursAgo."
+  },
+  "timeDaysAgo": "Ha {days} dias",
+  "@timeDaysAgo": {
+    "placeholders": {
+      "days": {}
+    },
+    "description": "Auto-generated description for timeDaysAgo."
+  },
+  "timeWeeksAgo": "Ha {weeks} semanas",
+  "@timeWeeksAgo": {
+    "placeholders": {
+      "weeks": {}
+    },
+    "description": "Auto-generated description for timeWeeksAgo."
+  },
+  "timeMonthsAgo": "Ha {months} meses",
+  "@timeMonthsAgo": {
+    "placeholders": {
+      "months": {}
+    },
+    "description": "Auto-generated description for timeMonthsAgo."
+  },
+  "projectProgressChartSemantics": "Grafico de progresso do projeto para {projectName}. Concluido {completedPercent} por cento, pendente {pendingPercent} por cento.",
+  "@projectProgressChartSemantics": {
+    "placeholders": {
+      "projectName": {},
+      "completedPercent": {},
+      "pendingPercent": {}
+    },
+    "description": "Auto-generated description for projectProgressChartSemantics."
+  },
+  "progressLabel": "Progresso",
+  "@progressLabel": {
+    "description": "Auto-generated description for progressLabel."
+  },
+  "completedPercentLabel": "Concluido: {percent}%",
+  "@completedPercentLabel": {
+    "placeholders": {
+      "percent": {}
+    },
+    "description": "Auto-generated description for completedPercentLabel."
+  },
+  "pendingPercentLabel": "Pendente: {percent}%",
+  "@pendingPercentLabel": {
+    "placeholders": {
+      "percent": {}
+    },
+    "description": "Auto-generated description for pendingPercentLabel."
+  },
+  "noDescription": "Sem descricao",
+  "@noDescription": {
+    "description": "Auto-generated description for noDescription."
+  },
+  "closeButton": "Fechar",
+  "@closeButton": {
+    "description": "Auto-generated description for closeButton."
+  },
+  "burndownProgressTitle": "Progresso burndown",
+  "@burndownProgressTitle": {
+    "description": "Auto-generated description for burndownProgressTitle."
+  },
+  "actualProgressLabel": "Progresso real",
+  "@actualProgressLabel": {
+    "description": "Auto-generated description for actualProgressLabel."
+  },
+  "idealTrendLabel": "Tendencia ideal",
+  "@idealTrendLabel": {
+    "description": "Auto-generated description for idealTrendLabel."
+  },
+  "statusLabel": "Status",
+  "@statusLabel": {
+    "description": "Auto-generated description for statusLabel."
+  },
+  "burndownChartSemantics": "Grafico burndown para {projectName}. Pontos reais: {actualPoints}. Pontos ideais: {idealPoints}.",
+  "@burndownChartSemantics": {
+    "placeholders": {
+      "projectName": {},
+      "actualPoints": {},
+      "idealPoints": {}
+    },
+    "description": "Auto-generated description for burndownChartSemantics."
+  },
+  "aiChatSemanticsLabel": "Chat de IA",
+  "@aiChatSemanticsLabel": {
+    "description": "Auto-generated description for aiChatSemanticsLabel."
+  },
+  "aiUsageTitle": "Uso de IA",
+  "@aiUsageTitle": {
+    "description": "Title for the AI usage overview screen."
+  },
+  "aiAssistantTitle": "Assistente de projetos IA",
+  "@aiAssistantTitle": {
+    "description": "Auto-generated description for aiAssistantTitle."
+  },
+  "clearChatTooltip": "Limpar chat",
+  "@clearChatTooltip": {
+    "description": "Auto-generated description for clearChatTooltip."
+  },
+  "noMessagesLabel": "Nenhuma mensagem",
+  "@noMessagesLabel": {
+    "description": "Auto-generated description for noMessagesLabel."
+  },
+  "aiEmptyTitle": "Inicie uma conversa com o assistente de IA",
+  "@aiEmptyTitle": {
+    "description": "Auto-generated description for aiEmptyTitle."
+  },
+  "aiEmptySubtitle": "Por exemplo: \"Gere um plano para o projeto: loja web\"",
+  "@aiEmptySubtitle": {
+    "description": "Auto-generated description for aiEmptySubtitle."
+  },
+  "useProjectFilesLabel": "Usar arquivos do projeto",
+  "@useProjectFilesLabel": {
+    "description": "Auto-generated description for useProjectFilesLabel."
+  },
+  "typeMessageHint": "Digite uma mensagem...",
+  "@typeMessageHint": {
+    "description": "Auto-generated description for typeMessageHint."
+  },
+  "projectFilesReadFailed": "Falha ao ler arquivos do projeto.",
+  "@projectFilesReadFailed": {
+    "description": "Auto-generated description for projectFilesReadFailed."
+  },
+  "aiResponseFailedTitle": "Resposta da IA falhou",
+  "@aiResponseFailedTitle": {
+    "description": "Auto-generated description for aiResponseFailedTitle."
+  },
+  "sendMessageTooltip": "Enviar mensagem",
+  "@sendMessageTooltip": {
+    "description": "Auto-generated description for sendMessageTooltip."
+  },
+  "loginMissingCredentials": "Informe usuario e senha.",
+  "@loginMissingCredentials": {
+    "description": "Auto-generated description for loginMissingCredentials."
+  },
+  "loginFailedMessage": "Falha ao entrar. Verifique suas credenciais.",
+  "@loginFailedMessage": {
+    "description": "Auto-generated description for loginFailedMessage."
+  },
+  "registerTitle": "Registrar",
+  "@registerTitle": {
+    "description": "Auto-generated description for registerTitle."
+  },
+  "languageLabel": "Idioma",
+  "@languageLabel": {
+    "description": "Auto-generated description for languageLabel."
+  },
+  "languageSystem": "Padrao do sistema",
+  "@languageSystem": {
+    "description": "Auto-generated description for languageSystem."
+  },
+  "languageEnglish": "Ingles",
+  "@languageEnglish": {
+    "description": "Auto-generated description for languageEnglish."
+  },
+  "languageDutch": "Holandes",
+  "@languageDutch": {
+    "description": "Auto-generated description for languageDutch."
+  },
+  "languageSpanish": "Espanhol",
+  "@languageSpanish": {
+    "description": "Auto-generated description for languageSpanish."
+  },
+  "languageFrench": "Frances",
+  "@languageFrench": {
+    "description": "Auto-generated description for languageFrench."
+  },
+  "languageGerman": "Alemao",
+  "@languageGerman": {
+    "description": "Auto-generated description for languageGerman."
+  },
+  "languagePortuguese": "Portugues",
+  "@languagePortuguese": {
+    "description": "Auto-generated description for languagePortuguese."
+  },
+  "languageItalian": "Italiano",
+  "@languageItalian": {
+    "description": "Auto-generated description for languageItalian."
+  },
+  "languageArabic": "Arabe",
+  "@languageArabic": {
+    "description": "Auto-generated description for languageArabic."
+  },
+  "languageChinese": "Chines",
+  "@languageChinese": {
+    "description": "Auto-generated description for languageChinese."
+  },
+  "languageJapanese": "Japones",
+  "@languageJapanese": {
+    "description": "Auto-generated description for languageJapanese."
+  },
+  "languageKorean": "Coreano",
+  "@languageKorean": {
+    "description": "Auto-generated description for languageKorean."
+  },
+  "languageRussian": "Russo",
+  "@languageRussian": {
+    "description": "Auto-generated description for languageRussian."
+  },
+  "languageHindi": "Hindi",
+  "@languageHindi": {
+    "description": "Auto-generated description for languageHindi."
+  },
+  "repeatPasswordLabel": "Repetir senha",
+  "@repeatPasswordLabel": {
+    "description": "Auto-generated description for repeatPasswordLabel."
+  },
+  "passwordRulesTitle": "Regras de senha",
+  "@passwordRulesTitle": {
+    "description": "Auto-generated description for passwordRulesTitle."
+  },
+  "passwordRuleMinLength": "Pelo menos 8 caracteres",
+  "@passwordRuleMinLength": {
+    "description": "Auto-generated description for passwordRuleMinLength."
+  },
+  "passwordRuleHasLetter": "Contem uma letra",
+  "@passwordRuleHasLetter": {
+    "description": "Auto-generated description for passwordRuleHasLetter."
+  },
+  "passwordRuleHasDigit": "Contem um numero",
+  "@passwordRuleHasDigit": {
+    "description": "Auto-generated description for passwordRuleHasDigit."
+  },
+  "passwordRuleMatches": "As senhas coincidem",
+  "@passwordRuleMatches": {
+    "description": "Auto-generated description for passwordRuleMatches."
+  },
+  "registerButton": "Registrar",
+  "@registerButton": {
+    "description": "Auto-generated description for registerButton."
+  },
+  "registrationIssueUsernameMissing": "falta usuario",
+  "@registrationIssueUsernameMissing": {
+    "description": "Auto-generated description for registrationIssueUsernameMissing."
+  },
+  "registrationIssueMinLength": "minimo 8 caracteres",
+  "@registrationIssueMinLength": {
+    "description": "Auto-generated description for registrationIssueMinLength."
+  },
+  "registrationIssueLetter": "pelo menos 1 letra",
+  "@registrationIssueLetter": {
+    "description": "Auto-generated description for registrationIssueLetter."
+  },
+  "registrationIssueDigit": "pelo menos 1 numero",
+  "@registrationIssueDigit": {
+    "description": "Auto-generated description for registrationIssueDigit."
+  },
+  "registrationIssueNoMatch": "as senhas nao coincidem",
+  "@registrationIssueNoMatch": {
+    "description": "Auto-generated description for registrationIssueNoMatch."
+  },
+  "registrationFailedWithIssues": "Registro falhou: {issues}.",
+  "@registrationFailedWithIssues": {
+    "placeholders": {
+      "issues": {}
+    },
+    "description": "Auto-generated description for registrationFailedWithIssues."
+  },
+  "accountCreatedMessage": "Conta criada. Entre agora.",
+  "@accountCreatedMessage": {
+    "description": "Auto-generated description for accountCreatedMessage."
+  },
+  "registerFailedMessage": "Registro falhou.",
+  "@registerFailedMessage": {
+    "description": "Auto-generated description for registerFailedMessage."
+  },
+  "accessDeniedMessage": "Acesso negado.",
+  "@accessDeniedMessage": {
+    "description": "Message shown when a user lacks permission."
+  },
+  "adminPanelTitle": "Painel de administração",
+  "@adminPanelTitle": {
+    "description": "Title for the admin panel screen."
+  },
+  "adminPanelSubtitle": "Gerencie funções, grupos e permissões.",
+  "@adminPanelSubtitle": {
+    "description": "Subtitle for the admin panel entry."
+  },
+  "rolesTitle": "Funções",
+  "@rolesTitle": {
+    "description": "Header for roles section."
+  },
+  "noRolesFound": "Nenhuma função encontrada.",
+  "@noRolesFound": {
+    "description": "Shown when no roles exist."
+  },
+  "permissionsCount": "Permissões: {count}",
+  "@permissionsCount": {
+    "placeholders": {
+      "count": {}
+    },
+    "description": "Displays the number of permissions on a role."
+  },
+  "editPermissionsTooltip": "Editar permissões",
+  "@editPermissionsTooltip": {
+    "description": "Tooltip for editing permissions."
+  },
+  "groupsTitle": "Grupos",
+  "@groupsTitle": {
+    "description": "Header for groups section."
+  },
+  "noGroupsFound": "Nenhum grupo encontrado.",
+  "@noGroupsFound": {
+    "description": "Shown when no groups exist."
+  },
+  "roleLabel": "Função",
+  "@roleLabel": {
+    "description": "Label for a role selection."
+  },
+  "groupAddTitle": "Adicionar grupo",
+  "@groupAddTitle": {
+    "description": "Title for adding a group."
+  },
+  "groupNameLabel": "Nome do grupo",
+  "@groupNameLabel": {
+    "description": "Label for the group name input."
+  },
+  "groupLabel": "Grupo",
+  "@groupLabel": {
+    "description": "Label for a group chip or field."
+  },
+  "addGroupMemberTitle": "Adicionar membro a {groupName}",
+  "@addGroupMemberTitle": {
+    "placeholders": {
+      "groupName": {}
+    },
+    "description": "Title for adding a member to a specific group."
+  },
+  "addGroupMemberTooltip": "Adicionar membro",
+  "@addGroupMemberTooltip": {
+    "description": "Tooltip for adding a group member."
+  },
+  "groupMembersTitle": "Membros do grupo: {groupName}",
+  "@groupMembersTitle": {
+    "placeholders": {
+      "groupName": {}
+    },
+    "description": "Title for the group members dialog."
+  },
+  "noGroupMembers": "Nenhum membro no grupo.",
+  "@noGroupMembers": {
+    "description": "Shown when a group has no members."
+  },
+  "removeGroupMemberTooltip": "Remover membro",
+  "@removeGroupMemberTooltip": {
+    "description": "Tooltip for removing a group member."
+  },
+  "roleCreateTitle": "Criar função",
+  "@roleCreateTitle": {
+    "description": "Title for creating a role."
+  },
+  "roleNameLabel": "Nome da função",
+  "@roleNameLabel": {
+    "description": "Label for the role name input."
+  },
+  "permissionsTitle": "Permissões",
+  "@permissionsTitle": {
+    "description": "Title for permissions selection dialog."
+  },
+  "settingsBackupTitle": "Criar backup",
+  "@settingsBackupTitle": {
+    "description": "Title for manual Hive backup action."
+  },
+  "settingsBackupSubtitle": "Salvar um backup local dos dados do Hive.",
+  "@settingsBackupSubtitle": {
+    "description": "Subtitle for manual Hive backup action."
+  },
+  "settingsRestoreTitle": "Restaurar backup",
+  "@settingsRestoreTitle": {
+    "description": "Title for restoring Hive backup."
+  },
+  "settingsRestoreSubtitle": "Substituir os dados locais por um arquivo de backup.",
+  "@settingsRestoreSubtitle": {
+    "description": "Subtitle for restoring Hive backup."
+  },
+  "backupSuccessMessage": "Backup salvo: {path}",
+  "@backupSuccessMessage": {
+    "description": "Shown after a backup file is created.",
+    "placeholders": {
+      "path": {}
+    }
+  },
+  "backupFailedMessage": "Backup falhou: {error}",
+  "@backupFailedMessage": {
+    "description": "Shown when backup fails.",
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "restoreSuccessMessage": "Backup restaurado. Reinicie o app para recarregar os dados.",
+  "@restoreSuccessMessage": {
+    "description": "Shown after a successful restore."
+  },
+  "restoreFailedMessage": "Falha na restauração: {error}",
+  "@restoreFailedMessage": {
+    "description": "Shown when restore fails.",
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "restoreConfirmTitle": "Restaurar backup?",
+  "@restoreConfirmTitle": {
+    "description": "Title for restore confirmation dialog."
+  },
+  "restoreConfirmContent": "Isso substituirá os dados locais.",
+  "@restoreConfirmContent": {
+    "description": "Content for restore confirmation dialog."
+  },
+  "restoreConfirmButton": "Restaurar",
+  "@restoreConfirmButton": {
+    "description": "Button label for confirming restore."
+  },
+  "settingsBackupLastRunLabel": "Último backup",
+  "@settingsBackupLastRunLabel": {
+    "description": "Label for last backup timestamp."
+  },
+  "backupNeverMessage": "Nunca",
+  "@backupNeverMessage": {
+    "description": "Shown when no backup has been created yet."
+  },
+  "backupNowButton": "Fazer backup agora",
+  "@backupNowButton": {
+    "description": "Button label to trigger a backup immediately."
+  },
+  "settingsBackupPathLabel": "Arquivo de backup",
+  "@settingsBackupPathLabel": {
+    "description": "Label for last backup file path."
+  },
+  "backupNoFileMessage": "Ainda não há arquivo de backup",
+  "@backupNoFileMessage": {
+    "description": "Shown when no backup file path is available."
+  }
+}
+  "aiUsageTitle": "AI Usage",
+  "@aiUsageTitle": {
+    "description": "Title for the AI usage overview screen."
+  },

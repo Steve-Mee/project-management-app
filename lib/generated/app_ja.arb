@@ -1,0 +1,1089 @@
+{
+  "@@locale": "ja",
+  "appTitle": "プロジェクト管理アプリ",
+  "@appTitle": {
+    "description": "Auto-generated description for appTitle."
+  },
+  "menuLabel": "メニュー",
+  "@menuLabel": {
+    "description": "Auto-generated description for menuLabel."
+  },
+  "loginTitle": "ログイン",
+  "@loginTitle": {
+    "description": "Auto-generated description for loginTitle."
+  },
+  "usernameLabel": "ユーザー名",
+  "@usernameLabel": {
+    "description": "Auto-generated description for usernameLabel."
+  },
+  "passwordLabel": "パスワード",
+  "@passwordLabel": {
+    "description": "Auto-generated description for passwordLabel."
+  },
+  "loginButton": "ログイン",
+  "@loginButton": {
+    "description": "Auto-generated description for loginButton."
+  },
+  "createAccount": "アカウント作成",
+  "@createAccount": {
+    "description": "Auto-generated description for createAccount."
+  },
+  "logoutTooltip": "ログアウト",
+  "@logoutTooltip": {
+    "description": "Auto-generated description for logoutTooltip."
+  },
+  "closeAppTooltip": "アプリを閉じる",
+  "@closeAppTooltip": {
+    "description": "Auto-generated description for closeAppTooltip."
+  },
+  "settingsTitle": "設定",
+  "@settingsTitle": {
+    "description": "Auto-generated description for settingsTitle."
+  },
+  "settingsDisplaySection": "表示",
+  "@settingsDisplaySection": {
+    "description": "Auto-generated description for settingsDisplaySection."
+  },
+  "settingsDarkModeTitle": "ダークモード",
+  "@settingsDarkModeTitle": {
+    "description": "Auto-generated description for settingsDarkModeTitle."
+  },
+  "settingsDarkModeSubtitle": "ライトとダークを切り替え",
+  "@settingsDarkModeSubtitle": {
+    "description": "Auto-generated description for settingsDarkModeSubtitle."
+  },
+  "settingsFollowSystemTitle": "システムテーマに従う",
+  "@settingsFollowSystemTitle": {
+    "description": "Auto-generated description for settingsFollowSystemTitle."
+  },
+  "settingsFollowSystemSubtitle": "デバイスのテーマを使用",
+  "@settingsFollowSystemSubtitle": {
+    "description": "Auto-generated description for settingsFollowSystemSubtitle."
+  },
+  "settingsLanguageTitle": "言語",
+  "@settingsLanguageTitle": {
+    "description": "Auto-generated description for settingsLanguageTitle."
+  },
+  "settingsLanguageSubtitle": "アプリの言語を選択",
+  "@settingsLanguageSubtitle": {
+    "description": "Auto-generated description for settingsLanguageSubtitle."
+  },
+  "settingsNotificationsSection": "通知",
+  "@settingsNotificationsSection": {
+    "description": "Auto-generated description for settingsNotificationsSection."
+  },
+  "settingsNotificationsTitle": "通知",
+  "@settingsNotificationsTitle": {
+    "description": "Auto-generated description for settingsNotificationsTitle."
+  },
+  "settingsNotificationsSubtitle": "更新とリマインダー",
+  "@settingsNotificationsSubtitle": {
+    "description": "Auto-generated description for settingsNotificationsSubtitle."
+  },
+  "settingsPrivacySection": "プライバシー",
+  "@settingsPrivacySection": {
+    "description": "Auto-generated description for settingsPrivacySection."
+  },
+  "settingsLocalFilesConsentTitle": "ローカルファイルの許可",
+  "@settingsLocalFilesConsentTitle": {
+    "description": "Auto-generated description for settingsLocalFilesConsentTitle."
+  },
+  "settingsLocalFilesConsentSubtitle": "AIのコンテキストのためにローカルのプロジェクトファイルを読み取ることを許可します。",
+  "@settingsLocalFilesConsentSubtitle": {
+    "description": "Auto-generated description for settingsLocalFilesConsentSubtitle."
+  },
+  "settingsUseProjectFilesTitle": "プロジェクトファイルを使用",
+  "@settingsUseProjectFilesTitle": {
+    "description": "Auto-generated description for settingsUseProjectFilesTitle."
+  },
+  "settingsUseProjectFilesSubtitle": "ローカルファイルをAIプロンプトに追加",
+  "@settingsUseProjectFilesSubtitle": {
+    "description": "Auto-generated description for settingsUseProjectFilesSubtitle."
+  },
+  "settingsProjectsSection": "プロジェクト",
+  "@settingsProjectsSection": {
+    "description": "Auto-generated description for settingsProjectsSection."
+  },
+  "settingsLogoutTitle": "ログアウト",
+  "@settingsLogoutTitle": {
+    "description": "Auto-generated description for settingsLogoutTitle."
+  },
+  "settingsLogoutSubtitle": "現在のセッションを終了",
+  "@settingsLogoutSubtitle": {
+    "description": "Auto-generated description for settingsLogoutSubtitle."
+  },
+  "settingsExportTitle": "プロジェクトを書き出す",
+  "@settingsExportTitle": {
+    "description": "Auto-generated description for settingsExportTitle."
+  },
+  "settingsExportSubtitle": "プロジェクトをファイルに書き出す",
+  "@settingsExportSubtitle": {
+    "description": "Auto-generated description for settingsExportSubtitle."
+  },
+  "settingsImportTitle": "プロジェクトを読み込む",
+  "@settingsImportTitle": {
+    "description": "Auto-generated description for settingsImportTitle."
+  },
+  "settingsImportSubtitle": "ファイルからプロジェクトを読み込む",
+  "@settingsImportSubtitle": {
+    "description": "Auto-generated description for settingsImportSubtitle."
+  },
+  "settingsUsersSection": "ユーザー",
+  "@settingsUsersSection": {
+    "description": "Auto-generated description for settingsUsersSection."
+  },
+  "settingsCurrentUserTitle": "現在のユーザー",
+  "@settingsCurrentUserTitle": {
+    "description": "Auto-generated description for settingsCurrentUserTitle."
+  },
+  "settingsNotLoggedIn": "未ログイン",
+  "@settingsNotLoggedIn": {
+    "description": "Auto-generated description for settingsNotLoggedIn."
+  },
+  "settingsNoUsersFound": "ユーザーが見つかりません。",
+  "@settingsNoUsersFound": {
+    "description": "Auto-generated description for settingsNoUsersFound."
+  },
+  "settingsLocalUserLabel": "ローカルユーザー",
+  "@settingsLocalUserLabel": {
+    "description": "Auto-generated description for settingsLocalUserLabel."
+  },
+  "settingsDeleteTooltip": "削除",
+  "@settingsDeleteTooltip": {
+    "description": "Auto-generated description for settingsDeleteTooltip."
+  },
+  "settingsLoadUsersFailed": "ユーザーの読み込みに失敗しました",
+  "@settingsLoadUsersFailed": {
+    "description": "Auto-generated description for settingsLoadUsersFailed."
+  },
+  "settingsAddUserTitle": "ユーザーを追加",
+  "@settingsAddUserTitle": {
+    "description": "Auto-generated description for settingsAddUserTitle."
+  },
+  "settingsAddUserSubtitle": "追加のアカウントを追加",
+  "@settingsAddUserSubtitle": {
+    "description": "Auto-generated description for settingsAddUserSubtitle."
+  },
+  "logoutDialogTitle": "ログアウト",
+  "@logoutDialogTitle": {
+    "description": "Auto-generated description for logoutDialogTitle."
+  },
+  "logoutDialogContent": "ログアウトしますか？",
+  "@logoutDialogContent": {
+    "description": "Auto-generated description for logoutDialogContent."
+  },
+  "cancelButton": "キャンセル",
+  "@cancelButton": {
+    "description": "Auto-generated description for cancelButton."
+  },
+  "logoutButton": "ログアウト",
+  "@logoutButton": {
+    "description": "Auto-generated description for logoutButton."
+  },
+  "loggedOutMessage": "ログアウトしました。",
+  "@loggedOutMessage": {
+    "description": "Auto-generated description for loggedOutMessage."
+  },
+  "exportCompleteMessage": "書き出し完了: {projectsPath}, {tasksPath}",
+  "@exportCompleteMessage": {
+    "placeholders": {
+      "projectsPath": {},
+      "tasksPath": {}
+    },
+    "description": "Auto-generated description for exportCompleteMessage."
+  },
+  "exportFailedMessage": "書き出し失敗: {error}",
+  "@exportFailedMessage": {
+    "placeholders": {
+      "error": {}
+    },
+    "description": "Auto-generated description for exportFailedMessage."
+  },
+  "exportPasswordTitle": "エクスポートを暗号化",
+  "@exportPasswordTitle": {
+    "description": "Auto-generated description for exportPasswordTitle."
+  },
+  "exportPasswordSubtitle": "エクスポートファイルを暗号化するためのパスワードを設定してください。",
+  "@exportPasswordSubtitle": {
+    "description": "Auto-generated description for exportPasswordSubtitle."
+  },
+  "exportPasswordMismatch": "パスワードが一致しません。",
+  "@exportPasswordMismatch": {
+    "description": "Auto-generated description for exportPasswordMismatch."
+  },
+  "importSelectFilesMessage": "CSVとJSONファイルを選択してください。",
+  "@importSelectFilesMessage": {
+    "description": "Auto-generated description for importSelectFilesMessage."
+  },
+  "importCompleteMessage": "読み込み完了: {projectsPath}, {tasksPath}",
+  "@importCompleteMessage": {
+    "placeholders": {
+      "projectsPath": {},
+      "tasksPath": {}
+    },
+    "description": "Auto-generated description for importCompleteMessage."
+  },
+  "importFailedMessage": "読み込み失敗: {error}",
+  "@importFailedMessage": {
+    "placeholders": {
+      "error": {}
+    },
+    "description": "Auto-generated description for importFailedMessage."
+  },
+  "importFailedTitle": "読み込み失敗",
+  "@importFailedTitle": {
+    "description": "Auto-generated description for importFailedTitle."
+  },
+  "addUserDialogTitle": "ユーザーを追加",
+  "@addUserDialogTitle": {
+    "description": "Auto-generated description for addUserDialogTitle."
+  },
+  "saveButton": "保存",
+  "@saveButton": {
+    "description": "Auto-generated description for saveButton."
+  },
+  "userAddedMessage": "ユーザーを追加しました。",
+  "@userAddedMessage": {
+    "description": "Auto-generated description for userAddedMessage."
+  },
+  "invalidUserMessage": "無効なユーザーです。",
+  "@invalidUserMessage": {
+    "description": "Auto-generated description for invalidUserMessage."
+  },
+  "deleteUserDialogTitle": "ユーザーを削除",
+  "@deleteUserDialogTitle": {
+    "description": "Auto-generated description for deleteUserDialogTitle."
+  },
+  "deleteUserDialogContent": "{username} を削除しますか？",
+  "@deleteUserDialogContent": {
+    "placeholders": {
+      "username": {}
+    },
+    "description": "Auto-generated description for deleteUserDialogContent."
+  },
+  "deleteButton": "削除",
+  "@deleteButton": {
+    "description": "Auto-generated description for deleteButton."
+  },
+  "userDeletedMessage": "ユーザーを削除しました: {username}",
+  "@userDeletedMessage": {
+    "placeholders": {
+      "username": {}
+    },
+    "description": "Auto-generated description for userDeletedMessage."
+  },
+  "projectsTitle": "プロジェクト",
+  "@projectsTitle": {
+    "description": "Auto-generated description for projectsTitle."
+  },
+  "newProjectButton": "新規プロジェクト",
+  "@newProjectButton": {
+    "description": "Auto-generated description for newProjectButton."
+  },
+  "noProjectsYet": "まだプロジェクトがありません",
+  "@noProjectsYet": {
+    "description": "Auto-generated description for noProjectsYet."
+  },
+  "noProjectsFound": "プロジェクトが見つかりません",
+  "@noProjectsFound": {
+    "description": "Auto-generated description for noProjectsFound."
+  },
+  "loadingMoreProjects": "さらに読み込み中...",
+  "@loadingMoreProjects": {
+    "description": "Auto-generated description for loadingMoreProjects."
+  },
+  "sortByLabel": "並び替え",
+  "@sortByLabel": {
+    "description": "Auto-generated description for sortByLabel."
+  },
+  "projectSortName": "名前",
+  "@projectSortName": {
+    "description": "Auto-generated description for projectSortName."
+  },
+  "projectSortProgress": "進捗",
+  "@projectSortProgress": {
+    "description": "Auto-generated description for projectSortProgress."
+  },
+  "projectSortPriority": "優先度",
+  "@projectSortPriority": {
+    "description": "Auto-generated description for projectSortPriority."
+  },
+  "allLabel": "すべて",
+  "@allLabel": {
+    "description": "Auto-generated description for allLabel."
+  },
+  "loadProjectsFailed": "プロジェクトの読み込みに失敗しました。",
+  "@loadProjectsFailed": {
+    "description": "Auto-generated description for loadProjectsFailed."
+  },
+  "projectSemanticsLabel": "プロジェクト {title}",
+  "@projectSemanticsLabel": {
+    "placeholders": {
+      "title": {}
+    },
+    "description": "Auto-generated description for projectSemanticsLabel."
+  },
+  "statusSemanticsLabel": "ステータス {status}",
+  "@statusSemanticsLabel": {
+    "placeholders": {
+      "status": {}
+    },
+    "description": "Auto-generated description for statusSemanticsLabel."
+  },
+  "newProjectDialogTitle": "新規プロジェクト",
+  "@newProjectDialogTitle": {
+    "description": "Auto-generated description for newProjectDialogTitle."
+  },
+  "projectNameLabel": "プロジェクト名",
+  "@projectNameLabel": {
+    "description": "Auto-generated description for projectNameLabel."
+  },
+  "descriptionLabel": "説明",
+  "@descriptionLabel": {
+    "description": "Auto-generated description for descriptionLabel."
+  },
+  "urgencyLabel": "緊急度",
+  "@urgencyLabel": {
+    "description": "Auto-generated description for urgencyLabel."
+  },
+  "urgencyLow": "低",
+  "@urgencyLow": {
+    "description": "Auto-generated description for urgencyLow."
+  },
+  "urgencyMedium": "中",
+  "@urgencyMedium": {
+    "description": "Auto-generated description for urgencyMedium."
+  },
+  "urgencyHigh": "高",
+  "@urgencyHigh": {
+    "description": "Auto-generated description for urgencyHigh."
+  },
+  "projectCreatedMessage": "プロジェクトを作成しました: {name}",
+  "@projectCreatedMessage": {
+    "placeholders": {
+      "name": {}
+    },
+    "description": "Auto-generated description for projectCreatedMessage."
+  },
+  "projectDetailsTitle": "プロジェクト詳細",
+  "@projectDetailsTitle": {
+    "description": "Auto-generated description for projectDetailsTitle."
+  },
+  "aiChatWithProjectFilesTooltip": "プロジェクトファイルでAIチャット",
+  "@aiChatWithProjectFilesTooltip": {
+    "description": "Auto-generated description for aiChatWithProjectFilesTooltip."
+  },
+  "moreOptionsLabel": "その他のオプション",
+  "@moreOptionsLabel": {
+    "description": "Auto-generated description for moreOptionsLabel."
+  },
+  "tasksTitle": "タスク",
+  "@tasksTitle": {
+    "description": "Auto-generated description for tasksTitle."
+  },
+  "tasksTab": "タスク",
+  "@tasksTab": {
+    "description": "Auto-generated description for tasksTab."
+  },
+  "detailsTab": "詳細",
+  "@detailsTab": {
+    "description": "Auto-generated description for detailsTab."
+  },
+  "tasksLoadFailed": "タスクの読み込みに失敗しました。",
+  "@tasksLoadFailed": {
+    "description": "Auto-generated description for tasksLoadFailed."
+  },
+  "projectOverviewTitle": "プロジェクト概要",
+  "@projectOverviewTitle": {
+    "description": "Auto-generated description for projectOverviewTitle."
+  },
+  "tasksLoading": "タスクを読み込み中...",
+  "@tasksLoading": {
+    "description": "Auto-generated description for tasksLoading."
+  },
+  "taskStatisticsTitle": "タスク統計",
+  "@taskStatisticsTitle": {
+    "description": "Auto-generated description for taskStatisticsTitle."
+  },
+  "totalLabel": "合計",
+  "@totalLabel": {
+    "description": "Auto-generated description for totalLabel."
+  },
+  "completedLabel": "完了",
+  "@completedLabel": {
+    "description": "Auto-generated description for completedLabel."
+  },
+  "inProgressLabel": "進行中",
+  "@inProgressLabel": {
+    "description": "Auto-generated description for inProgressLabel."
+  },
+  "remainingLabel": "残り",
+  "@remainingLabel": {
+    "description": "Auto-generated description for remainingLabel."
+  },
+  "completionPercentLabel": "{percent}% 完了",
+  "@completionPercentLabel": {
+    "placeholders": {
+      "percent": {}
+    },
+    "description": "Auto-generated description for completionPercentLabel."
+  },
+  "burndownChartTitle": "バーンダウンチャート",
+  "@burndownChartTitle": {
+    "description": "Auto-generated description for burndownChartTitle."
+  },
+  "chartPlaceholderTitle": "チャートのプレースホルダー",
+  "@chartPlaceholderTitle": {
+    "description": "Auto-generated description for chartPlaceholderTitle."
+  },
+  "chartPlaceholderSubtitle": "fl_chart の統合は近日予定",
+  "@chartPlaceholderSubtitle": {
+    "description": "Auto-generated description for chartPlaceholderSubtitle."
+  },
+  "workflowsTitle": "ワークフロー",
+  "@workflowsTitle": {
+    "description": "Auto-generated description for workflowsTitle."
+  },
+  "noWorkflowsAvailable": "利用可能なワークフローはありません。",
+  "@noWorkflowsAvailable": {
+    "description": "Auto-generated description for noWorkflowsAvailable."
+  },
+  "taskStatusTodo": "未着手",
+  "@taskStatusTodo": {
+    "description": "Auto-generated description for taskStatusTodo."
+  },
+  "taskStatusInProgress": "進行中",
+  "@taskStatusInProgress": {
+    "description": "Auto-generated description for taskStatusInProgress."
+  },
+  "taskStatusReview": "レビュー",
+  "@taskStatusReview": {
+    "description": "Auto-generated description for taskStatusReview."
+  },
+  "taskStatusDone": "完了",
+  "@taskStatusDone": {
+    "description": "Auto-generated description for taskStatusDone."
+  },
+  "workflowStatusActive": "アクティブ",
+  "@workflowStatusActive": {
+    "description": "Auto-generated description for workflowStatusActive."
+  },
+  "workflowStatusPending": "保留",
+  "@workflowStatusPending": {
+    "description": "Auto-generated description for workflowStatusPending."
+  },
+  "noTasksYet": "まだタスクがありません",
+  "@noTasksYet": {
+    "description": "Auto-generated description for noTasksYet."
+  },
+  "projectTimeTitle": "プロジェクト時間",
+  "@projectTimeTitle": {
+    "description": "Auto-generated description for projectTimeTitle."
+  },
+  "urgencyValue": "緊急度: {value}",
+  "@urgencyValue": {
+    "placeholders": {
+      "value": {}
+    },
+    "description": "Auto-generated description for urgencyValue."
+  },
+  "trackedTimeValue": "記録時間: {value}",
+  "@trackedTimeValue": {
+    "placeholders": {
+      "value": {}
+    },
+    "description": "Auto-generated description for trackedTimeValue."
+  },
+  "hourShort": "h",
+  "@hourShort": {
+    "description": "Auto-generated description for hourShort."
+  },
+  "minuteShort": "m",
+  "@minuteShort": {
+    "description": "Auto-generated description for minuteShort."
+  },
+  "secondShort": "s",
+  "@secondShort": {
+    "description": "Auto-generated description for secondShort."
+  },
+  "searchTasksHint": "タスクを検索...",
+  "@searchTasksHint": {
+    "description": "Auto-generated description for searchTasksHint."
+  },
+  "searchAttachmentsHint": "添付ファイルを検索...",
+  "@searchAttachmentsHint": {
+    "description": "Auto-generated description for searchAttachmentsHint."
+  },
+  "clearSearchTooltip": "検索をクリア",
+  "@clearSearchTooltip": {
+    "description": "Auto-generated description for clearSearchTooltip."
+  },
+  "projectMapTitle": "プロジェクトフォルダー",
+  "@projectMapTitle": {
+    "description": "Auto-generated description for projectMapTitle."
+  },
+  "linkProjectMapButton": "プロジェクトフォルダーをリンク",
+  "@linkProjectMapButton": {
+    "description": "Auto-generated description for linkProjectMapButton."
+  },
+  "projectDataLoading": "プロジェクトデータを読み込み中...",
+  "@projectDataLoading": {
+    "description": "Auto-generated description for projectDataLoading."
+  },
+  "projectDataLoadFailed": "プロジェクトデータの読み込みに失敗しました。",
+  "@projectDataLoadFailed": {
+    "description": "Auto-generated description for projectDataLoadFailed."
+  },
+  "currentMapLabel": "現在のフォルダー: {path}",
+  "@currentMapLabel": {
+    "placeholders": {
+      "path": {}
+    },
+    "description": "Auto-generated description for currentMapLabel."
+  },
+  "noProjectMapLinked": "フォルダーがリンクされていません。ファイルを読むにはフォルダーをリンクしてください。",
+  "@noProjectMapLinked": {
+    "description": "Auto-generated description for noProjectMapLinked."
+  },
+  "projectNotAvailable": "プロジェクトを利用できません。",
+  "@projectNotAvailable": {
+    "description": "Auto-generated description for projectNotAvailable."
+  },
+  "enableConsentInSettings": "設定で許可を有効にしてください。",
+  "@enableConsentInSettings": {
+    "description": "Auto-generated description for enableConsentInSettings."
+  },
+  "projectMapLinked": "プロジェクトフォルダーをリンクしました。",
+  "@projectMapLinked": {
+    "description": "Auto-generated description for projectMapLinked."
+  },
+  "privacyWarningTitle": "プライバシー警告",
+  "@privacyWarningTitle": {
+    "description": "Auto-generated description for privacyWarningTitle."
+  },
+  "privacyWarningContent": "警告: 機密データが読み取られる可能性があります。",
+  "@privacyWarningContent": {
+    "description": "Auto-generated description for privacyWarningContent."
+  },
+  "continueButton": "続行",
+  "@continueButton": {
+    "description": "Auto-generated description for continueButton."
+  },
+  "attachFilesTooltip": "ファイルを添付",
+  "@attachFilesTooltip": {
+    "description": "Auto-generated description for attachFilesTooltip."
+  },
+  "moreAttachmentsLabel": "+{count}",
+  "@moreAttachmentsLabel": {
+    "placeholders": {
+      "count": {}
+    },
+    "description": "Auto-generated description for moreAttachmentsLabel."
+  },
+  "aiAssistantLabel": "AIアシスタント",
+  "@aiAssistantLabel": {
+    "description": "Auto-generated description for aiAssistantLabel."
+  },
+  "welcomeBack": "おかえりなさい！👋",
+  "@welcomeBack": {
+    "description": "Auto-generated description for welcomeBack."
+  },
+  "projectsOverviewSubtitle": "アクティブなプロジェクトの概要です",
+  "@projectsOverviewSubtitle": {
+    "description": "Auto-generated description for projectsOverviewSubtitle."
+  },
+  "recentWorkflowsTitle": "最近のワークフロー",
+  "@recentWorkflowsTitle": {
+    "description": "Auto-generated description for recentWorkflowsTitle."
+  },
+  "recentWorkflowsLoading": "最近のワークフローを読み込み中...",
+  "@recentWorkflowsLoading": {
+    "description": "Auto-generated description for recentWorkflowsLoading."
+  },
+  "recentWorkflowsLoadFailed": "最近のワークフローの読み込みに失敗しました。",
+  "@recentWorkflowsLoadFailed": {
+    "description": "Auto-generated description for recentWorkflowsLoadFailed."
+  },
+  "retryButton": "再試行",
+  "@retryButton": {
+    "description": "Auto-generated description for retryButton."
+  },
+  "noRecentTasks": "最近のタスクはありません。",
+  "@noRecentTasks": {
+    "description": "Auto-generated description for noRecentTasks."
+  },
+  "unknownProject": "不明なプロジェクト",
+  "@unknownProject": {
+    "description": "Auto-generated description for unknownProject."
+  },
+  "projectTaskStatusSemantics": "プロジェクト {projectName}、タスク {taskTitle}、ステータス {statusLabel}、{timeLabel}",
+  "@projectTaskStatusSemantics": {
+    "placeholders": {
+      "projectName": {},
+      "taskTitle": {},
+      "statusLabel": {},
+      "timeLabel": {}
+    },
+    "description": "Auto-generated description for projectTaskStatusSemantics."
+  },
+  "taskStatusSemantics": "タスク {taskTitle} {statusLabel}",
+  "@taskStatusSemantics": {
+    "placeholders": {
+      "taskTitle": {},
+      "statusLabel": {}
+    },
+    "description": "Auto-generated description for taskStatusSemantics."
+  },
+  "timeJustNow": "たった今",
+  "@timeJustNow": {
+    "description": "Auto-generated description for timeJustNow."
+  },
+  "timeMinutesAgo": "{minutes} 分前",
+  "@timeMinutesAgo": {
+    "placeholders": {
+      "minutes": {}
+    },
+    "description": "Auto-generated description for timeMinutesAgo."
+  },
+  "timeHoursAgo": "{hours} 時間前",
+  "@timeHoursAgo": {
+    "placeholders": {
+      "hours": {}
+    },
+    "description": "Auto-generated description for timeHoursAgo."
+  },
+  "timeDaysAgo": "{days} 日前",
+  "@timeDaysAgo": {
+    "placeholders": {
+      "days": {}
+    },
+    "description": "Auto-generated description for timeDaysAgo."
+  },
+  "timeWeeksAgo": "{weeks} 週間前",
+  "@timeWeeksAgo": {
+    "placeholders": {
+      "weeks": {}
+    },
+    "description": "Auto-generated description for timeWeeksAgo."
+  },
+  "timeMonthsAgo": "{months} か月前",
+  "@timeMonthsAgo": {
+    "placeholders": {
+      "months": {}
+    },
+    "description": "Auto-generated description for timeMonthsAgo."
+  },
+  "projectProgressChartSemantics": "{projectName} の進捗チャート。完了 {completedPercent} パーセント、保留 {pendingPercent} パーセント。",
+  "@projectProgressChartSemantics": {
+    "placeholders": {
+      "projectName": {},
+      "completedPercent": {},
+      "pendingPercent": {}
+    },
+    "description": "Auto-generated description for projectProgressChartSemantics."
+  },
+  "progressLabel": "進捗",
+  "@progressLabel": {
+    "description": "Auto-generated description for progressLabel."
+  },
+  "completedPercentLabel": "完了: {percent}%",
+  "@completedPercentLabel": {
+    "placeholders": {
+      "percent": {}
+    },
+    "description": "Auto-generated description for completedPercentLabel."
+  },
+  "pendingPercentLabel": "保留: {percent}%",
+  "@pendingPercentLabel": {
+    "placeholders": {
+      "percent": {}
+    },
+    "description": "Auto-generated description for pendingPercentLabel."
+  },
+  "noDescription": "説明なし",
+  "@noDescription": {
+    "description": "Auto-generated description for noDescription."
+  },
+  "closeButton": "閉じる",
+  "@closeButton": {
+    "description": "Auto-generated description for closeButton."
+  },
+  "burndownProgressTitle": "バーンダウン進捗",
+  "@burndownProgressTitle": {
+    "description": "Auto-generated description for burndownProgressTitle."
+  },
+  "actualProgressLabel": "実際の進捗",
+  "@actualProgressLabel": {
+    "description": "Auto-generated description for actualProgressLabel."
+  },
+  "idealTrendLabel": "理想トレンド",
+  "@idealTrendLabel": {
+    "description": "Auto-generated description for idealTrendLabel."
+  },
+  "statusLabel": "ステータス",
+  "@statusLabel": {
+    "description": "Auto-generated description for statusLabel."
+  },
+  "burndownChartSemantics": "{projectName} のバーンダウンチャート。実測点: {actualPoints}。理想点: {idealPoints}。",
+  "@burndownChartSemantics": {
+    "placeholders": {
+      "projectName": {},
+      "actualPoints": {},
+      "idealPoints": {}
+    },
+    "description": "Auto-generated description for burndownChartSemantics."
+  },
+  "aiChatSemanticsLabel": "AIチャット",
+  "@aiChatSemanticsLabel": {
+    "description": "Auto-generated description for aiChatSemanticsLabel."
+  },
+  "aiUsageTitle": "AI使用状況",
+  "@aiUsageTitle": {
+    "description": "Title for the AI usage overview screen."
+  },
+  "aiAssistantTitle": "AIプロジェクトアシスタント",
+  "@aiAssistantTitle": {
+    "description": "Auto-generated description for aiAssistantTitle."
+  },
+  "clearChatTooltip": "チャットをクリア",
+  "@clearChatTooltip": {
+    "description": "Auto-generated description for clearChatTooltip."
+  },
+  "noMessagesLabel": "メッセージなし",
+  "@noMessagesLabel": {
+    "description": "Auto-generated description for noMessagesLabel."
+  },
+  "aiEmptyTitle": "AIアシスタントとの会話を開始",
+  "@aiEmptyTitle": {
+    "description": "Auto-generated description for aiEmptyTitle."
+  },
+  "aiEmptySubtitle": "例: \"プロジェクトの計画を作成: Webショップ\"",
+  "@aiEmptySubtitle": {
+    "description": "Auto-generated description for aiEmptySubtitle."
+  },
+  "useProjectFilesLabel": "プロジェクトファイルを使用",
+  "@useProjectFilesLabel": {
+    "description": "Auto-generated description for useProjectFilesLabel."
+  },
+  "typeMessageHint": "メッセージを入力...",
+  "@typeMessageHint": {
+    "description": "Auto-generated description for typeMessageHint."
+  },
+  "projectFilesReadFailed": "プロジェクトファイルの読み取りに失敗しました。",
+  "@projectFilesReadFailed": {
+    "description": "Auto-generated description for projectFilesReadFailed."
+  },
+  "aiResponseFailedTitle": "AI応答に失敗しました",
+  "@aiResponseFailedTitle": {
+    "description": "Auto-generated description for aiResponseFailedTitle."
+  },
+  "sendMessageTooltip": "メッセージ送信",
+  "@sendMessageTooltip": {
+    "description": "Auto-generated description for sendMessageTooltip."
+  },
+  "loginMissingCredentials": "ユーザー名とパスワードを入力してください。",
+  "@loginMissingCredentials": {
+    "description": "Auto-generated description for loginMissingCredentials."
+  },
+  "loginFailedMessage": "ログインに失敗しました。資格情報を確認してください。",
+  "@loginFailedMessage": {
+    "description": "Auto-generated description for loginFailedMessage."
+  },
+  "registerTitle": "登録",
+  "@registerTitle": {
+    "description": "Auto-generated description for registerTitle."
+  },
+  "languageLabel": "言語",
+  "@languageLabel": {
+    "description": "Auto-generated description for languageLabel."
+  },
+  "languageSystem": "システム既定",
+  "@languageSystem": {
+    "description": "Auto-generated description for languageSystem."
+  },
+  "languageEnglish": "英語",
+  "@languageEnglish": {
+    "description": "Auto-generated description for languageEnglish."
+  },
+  "languageDutch": "オランダ語",
+  "@languageDutch": {
+    "description": "Auto-generated description for languageDutch."
+  },
+  "languageSpanish": "スペイン語",
+  "@languageSpanish": {
+    "description": "Auto-generated description for languageSpanish."
+  },
+  "languageFrench": "フランス語",
+  "@languageFrench": {
+    "description": "Auto-generated description for languageFrench."
+  },
+  "languageGerman": "ドイツ語",
+  "@languageGerman": {
+    "description": "Auto-generated description for languageGerman."
+  },
+  "languagePortuguese": "ポルトガル語",
+  "@languagePortuguese": {
+    "description": "Auto-generated description for languagePortuguese."
+  },
+  "languageItalian": "イタリア語",
+  "@languageItalian": {
+    "description": "Auto-generated description for languageItalian."
+  },
+  "languageArabic": "アラビア語",
+  "@languageArabic": {
+    "description": "Auto-generated description for languageArabic."
+  },
+  "languageChinese": "中国語",
+  "@languageChinese": {
+    "description": "Auto-generated description for languageChinese."
+  },
+  "languageJapanese": "日本語",
+  "@languageJapanese": {
+    "description": "Auto-generated description for languageJapanese."
+  },
+  "languageKorean": "韓国語",
+  "@languageKorean": {
+    "description": "Auto-generated description for languageKorean."
+  },
+  "languageRussian": "ロシア語",
+  "@languageRussian": {
+    "description": "Auto-generated description for languageRussian."
+  },
+  "languageHindi": "ヒンディー語",
+  "@languageHindi": {
+    "description": "Auto-generated description for languageHindi."
+  },
+  "repeatPasswordLabel": "パスワードを再入力",
+  "@repeatPasswordLabel": {
+    "description": "Auto-generated description for repeatPasswordLabel."
+  },
+  "passwordRulesTitle": "パスワードのルール",
+  "@passwordRulesTitle": {
+    "description": "Auto-generated description for passwordRulesTitle."
+  },
+  "passwordRuleMinLength": "8文字以上",
+  "@passwordRuleMinLength": {
+    "description": "Auto-generated description for passwordRuleMinLength."
+  },
+  "passwordRuleHasLetter": "文字を含む",
+  "@passwordRuleHasLetter": {
+    "description": "Auto-generated description for passwordRuleHasLetter."
+  },
+  "passwordRuleHasDigit": "数字を含む",
+  "@passwordRuleHasDigit": {
+    "description": "Auto-generated description for passwordRuleHasDigit."
+  },
+  "passwordRuleMatches": "パスワードが一致",
+  "@passwordRuleMatches": {
+    "description": "Auto-generated description for passwordRuleMatches."
+  },
+  "registerButton": "登録",
+  "@registerButton": {
+    "description": "Auto-generated description for registerButton."
+  },
+  "registrationIssueUsernameMissing": "ユーザー名がありません",
+  "@registrationIssueUsernameMissing": {
+    "description": "Auto-generated description for registrationIssueUsernameMissing."
+  },
+  "registrationIssueMinLength": "8文字以上",
+  "@registrationIssueMinLength": {
+    "description": "Auto-generated description for registrationIssueMinLength."
+  },
+  "registrationIssueLetter": "少なくとも1文字",
+  "@registrationIssueLetter": {
+    "description": "Auto-generated description for registrationIssueLetter."
+  },
+  "registrationIssueDigit": "少なくとも1数字",
+  "@registrationIssueDigit": {
+    "description": "Auto-generated description for registrationIssueDigit."
+  },
+  "registrationIssueNoMatch": "パスワードが一致しません",
+  "@registrationIssueNoMatch": {
+    "description": "Auto-generated description for registrationIssueNoMatch."
+  },
+  "registrationFailedWithIssues": "登録に失敗しました: {issues}。",
+  "@registrationFailedWithIssues": {
+    "placeholders": {
+      "issues": {}
+    },
+    "description": "Auto-generated description for registrationFailedWithIssues."
+  },
+  "accountCreatedMessage": "アカウントが作成されました。ログインしてください。",
+  "@accountCreatedMessage": {
+    "description": "Auto-generated description for accountCreatedMessage."
+  },
+  "registerFailedMessage": "登録に失敗しました。",
+  "@registerFailedMessage": {
+    "description": "Auto-generated description for registerFailedMessage."
+  },
+  "accessDeniedMessage": "アクセスが拒否されました。",
+  "@accessDeniedMessage": {
+    "description": "Message shown when a user lacks permission."
+  },
+  "adminPanelTitle": "管理パネル",
+  "@adminPanelTitle": {
+    "description": "Title for the admin panel screen."
+  },
+  "adminPanelSubtitle": "ロール、グループ、権限を管理",
+  "@adminPanelSubtitle": {
+    "description": "Subtitle for the admin panel entry."
+  },
+  "rolesTitle": "ロール",
+  "@rolesTitle": {
+    "description": "Header for roles section."
+  },
+  "noRolesFound": "ロールが見つかりません。",
+  "@noRolesFound": {
+    "description": "Shown when no roles exist."
+  },
+  "permissionsCount": "権限: {count}",
+  "@permissionsCount": {
+    "placeholders": {
+      "count": {}
+    },
+    "description": "Displays the number of permissions on a role."
+  },
+  "editPermissionsTooltip": "権限を編集",
+  "@editPermissionsTooltip": {
+    "description": "Tooltip for editing permissions."
+  },
+  "groupsTitle": "グループ",
+  "@groupsTitle": {
+    "description": "Header for groups section."
+  },
+  "noGroupsFound": "グループが見つかりません。",
+  "@noGroupsFound": {
+    "description": "Shown when no groups exist."
+  },
+  "roleLabel": "ロール",
+  "@roleLabel": {
+    "description": "Label for a role selection."
+  },
+  "groupAddTitle": "グループを追加",
+  "@groupAddTitle": {
+    "description": "Title for adding a group."
+  },
+  "groupNameLabel": "グループ名",
+  "@groupNameLabel": {
+    "description": "Label for the group name input."
+  },
+  "groupLabel": "グループ",
+  "@groupLabel": {
+    "description": "Label for a group chip or field."
+  },
+  "addGroupMemberTitle": "{groupName}にメンバーを追加",
+  "@addGroupMemberTitle": {
+    "placeholders": {
+      "groupName": {}
+    },
+    "description": "Title for adding a member to a specific group."
+  },
+  "addGroupMemberTooltip": "メンバーを追加",
+  "@addGroupMemberTooltip": {
+    "description": "Tooltip for adding a group member."
+  },
+  "groupMembersTitle": "グループのメンバー: {groupName}",
+  "@groupMembersTitle": {
+    "placeholders": {
+      "groupName": {}
+    },
+    "description": "Title for the group members dialog."
+  },
+  "noGroupMembers": "グループにメンバーがいません。",
+  "@noGroupMembers": {
+    "description": "Shown when a group has no members."
+  },
+  "removeGroupMemberTooltip": "メンバーを削除",
+  "@removeGroupMemberTooltip": {
+    "description": "Tooltip for removing a group member."
+  },
+  "roleCreateTitle": "ロールを作成",
+  "@roleCreateTitle": {
+    "description": "Title for creating a role."
+  },
+  "roleNameLabel": "ロール名",
+  "@roleNameLabel": {
+    "description": "Label for the role name input."
+  },
+  "permissionsTitle": "権限",
+  "@permissionsTitle": {
+    "description": "Title for permissions selection dialog."
+  },
+  "settingsBackupTitle": "バックアップを作成",
+  "@settingsBackupTitle": {
+    "description": "Title for manual Hive backup action."
+  },
+  "settingsBackupSubtitle": "Hive データのローカルバックアップを保存します。",
+  "@settingsBackupSubtitle": {
+    "description": "Subtitle for manual Hive backup action."
+  },
+  "settingsRestoreTitle": "バックアップを復元",
+  "@settingsRestoreTitle": {
+    "description": "Title for restoring Hive backup."
+  },
+  "settingsRestoreSubtitle": "ローカルデータをバックアップファイルで置き換えます。",
+  "@settingsRestoreSubtitle": {
+    "description": "Subtitle for restoring Hive backup."
+  },
+  "backupSuccessMessage": "バックアップを保存しました: {path}",
+  "@backupSuccessMessage": {
+    "description": "Shown after a backup file is created.",
+    "placeholders": {
+      "path": {}
+    }
+  },
+  "backupFailedMessage": "バックアップに失敗しました: {error}",
+  "@backupFailedMessage": {
+    "description": "Shown when backup fails.",
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "restoreSuccessMessage": "バックアップを復元しました。データを読み込むためにアプリを再起動してください。",
+  "@restoreSuccessMessage": {
+    "description": "Shown after a successful restore."
+  },
+  "restoreFailedMessage": "復元に失敗しました: {error}",
+  "@restoreFailedMessage": {
+    "description": "Shown when restore fails.",
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "restoreConfirmTitle": "バックアップを復元しますか？",
+  "@restoreConfirmTitle": {
+    "description": "Title for restore confirmation dialog."
+  },
+  "restoreConfirmContent": "ローカルデータが上書きされます。",
+  "@restoreConfirmContent": {
+    "description": "Content for restore confirmation dialog."
+  },
+  "restoreConfirmButton": "復元",
+  "@restoreConfirmButton": {
+    "description": "Button label for confirming restore."
+  },
+  "settingsBackupLastRunLabel": "最終バックアップ",
+  "@settingsBackupLastRunLabel": {
+    "description": "Label for last backup timestamp."
+  },
+  "backupNeverMessage": "なし",
+  "@backupNeverMessage": {
+    "description": "Shown when no backup has been created yet."
+  },
+  "backupNowButton": "今すぐバックアップ",
+  "@backupNowButton": {
+    "description": "Button label to trigger a backup immediately."
+  },
+  "settingsBackupPathLabel": "バックアップ ファイル",
+  "@settingsBackupPathLabel": {
+    "description": "Label for last backup file path."
+  },
+  "backupNoFileMessage": "バックアップ ファイルがありません",
+  "@backupNoFileMessage": {
+    "description": "Shown when no backup file path is available."
+  }
+}
+  "aiUsageTitle": "AI Usage",
+  "@aiUsageTitle": {
+    "description": "Title for the AI usage overview screen."
+  },

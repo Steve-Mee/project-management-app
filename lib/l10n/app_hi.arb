@@ -1,0 +1,1089 @@
+{
+  "@@locale": "hi",
+  "appTitle": "प्रोजेक्ट प्रबंधन ऐप",
+  "@appTitle": {
+    "description": "Auto-generated description for appTitle."
+  },
+  "loginTitle": "लॉगिन",
+  "@loginTitle": {
+    "description": "Auto-generated description for loginTitle."
+  },
+  "menuLabel": "मेनू",
+  "@menuLabel": {
+    "description": "Auto-generated description for menuLabel."
+  },
+  "usernameLabel": "यूज़रनेम",
+  "@usernameLabel": {
+    "description": "Auto-generated description for usernameLabel."
+  },
+  "passwordLabel": "पासवर्ड",
+  "@passwordLabel": {
+    "description": "Auto-generated description for passwordLabel."
+  },
+  "loginButton": "लॉगिन",
+  "@loginButton": {
+    "description": "Auto-generated description for loginButton."
+  },
+  "createAccount": "खाता बनाएं",
+  "@createAccount": {
+    "description": "Auto-generated description for createAccount."
+  },
+  "logoutTooltip": "लॉगआउट",
+  "@logoutTooltip": {
+    "description": "Auto-generated description for logoutTooltip."
+  },
+  "closeAppTooltip": "ऐप बंद करें",
+  "@closeAppTooltip": {
+    "description": "Auto-generated description for closeAppTooltip."
+  },
+  "settingsTitle": "सेटिंग्स",
+  "@settingsTitle": {
+    "description": "Auto-generated description for settingsTitle."
+  },
+  "settingsDisplaySection": "डिस्प्ले",
+  "@settingsDisplaySection": {
+    "description": "Auto-generated description for settingsDisplaySection."
+  },
+  "settingsDarkModeTitle": "डार्क मोड",
+  "@settingsDarkModeTitle": {
+    "description": "Auto-generated description for settingsDarkModeTitle."
+  },
+  "settingsDarkModeSubtitle": "लाइट और डार्क में बदलें",
+  "@settingsDarkModeSubtitle": {
+    "description": "Auto-generated description for settingsDarkModeSubtitle."
+  },
+  "settingsFollowSystemTitle": "सिस्टम थीम का पालन करें",
+  "@settingsFollowSystemTitle": {
+    "description": "Auto-generated description for settingsFollowSystemTitle."
+  },
+  "settingsFollowSystemSubtitle": "डिवाइस थीम का उपयोग करें",
+  "@settingsFollowSystemSubtitle": {
+    "description": "Auto-generated description for settingsFollowSystemSubtitle."
+  },
+  "settingsLanguageTitle": "भाषा",
+  "@settingsLanguageTitle": {
+    "description": "Auto-generated description for settingsLanguageTitle."
+  },
+  "settingsLanguageSubtitle": "ऐप की भाषा चुनें",
+  "@settingsLanguageSubtitle": {
+    "description": "Auto-generated description for settingsLanguageSubtitle."
+  },
+  "settingsNotificationsSection": "सूचनाएं",
+  "@settingsNotificationsSection": {
+    "description": "Auto-generated description for settingsNotificationsSection."
+  },
+  "settingsNotificationsTitle": "सूचनाएं",
+  "@settingsNotificationsTitle": {
+    "description": "Auto-generated description for settingsNotificationsTitle."
+  },
+  "settingsNotificationsSubtitle": "अपडेट और रिमाइंडर",
+  "@settingsNotificationsSubtitle": {
+    "description": "Auto-generated description for settingsNotificationsSubtitle."
+  },
+  "settingsPrivacySection": "गोपनीयता",
+  "@settingsPrivacySection": {
+    "description": "Auto-generated description for settingsPrivacySection."
+  },
+  "settingsLocalFilesConsentTitle": "लोकल फाइल अनुमति",
+  "@settingsLocalFilesConsentTitle": {
+    "description": "Auto-generated description for settingsLocalFilesConsentTitle."
+  },
+  "settingsLocalFilesConsentSubtitle": "AI संदर्भ के लिए ऐप को लोकल प्रोजेक्ट फाइलें पढ़ने की अनुमति दें।",
+  "@settingsLocalFilesConsentSubtitle": {
+    "description": "Auto-generated description for settingsLocalFilesConsentSubtitle."
+  },
+  "settingsUseProjectFilesTitle": "प्रोजेक्ट फाइलें उपयोग करें",
+  "@settingsUseProjectFilesTitle": {
+    "description": "Auto-generated description for settingsUseProjectFilesTitle."
+  },
+  "settingsUseProjectFilesSubtitle": "लोकल फाइलें AI प्रॉम्प्ट में जोड़ें",
+  "@settingsUseProjectFilesSubtitle": {
+    "description": "Auto-generated description for settingsUseProjectFilesSubtitle."
+  },
+  "settingsProjectsSection": "प्रोजेक्ट",
+  "@settingsProjectsSection": {
+    "description": "Auto-generated description for settingsProjectsSection."
+  },
+  "settingsLogoutTitle": "लॉगआउट",
+  "@settingsLogoutTitle": {
+    "description": "Auto-generated description for settingsLogoutTitle."
+  },
+  "settingsLogoutSubtitle": "वर्तमान सत्र समाप्त करें",
+  "@settingsLogoutSubtitle": {
+    "description": "Auto-generated description for settingsLogoutSubtitle."
+  },
+  "settingsExportTitle": "प्रोजेक्ट निर्यात करें",
+  "@settingsExportTitle": {
+    "description": "Auto-generated description for settingsExportTitle."
+  },
+  "settingsExportSubtitle": "प्रोजेक्ट को फाइल में निर्यात करें",
+  "@settingsExportSubtitle": {
+    "description": "Auto-generated description for settingsExportSubtitle."
+  },
+  "settingsImportTitle": "प्रोजेक्ट आयात करें",
+  "@settingsImportTitle": {
+    "description": "Auto-generated description for settingsImportTitle."
+  },
+  "settingsImportSubtitle": "फाइल से प्रोजेक्ट आयात करें",
+  "@settingsImportSubtitle": {
+    "description": "Auto-generated description for settingsImportSubtitle."
+  },
+  "settingsUsersSection": "यूज़र",
+  "@settingsUsersSection": {
+    "description": "Auto-generated description for settingsUsersSection."
+  },
+  "settingsCurrentUserTitle": "वर्तमान यूज़र",
+  "@settingsCurrentUserTitle": {
+    "description": "Auto-generated description for settingsCurrentUserTitle."
+  },
+  "settingsNotLoggedIn": "लॉगिन नहीं है",
+  "@settingsNotLoggedIn": {
+    "description": "Auto-generated description for settingsNotLoggedIn."
+  },
+  "settingsNoUsersFound": "कोई यूज़र नहीं मिला।",
+  "@settingsNoUsersFound": {
+    "description": "Auto-generated description for settingsNoUsersFound."
+  },
+  "settingsLocalUserLabel": "लोकल यूज़र",
+  "@settingsLocalUserLabel": {
+    "description": "Auto-generated description for settingsLocalUserLabel."
+  },
+  "settingsDeleteTooltip": "हटाएं",
+  "@settingsDeleteTooltip": {
+    "description": "Auto-generated description for settingsDeleteTooltip."
+  },
+  "settingsLoadUsersFailed": "यूज़र लोड नहीं हो सके",
+  "@settingsLoadUsersFailed": {
+    "description": "Auto-generated description for settingsLoadUsersFailed."
+  },
+  "settingsAddUserTitle": "यूज़र जोड़ें",
+  "@settingsAddUserTitle": {
+    "description": "Auto-generated description for settingsAddUserTitle."
+  },
+  "settingsAddUserSubtitle": "एक अतिरिक्त खाता जोड़ें",
+  "@settingsAddUserSubtitle": {
+    "description": "Auto-generated description for settingsAddUserSubtitle."
+  },
+  "logoutDialogTitle": "लॉगआउट",
+  "@logoutDialogTitle": {
+    "description": "Auto-generated description for logoutDialogTitle."
+  },
+  "logoutDialogContent": "क्या आप लॉगआउट करना चाहते हैं?",
+  "@logoutDialogContent": {
+    "description": "Auto-generated description for logoutDialogContent."
+  },
+  "cancelButton": "रद्द करें",
+  "@cancelButton": {
+    "description": "Auto-generated description for cancelButton."
+  },
+  "logoutButton": "लॉगआउट",
+  "@logoutButton": {
+    "description": "Auto-generated description for logoutButton."
+  },
+  "loggedOutMessage": "आप लॉगआउट हो गए हैं।",
+  "@loggedOutMessage": {
+    "description": "Auto-generated description for loggedOutMessage."
+  },
+  "exportCompleteMessage": "निर्यात पूरा: {projectsPath}, {tasksPath}",
+  "@exportCompleteMessage": {
+    "placeholders": {
+      "projectsPath": {},
+      "tasksPath": {}
+    },
+    "description": "Auto-generated description for exportCompleteMessage."
+  },
+  "exportFailedMessage": "निर्यात असफल: {error}",
+  "@exportFailedMessage": {
+    "placeholders": {
+      "error": {}
+    },
+    "description": "Auto-generated description for exportFailedMessage."
+  },
+  "exportPasswordTitle": "एक्सपोर्ट एन्क्रिप्ट करें",
+  "@exportPasswordTitle": {
+    "description": "Auto-generated description for exportPasswordTitle."
+  },
+  "exportPasswordSubtitle": "एक्सपोर्ट फाइलों को एन्क्रिप्ट करने के लिए पासवर्ड सेट करें।",
+  "@exportPasswordSubtitle": {
+    "description": "Auto-generated description for exportPasswordSubtitle."
+  },
+  "exportPasswordMismatch": "पासवर्ड मेल नहीं खाते।",
+  "@exportPasswordMismatch": {
+    "description": "Auto-generated description for exportPasswordMismatch."
+  },
+  "importSelectFilesMessage": "कृपया CSV और JSON फाइल चुनें।",
+  "@importSelectFilesMessage": {
+    "description": "Auto-generated description for importSelectFilesMessage."
+  },
+  "importCompleteMessage": "आयात पूरा: {projectsPath}, {tasksPath}",
+  "@importCompleteMessage": {
+    "placeholders": {
+      "projectsPath": {},
+      "tasksPath": {}
+    },
+    "description": "Auto-generated description for importCompleteMessage."
+  },
+  "importFailedMessage": "आयात असफल: {error}",
+  "@importFailedMessage": {
+    "placeholders": {
+      "error": {}
+    },
+    "description": "Auto-generated description for importFailedMessage."
+  },
+  "importFailedTitle": "आयात असफल",
+  "@importFailedTitle": {
+    "description": "Auto-generated description for importFailedTitle."
+  },
+  "addUserDialogTitle": "यूज़र जोड़ें",
+  "@addUserDialogTitle": {
+    "description": "Auto-generated description for addUserDialogTitle."
+  },
+  "saveButton": "सेव करें",
+  "@saveButton": {
+    "description": "Auto-generated description for saveButton."
+  },
+  "userAddedMessage": "यूज़र जोड़ा गया।",
+  "@userAddedMessage": {
+    "description": "Auto-generated description for userAddedMessage."
+  },
+  "invalidUserMessage": "अमान्य यूज़र।",
+  "@invalidUserMessage": {
+    "description": "Auto-generated description for invalidUserMessage."
+  },
+  "deleteUserDialogTitle": "यूज़र हटाएं",
+  "@deleteUserDialogTitle": {
+    "description": "Auto-generated description for deleteUserDialogTitle."
+  },
+  "deleteUserDialogContent": "क्या आप {username} को हटाना चाहते हैं?",
+  "@deleteUserDialogContent": {
+    "placeholders": {
+      "username": {}
+    },
+    "description": "Auto-generated description for deleteUserDialogContent."
+  },
+  "deleteButton": "हटाएं",
+  "@deleteButton": {
+    "description": "Auto-generated description for deleteButton."
+  },
+  "userDeletedMessage": "यूज़र हटाया गया: {username}",
+  "@userDeletedMessage": {
+    "placeholders": {
+      "username": {}
+    },
+    "description": "Auto-generated description for userDeletedMessage."
+  },
+  "projectsTitle": "प्रोजेक्ट",
+  "@projectsTitle": {
+    "description": "Auto-generated description for projectsTitle."
+  },
+  "newProjectButton": "नया प्रोजेक्ट",
+  "@newProjectButton": {
+    "description": "Auto-generated description for newProjectButton."
+  },
+  "noProjectsYet": "अभी कोई प्रोजेक्ट नहीं",
+  "@noProjectsYet": {
+    "description": "Auto-generated description for noProjectsYet."
+  },
+  "noProjectsFound": "कोई प्रोजेक्ट नहीं मिला",
+  "@noProjectsFound": {
+    "description": "Auto-generated description for noProjectsFound."
+  },
+  "loadingMoreProjects": "और प्रोजेक्ट लोड हो रहे हैं...",
+  "@loadingMoreProjects": {
+    "description": "Auto-generated description for loadingMoreProjects."
+  },
+  "sortByLabel": "क्रमबद्ध करें",
+  "@sortByLabel": {
+    "description": "Auto-generated description for sortByLabel."
+  },
+  "projectSortName": "नाम",
+  "@projectSortName": {
+    "description": "Auto-generated description for projectSortName."
+  },
+  "projectSortProgress": "प्रगति",
+  "@projectSortProgress": {
+    "description": "Auto-generated description for projectSortProgress."
+  },
+  "projectSortPriority": "प्राथमिकता",
+  "@projectSortPriority": {
+    "description": "Auto-generated description for projectSortPriority."
+  },
+  "allLabel": "सभी",
+  "@allLabel": {
+    "description": "Auto-generated description for allLabel."
+  },
+  "loadProjectsFailed": "प्रोजेक्ट लोड नहीं हो सके।",
+  "@loadProjectsFailed": {
+    "description": "Auto-generated description for loadProjectsFailed."
+  },
+  "projectSemanticsLabel": "प्रोजेक्ट {title}",
+  "@projectSemanticsLabel": {
+    "placeholders": {
+      "title": {}
+    },
+    "description": "Auto-generated description for projectSemanticsLabel."
+  },
+  "statusSemanticsLabel": "स्थिति {status}",
+  "@statusSemanticsLabel": {
+    "placeholders": {
+      "status": {}
+    },
+    "description": "Auto-generated description for statusSemanticsLabel."
+  },
+  "newProjectDialogTitle": "नया प्रोजेक्ट",
+  "@newProjectDialogTitle": {
+    "description": "Auto-generated description for newProjectDialogTitle."
+  },
+  "projectNameLabel": "प्रोजेक्ट नाम",
+  "@projectNameLabel": {
+    "description": "Auto-generated description for projectNameLabel."
+  },
+  "descriptionLabel": "विवरण",
+  "@descriptionLabel": {
+    "description": "Auto-generated description for descriptionLabel."
+  },
+  "urgencyLabel": "तात्कालिकता",
+  "@urgencyLabel": {
+    "description": "Auto-generated description for urgencyLabel."
+  },
+  "urgencyLow": "कम",
+  "@urgencyLow": {
+    "description": "Auto-generated description for urgencyLow."
+  },
+  "urgencyMedium": "मध्यम",
+  "@urgencyMedium": {
+    "description": "Auto-generated description for urgencyMedium."
+  },
+  "urgencyHigh": "उच्च",
+  "@urgencyHigh": {
+    "description": "Auto-generated description for urgencyHigh."
+  },
+  "projectCreatedMessage": "प्रोजेक्ट बनाया गया: {name}",
+  "@projectCreatedMessage": {
+    "placeholders": {
+      "name": {}
+    },
+    "description": "Auto-generated description for projectCreatedMessage."
+  },
+  "projectDetailsTitle": "प्रोजेक्ट विवरण",
+  "@projectDetailsTitle": {
+    "description": "Auto-generated description for projectDetailsTitle."
+  },
+  "aiChatWithProjectFilesTooltip": "प्रोजेक्ट फाइलों के साथ AI चैट",
+  "@aiChatWithProjectFilesTooltip": {
+    "description": "Auto-generated description for aiChatWithProjectFilesTooltip."
+  },
+  "moreOptionsLabel": "और विकल्प",
+  "@moreOptionsLabel": {
+    "description": "Auto-generated description for moreOptionsLabel."
+  },
+  "tasksTitle": "कार्य",
+  "@tasksTitle": {
+    "description": "Auto-generated description for tasksTitle."
+  },
+  "tasksTab": "कार्य",
+  "@tasksTab": {
+    "description": "Auto-generated description for tasksTab."
+  },
+  "detailsTab": "विवरण",
+  "@detailsTab": {
+    "description": "Auto-generated description for detailsTab."
+  },
+  "tasksLoadFailed": "कार्य लोड नहीं हो सके।",
+  "@tasksLoadFailed": {
+    "description": "Auto-generated description for tasksLoadFailed."
+  },
+  "projectOverviewTitle": "प्रोजेक्ट अवलोकन",
+  "@projectOverviewTitle": {
+    "description": "Auto-generated description for projectOverviewTitle."
+  },
+  "tasksLoading": "कार्य लोड हो रहे हैं...",
+  "@tasksLoading": {
+    "description": "Auto-generated description for tasksLoading."
+  },
+  "taskStatisticsTitle": "कार्य सांख्यिकी",
+  "@taskStatisticsTitle": {
+    "description": "Auto-generated description for taskStatisticsTitle."
+  },
+  "totalLabel": "कुल",
+  "@totalLabel": {
+    "description": "Auto-generated description for totalLabel."
+  },
+  "completedLabel": "पूरा",
+  "@completedLabel": {
+    "description": "Auto-generated description for completedLabel."
+  },
+  "inProgressLabel": "चल रहा",
+  "@inProgressLabel": {
+    "description": "Auto-generated description for inProgressLabel."
+  },
+  "remainingLabel": "शेष",
+  "@remainingLabel": {
+    "description": "Auto-generated description for remainingLabel."
+  },
+  "completionPercentLabel": "{percent}% पूरा",
+  "@completionPercentLabel": {
+    "placeholders": {
+      "percent": {}
+    },
+    "description": "Auto-generated description for completionPercentLabel."
+  },
+  "burndownChartTitle": "बरडाउन चार्ट",
+  "@burndownChartTitle": {
+    "description": "Auto-generated description for burndownChartTitle."
+  },
+  "chartPlaceholderTitle": "चार्ट प्लेसहोल्डर",
+  "@chartPlaceholderTitle": {
+    "description": "Auto-generated description for chartPlaceholderTitle."
+  },
+  "chartPlaceholderSubtitle": "fl_chart एकीकरण जल्द आ रहा है",
+  "@chartPlaceholderSubtitle": {
+    "description": "Auto-generated description for chartPlaceholderSubtitle."
+  },
+  "workflowsTitle": "वर्कफ़्लो",
+  "@workflowsTitle": {
+    "description": "Auto-generated description for workflowsTitle."
+  },
+  "noWorkflowsAvailable": "कोई वर्कफ़्लो आइटम उपलब्ध नहीं।",
+  "@noWorkflowsAvailable": {
+    "description": "Auto-generated description for noWorkflowsAvailable."
+  },
+  "taskStatusTodo": "करना है",
+  "@taskStatusTodo": {
+    "description": "Auto-generated description for taskStatusTodo."
+  },
+  "taskStatusInProgress": "चल रहा",
+  "@taskStatusInProgress": {
+    "description": "Auto-generated description for taskStatusInProgress."
+  },
+  "taskStatusReview": "समीक्षा",
+  "@taskStatusReview": {
+    "description": "Auto-generated description for taskStatusReview."
+  },
+  "taskStatusDone": "पूरा",
+  "@taskStatusDone": {
+    "description": "Auto-generated description for taskStatusDone."
+  },
+  "workflowStatusActive": "सक्रिय",
+  "@workflowStatusActive": {
+    "description": "Auto-generated description for workflowStatusActive."
+  },
+  "workflowStatusPending": "लंबित",
+  "@workflowStatusPending": {
+    "description": "Auto-generated description for workflowStatusPending."
+  },
+  "noTasksYet": "अभी कोई कार्य नहीं",
+  "@noTasksYet": {
+    "description": "Auto-generated description for noTasksYet."
+  },
+  "projectTimeTitle": "प्रोजेक्ट समय",
+  "@projectTimeTitle": {
+    "description": "Auto-generated description for projectTimeTitle."
+  },
+  "urgencyValue": "तात्कालिकता: {value}",
+  "@urgencyValue": {
+    "placeholders": {
+      "value": {}
+    },
+    "description": "Auto-generated description for urgencyValue."
+  },
+  "trackedTimeValue": "ट्रैक किया गया समय: {value}",
+  "@trackedTimeValue": {
+    "placeholders": {
+      "value": {}
+    },
+    "description": "Auto-generated description for trackedTimeValue."
+  },
+  "hourShort": "घं",
+  "@hourShort": {
+    "description": "Auto-generated description for hourShort."
+  },
+  "minuteShort": "मि",
+  "@minuteShort": {
+    "description": "Auto-generated description for minuteShort."
+  },
+  "secondShort": "से",
+  "@secondShort": {
+    "description": "Auto-generated description for secondShort."
+  },
+  "searchTasksHint": "कार्य खोजें...",
+  "@searchTasksHint": {
+    "description": "Auto-generated description for searchTasksHint."
+  },
+  "searchAttachmentsHint": "अटैचमेंट खोजें...",
+  "@searchAttachmentsHint": {
+    "description": "Auto-generated description for searchAttachmentsHint."
+  },
+  "clearSearchTooltip": "खोज साफ करें",
+  "@clearSearchTooltip": {
+    "description": "Auto-generated description for clearSearchTooltip."
+  },
+  "projectMapTitle": "प्रोजेक्ट फ़ोल्डर",
+  "@projectMapTitle": {
+    "description": "Auto-generated description for projectMapTitle."
+  },
+  "linkProjectMapButton": "प्रोजेक्ट फ़ोल्डर लिंक करें",
+  "@linkProjectMapButton": {
+    "description": "Auto-generated description for linkProjectMapButton."
+  },
+  "projectDataLoading": "प्रोजेक्ट डेटा लोड हो रहा है...",
+  "@projectDataLoading": {
+    "description": "Auto-generated description for projectDataLoading."
+  },
+  "projectDataLoadFailed": "प्रोजेक्ट डेटा लोड नहीं हो सका।",
+  "@projectDataLoadFailed": {
+    "description": "Auto-generated description for projectDataLoadFailed."
+  },
+  "currentMapLabel": "वर्तमान फ़ोल्डर: {path}",
+  "@currentMapLabel": {
+    "placeholders": {
+      "path": {}
+    },
+    "description": "Auto-generated description for currentMapLabel."
+  },
+  "noProjectMapLinked": "कोई फ़ोल्डर लिंक नहीं है। फ़ाइलें पढ़ने के लिए फ़ोल्डर लिंक करें।",
+  "@noProjectMapLinked": {
+    "description": "Auto-generated description for noProjectMapLinked."
+  },
+  "projectNotAvailable": "प्रोजेक्ट उपलब्ध नहीं है।",
+  "@projectNotAvailable": {
+    "description": "Auto-generated description for projectNotAvailable."
+  },
+  "enableConsentInSettings": "सेटिंग्स में अनुमति सक्षम करें।",
+  "@enableConsentInSettings": {
+    "description": "Auto-generated description for enableConsentInSettings."
+  },
+  "projectMapLinked": "प्रोजेक्ट फ़ोल्डर लिंक हो गया।",
+  "@projectMapLinked": {
+    "description": "Auto-generated description for projectMapLinked."
+  },
+  "privacyWarningTitle": "गोपनीयता चेतावनी",
+  "@privacyWarningTitle": {
+    "description": "Auto-generated description for privacyWarningTitle."
+  },
+  "privacyWarningContent": "चेतावनी: संवेदनशील डेटा पढ़ा जा सकता है।",
+  "@privacyWarningContent": {
+    "description": "Auto-generated description for privacyWarningContent."
+  },
+  "continueButton": "जारी रखें",
+  "@continueButton": {
+    "description": "Auto-generated description for continueButton."
+  },
+  "attachFilesTooltip": "फाइलें संलग्न करें",
+  "@attachFilesTooltip": {
+    "description": "Auto-generated description for attachFilesTooltip."
+  },
+  "moreAttachmentsLabel": "+{count}",
+  "@moreAttachmentsLabel": {
+    "placeholders": {
+      "count": {}
+    },
+    "description": "Auto-generated description for moreAttachmentsLabel."
+  },
+  "aiAssistantLabel": "AI सहायक",
+  "@aiAssistantLabel": {
+    "description": "Auto-generated description for aiAssistantLabel."
+  },
+  "welcomeBack": "वापस स्वागत है! 👋",
+  "@welcomeBack": {
+    "description": "Auto-generated description for welcomeBack."
+  },
+  "projectsOverviewSubtitle": "यह आपके सक्रिय प्रोजेक्ट्स का सारांश है",
+  "@projectsOverviewSubtitle": {
+    "description": "Auto-generated description for projectsOverviewSubtitle."
+  },
+  "recentWorkflowsTitle": "हाल के वर्कफ़्लो",
+  "@recentWorkflowsTitle": {
+    "description": "Auto-generated description for recentWorkflowsTitle."
+  },
+  "recentWorkflowsLoading": "हाल के वर्कफ़्लो लोड हो रहे हैं...",
+  "@recentWorkflowsLoading": {
+    "description": "Auto-generated description for recentWorkflowsLoading."
+  },
+  "recentWorkflowsLoadFailed": "हाल के वर्कफ़्लो लोड नहीं हो सके।",
+  "@recentWorkflowsLoadFailed": {
+    "description": "Auto-generated description for recentWorkflowsLoadFailed."
+  },
+  "retryButton": "फिर से प्रयास करें",
+  "@retryButton": {
+    "description": "Auto-generated description for retryButton."
+  },
+  "noRecentTasks": "कोई हालिया कार्य उपलब्ध नहीं।",
+  "@noRecentTasks": {
+    "description": "Auto-generated description for noRecentTasks."
+  },
+  "unknownProject": "अज्ञात प्रोजेक्ट",
+  "@unknownProject": {
+    "description": "Auto-generated description for unknownProject."
+  },
+  "projectTaskStatusSemantics": "प्रोजेक्ट {projectName}, कार्य {taskTitle}, स्थिति {statusLabel}, {timeLabel}",
+  "@projectTaskStatusSemantics": {
+    "placeholders": {
+      "projectName": {},
+      "taskTitle": {},
+      "statusLabel": {},
+      "timeLabel": {}
+    },
+    "description": "Auto-generated description for projectTaskStatusSemantics."
+  },
+  "taskStatusSemantics": "कार्य {taskTitle} {statusLabel}",
+  "@taskStatusSemantics": {
+    "placeholders": {
+      "taskTitle": {},
+      "statusLabel": {}
+    },
+    "description": "Auto-generated description for taskStatusSemantics."
+  },
+  "timeJustNow": "अभी",
+  "@timeJustNow": {
+    "description": "Auto-generated description for timeJustNow."
+  },
+  "timeMinutesAgo": "{minutes} मिनट पहले",
+  "@timeMinutesAgo": {
+    "placeholders": {
+      "minutes": {}
+    },
+    "description": "Auto-generated description for timeMinutesAgo."
+  },
+  "timeHoursAgo": "{hours} घंटे पहले",
+  "@timeHoursAgo": {
+    "placeholders": {
+      "hours": {}
+    },
+    "description": "Auto-generated description for timeHoursAgo."
+  },
+  "timeDaysAgo": "{days} दिन पहले",
+  "@timeDaysAgo": {
+    "placeholders": {
+      "days": {}
+    },
+    "description": "Auto-generated description for timeDaysAgo."
+  },
+  "timeWeeksAgo": "{weeks} सप्ताह पहले",
+  "@timeWeeksAgo": {
+    "placeholders": {
+      "weeks": {}
+    },
+    "description": "Auto-generated description for timeWeeksAgo."
+  },
+  "timeMonthsAgo": "{months} महीने पहले",
+  "@timeMonthsAgo": {
+    "placeholders": {
+      "months": {}
+    },
+    "description": "Auto-generated description for timeMonthsAgo."
+  },
+  "projectProgressChartSemantics": "{projectName} के लिए प्रगति चार्ट। पूरा {completedPercent} प्रतिशत, लंबित {pendingPercent} प्रतिशत।",
+  "@projectProgressChartSemantics": {
+    "placeholders": {
+      "projectName": {},
+      "completedPercent": {},
+      "pendingPercent": {}
+    },
+    "description": "Auto-generated description for projectProgressChartSemantics."
+  },
+  "progressLabel": "प्रगति",
+  "@progressLabel": {
+    "description": "Auto-generated description for progressLabel."
+  },
+  "completedPercentLabel": "पूरा: {percent}%",
+  "@completedPercentLabel": {
+    "placeholders": {
+      "percent": {}
+    },
+    "description": "Auto-generated description for completedPercentLabel."
+  },
+  "pendingPercentLabel": "लंबित: {percent}%",
+  "@pendingPercentLabel": {
+    "placeholders": {
+      "percent": {}
+    },
+    "description": "Auto-generated description for pendingPercentLabel."
+  },
+  "noDescription": "कोई विवरण नहीं",
+  "@noDescription": {
+    "description": "Auto-generated description for noDescription."
+  },
+  "closeButton": "बंद करें",
+  "@closeButton": {
+    "description": "Auto-generated description for closeButton."
+  },
+  "burndownProgressTitle": "बरडाउन प्रगति",
+  "@burndownProgressTitle": {
+    "description": "Auto-generated description for burndownProgressTitle."
+  },
+  "actualProgressLabel": "वास्तविक प्रगति",
+  "@actualProgressLabel": {
+    "description": "Auto-generated description for actualProgressLabel."
+  },
+  "idealTrendLabel": "आदर्श प्रवृत्ति",
+  "@idealTrendLabel": {
+    "description": "Auto-generated description for idealTrendLabel."
+  },
+  "statusLabel": "स्थिति",
+  "@statusLabel": {
+    "description": "Auto-generated description for statusLabel."
+  },
+  "burndownChartSemantics": "{projectName} के लिए बरडाउन चार्ट। वास्तविक बिंदु: {actualPoints}। आदर्श बिंदु: {idealPoints}।",
+  "@burndownChartSemantics": {
+    "placeholders": {
+      "projectName": {},
+      "actualPoints": {},
+      "idealPoints": {}
+    },
+    "description": "Auto-generated description for burndownChartSemantics."
+  },
+  "aiChatSemanticsLabel": "AI चैट",
+  "@aiChatSemanticsLabel": {
+    "description": "Auto-generated description for aiChatSemanticsLabel."
+  },
+  "aiUsageTitle": "AI उपयोग",
+  "@aiUsageTitle": {
+    "description": "Title for the AI usage overview screen."
+  },
+  "aiAssistantTitle": "AI प्रोजेक्ट सहायक",
+  "@aiAssistantTitle": {
+    "description": "Auto-generated description for aiAssistantTitle."
+  },
+  "clearChatTooltip": "चैट साफ करें",
+  "@clearChatTooltip": {
+    "description": "Auto-generated description for clearChatTooltip."
+  },
+  "noMessagesLabel": "कोई संदेश नहीं",
+  "@noMessagesLabel": {
+    "description": "Auto-generated description for noMessagesLabel."
+  },
+  "aiEmptyTitle": "AI सहायक से बातचीत शुरू करें",
+  "@aiEmptyTitle": {
+    "description": "Auto-generated description for aiEmptyTitle."
+  },
+  "aiEmptySubtitle": "उदाहरण: \"प्रोजेक्ट के लिए योजना बनाएं: वेब शॉप\"",
+  "@aiEmptySubtitle": {
+    "description": "Auto-generated description for aiEmptySubtitle."
+  },
+  "useProjectFilesLabel": "प्रोजेक्ट फाइलें उपयोग करें",
+  "@useProjectFilesLabel": {
+    "description": "Auto-generated description for useProjectFilesLabel."
+  },
+  "typeMessageHint": "संदेश लिखें...",
+  "@typeMessageHint": {
+    "description": "Auto-generated description for typeMessageHint."
+  },
+  "projectFilesReadFailed": "प्रोजेक्ट फाइलें पढ़ने में विफल।",
+  "@projectFilesReadFailed": {
+    "description": "Auto-generated description for projectFilesReadFailed."
+  },
+  "aiResponseFailedTitle": "AI उत्तर विफल",
+  "@aiResponseFailedTitle": {
+    "description": "Auto-generated description for aiResponseFailedTitle."
+  },
+  "sendMessageTooltip": "संदेश भेजें",
+  "@sendMessageTooltip": {
+    "description": "Auto-generated description for sendMessageTooltip."
+  },
+  "loginMissingCredentials": "कृपया यूज़रनेम और पासवर्ड दर्ज करें।",
+  "@loginMissingCredentials": {
+    "description": "Auto-generated description for loginMissingCredentials."
+  },
+  "loginFailedMessage": "लॉगिन विफल। कृपया अपनी जानकारी जांचें।",
+  "@loginFailedMessage": {
+    "description": "Auto-generated description for loginFailedMessage."
+  },
+  "registerTitle": "रजिस्टर",
+  "@registerTitle": {
+    "description": "Auto-generated description for registerTitle."
+  },
+  "languageLabel": "भाषा",
+  "@languageLabel": {
+    "description": "Auto-generated description for languageLabel."
+  },
+  "languageSystem": "सिस्टम डिफ़ॉल्ट",
+  "@languageSystem": {
+    "description": "Auto-generated description for languageSystem."
+  },
+  "languageEnglish": "अंग्रेज़ी",
+  "@languageEnglish": {
+    "description": "Auto-generated description for languageEnglish."
+  },
+  "languageDutch": "डच",
+  "@languageDutch": {
+    "description": "Auto-generated description for languageDutch."
+  },
+  "languageSpanish": "स्पेनिश",
+  "@languageSpanish": {
+    "description": "Auto-generated description for languageSpanish."
+  },
+  "languageFrench": "फ्रेंच",
+  "@languageFrench": {
+    "description": "Auto-generated description for languageFrench."
+  },
+  "languageGerman": "जर्मन",
+  "@languageGerman": {
+    "description": "Auto-generated description for languageGerman."
+  },
+  "languagePortuguese": "पुर्तगाली",
+  "@languagePortuguese": {
+    "description": "Auto-generated description for languagePortuguese."
+  },
+  "languageItalian": "इटालियन",
+  "@languageItalian": {
+    "description": "Auto-generated description for languageItalian."
+  },
+  "languageArabic": "अरबी",
+  "@languageArabic": {
+    "description": "Auto-generated description for languageArabic."
+  },
+  "languageChinese": "चीनी",
+  "@languageChinese": {
+    "description": "Auto-generated description for languageChinese."
+  },
+  "languageJapanese": "जापानी",
+  "@languageJapanese": {
+    "description": "Auto-generated description for languageJapanese."
+  },
+  "languageKorean": "कोरियन",
+  "@languageKorean": {
+    "description": "Auto-generated description for languageKorean."
+  },
+  "languageRussian": "रूसी",
+  "@languageRussian": {
+    "description": "Auto-generated description for languageRussian."
+  },
+  "languageHindi": "हिंदी",
+  "@languageHindi": {
+    "description": "Auto-generated description for languageHindi."
+  },
+  "repeatPasswordLabel": "पासवर्ड दोबारा",
+  "@repeatPasswordLabel": {
+    "description": "Auto-generated description for repeatPasswordLabel."
+  },
+  "passwordRulesTitle": "पासवर्ड नियम",
+  "@passwordRulesTitle": {
+    "description": "Auto-generated description for passwordRulesTitle."
+  },
+  "passwordRuleMinLength": "कम से कम 8 अक्षर",
+  "@passwordRuleMinLength": {
+    "description": "Auto-generated description for passwordRuleMinLength."
+  },
+  "passwordRuleHasLetter": "एक अक्षर शामिल",
+  "@passwordRuleHasLetter": {
+    "description": "Auto-generated description for passwordRuleHasLetter."
+  },
+  "passwordRuleHasDigit": "एक अंक शामिल",
+  "@passwordRuleHasDigit": {
+    "description": "Auto-generated description for passwordRuleHasDigit."
+  },
+  "passwordRuleMatches": "पासवर्ड मेल खाते हैं",
+  "@passwordRuleMatches": {
+    "description": "Auto-generated description for passwordRuleMatches."
+  },
+  "registerButton": "रजिस्टर",
+  "@registerButton": {
+    "description": "Auto-generated description for registerButton."
+  },
+  "registrationIssueUsernameMissing": "यूज़रनेम नहीं है",
+  "@registrationIssueUsernameMissing": {
+    "description": "Auto-generated description for registrationIssueUsernameMissing."
+  },
+  "registrationIssueMinLength": "कम से कम 8 अक्षर",
+  "@registrationIssueMinLength": {
+    "description": "Auto-generated description for registrationIssueMinLength."
+  },
+  "registrationIssueLetter": "कम से कम 1 अक्षर",
+  "@registrationIssueLetter": {
+    "description": "Auto-generated description for registrationIssueLetter."
+  },
+  "registrationIssueDigit": "कम से कम 1 अंक",
+  "@registrationIssueDigit": {
+    "description": "Auto-generated description for registrationIssueDigit."
+  },
+  "registrationIssueNoMatch": "पासवर्ड मेल नहीं खाते",
+  "@registrationIssueNoMatch": {
+    "description": "Auto-generated description for registrationIssueNoMatch."
+  },
+  "registrationFailedWithIssues": "रजिस्ट्रेशन विफल: {issues}।",
+  "@registrationFailedWithIssues": {
+    "placeholders": {
+      "issues": {}
+    },
+    "description": "Auto-generated description for registrationFailedWithIssues."
+  },
+  "accountCreatedMessage": "खाता बन गया। अब लॉगिन करें।",
+  "@accountCreatedMessage": {
+    "description": "Auto-generated description for accountCreatedMessage."
+  },
+  "registerFailedMessage": "रजिस्ट्रेशन विफल।",
+  "@registerFailedMessage": {
+    "description": "Auto-generated description for registerFailedMessage."
+  },
+  "accessDeniedMessage": "पहुंच अस्वीकृत.",
+  "@accessDeniedMessage": {
+    "description": "Message shown when a user lacks permission."
+  },
+  "adminPanelTitle": "एडमिन पैनल",
+  "@adminPanelTitle": {
+    "description": "Title for the admin panel screen."
+  },
+  "adminPanelSubtitle": "भूमिकाएँ, समूह और अनुमतियाँ प्रबंधित करें.",
+  "@adminPanelSubtitle": {
+    "description": "Subtitle for the admin panel entry."
+  },
+  "rolesTitle": "भूमिकाएँ",
+  "@rolesTitle": {
+    "description": "Header for roles section."
+  },
+  "noRolesFound": "कोई भूमिका नहीं मिली.",
+  "@noRolesFound": {
+    "description": "Shown when no roles exist."
+  },
+  "permissionsCount": "अनुमतियाँ: {count}",
+  "@permissionsCount": {
+    "placeholders": {
+      "count": {}
+    },
+    "description": "Displays the number of permissions on a role."
+  },
+  "editPermissionsTooltip": "अनुमतियाँ संपादित करें",
+  "@editPermissionsTooltip": {
+    "description": "Tooltip for editing permissions."
+  },
+  "groupsTitle": "समूह",
+  "@groupsTitle": {
+    "description": "Header for groups section."
+  },
+  "noGroupsFound": "कोई समूह नहीं मिला.",
+  "@noGroupsFound": {
+    "description": "Shown when no groups exist."
+  },
+  "roleLabel": "भूमिका",
+  "@roleLabel": {
+    "description": "Label for a role selection."
+  },
+  "groupAddTitle": "समूह जोड़ें",
+  "@groupAddTitle": {
+    "description": "Title for adding a group."
+  },
+  "groupNameLabel": "समूह का नाम",
+  "@groupNameLabel": {
+    "description": "Label for the group name input."
+  },
+  "groupLabel": "समूह",
+  "@groupLabel": {
+    "description": "Label for a group chip or field."
+  },
+  "addGroupMemberTitle": "{groupName} में सदस्य जोड़ें",
+  "@addGroupMemberTitle": {
+    "placeholders": {
+      "groupName": {}
+    },
+    "description": "Title for adding a member to a specific group."
+  },
+  "addGroupMemberTooltip": "सदस्य जोड़ें",
+  "@addGroupMemberTooltip": {
+    "description": "Tooltip for adding a group member."
+  },
+  "groupMembersTitle": "समूह के सदस्य: {groupName}",
+  "@groupMembersTitle": {
+    "placeholders": {
+      "groupName": {}
+    },
+    "description": "Title for the group members dialog."
+  },
+  "noGroupMembers": "समूह में कोई सदस्य नहीं है.",
+  "@noGroupMembers": {
+    "description": "Shown when a group has no members."
+  },
+  "removeGroupMemberTooltip": "सदस्य हटाएँ",
+  "@removeGroupMemberTooltip": {
+    "description": "Tooltip for removing a group member."
+  },
+  "roleCreateTitle": "भूमिका बनाएँ",
+  "@roleCreateTitle": {
+    "description": "Title for creating a role."
+  },
+  "roleNameLabel": "भूमिका का नाम",
+  "@roleNameLabel": {
+    "description": "Label for the role name input."
+  },
+  "permissionsTitle": "अनुमतियाँ",
+  "@permissionsTitle": {
+    "description": "Title for permissions selection dialog."
+  },
+  "settingsBackupTitle": "बैकअप बनाएं",
+  "@settingsBackupTitle": {
+    "description": "Title for manual Hive backup action."
+  },
+  "settingsBackupSubtitle": "हाइव डेटा का स्थानीय बैकअप सहेजें.",
+  "@settingsBackupSubtitle": {
+    "description": "Subtitle for manual Hive backup action."
+  },
+  "settingsRestoreTitle": "बैकअप पुनर्स्थापित करें",
+  "@settingsRestoreTitle": {
+    "description": "Title for restoring Hive backup."
+  },
+  "settingsRestoreSubtitle": "स्थानीय डेटा को बैकअप फ़ाइल से बदलें.",
+  "@settingsRestoreSubtitle": {
+    "description": "Subtitle for restoring Hive backup."
+  },
+  "backupSuccessMessage": "बैकअप सहेजा गया: {path}",
+  "@backupSuccessMessage": {
+    "description": "Shown after a backup file is created.",
+    "placeholders": {
+      "path": {}
+    }
+  },
+  "backupFailedMessage": "बैकअप असफल: {error}",
+  "@backupFailedMessage": {
+    "description": "Shown when backup fails.",
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "restoreSuccessMessage": "बैकअप पुनर्स्थापित हो गया। डेटा लोड करने के लिए ऐप रीस्टार्ट करें.",
+  "@restoreSuccessMessage": {
+    "description": "Shown after a successful restore."
+  },
+  "restoreFailedMessage": "पुनर्स्थापना असफल: {error}",
+  "@restoreFailedMessage": {
+    "description": "Shown when restore fails.",
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "restoreConfirmTitle": "बैकअप पुनर्स्थापित करें?",
+  "@restoreConfirmTitle": {
+    "description": "Title for restore confirmation dialog."
+  },
+  "restoreConfirmContent": "इससे स्थानीय डेटा ओवरराइट होगा.",
+  "@restoreConfirmContent": {
+    "description": "Content for restore confirmation dialog."
+  },
+  "restoreConfirmButton": "पुनर्स्थापित करें",
+  "@restoreConfirmButton": {
+    "description": "Button label for confirming restore."
+  },
+  "settingsBackupLastRunLabel": "अंतिम बैकअप",
+  "@settingsBackupLastRunLabel": {
+    "description": "Label for last backup timestamp."
+  },
+  "backupNeverMessage": "कभी नहीं",
+  "@backupNeverMessage": {
+    "description": "Shown when no backup has been created yet."
+  },
+  "backupNowButton": "अब बैकअप करें",
+  "@backupNowButton": {
+    "description": "Button label to trigger a backup immediately."
+  },
+  "settingsBackupPathLabel": "बैकअप फ़ाइल",
+  "@settingsBackupPathLabel": {
+    "description": "Label for last backup file path."
+  },
+  "backupNoFileMessage": "अभी कोई बैकअप फ़ाइल नहीं है",
+  "@backupNoFileMessage": {
+    "description": "Shown when no backup file path is available."
+  }
+}
+  "aiUsageTitle": "AI Usage",
+  "@aiUsageTitle": {
+    "description": "Title for the AI usage overview screen."
+  },
