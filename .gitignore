@@ -80,7 +80,8 @@ node_modules/
 *.exe
 node_modules/
 build/
-.env  # Maar hou .env.example!
+.env  
+# Maar hou .env.example!
 # Flutter-specifiek (je hebt het al, maar dubbelcheck)
 **/build/
 .dart_tool/
@@ -90,3 +91,4 @@ build/
 .pub/
 # Backups
 *.backup
+
