@@ -76,7 +76,15 @@ migrate_report/
 /packages/flutter/test_private/
 # Node modules (voor Supabase of andere deps)
 node_modules/
-# Grote binaries
+# Grote binaries en builds
 *.exe
-# Environment variables
-.env
+node_modules/
+build/
+.env  # Maar hou .env.example!
+# Flutter-specifiek (je hebt het al, maar dubbelcheck)
+**/build/
+.dart_tool/
+.flutter-plugins
+.packages
+.pub-cache/
+.pub/
