@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:my_project_management_app/models/project_model.dart';
 import 'package:my_project_management_app/core/repository/project_repository.dart';
+import 'package:my_project_management_app/core/repository/i_project_repository.dart';
 import 'package:my_project_management_app/core/services/app_logger.dart';
 import 'auth_providers.dart'; // Import for auth provider access
 import 'package:my_project_management_app/core/repository/project_meta_repository.dart';
@@ -19,39 +20,12 @@ class _CacheEntry<T> {
   bool get isExpired => DateTime.now().difference(timestamp) > ttl;
 }
 
-/// Abstract interface for project repository
-/// Allows easy swapping of implementations (Hive, Supabase, etc.)
-/// TODO: Move to separate file when repository implementations grow
-abstract class IProjectRepository {
-  Future<List<ProjectModel>> getAllProjects();
-  Future<void> addProject(ProjectModel project, {String? userId, Map<String, dynamic>? metadata});
-  Future<void> updateProject(String projectId, ProjectModel updatedProject, {String? userId, String? changeDescription, Map<String, dynamic>? metadata});
-  Future<void> updateProgress(String projectId, double newProgress, {String? userId, Map<String, dynamic>? metadata});
-  /// Update the project's task list; used by task provider when syncing
-  Future<void> updateTasks(String projectId, List<String> tasks, {String? userId, Map<String, dynamic>? metadata});
-  Future<void> deleteProject(String projectId, {String? userId});
-  Future<ProjectModel?> getProjectById(String id);
-  
-  /// Close repository resources (e.g., Hive boxes)
-  Future<void> close();
-  
-  // Sharing helpers
-  Future<void> addSharedUser(String projectId, String username, {String? userId, Map<String, dynamic>? metadata});
-  Future<void> removeSharedUser(String projectId, String username, {String? userId, Map<String, dynamic>? metadata});
-  Future<void> addSharedGroup(String projectId, String groupId, {String? userId, Map<String, dynamic>? metadata});
-  Future<void> removeSharedGroup(String projectId, String groupId, {String? userId, Map<String, dynamic>? metadata});
-
-  // Directory and plan updates
-  Future<void> updateDirectoryPath(String projectId, String? directoryPath, {String? userId, Map<String, dynamic>? metadata});
-  Future<void> updatePlanJson(String projectId, String? planJson, {String? userId, Map<String, dynamic>? metadata});
-  // TODO: Add pagination methods: getProjectsPaginated(int page, int limit)
-  // TODO: Add filtering methods: getProjectsByStatus(String status)
-}
+// IProjectRepository has been moved to `lib/core/repository/i_project_repository.dart`
 
 /// Provider for project repository with abstract interface
 /// Easy to swap implementations for testing or different backends
 final projectRepositoryProvider = Provider<IProjectRepository>((ref) {
-  return ProjectRepository() as IProjectRepository;
+  return ProjectRepository();
 });
 
 /// Provider for projects with caching and TTL

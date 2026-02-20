@@ -5,7 +5,7 @@ import 'package:my_project_management_app/core/services/project_members_service.
 import 'package:my_project_management_app/core/services/app_logger.dart';
 import 'package:uuid/uuid.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import '../providers/project_providers.dart'; // For IProjectRepository interface
+import 'package:my_project_management_app/core/repository/i_project_repository.dart';
 
 /// Repository for managing project persistence using Hive
 class ProjectRepository implements IProjectRepository {

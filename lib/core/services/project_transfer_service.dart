@@ -5,7 +5,7 @@ import 'dart:typed_data';
 import 'package:crypto/crypto.dart';
 import 'package:encrypt/encrypt.dart';
 import 'package:file_picker/file_picker.dart';
-import 'package:my_project_management_app/core/providers/project_providers.dart';
+import '../repository/i_project_repository.dart';
 import 'package:my_project_management_app/core/repository/task_repository.dart';
 import 'package:my_project_management_app/models/project_model.dart';
 import 'package:my_project_management_app/models/task_model.dart';
