@@ -11,8 +11,6 @@ Onderstaand een gegroepeerde lijst van alle "TODO"-aantekeningen die in de codeb
   - Verwachte actie: Voeg paginatie-API toe aan `IProjectRepository` en implementatie in `ProjectRepository`.
 - TODO: Add filtering methods: getProjectsByStatus(String status)
   - Verwachte actie: Voeg filter-functies toe aan repository en expose via providers/families.
-- TODO: Add pagination for large project lists
-  - Verwachte actie: Pas `projectsProvider` aan of voeg nieuw paginated provider toe.
 - TODO: Add filtering/sorting parameters via family provider
   - Verwachte actie: Maak `projectsProvider` of `filteredProjectsProvider` uitbreidbaar met parameters (status, zoekquery, sortering).
 - TODO: Add caching for individual projects

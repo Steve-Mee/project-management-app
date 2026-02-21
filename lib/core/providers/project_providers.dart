@@ -34,18 +34,6 @@ final projectsProvider = NotifierProvider<ProjectsNotifier, AsyncValue<List<Proj
   ProjectsNotifier.new,
 );
 
-/// Paginated projects provider with optional filtering
-final projectsPaginatedProvider = FutureProvider.autoDispose.family<List<ProjectModel>, ProjectPaginationParams>(
-  (ref, params) async {
-    final repository = ref.watch(projectRepositoryProvider);
-    return repository.getProjectsPaginated(
-      page: params.page,
-      limit: params.limit,
-      statusFilter: params.statusFilter,
-      searchQuery: params.searchQuery,
-    );
-  },
-);
 
 /// Family provider for getting a specific project by ID
 /// Uses AsyncValue.guard() for robust error handling
@@ -77,6 +65,20 @@ final filteredProjectsProvider = FutureProvider.autoDispose.family<List<ProjectM
     return true;
   }).toList();
 });
+
+/// Dedicated paginated projects provider
+/// Use this for lists that need efficient loading (dashboard, projects page, etc.)
+final projectsPaginatedProvider = FutureProvider.autoDispose.family<List<ProjectModel>, ProjectPaginationParams>(
+  (ref, params) async {
+    final repository = ref.watch(projectRepositoryProvider);
+    return repository.getProjectsPaginated(
+      page: params.page,
+      limit: params.limit,
+      statusFilter: params.statusFilter,
+      searchQuery: params.searchQuery,
+    );
+  },
+);
 
 /// Filter class for project queries
 /// Extensible for future filter parameters
