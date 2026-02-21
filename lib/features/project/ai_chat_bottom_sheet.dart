@@ -9,6 +9,7 @@ import 'package:my_project_management_app/models/task_model.dart';
 import 'package:my_project_management_app/core/repository/auth_repository.dart';
 import 'package:my_project_management_app/core/config/ai_config.dart';
 import 'package:my_project_management_app/core/services/ai_planning_helpers.dart';
+import 'package:my_project_management_app/core/auth/auth_user.dart';
 
 /// Model for chat history entries
 class ChatHistoryEntry {
@@ -337,7 +338,7 @@ Current Date: ${DateTime.now().toString().split(' ')[0]}
     }
   }
 
-  void _showApplyConfirmationDialog(BuildContext context, AsyncValue<AuthUser?> currentUserAsync) {
+  void _showApplyConfirmationDialog(BuildContext context, AsyncValue<AppUser?> currentUserAsync) {
     if (_lastAiResponse == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('No AI response to apply')),
@@ -414,7 +415,7 @@ Current Date: ${DateTime.now().toString().split(' ')[0]}
     );
   }
 
-  Future<void> _applyChanges(BuildContext context, AsyncValue<AuthUser?> currentUserAsync) async {
+  Future<void> _applyChanges(BuildContext context, AsyncValue<AppUser?> currentUserAsync) async {
     if (_lastAiResponse == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('No AI response to apply')),
