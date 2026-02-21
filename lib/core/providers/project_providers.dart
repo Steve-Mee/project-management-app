@@ -85,6 +85,11 @@ class ProjectFilter {
   final String? userId;
   final String? searchQuery;
 
+  const ProjectFilter({
+    this.status,
+    this.userId,
+    this.searchQuery,
+  });
 }
 
 class ProjectPaginationParams {
