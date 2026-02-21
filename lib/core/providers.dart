@@ -7,3 +7,4 @@ export 'providers/task_providers.dart';
 export 'providers/notification_providers.dart';
 export 'providers/sync_providers.dart';
 export 'providers/analytics_providers.dart';
+export 'providers/active_viewers_provider.dart';

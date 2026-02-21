@@ -16,11 +16,13 @@ import 'package:my_project_management_app/features/project/pdf_export.dart';
 import 'package:my_project_management_app/core/providers/project_providers.dart';
 import '../../core/providers/auth_providers.dart';
 import '../../core/providers/theme_providers.dart';
+import '../../core/providers/active_viewers_provider.dart';
 import '../../models/project_meta.dart';
 import '../../models/project_model.dart';
 import '../../models/project_sort.dart';
 import 'widgets/project_filter_dialog.dart';
 import 'widgets/project_views.dart';
+import 'widgets/active_viewers_indicator.dart';
 
 /// Project management screen - displays list of all projects
 class ProjectScreen extends ConsumerStatefulWidget {
@@ -293,9 +295,14 @@ class _ProjectScreenState extends ConsumerState<ProjectScreen> {
                             if (result != null) {
                               ref.read(persistentProjectFilterProvider.notifier).updateFilter(result);
                               _resetPagination();
+                              // Broadcast filter change to active viewers
+                              ref.read(activeViewersProvider.notifier).updateCurrentFilter(result.toJson());
                             }
                           },
                         ),
+                        const SizedBox(width: 8),
+                        // Active Viewers Indicator
+                        const ActiveViewersIndicator(),
                       ],
                     ),
                   ],
