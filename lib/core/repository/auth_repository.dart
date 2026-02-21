@@ -5,38 +5,12 @@ import 'package:hive_flutter/hive_flutter.dart';
 import 'package:my_project_management_app/core/services/app_logger.dart';
 import 'package:my_project_management_app/core/auth/permissions.dart';
 import 'package:my_project_management_app/core/auth/role_models.dart';
+import 'package:my_project_management_app/core/auth/auth_user.dart';
+import 'package:my_project_management_app/core/repository/i_auth_repository.dart';
 
 enum Role {
   admin,
   user,
-}
-
-class AuthUser {
-  final String username;
-  final String password;
-  final String roleId;
-
-  const AuthUser({
-    required this.username,
-    required this.password,
-    this.roleId = AuthRepository.defaultUserRoleId,
-  });
-
-  Map<String, String> toMap() {
-    return {
-      'username': username,
-      'password': password,
-      'roleId': roleId,
-    };
-  }
-
-  static AuthUser fromMap(Map<String, dynamic> map) {
-    return AuthUser(
-      username: map['username'] as String? ?? '',
-      password: map['password'] as String? ?? '',
-      roleId: map['roleId'] as String? ?? AuthRepository.defaultUserRoleId,
-    );
-  }
 }
 
 /// Placeholder for future backend integration.
@@ -54,7 +28,7 @@ class RemoteAuthService {
   }
 }
 
-class AuthRepository {
+class AuthRepository implements IAuthRepository {
   static const String _boxName = 'auth';
   static const String _usersKey = 'users';
   static const String _currentUserKey = 'current_user';
@@ -333,6 +307,46 @@ class AuthRepository {
   Future<void> logout() async {
     await _remote.signOut();
     await setCurrentUser(null);
+  }
+
+  // Implement IAuthRepository's small wrappers
+  @override
+  Future<bool> login(String email, String password) async {
+    final validated = validateUser(email.trim(), password);
+    if (validated != null) {
+      await setCurrentUser(validated.username);
+      return true;
+    }
+    await recordFailedLoginAttempt(email.trim().toLowerCase());
+    return false;
+  }
+
+  @override
+  Future<void> register(String email, String password) async {
+    await addUser(AuthUser(username: email.trim(), password: password));
+  }
+
+  @override
+  Future<bool> isLoggedIn() async {
+    return getCurrentUser() != null;
+  }
+
+  // Simple in-memory rate limiter stored per-repository instance
+  final Map<String, List<DateTime>> _failedAttempts = {};
+
+  @override
+  Future<bool> canAttemptLogin(String identifier) async {
+    final now = DateTime.now();
+    final list = _failedAttempts.putIfAbsent(identifier, () => []);
+    list.retainWhere((t) => now.difference(t) <= const Duration(minutes: 1));
+    return list.length < 5;
+  }
+
+  @override
+  Future<void> recordFailedLoginAttempt(String identifier) async {
+    final now = DateTime.now();
+    final list = _failedAttempts.putIfAbsent(identifier, () => []);
+    list.add(now);
   }
 
   Future<void> _seedDefaultsIfEmpty() async {

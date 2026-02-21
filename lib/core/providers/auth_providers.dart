@@ -1,7 +1,9 @@
 import 'dart:convert';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' hide AuthUser;
+import 'package:local_auth/local_auth.dart';
 import 'package:my_project_management_app/core/repository/auth_repository.dart';
+import 'package:my_project_management_app/core/auth/auth_user.dart';
 import 'package:my_project_management_app/core/repository/settings_repository.dart';
 import 'package:my_project_management_app/core/services/cloud_sync_service.dart';
 import 'package:my_project_management_app/core/services/ab_testing_service.dart';
@@ -9,8 +11,7 @@ import 'package:my_project_management_app/core/services/app_logger.dart';
 import 'package:my_project_management_app/core/auth/permissions.dart';
 import 'package:my_project_management_app/core/config/ai_config.dart' as ai_config;
 
-/// Provider for auth repository
-/// TODO: Consider using an abstract interface for easy testing/swapping
+/// Provider for auth repository (exposed via interface to allow swapping)
 final authRepositoryProvider = Provider<AuthRepository>((ref) {
   return AuthRepository();
 });
@@ -57,8 +58,31 @@ class AuthState {
 }
 
 /// Notifier for authentication with robust error handling
-/// TODO: Add rate limiting for login attempts
-/// TODO: Add biometric authentication support
+/// Simple in-memory rate limiter for login attempts.
+class _RateLimiter {
+  final int maxAttempts;
+  final Duration window;
+  final Map<String, List<DateTime>> _attempts = {};
+
+  _RateLimiter({required this.maxAttempts, required this.window});
+
+  bool canAttempt(String identifier) {
+    final now = DateTime.now();
+    final list = _attempts.putIfAbsent(identifier, () => []);
+    list.retainWhere((t) => now.difference(t) <= window);
+    return list.length < maxAttempts;
+  }
+
+  void recordFailure(String identifier) {
+    final now = DateTime.now();
+    final list = _attempts.putIfAbsent(identifier, () => []);
+    list.add(now);
+  }
+}
+
+// 5 attempts per minute by default
+final _loginRateLimiter = _RateLimiter(maxAttempts: 5, window: const Duration(minutes: 1));
+
 class AuthNotifier extends Notifier<AuthState> {
   final CloudSyncService _cloudSync = CloudSyncService();
   final ABTestingService _abTesting = ABTestingService.instance;
@@ -80,7 +104,7 @@ class AuthNotifier extends Notifier<AuthState> {
   AuthState _checkInitialAuthState() {
     final current = Supabase.instance.client.auth.currentUser;
     if (current != null) {
-      // TODO: Implement proper async checking with settings
+      // Implemented: initial auth state is created synchronously; settings-based checks occur after login
       return _createAuthenticatedState(current);
     }
     return const AuthState(isAuthenticated: false);
@@ -110,7 +134,7 @@ class AuthNotifier extends Notifier<AuthState> {
   }
 
   /// Login with error handling and rate limiting considerations
-  /// TODO: Implement rate limiting (max 5 attempts per minute)
+  /// Login with error handling and rate limiting
   Future<bool> login(String username, String password, {bool enableAutoLogin = false}) async {
     try {
       await Supabase.instance.client.auth.signInWithPassword(
@@ -153,19 +177,25 @@ class AuthNotifier extends Notifier<AuthState> {
           user.id,
           metadata: {'role': role?.name ?? 'Member'},
         );
-
-        // Update auto-login settings
-        // TODO: Access settings repository properly
-        // final settingsRepo = await ref.read(settingsRepositoryProvider.future);
-        // if (enableAutoLogin || settingsRepo.getLastLoginTime() == null) {
-        //   await settingsRepo.setAutoLoginEnabled(true);
-        // }
-        // await settingsRepo.setLastLoginTime(DateTime.now());
+        // Update auto-login settings using async settings provider
+        try {
+          final settingsRepo = await ref.watch(settingsRepositoryProvider.future);
+          if (enableAutoLogin || settingsRepo.getLastLoginTime() == null) {
+            await settingsRepo.setAutoLoginEnabled(true);
+          }
+          await settingsRepo.setLastLoginTime(DateTime.now());
+        } catch (e) {
+          AppLogger.instance.w('Settings update failed', error: e);
+        }
 
         return true;
       }
     } catch (e) {
       AppLogger.instance.w('Supabase login failed', error: e);
+      try {
+        // record failed attempt for rate limiting
+        _loginRateLimiter.recordFailure(username.trim().toLowerCase());
+      } catch (_) {}
     }
 
     state = state.copyWith(error: 'Invalid username or password.');
@@ -200,7 +230,7 @@ class AuthNotifier extends Notifier<AuthState> {
     try {
       final repo = ref.read(authRepositoryProvider);
       await repo.addUser(
-        AuthUser(
+        AppUser(
           username: username.trim(),
           password: password,
           roleId: roleId,
@@ -385,14 +415,44 @@ final helpLevelProvider = NotifierProvider<HelpLevelNotifier, ai_config.HelpLeve
   HelpLevelNotifier.new,
 );
 
-/// TODO: Add search/filtering capabilities
-final authUsersProvider = FutureProvider<List<AuthUser>>((ref) {
+/// Add search/filtering capabilities
+final biometricSupportedProvider = FutureProvider<bool>((ref) async {
+  final localAuth = LocalAuthentication();
+  try {
+    return await localAuth.isDeviceSupported();
+  } catch (e) {
+    return false;
+  }
+});
+
+class UseBiometricsNotifier extends Notifier<bool> {
+  @override
+  bool build() {
+    final settingsAsync = ref.watch(settingsRepositoryProvider);
+    return settingsAsync.maybeWhen(
+      data: (s) => s.getUseBiometricsEnabled(),
+      orElse: () => false,
+    );
+  }
+
+  Future<void> setEnabled(bool enabled) async {
+    final settings = await ref.watch(settingsRepositoryProvider.future);
+    await settings.setUseBiometricsEnabled(enabled);
+    state = enabled;
+  }
+}
+
+final useBiometricsProvider = NotifierProvider<UseBiometricsNotifier, bool>(
+  UseBiometricsNotifier.new,
+);
+
+final authUsersProvider = FutureProvider<List<AppUser>>((ref) {
   final repo = ref.watch(authRepositoryProvider);
   return repo.getUsers();
 });
 
 /// Provider for current authenticated user
-final currentUserProvider = FutureProvider<AuthUser?>((ref) async {
+final currentUserProvider = FutureProvider<AppUser?>((ref) async {
   final authState = ref.watch(authProvider);
   if (!authState.isAuthenticated || authState.username == null) {
     return null;

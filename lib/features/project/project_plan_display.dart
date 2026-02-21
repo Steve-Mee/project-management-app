@@ -5,6 +5,7 @@ import 'dart:async';
 import 'package:my_project_management_app/models/project_plan.dart';
 import 'package:my_project_management_app/core/providers/project_providers.dart';
 import 'package:my_project_management_app/core/providers/auth_providers.dart';
+import 'package:my_project_management_app/core/auth/auth_user.dart' as local_auth;
 import 'package:http/http.dart' as http;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -1447,17 +1448,20 @@ class _ProjectPlanDisplayState extends ConsumerState<ProjectPlanDisplay> {
           }
         }
 
-        return DropdownButtonFormField<String>(
+        return DropdownButtonFormField<String?>(
           initialValue: assignedTo,
           items: [
-            const DropdownMenuItem<String>(
+            DropdownMenuItem<String?>(
               value: null,
               child: Text('Unassigned'),
             ),
-            ...users.map((user) => DropdownMenuItem<String>(
-              value: user.username,
-              child: Text(user.username),
-            )),
+            ...users.where((user) => user != null).map((user) {
+              final u = user as local_auth.AuthUser;
+              return DropdownMenuItem<String?>(
+                value: u.username,
+                child: Text(u.username),
+              );
+            }),
           ],
           onChanged: (String? value) {
             // Update the JSON
