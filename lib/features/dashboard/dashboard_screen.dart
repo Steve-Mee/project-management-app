@@ -17,15 +17,13 @@ import '../../models/project_model.dart';
 import '../../models/project_sort.dart';
 import '../ai_chat/ai_chat_modal.dart';
 import 'widgets/error_state_widget.dart';
-import 'widgets/loading_more_widget.dart';
 import 'widgets/project_card_widget.dart';
 
 /// Filter state for projects list
-final currentProjectFilterProvider = StateProvider<ProjectFilter>((ref) => const ProjectFilter());
+final currentProjectFilterProvider = StateProvider<ProjectFilterParams>((ref) => const ProjectFilterParams());
 
 /// Sorting state for projects list
 final currentProjectSortProvider = StateProvider<ProjectSort>((ref) => ProjectSort.name);
-
 
 /// Dashboard screen - responsive main page with projects overview
 class DashboardScreen extends ConsumerStatefulWidget {
@@ -56,12 +54,6 @@ class _ChartColors {
 class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   final ScrollController _scrollController = ScrollController();
   Timer? _debounce;
-  static const int _pageSize = 9;
-
-  // pagination state
-  int _page = 1;
-  bool _hasMore = true;
-  bool _isLoading = false;
   List<ProjectModel> _projects = [];
 
   // we no longer keep local sort/status values; read from providers
@@ -69,7 +61,6 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   @override
   void initState() {
     super.initState();
-    _scrollController.addListener(_onScroll);
     // _loadDashboardConfig(); // Removed, now using provider
   }
 
@@ -87,7 +78,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   // custom widget formatter removed; not needed for combined list UI
 
   /// Build shimmer loading skeleton
-  Widget _buildFilterBar(BuildContext context, ProjectFilter filter) {
+  Widget _buildFilterBar(BuildContext context, ProjectFilterParams filter) {
     final l10n = AppLocalizations.of(context)!;
     final sort = ref.watch(currentProjectSortProvider);
     final theme = Theme.of(context);
@@ -208,38 +199,27 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     super.dispose();
   }
 
-  void _onScroll() {
-    if (!_scrollController.hasClients || !_hasMore || _isLoading) return;
-
-    final position = _scrollController.position;
-    if (position.pixels >= position.maxScrollExtent - 200) {
-      setState(() {
-        _page += 1;
-      });
-    }
-  }
-
   void _updateSearch(String query) {
     _debounce?.cancel();
     _debounce = Timer(const Duration(milliseconds: 300), () {
       final current = ref.read(currentProjectFilterProvider);
       ref.read(currentProjectFilterProvider.notifier).state =
-          ProjectFilter(
+          ProjectFilterParams(
             status: current.status,
-            searchQuery: query,
+            searchQuery: query.isEmpty ? null : query,
           );
-      _resetPagination();
+      // No need to reset pagination since we have all results
     });
   }
 
   void _updateStatus(String status) {
     final current = ref.read(currentProjectFilterProvider);
     ref.read(currentProjectFilterProvider.notifier).state =
-        ProjectFilter(
+        ProjectFilterParams(
           status: status == 'All' ? null : status,
           searchQuery: current.searchQuery,
         );
-    _resetPagination();
+    // No need to reset pagination since we have all results
   }
 
   _ChartColors _chartColors(BuildContext context) {
@@ -279,39 +259,27 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     final filter = ref.watch(currentProjectFilterProvider);
     final canUseAi = ref.watch(hasPermissionProvider(AppPermissions.useAi));
 
-    // watch paginated data for current page
-    final params = ProjectPaginationParams(
-      page: _page,
-      limit: _pageSize,
-      statusFilter: filter.status,
-      searchQuery: filter.searchQuery,
-    );
-    final pageState = ref.watch(projectsPaginatedProvider(params));
+    // watch filtered projects data
+    final filteredProjectsState = ref.watch(filteredProjectsProvider(filter));
 
-    // listen to new page results and append
-    ref.listen<AsyncValue<List<ProjectModel>>>(projectsPaginatedProvider(params),
+    // listen to filtered projects results
+    ref.listen<AsyncValue<List<ProjectModel>>>(filteredProjectsProvider(filter),
         (previous, next) {
-      next.whenData((newProjects) {
-        if (_page == 1) {
-          _projects = List.from(newProjects);
-        } else {
-          _projects.addAll(newProjects);
-        }
-        if (newProjects.length < _pageSize) {
-          _hasMore = false;
-        }
+      next.whenData((filteredProjects) {
+        _projects = List.from(filteredProjects);
         _sortProjectsLocal();
       });
     });
 
     Widget bodyContent;
-    if (pageState.isLoading && _projects.isEmpty) {
+    if (filteredProjectsState.isLoading && _projects.isEmpty) {
       bodyContent = _buildShimmerLoading();
-    } else if (pageState.hasError && _projects.isEmpty) {
+    } else if (filteredProjectsState.hasError && _projects.isEmpty) {
       bodyContent = ErrorStateWidget(
-        error: pageState.error!,
+        error: filteredProjectsState.error!,
         onRetry: () {
-          _resetPagination();
+          // Reset by invalidating the provider
+          ref.invalidate(filteredProjectsProvider(filter));
         },
       );
     } else {
@@ -393,21 +361,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     }
   }
 
-  void _resetPagination() {
-    setState(() {
-      _page = 1;
-      _projects.clear();
-      _hasMore = true;
-      _isLoading = false;
-    });
-    if (_scrollController.hasClients) {
-      _scrollController.jumpTo(0);
-    }
-  }
-
   void _updateSort(ProjectSort sort) {
     ref.read(currentProjectSortProvider.notifier).state = sort;
-    _resetPagination();
+    // No need to reset pagination since we have all results
   }
 
   Widget _buildListView() {
@@ -427,26 +383,23 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
         content = ListView.builder(
           controller: _scrollController,
           padding: EdgeInsets.all(16.w),
-          itemCount: _projects.length + (_hasMore ? 1 : 0),
+          itemCount: _projects.length,
           itemBuilder: (context, index) {
-            if (index < _projects.length) {
-              final project = _projects[index];
-              return Padding(
-                padding: EdgeInsets.only(bottom: 12.h),
-                child: AspectRatio(
-                  aspectRatio: 1 / 0.75,
-                  child: FadeInUp(
-                    duration: Duration(milliseconds: 400 + index * 100),
-                    child: ProjectCardWidget(
-                      key: Key(project.id),
-                      project: project,
-                      onTap: () => _showProjectDetailSheet(context, project),
-                    ),
+            final project = _projects[index];
+            return Padding(
+              padding: EdgeInsets.only(bottom: 12.h),
+              child: AspectRatio(
+                aspectRatio: 1 / 0.75,
+                child: FadeInUp(
+                  duration: Duration(milliseconds: 400 + index * 100),
+                  child: ProjectCardWidget(
+                    key: Key(project.id),
+                    project: project,
+                    onTap: () => _showProjectDetailSheet(context, project),
                   ),
                 ),
-              );
-            }
-            return const LoadingMoreWidget();
+              ),
+            );
           },
         );
       } else {
@@ -459,24 +412,15 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             crossAxisSpacing: 12.w,
             childAspectRatio: 1 / 0.75,
           ),
-          itemCount: _projects.length + (_hasMore ? 1 : 0),
+          itemCount: _projects.length,
           itemBuilder: (context, index) {
-            if (index < _projects.length) {
-              final project = _projects[index];
-              return FadeInUp(
-                duration: Duration(milliseconds: 400 + index * 100),
-                child: ProjectCardWidget(
-                  key: Key(project.id),
-                  project: project,
-                  onTap: () => _showProjectDetailSheet(context, project),
-                ),
-              );
-            }
-            // show loading indicator spanning columns
-            return GridTile(
-              child: Padding(
-                padding: EdgeInsets.only(top: 24.h),
-                child: const LoadingMoreWidget(),
+            final project = _projects[index];
+            return FadeInUp(
+              duration: Duration(milliseconds: 400 + index * 100),
+              child: ProjectCardWidget(
+                key: Key(project.id),
+                project: project,
+                onTap: () => _showProjectDetailSheet(context, project),
               ),
             );
           },
