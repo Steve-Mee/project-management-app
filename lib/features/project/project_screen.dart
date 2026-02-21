@@ -24,9 +24,16 @@ class _ProjectScreenState extends ConsumerState<ProjectScreen> {
   final ScrollController _scrollController = ScrollController();
   late final ProviderSubscription<String> _searchSubscription;
   static const int _pageSize = 12;
-  int _visibleCount = _pageSize;
+
+  // pagination state
+  final List<ProjectModel> _projects = [];
+  int _page = 1;
+  bool _isLoading = false;
+  bool _hasMore = true;
+
   String _selectedStatus = 'All';
   ProjectSort _sortBy = ProjectSort.name;
+  String? _loadError;
 
   @override
   void initState() {
@@ -34,15 +41,12 @@ class _ProjectScreenState extends ConsumerState<ProjectScreen> {
     _scrollController.addListener(_onScroll);
     _searchSubscription = ref.listenManual<String>(
       searchQueryProvider,
-      (_, _) {
-        if (!mounted) {
-          return;
-        }
-        setState(() {
-          _visibleCount = _pageSize;
-        });
+      (_, __) {
+        if (!mounted) return;
+        _resetPagination();
       },
     );
+    WidgetsBinding.instance.addPostFrameCallback((_) => _resetPagination());
   }
 
   @override
@@ -53,34 +57,70 @@ class _ProjectScreenState extends ConsumerState<ProjectScreen> {
   }
 
   void _onScroll() {
-    if (!_scrollController.hasClients) {
-      return;
-    }
-
+    if (!_scrollController.hasClients || _isLoading || !_hasMore) return;
     final position = _scrollController.position;
     if (position.pixels >= position.maxScrollExtent - 200) {
-      setState(() {
-        _visibleCount += _pageSize;
-      });
+      _loadPage();
+    }
+  }
+
+  void _resetPagination() {
+    setState(() {
+      _page = 1;
+      _projects.clear();
+      _hasMore = true;
+      _isLoading = false;
+      _loadError = null;
+    });
+    if (_scrollController.hasClients) {
+      _scrollController.jumpTo(0);
+    }
+    _loadPage();
+  }
+
+  Future<void> _loadPage() async {
+    if (_isLoading || !_hasMore) return;
+    setState(() => _isLoading = true);
+    try {
+      final params = ProjectPaginationParams(
+        page: _page,
+        limit: _pageSize,
+        statusFilter: _selectedStatus == 'All' ? null : _selectedStatus,
+        searchQuery: ref.watch(searchQueryProvider).isEmpty
+            ? null
+            : ref.watch(searchQueryProvider),
+      );
+      final newItems =
+          await ref.read(projectsPaginatedProvider(params).future);
+      if (newItems.isEmpty || newItems.length < _pageSize) {
+        _hasMore = false;
+      }
+      _projects.addAll(newItems);
+      _page += 1;
+    } catch (e) {
+      _loadError = e.toString();
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final projectsState = ref.watch(visibleProjectsProvider);
     final metaByProjectId = ref.watch(projectMetaProvider);
     final canEditProjects =
         ref.watch(hasPermissionProvider(AppPermissions.editProjects));
 
-    return projectsState.when(
-      loading: () => _buildLoadingContent(context, canEditProjects),
-      error: (error, _) => _buildErrorContent(context, error, canEditProjects),
-      data: (projects) => _buildProjectList(
-        context,
-        projects,
-        metaByProjectId,
-        canEditProjects,
-      ),
+    if (_projects.isEmpty && _isLoading) {
+      return _buildLoadingContent(context, canEditProjects);
+    }
+    if (_loadError != null && _projects.isEmpty) {
+      return _buildErrorContent(context, _loadError!, canEditProjects);
+    }
+    return _buildProjectList(
+      context,
+      _projects,
+      metaByProjectId,
+      canEditProjects,
     );
   }
 
@@ -93,8 +133,8 @@ class _ProjectScreenState extends ConsumerState<ProjectScreen> {
     final l10n = AppLocalizations.of(context)!;
     final filtered = _filterProjects(projects);
     final sorted = _sortProjects(filtered, metaByProjectId);
-    final visible = sorted.take(_visibleCount).toList();
-    final hasMore = visible.length < sorted.length;
+    final visible = sorted; // pagination already applied via repository
+    final hasMore = _hasMore;
 
     const baseCount = 2;
     final itemCount = baseCount + (sorted.isEmpty ? 1 : visible.length + 1);
@@ -286,6 +326,7 @@ class _ProjectScreenState extends ConsumerState<ProjectScreen> {
     );
   }
 
+  // old filtering now mostly handled by repository; keep for fallback
   List<ProjectModel> _filterProjects(List<ProjectModel> projects) {
     final query = ref.watch(searchQueryProvider).toLowerCase();
     return projects
@@ -371,8 +412,8 @@ class _ProjectScreenState extends ConsumerState<ProjectScreen> {
           onSelected: (_) {
             setState(() {
               _selectedStatus = status;
-              _visibleCount = _pageSize;
             });
+            _resetPagination();
           },
         );
       }).toList(),
