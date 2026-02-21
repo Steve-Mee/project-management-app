@@ -55,19 +55,19 @@ class AuthRepository implements IAuthRepository {
 
   Box get _box => Hive.box(_boxName);
 
-  List<AuthUser> getUsers() {
+  List<AppUser> getUsers() {
     final raw = _box.get(_usersKey);
     if (raw is List) {
       return raw
           .whereType<Map>()
-          .map((entry) => AuthUser.fromMap(Map<String, dynamic>.from(entry)))
+          .map((entry) => AppUser.fromMap(Map<String, dynamic>.from(entry)))
           .where((user) => user.username.isNotEmpty)
           .toList();
     }
     return [];
   }
 
-  AuthUser? getUserByUsername(String username) {
+  AppUser? getUserByUsername(String username) {
     final trimmed = username.trim().toLowerCase();
     if (trimmed.isEmpty) {
       return null;
@@ -216,7 +216,7 @@ class AuthRepository implements IAuthRepository {
     final users = getUsers();
     final updated = users.map((user) {
       if (user.username.toLowerCase() == username.toLowerCase()) {
-        return AuthUser(
+        return AppUser(
           username: user.username,
           password: user.password,
           roleId: roleId,
@@ -231,7 +231,7 @@ class AuthRepository implements IAuthRepository {
     );
   }
 
-  Future<void> addUser(AuthUser user) async {
+  Future<void> addUser(AppUser user) async {
     // NOTE: Integreer Firebase Auth later; if (useRemote) { ... } else { local add }.
     final users = getUsers();
     final hashedPassword = _hashPassword(user.password);
@@ -239,7 +239,7 @@ class AuthRepository implements IAuthRepository {
       (existing) => existing.username.toLowerCase() == user.username.toLowerCase(),
     );
     users.add(
-      AuthUser(
+      AppUser(
         username: user.username,
         password: hashedPassword,
         roleId: user.roleId,
@@ -268,7 +268,7 @@ class AuthRepository implements IAuthRepository {
     }
   }
 
-  AuthUser? validateUser(String username, String password) {
+  AppUser? validateUser(String username, String password) {
     // NOTE: Integreer Firebase Auth later; if (useRemote) { ... } else { local validate }.
     final users = getUsers();
     final hashedPassword = _hashPassword(password);
@@ -278,7 +278,7 @@ class AuthRepository implements IAuthRepository {
       }
       if (user.username == username && user.password == password) {
         _upgradeLegacyPassword(username, hashedPassword, users);
-        return AuthUser(
+        return AppUser(
           username: user.username,
           password: hashedPassword,
           roleId: user.roleId,
@@ -323,7 +323,7 @@ class AuthRepository implements IAuthRepository {
 
   @override
   Future<void> register(String email, String password) async {
-    await addUser(AuthUser(username: email.trim(), password: password));
+    await addUser(AppUser(username: email.trim(), password: password));
   }
 
   @override
@@ -416,13 +416,13 @@ class AuthRepository implements IAuthRepository {
   void _upgradeLegacyPassword(
     String username,
     String hashedPassword,
-    List<AuthUser> users,
+    List<AppUser> users,
   ) {
-    final updated = <AuthUser>[];
+    final updated = <AppUser>[];
     for (final user in users) {
       if (user.username == username) {
         updated.add(
-          AuthUser(
+          AppUser(
             username: user.username,
             password: hashedPassword,
             roleId: user.roleId,
