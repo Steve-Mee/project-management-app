@@ -308,6 +308,11 @@ class _ProjectFilterDialogState extends State<ProjectFilterDialog> with TickerPr
         chips.add(Chip(label: Text('#$tag'), backgroundColor: Colors.purple.shade100));
       }
     }
+    if (filter.requiredTags != null && filter.requiredTags!.isNotEmpty) {
+      for (final tag in filter.requiredTags!) {
+        chips.add(Chip(label: Text('#$tag (required)'), backgroundColor: Colors.red.shade100));
+      }
+    }
     if (filter.startDate != null) {
       chips.add(Chip(label: Text('From ${DateFormat('MMM dd').format(filter.startDate!)}'), backgroundColor: Colors.green.shade100));
     }
@@ -416,8 +421,8 @@ class _ProjectFilterDialogState extends State<ProjectFilterDialog> with TickerPr
             },
           ),
           const SizedBox(height: 16),
-          // Tags Multi-Select
-          _buildTagsSection(context, l10n),
+          // Tags Multi-Select (split into optional and required)
+          _buildTagsSections(context, l10n),
           const SizedBox(height: 16),
           // Priority Dropdown
           DropdownButtonFormField<String?>(
@@ -581,33 +586,42 @@ class _ProjectFilterDialogState extends State<ProjectFilterDialog> with TickerPr
     );
   }
 
-  Widget _buildTagsSection(BuildContext context, AppLocalizations l10n) {
+  Widget _buildTagsSections(BuildContext context, AppLocalizations l10n) {
     final allTags = _getAllAvailableTags();
-    final selectedTags = _filter.tags ?? [];
+    final optionalTags = _filter.tags ?? [];
+    final requiredTags = _filter.requiredTags ?? [];
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(l10n.filterTagsLabel, style: Theme.of(context).textTheme.titleSmall),
+        // Required Tags Section (AND logic)
+        Text(l10n.requiredTagsLabel, style: Theme.of(context).textTheme.titleSmall),
+        Text(
+          l10n.requiredTagsDescription,
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
+          ),
+        ),
         const SizedBox(height: 8),
-        // Selected tags chips
-        if (selectedTags.isNotEmpty) ...[
+        // Selected required tags chips
+        if (requiredTags.isNotEmpty) ...[
           Wrap(
             spacing: 4,
-            children: selectedTags.map((tag) => Chip(
+            children: requiredTags.map((tag) => Chip(
               label: Text('#$tag'),
+              backgroundColor: Colors.red.shade100,
               deleteIcon: const Icon(Icons.close, size: 16),
               onDeleted: () {
                 setState(() {
-                  final newTags = List<String>.from(selectedTags)..remove(tag);
-                  _filter = _filter.copyWith(tags: newTags.isEmpty ? null : newTags);
+                  final newTags = List<String>.from(requiredTags)..remove(tag);
+                  _filter = _filter.copyWith(requiredTags: newTags.isEmpty ? null : newTags);
                 });
               },
             )).toList(),
           ),
           const SizedBox(height: 8),
         ],
-        // Add new tag input
+        // Add new required tag input
         Row(
           children: [
             Expanded(
@@ -617,25 +631,89 @@ class _ProjectFilterDialogState extends State<ProjectFilterDialog> with TickerPr
                   labelText: l10n.addTagLabel,
                   hintText: l10n.addTagHint,
                 ),
-                onSubmitted: (value) => _addTag(value.trim()),
+                onSubmitted: (value) => _addRequiredTag(value.trim()),
               ),
             ),
             IconButton(
               icon: const Icon(Icons.add),
-              onPressed: () => _addTag(_tagController.text.trim()),
+              onPressed: () => _addRequiredTag(_tagController.text.trim()),
             ),
           ],
         ),
         const SizedBox(height: 8),
-        // Available tags
+        // Available tags for required
         if (allTags.isNotEmpty) ...[
           Text(l10n.availableTagsLabel, style: Theme.of(context).textTheme.bodySmall),
           const SizedBox(height: 4),
           Wrap(
             spacing: 4,
-            children: allTags.where((tag) => !selectedTags.contains(tag)).map((tag) => ActionChip(
+            children: allTags.where((tag) => !requiredTags.contains(tag)).map((tag) => ActionChip(
               label: Text('#$tag'),
-              onPressed: () => _addTag(tag),
+              backgroundColor: Colors.red.shade50,
+              onPressed: () => _addRequiredTag(tag),
+            )).toList(),
+          ),
+        ],
+        const SizedBox(height: 16),
+        const Divider(),
+        const SizedBox(height: 16),
+        // Optional Tags Section (OR logic)
+        Text(l10n.optionalTagsLabel, style: Theme.of(context).textTheme.titleSmall),
+        Text(
+          l10n.optionalTagsDescription,
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
+          ),
+        ),
+        const SizedBox(height: 8),
+        // Selected optional tags chips
+        if (optionalTags.isNotEmpty) ...[
+          Wrap(
+            spacing: 4,
+            children: optionalTags.map((tag) => Chip(
+              label: Text('#$tag'),
+              backgroundColor: Colors.purple.shade100,
+              deleteIcon: const Icon(Icons.close, size: 16),
+              onDeleted: () {
+                setState(() {
+                  final newTags = List<String>.from(optionalTags)..remove(tag);
+                  _filter = _filter.copyWith(tags: newTags.isEmpty ? null : newTags);
+                });
+              },
+            )).toList(),
+          ),
+          const SizedBox(height: 8),
+        ],
+        // Add new optional tag input
+        Row(
+          children: [
+            Expanded(
+              child: TextField(
+                controller: _tagController,
+                decoration: InputDecoration(
+                  labelText: l10n.addTagLabel,
+                  hintText: l10n.addTagHint,
+                ),
+                onSubmitted: (value) => _addOptionalTag(value.trim()),
+              ),
+            ),
+            IconButton(
+              icon: const Icon(Icons.add),
+              onPressed: () => _addOptionalTag(_tagController.text.trim()),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        // Available tags for optional
+        if (allTags.isNotEmpty) ...[
+          Text(l10n.availableTagsLabel, style: Theme.of(context).textTheme.bodySmall),
+          const SizedBox(height: 4),
+          Wrap(
+            spacing: 4,
+            children: allTags.where((tag) => !optionalTags.contains(tag)).map((tag) => ActionChip(
+              label: Text('#$tag'),
+              backgroundColor: Colors.purple.shade50,
+              onPressed: () => _addOptionalTag(tag),
             )).toList(),
           ),
         ],
@@ -651,7 +729,18 @@ class _ProjectFilterDialogState extends State<ProjectFilterDialog> with TickerPr
     return allTags.toList()..sort();
   }
 
-  void _addTag(String tag) {
+  void _addRequiredTag(String tag) {
+    if (tag.isEmpty) return;
+    final selectedTags = _filter.requiredTags ?? [];
+    if (!selectedTags.contains(tag)) {
+      setState(() {
+        _filter = _filter.copyWith(requiredTags: [...selectedTags, tag]);
+      });
+    }
+    _tagController.clear();
+  }
+
+  void _addOptionalTag(String tag) {
     if (tag.isEmpty) return;
     final selectedTags = _filter.tags ?? [];
     if (!selectedTags.contains(tag)) {

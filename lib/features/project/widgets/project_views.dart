@@ -143,6 +143,19 @@ class ProjectListView extends ProjectView {
                           ),
                         ],
                       ),
+                      if (project.tags.isNotEmpty) ...[
+                        const SizedBox(height: 8),
+                        Wrap(
+                          spacing: 4,
+                          runSpacing: 4,
+                          children: project.tags.map((tag) => Chip(
+                            label: Text('#$tag', style: const TextStyle(fontSize: 10)),
+                            materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                            padding: EdgeInsets.zero,
+                            backgroundColor: _getTagColor(tag),
+                          )).toList(),
+                        ),
+                      ],
                     ],
                   ),
                 ),
@@ -157,6 +170,24 @@ class ProjectListView extends ProjectView {
         ),
       ),
     );
+  }
+
+  Color _getTagColor(String tag) {
+    // Simple hash-based color assignment for consistent colors per tag
+    final hash = tag.hashCode;
+    final colors = [
+      Colors.blue.shade100,
+      Colors.green.shade100,
+      Colors.orange.shade100,
+      Colors.purple.shade100,
+      Colors.red.shade100,
+      Colors.teal.shade100,
+      Colors.pink.shade100,
+      Colors.indigo.shade100,
+      Colors.amber.shade100,
+      Colors.cyan.shade100,
+    ];
+    return colors[hash.abs() % colors.length];
   }
 }
 
@@ -396,6 +427,19 @@ class ProjectKanbanView extends ProjectView {
                 ],
               ],
             ),
+            if (project.tags.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 4,
+                runSpacing: 4,
+                children: project.tags.map((tag) => Chip(
+                  label: Text('#$tag', style: const TextStyle(fontSize: 10)),
+                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  padding: EdgeInsets.zero,
+                  backgroundColor: _getTagColor(tag),
+                )).toList(),
+              ),
+            ],
           ],
         ),
       ),
@@ -426,6 +470,24 @@ class ProjectKanbanView extends ProjectView {
       default:
         return Colors.grey;
     }
+  }
+
+  Color _getTagColor(String tag) {
+    // Simple hash-based color assignment for consistent colors per tag
+    final hash = tag.hashCode;
+    final colors = [
+      Colors.blue.shade100,
+      Colors.green.shade100,
+      Colors.orange.shade100,
+      Colors.purple.shade100,
+      Colors.red.shade100,
+      Colors.teal.shade100,
+      Colors.pink.shade100,
+      Colors.indigo.shade100,
+      Colors.amber.shade100,
+      Colors.cyan.shade100,
+    ];
+    return colors[hash.abs() % colors.length];
   }
 }
 
@@ -517,6 +579,7 @@ class ProjectTableView extends ProjectView {
                     label: Text('#$tag', style: const TextStyle(fontSize: 10)),
                     materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                     padding: EdgeInsets.zero,
+                    backgroundColor: _getTagColor(tag),
                   )).toList(),
                 ),
               ),
@@ -538,5 +601,23 @@ class ProjectTableView extends ProjectView {
       default:
         return Colors.grey;
     }
+  }
+
+  Color _getTagColor(String tag) {
+    // Simple hash-based color assignment for consistent colors per tag
+    final hash = tag.hashCode;
+    final colors = [
+      Colors.blue.shade100,
+      Colors.green.shade100,
+      Colors.orange.shade100,
+      Colors.purple.shade100,
+      Colors.red.shade100,
+      Colors.teal.shade100,
+      Colors.pink.shade100,
+      Colors.indigo.shade100,
+      Colors.amber.shade100,
+      Colors.cyan.shade100,
+    ];
+    return colors[hash.abs() % colors.length];
   }
 }

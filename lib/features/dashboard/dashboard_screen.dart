@@ -1094,6 +1094,42 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
           },
         ));
       }
+      if (filter.tags != null && filter.tags!.isNotEmpty) {
+        for (final tag in filter.tags!) {
+          activeFilterChips.add(FilterChip(
+            label: Text('#$tag'),
+            backgroundColor: Colors.purple.shade100,
+            selected: false,
+            onSelected: (_) {},
+            onDeleted: () {
+              final newTags = List<String>.from(filter.tags!)..remove(tag);
+              ref.read(persistentProjectFilterProvider.notifier).updateFilter(
+                ref.read(persistentProjectFilterProvider).copyWith(
+                  tags: newTags.isEmpty ? null : newTags,
+                ),
+              );
+            },
+          ));
+        }
+      }
+      if (filter.requiredTags != null && filter.requiredTags!.isNotEmpty) {
+        for (final tag in filter.requiredTags!) {
+          activeFilterChips.add(FilterChip(
+            label: Text('#$tag (required)'),
+            backgroundColor: Colors.red.shade100,
+            selected: false,
+            onSelected: (_) {},
+            onDeleted: () {
+              final newTags = List<String>.from(filter.requiredTags!)..remove(tag);
+              ref.read(persistentProjectFilterProvider.notifier).updateFilter(
+                ref.read(persistentProjectFilterProvider).copyWith(
+                  requiredTags: newTags.isEmpty ? null : newTags,
+                ),
+              );
+            },
+          ));
+        }
+      }
 
       Widget content;
       if (columns == 1) {

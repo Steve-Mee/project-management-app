@@ -124,9 +124,14 @@ final filteredProjectsProvider = FutureProvider.autoDispose.family<List<ProjectM
     projects = projects.where((p) => _matchesFuzzySearch(p, query)).toList();
   }
 
-  // Apply tags filter
+  // Apply tags filter (OR logic - project must have at least one of the tags)
   if (params.tags != null && params.tags!.isNotEmpty) {
     projects = projects.where((p) => params.tags!.any((tag) => p.tags.contains(tag))).toList();
+  }
+
+  // Apply required tags filter (AND logic - project must have ALL required tags)
+  if (params.requiredTags != null && params.requiredTags!.isNotEmpty) {
+    projects = projects.where((p) => params.requiredTags!.every((tag) => p.tags.contains(tag))).toList();
   }
 
   // Apply priority filter: exact match if specified
@@ -291,6 +296,7 @@ class ProjectFilter {
   final DateTime? dueDateStart;
   final DateTime? dueDateEnd;
   final List<String>? tags;
+  final List<String>? requiredTags;
   final List<repo.ProjectFilterConditions>? extraConditions;
   final String? sortBy; // values: "name", "priority", "startDate", "dueDate", "createdAt", "status"
   final bool sortAscending;
@@ -316,6 +322,7 @@ class ProjectFilter {
     this.dueDateStart,
     this.dueDateEnd,
     this.tags,
+    this.requiredTags,
     this.extraConditions,
     this.sortBy,
     this.sortAscending = true,
@@ -334,6 +341,7 @@ class ProjectFilter {
     DateTime? dueDateStart,
     DateTime? dueDateEnd,
     List<String>? tags,
+    List<String>? requiredTags,
     List<repo.ProjectFilterConditions>? extraConditions,
     String? sortBy,
     bool? sortAscending,
@@ -351,6 +359,7 @@ class ProjectFilter {
       dueDateStart: dueDateStart ?? this.dueDateStart,
       dueDateEnd: dueDateEnd ?? this.dueDateEnd,
       tags: tags ?? this.tags,
+      requiredTags: requiredTags ?? this.requiredTags,
       extraConditions: extraConditions ?? this.extraConditions,
       sortBy: sortBy ?? this.sortBy,
       sortAscending: sortAscending ?? this.sortAscending,

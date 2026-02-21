@@ -1035,6 +1035,18 @@ class AppLocalizationsHi extends AppLocalizations {
   String get availableTagsLabel => 'Available tags:';
 
   @override
+  String get requiredTagsLabel => 'Required Tags (AND)';
+
+  @override
+  String get optionalTagsLabel => 'Optional Tags (OR)';
+
+  @override
+  String get requiredTagsDescription => 'Projects must have ALL of these tags';
+
+  @override
+  String get optionalTagsDescription => 'Projects can have ANY of these tags';
+
+  @override
   String get listViewTooltip => 'List view';
 
   @override

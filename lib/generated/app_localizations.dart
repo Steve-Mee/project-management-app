@@ -1975,6 +1975,30 @@ abstract class AppLocalizations {
   /// **'Available tags:'**
   String get availableTagsLabel;
 
+  /// Label for the required tags filter section that uses AND logic.
+  ///
+  /// In en, this message translates to:
+  /// **'Required Tags (AND)'**
+  String get requiredTagsLabel;
+
+  /// Label for the optional tags filter section that uses OR logic.
+  ///
+  /// In en, this message translates to:
+  /// **'Optional Tags (OR)'**
+  String get optionalTagsLabel;
+
+  /// Description explaining that required tags use AND logic.
+  ///
+  /// In en, this message translates to:
+  /// **'Projects must have ALL of these tags'**
+  String get requiredTagsDescription;
+
+  /// Description explaining that optional tags use OR logic.
+  ///
+  /// In en, this message translates to:
+  /// **'Projects can have ANY of these tags'**
+  String get optionalTagsDescription;
+
   /// Tooltip for the list view mode button.
   ///
   /// In en, this message translates to:

@@ -1425,6 +1425,22 @@
   "@availableTagsLabel": {
     "description": "Label showing available tags to select from."
   },
+  "requiredTagsLabel": "Required Tags (AND)",
+  "@requiredTagsLabel": {
+    "description": "Label for the required tags filter section that uses AND logic."
+  },
+  "optionalTagsLabel": "Optional Tags (OR)",
+  "@optionalTagsLabel": {
+    "description": "Label for the optional tags filter section that uses OR logic."
+  },
+  "requiredTagsDescription": "Projects must have ALL of these tags",
+  "@requiredTagsDescription": {
+    "description": "Description explaining that required tags use AND logic."
+  },
+  "optionalTagsDescription": "Projects can have ANY of these tags",
+  "@optionalTagsDescription": {
+    "description": "Description explaining that optional tags use OR logic."
+  },
   "listViewTooltip": "List view",
   "@listViewTooltip": {
     "description": "Tooltip for the list view mode button."

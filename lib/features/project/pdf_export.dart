@@ -159,7 +159,11 @@ class PdfExporter {
     }
 
     if (filter.tags != null && filter.tags!.isNotEmpty) {
-      filters.add('Tags: ${filter.tags!.join(", ")}');
+      filters.add('Optional Tags: ${filter.tags!.join(", ")}');
+    }
+
+    if (filter.requiredTags != null && filter.requiredTags!.isNotEmpty) {
+      filters.add('Required Tags: ${filter.requiredTags!.join(", ")}');
     }
 
     if (filter.startDate != null) {
