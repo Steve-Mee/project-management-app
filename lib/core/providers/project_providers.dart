@@ -30,10 +30,21 @@ final projectRepositoryProvider = Provider<IProjectRepository>((ref) {
 
 /// Provider for projects with caching and TTL
 /// Uses AsyncValue.guard() for robust error handling
-/// TODO: Add pagination for large project lists
-/// TODO: Add filtering/sorting parameters via family provider
 final projectsProvider = NotifierProvider<ProjectsNotifier, AsyncValue<List<ProjectModel>>>(
   ProjectsNotifier.new,
+);
+
+/// Paginated projects provider with optional filtering
+final projectsPaginatedProvider = FutureProvider.autoDispose.family<List<ProjectModel>, ProjectPaginationParams>(
+  (ref, params) async {
+    final repository = ref.watch(projectRepositoryProvider);
+    return repository.getProjectsPaginated(
+      page: params.page,
+      limit: params.limit,
+      statusFilter: params.statusFilter,
+      searchQuery: params.searchQuery,
+    );
+  },
 );
 
 /// Family provider for getting a specific project by ID
@@ -80,6 +91,20 @@ class ProjectFilter {
   const ProjectFilter({
     this.status,
     this.userId,
+    this.searchQuery,
+  });
+}
+
+class ProjectPaginationParams {
+  final int page;
+  final int limit;
+  final String? statusFilter;
+  final String? searchQuery;
+
+  const ProjectPaginationParams({
+    required this.page,
+    required this.limit,
+    this.statusFilter,
     this.searchQuery,
   });
 }
