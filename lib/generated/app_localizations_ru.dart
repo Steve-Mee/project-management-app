@@ -240,31 +240,10 @@ class AppLocalizationsRu extends AppLocalizations {
   String get projectSortPriority => 'Приоритет';
 
   @override
-  String get projectSortCreatedDate => 'Дата создания';
+  String get projectSortCreatedDate => 'Created date';
 
   @override
-  String get projectSortStatus => 'Статус';
-
-  @override
-  String get projectSortStartDate => 'Дата начала';
-
-  @override
-  String get projectSortDueDate => 'Дата окончания';
-
-  @override
-  String get sortDirectionLabel => 'Направление';
-
-  @override
-  String get sortAscendingLabel => 'По возрастанию';
-
-  @override
-  String get sortDescendingLabel => 'По убыванию';
-
-  @override
-  String get exportToCsvLabel => 'Экспорт в CSV';
-
-  @override
-  String get csvExportSuccessMessage => 'CSV успешно экспортирован и поделён';
+  String get projectSortStatus => 'Status';
 
   @override
   String get allLabel => 'Все';
@@ -594,6 +573,9 @@ class AppLocalizationsRu extends AppLocalizations {
   String get aiChatSemanticsLabel => 'ИИ чат';
 
   @override
+  String get aiUsageTitle => 'Использование ИИ';
+
+  @override
   String get aiAssistantTitle => 'ИИ помощник по проектам';
 
   @override
@@ -853,10 +835,13 @@ class AppLocalizationsRu extends AppLocalizations {
   String get backupNoFileMessage => 'Файл резервной копии еще не создан';
 
   @override
-  String get filterButtonTooltip => 'Filter projects';
+  String get filterPriorityLabel => 'Priority';
 
   @override
-  String get filterPriorityLabel => 'Priority';
+  String get filterStartDateLabel => 'Start Date';
+
+  @override
+  String get filterEndDateLabel => 'End Date';
 
   @override
   String get priorityLow => 'Low';
@@ -871,43 +856,46 @@ class AppLocalizationsRu extends AppLocalizations {
   String get filterDateRangeLabel => 'Date Range';
 
   @override
-  String get filterStartDateLabel => 'Start Date';
+  String get applyFiltersLabel => 'Apply Filters';
 
   @override
-  String get filterEndDateLabel => 'End Date';
+  String get resetAllLabel => 'Reset All';
 
   @override
-  String activeFilterPriority(String priority) {
-    return 'Priority: $priority';
+  String get cancelLabel => 'Cancel';
+
+  @override
+  String get projectFiltersTitle => 'Project Filters';
+
+  @override
+  String get filterButtonTooltip => 'Filter projects';
+
+  @override
+  String activeFilterPriority(String value) {
+    return 'Priority: $value';
   }
 
   @override
   String activeFilterStartDate(String date) {
-    return 'From $date';
+    return 'Start: $date';
   }
 
   @override
   String activeFilterEndDate(String date) {
-    return 'To $date';
+    return 'End: $date';
   }
 
   @override
-  String showingProjectsCount(int count, int total) {
-    return 'Showing $count of $total projects';
-  }
+  String get allProjectsHint => 'All projects';
 
   @override
-  String get clearAllFiltersButtonLabel => 'Clear All Filters';
+  String get clearAllLabel => 'Clear All';
 
   @override
-  String get noProjectsMatchFiltersTitle => 'No projects match your filters';
+  String get saveAsDefaultViewLabel => 'Save as Default View';
 
   @override
-  String get noProjectsMatchFiltersSubtitle =>
-      'Try changing or clearing your filters';
-
-  @override
-  String get projectFiltersTitle => 'Project Filters';
+  String get saveAsDefaultSuccessMessage => 'Default view saved successfully';
 
   @override
   String get allProjectsPresetLabel => 'All Projects';
@@ -925,25 +913,58 @@ class AppLocalizationsRu extends AppLocalizations {
   String get myProjectsPresetLabel => 'My Projects';
 
   @override
-  String get cancelLabel => 'Cancel';
+  String showingProjectsCount(int count, int total) {
+    return 'Showing $count of $total projects';
+  }
 
   @override
-  String get clearAllLabel => 'Clear All';
+  String get noProjectsMatchFiltersTitle => 'No projects match your filters';
 
   @override
-  String get saveAsDefaultSuccessMessage => 'Filter saved as default';
+  String get noProjectsMatchFiltersSubtitle =>
+      'Try changing or clearing your filters';
 
   @override
-  String get saveAsDefaultViewLabel => 'Save as Default';
+  String get clearAllFiltersButtonLabel => 'Clear All Filters';
 
   @override
-  String get applyFiltersLabel => 'Apply Filters';
+  String get smartFilterButtonLabel => 'Smart Filter';
 
   @override
-  String get savedViewsTabLabel => 'Saved Views';
+  String get smartFilterButtonTooltip =>
+      'Use AI to create filters from natural language';
 
   @override
-  String get filtersTabLabel => 'Filters';
+  String get smartFilterDialogTitle => 'Describe Your Filter';
+
+  @override
+  String get smartFilterHint =>
+      'Show high priority tasks due this week for team X';
+
+  @override
+  String get smartFilterProcessing => 'Analyzing your request...';
+
+  @override
+  String get smartFilterError =>
+      'Could not understand your request. Please try rephrasing.';
+
+  @override
+  String get aiSuggestedFilterLabel => 'AI Suggested Filter';
+
+  @override
+  String get acceptFilterButtonLabel => 'Accept';
+
+  @override
+  String get editFilterButtonLabel => 'Edit';
+
+  @override
+  String get projectSortStartDate => 'Start Date';
+
+  @override
+  String get projectSortDueDate => 'Due Date';
+
+  @override
+  String get csvExportSuccessMessage => 'Projects exported to CSV successfully';
 
   @override
   String get viewNameLabel => 'View Name';
@@ -952,22 +973,62 @@ class AppLocalizationsRu extends AppLocalizations {
   String get viewNameHint => 'Enter a name for this view';
 
   @override
-  String get saveCurrentAsViewLabel => 'Save Current';
-
-  @override
   String get viewSavedMessage => 'View saved successfully';
 
   @override
-  String get noSavedViewsMessage => 'No saved views yet';
+  String get saveCurrentAsViewLabel => 'Save Current as View';
 
   @override
-  String get savedViewsLabel => 'Saved Views';
+  String get noSavedViewsMessage =>
+      'No saved views yet. Save your current filters to create a view.';
 
   @override
-  String get allViewsLabel => 'All Views';
+  String get sortDirectionLabel => 'Sort Direction';
 
   @override
-  String get filterProjectsTooltip => 'Filter projects';
+  String get sortAscendingLabel => 'Ascending';
+
+  @override
+  String get sortDescendingLabel => 'Descending';
+
+  @override
+  String get searchProjectsLabel => 'Search Projects';
+
+  @override
+  String get searchProjectsHint => 'Search by name, description, or tags';
+
+  @override
+  String get savedViewsTabLabel => 'Saved Views';
+
+  @override
+  String get filtersTabLabel => 'Filters';
+
+  @override
+  String get exportToCsvLabel => 'Export to CSV';
+
+  @override
+  String get exportToPdfLabel => 'Export to PDF';
+
+  @override
+  String get requiredTagsLabel => 'Required Tags';
+
+  @override
+  String get requiredTagsDescription => 'Projects must have all of these tags';
+
+  @override
+  String get optionalTagsLabel => 'Optional Tags';
+
+  @override
+  String get optionalTagsDescription => 'Projects can have any of these tags';
+
+  @override
+  String get addTagLabel => 'Add Tag';
+
+  @override
+  String get addTagHint => 'Type to add a tag';
+
+  @override
+  String get availableTagsLabel => 'Available Tags';
 
   @override
   String selectProjectsTitle(int count) {
@@ -981,8 +1042,26 @@ class AppLocalizationsRu extends AppLocalizations {
   String get exitSelectionModeTooltip => 'Exit selection mode';
 
   @override
+  String get savedViewsLabel => 'Saved Views';
+
+  @override
+  String get allViewsLabel => 'All Views';
+
+  @override
+  String get filterProjectsTooltip => 'Filter projects';
+
+  @override
+  String get listViewTooltip => 'List view';
+
+  @override
+  String get kanbanViewTooltip => 'Kanban view';
+
+  @override
+  String get tableViewTooltip => 'Table view';
+
+  @override
   String bulkActionsTitle(int count) {
-    return 'Bulk Actions ($count selected)';
+    return 'Bulk Actions ($count)';
   }
 
   @override
@@ -1010,58 +1089,17 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String bulkDeleteSuccessMessage(int count) {
-    return 'Successfully deleted $count projects.';
+    return '$count projects deleted successfully';
   }
-
-  @override
-  String bulkActionsAppliedMessage(int actions, int count) {
-    return 'Applied $actions action(s) to $count projects.';
-  }
-
-  @override
-  String get searchProjectsLabel => 'Search Projects';
-
-  @override
-  String get searchProjectsHint => 'Search by name, description, or tags...';
-
-  @override
-  String get filterTagsLabel => 'Tags';
-
-  @override
-  String get addTagLabel => 'Add Tag';
-
-  @override
-  String get addTagHint => 'Enter tag name';
-
-  @override
-  String get availableTagsLabel => 'Available tags:';
-
-  @override
-  String get requiredTagsLabel => 'Required Tags (AND)';
-
-  @override
-  String get optionalTagsLabel => 'Optional Tags (OR)';
-
-  @override
-  String get requiredTagsDescription => 'Projects must have ALL of these tags';
-
-  @override
-  String get optionalTagsDescription => 'Projects can have ANY of these tags';
-
-  @override
-  String get listViewTooltip => 'List view';
-
-  @override
-  String get kanbanViewTooltip => 'Kanban view';
-
-  @override
-  String get tableViewTooltip => 'Table view';
-
-  @override
-  String get nameLabel => 'Name';
 
   @override
   String get priorityLabel => 'Priority';
+
+  @override
+  String get tagsLabel => 'Tags';
+
+  @override
+  String get nameLabel => 'Name';
 
   @override
   String get startDateLabel => 'Start Date';
@@ -1070,16 +1108,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get dueDateLabel => 'Due Date';
 
   @override
-  String get tagsLabel => 'Tags';
-
-  @override
-  String get exportToPdfLabel => 'Export to PDF';
-
-  @override
-  String get exportingPdfMessage => 'Generating PDF report...';
-
-  @override
-  String get pdfExportedMessage => 'PDF exported successfully';
+  String get exportingPdfMessage => 'Exporting PDF...';
 
   @override
   String get pdfExportErrorMessage => 'Failed to export PDF';
@@ -1103,16 +1132,13 @@ class AppLocalizationsRu extends AppLocalizations {
   String get priorityDistributionLabel => 'Priority Distribution';
 
   @override
-  String get dueDatesLabel => 'Due Dates';
+  String get pdfExportedMessage => 'PDF exported successfully';
 
   @override
   String get projectListLabel => 'Project List';
 
   @override
   String get recentFiltersTooltip => 'Recent filters';
-
-  @override
-  String get unnamedFilterLabel => 'Unnamed Filter';
 
   @override
   String get ownerLabel => 'Owner';
@@ -1125,4 +1151,7 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get allProjectsLabel => 'All Projects';
+
+  @override
+  String get unnamedFilterLabel => 'Unnamed Filter';
 }

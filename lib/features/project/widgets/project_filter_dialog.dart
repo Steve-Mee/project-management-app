@@ -3,6 +3,7 @@ import 'package:my_project_management_app/core/providers/project_providers.dart'
 import 'package:my_project_management_app/generated/app_localizations.dart';
 import 'package:my_project_management_app/models/project_model.dart';
 import 'package:my_project_management_app/features/project/pdf_export.dart';
+import 'package:my_project_management_app/core/services/ai_planning_helpers.dart';
 import 'package:csv/csv.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:path_provider/path_provider.dart';
@@ -40,6 +41,10 @@ class _ProjectFilterDialogState extends State<ProjectFilterDialog> with TickerPr
   late TabController _tabController;
   final TextEditingController _viewNameController = TextEditingController();
   final TextEditingController _tagController = TextEditingController();
+  
+  // AI Smart Filter state
+  ProjectFilter? _aiSuggestedFilter;
+  bool _isProcessingAiRequest = false;
 
   @override
   void initState() {
@@ -217,6 +222,107 @@ class _ProjectFilterDialogState extends State<ProjectFilterDialog> with TickerPr
           SnackBar(content: Text('PDF export failed: $e')),
         );
       }
+    }
+  }
+
+  Future<void> _showSmartFilterDialog() async {
+    final l10n = AppLocalizations.of(context)!;
+    final TextEditingController smartFilterController = TextEditingController();
+
+    final result = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(l10n.smartFilterDialogTitle),
+        content: TextField(
+          controller: smartFilterController,
+          decoration: InputDecoration(
+            hintText: l10n.smartFilterHint,
+          ),
+          maxLines: 3,
+          autofocus: true,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: Text(l10n.cancelLabel),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(context).pop(smartFilterController.text.trim()),
+            child: Text(l10n.smartFilterButtonLabel),
+          ),
+        ],
+      ),
+    );
+
+    if (result != null && result.isNotEmpty) {
+      await _processSmartFilterRequest(result);
+    }
+  }
+
+  Future<void> _processSmartFilterRequest(String userRequest) async {
+    final l10n = AppLocalizations.of(context)!;
+
+    setState(() {
+      _isProcessingAiRequest = true;
+      _aiSuggestedFilter = null;
+    });
+
+    try {
+      // Show processing indicator
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(l10n.smartFilterProcessing)),
+        );
+      }
+
+      // Call AI to parse the filter request
+      final result = await AiPlanningHelpers.parseFilterRequest(userRequest);
+
+      if (result.content != null) {
+        setState(() {
+          _aiSuggestedFilter = result.content;
+          _isProcessingAiRequest = false;
+        });
+      } else {
+        // AI couldn't understand the request
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(l10n.smartFilterError)),
+          );
+        }
+        setState(() {
+          _isProcessingAiRequest = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Smart filter failed: $e')),
+        );
+      }
+      setState(() {
+        _isProcessingAiRequest = false;
+      });
+    }
+  }
+
+  void _acceptAiSuggestedFilter() {
+    if (_aiSuggestedFilter != null) {
+      setState(() {
+        _filter = _aiSuggestedFilter!;
+        _aiSuggestedFilter = null;
+      });
+    }
+  }
+
+  void _editAiSuggestedFilter() {
+    if (_aiSuggestedFilter != null) {
+      // Switch to filters tab and apply the suggested filter
+      _tabController.animateTo(1); // Switch to filters tab
+      setState(() {
+        _filter = _aiSuggestedFilter!;
+        _aiSuggestedFilter = null;
+      });
     }
   }
 
@@ -505,6 +611,33 @@ class _ProjectFilterDialogState extends State<ProjectFilterDialog> with TickerPr
     );
   }
 
+  Widget _buildAiSuggestionChip(AppLocalizations l10n) {
+    if (_isProcessingAiRequest) {
+      return Chip(
+        avatar: const CircularProgressIndicator(strokeWidth: 2),
+        label: Text(l10n.smartFilterProcessing),
+        backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
+      );
+    }
+
+    if (_aiSuggestedFilter != null) {
+      return Chip(
+        avatar: const Icon(Icons.auto_awesome),
+        label: Text(l10n.aiSuggestedFilterLabel),
+        backgroundColor: Theme.of(context).colorScheme.primaryContainer,
+        deleteIcon: const Icon(Icons.close),
+        onDeleted: () {
+          setState(() {
+            _aiSuggestedFilter = null;
+          });
+        },
+        deleteButtonTooltipMessage: l10n.cancelLabel,
+      );
+    }
+
+    return const SizedBox.shrink();
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
@@ -533,10 +666,23 @@ class _ProjectFilterDialogState extends State<ProjectFilterDialog> with TickerPr
                 ],
               ),
             ),
+            // AI Suggested Filter Chip
+            if (_aiSuggestedFilter != null || _isProcessingAiRequest) ...[
+              const SizedBox(height: 16),
+              _buildAiSuggestionChip(l10n),
+            ],
           ],
         ),
       ),
       actions: [
+        // Smart Filter Button
+        IconButton(
+          onPressed: _isProcessingAiRequest ? null : _showSmartFilterDialog,
+          icon: const Icon(Icons.auto_awesome),
+          tooltip: l10n.smartFilterButtonTooltip,
+          color: Theme.of(context).colorScheme.primary,
+        ),
+        const SizedBox(width: 8),
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
           child: Text(l10n.cancelLabel),
@@ -578,10 +724,21 @@ class _ProjectFilterDialogState extends State<ProjectFilterDialog> with TickerPr
             foregroundColor: Theme.of(context).colorScheme.onTertiaryContainer,
           ),
         ),
-        ElevatedButton(
-          onPressed: () => Navigator.of(context).pop(_filter),
-          child: Text(l10n.applyFiltersLabel),
-        ),
+        // Apply Filters Button (or AI suggestion actions)
+        if (_aiSuggestedFilter != null) ...[
+          TextButton(
+            onPressed: _editAiSuggestedFilter,
+            child: Text(l10n.editFilterButtonLabel),
+          ),
+          ElevatedButton(
+            onPressed: _acceptAiSuggestedFilter,
+            child: Text(l10n.acceptFilterButtonLabel),
+          ),
+        ] else
+          ElevatedButton(
+            onPressed: () => Navigator.of(context).pop(_filter),
+            child: Text(l10n.applyFiltersLabel),
+          ),
       ],
     );
   }

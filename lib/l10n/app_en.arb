@@ -1224,5 +1224,313 @@
   "clearAllFiltersButtonLabel": "Clear All Filters",
   "@clearAllFiltersButtonLabel": {
     "description": "Button label to clear all active filters"
+  },
+  "smartFilterButtonLabel": "Smart Filter",
+  "@smartFilterButtonLabel": {
+    "description": "Button label for AI-powered smart filtering"
+  },
+  "smartFilterButtonTooltip": "Use AI to create filters from natural language",
+  "@smartFilterButtonTooltip": {
+    "description": "Tooltip for the smart filter button"
+  },
+  "smartFilterDialogTitle": "Describe Your Filter",
+  "@smartFilterDialogTitle": {
+    "description": "Title for the smart filter input dialog"
+  },
+  "smartFilterHint": "Show high priority tasks due this week for team X",
+  "@smartFilterHint": {
+    "description": "Hint text for the smart filter input field"
+  },
+  "smartFilterProcessing": "Analyzing your request...",
+  "@smartFilterProcessing": {
+    "description": "Message shown while AI is processing the filter request"
+  },
+  "smartFilterError": "Could not understand your request. Please try rephrasing.",
+  "@smartFilterError": {
+    "description": "Error message when AI cannot parse the filter request"
+  },
+  "aiSuggestedFilterLabel": "AI Suggested Filter",
+  "@aiSuggestedFilterLabel": {
+    "description": "Label for the AI suggested filter chip"
+  },
+  "acceptFilterButtonLabel": "Accept",
+  "@acceptFilterButtonLabel": {
+    "description": "Button to accept the AI suggested filter"
+  },
+  "editFilterButtonLabel": "Edit",
+  "@editFilterButtonLabel": {
+    "description": "Button to edit the AI suggested filter"
+  },
+  "projectSortStartDate": "Start Date",
+  "@projectSortStartDate": {
+    "description": "Label for sorting projects by start date"
+  },
+  "projectSortDueDate": "Due Date",
+  "@projectSortDueDate": {
+    "description": "Label for sorting projects by due date"
+  },
+  "csvExportSuccessMessage": "Projects exported to CSV successfully",
+  "@csvExportSuccessMessage": {
+    "description": "Success message when exporting projects to CSV"
+  },
+  "viewNameLabel": "View Name",
+  "@viewNameLabel": {
+    "description": "Label for the saved view name input field"
+  },
+  "viewNameHint": "Enter a name for this view",
+  "@viewNameHint": {
+    "description": "Hint text for the view name input field"
+  },
+  "viewSavedMessage": "View saved successfully",
+  "@viewSavedMessage": {
+    "description": "Message shown when a view is saved"
+  },
+  "saveCurrentAsViewLabel": "Save Current as View",
+  "@saveCurrentAsViewLabel": {
+    "description": "Button label to save current filter settings as a named view"
+  },
+  "noSavedViewsMessage": "No saved views yet. Save your current filters to create a view.",
+  "@noSavedViewsMessage": {
+    "description": "Message shown when there are no saved views"
+  },
+  "sortDirectionLabel": "Sort Direction",
+  "@sortDirectionLabel": {
+    "description": "Label for sort direction selection"
+  },
+  "sortAscendingLabel": "Ascending",
+  "@sortAscendingLabel": {
+    "description": "Label for ascending sort direction"
+  },
+  "sortDescendingLabel": "Descending",
+  "@sortDescendingLabel": {
+    "description": "Label for descending sort direction"
+  },
+  "searchProjectsLabel": "Search Projects",
+  "@searchProjectsLabel": {
+    "description": "Label for project search field"
+  },
+  "searchProjectsHint": "Search by name, description, or tags",
+  "@searchProjectsHint": {
+    "description": "Hint text for project search field"
+  },
+  "savedViewsTabLabel": "Saved Views",
+  "@savedViewsTabLabel": {
+    "description": "Tab label for saved views"
+  },
+  "filtersTabLabel": "Filters",
+  "@filtersTabLabel": {
+    "description": "Tab label for filters"
+  },
+  "exportToCsvLabel": "Export to CSV",
+  "@exportToCsvLabel": {
+    "description": "Button label for CSV export"
+  },
+  "exportToPdfLabel": "Export to PDF",
+  "@exportToPdfLabel": {
+    "description": "Button label for PDF export"
+  },
+  "requiredTagsLabel": "Required Tags",
+  "@requiredTagsLabel": {
+    "description": "Label for required tags section"
+  },
+  "requiredTagsDescription": "Projects must have all of these tags",
+  "@requiredTagsDescription": {
+    "description": "Description for required tags"
+  },
+  "optionalTagsLabel": "Optional Tags",
+  "@optionalTagsLabel": {
+    "description": "Label for optional tags section"
+  },
+  "optionalTagsDescription": "Projects can have any of these tags",
+  "@optionalTagsDescription": {
+    "description": "Description for optional tags"
+  },
+  "addTagLabel": "Add Tag",
+  "@addTagLabel": {
+    "description": "Button label to add a tag"
+  },
+  "addTagHint": "Type to add a tag",
+  "@addTagHint": {
+    "description": "Hint text for adding tags"
+  },
+  "availableTagsLabel": "Available Tags",
+  "@availableTagsLabel": {
+    "description": "Label for available tags list"
+  },
+  "selectProjectsTitle": "Select Projects ({count})",
+  "@selectProjectsTitle": {
+    "description": "Title for project selection mode with count",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "bulkActionsTooltip": "Bulk actions",
+  "@bulkActionsTooltip": {
+    "description": "Tooltip for bulk actions button"
+  },
+  "exitSelectionModeTooltip": "Exit selection mode",
+  "@exitSelectionModeTooltip": {
+    "description": "Tooltip for exiting selection mode"
+  },
+  "savedViewsLabel": "Saved Views",
+  "@savedViewsLabel": {
+    "description": "Label for saved views section"
+  },
+  "allViewsLabel": "All Views",
+  "@allViewsLabel": {
+    "description": "Label for all views option"
+  },
+  "filterProjectsTooltip": "Filter projects",
+  "@filterProjectsTooltip": {
+    "description": "Tooltip for filter projects button"
+  },
+  "listViewTooltip": "List view",
+  "@listViewTooltip": {
+    "description": "Tooltip for list view button"
+  },
+  "kanbanViewTooltip": "Kanban view",
+  "@kanbanViewTooltip": {
+    "description": "Tooltip for kanban view button"
+  },
+  "tableViewTooltip": "Table view",
+  "@tableViewTooltip": {
+    "description": "Tooltip for table view button"
+  },
+  "bulkActionsTitle": "Bulk Actions ({count})",
+  "@bulkActionsTitle": {
+    "description": "Title for bulk actions dialog with count",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "deleteSelectedProjectsLabel": "Delete Selected Projects",
+  "@deleteSelectedProjectsLabel": {
+    "description": "Label for delete selected projects action"
+  },
+  "changePriorityLabel": "Change Priority",
+  "@changePriorityLabel": {
+    "description": "Label for change priority action"
+  },
+  "changeStatusLabel": "Change Status",
+  "@changeStatusLabel": {
+    "description": "Label for change status action"
+  },
+  "assignToUserLabel": "Assign to User",
+  "@assignToUserLabel": {
+    "description": "Label for assign to user action"
+  },
+  "exportSelectedToCsvLabel": "Export Selected to CSV",
+  "@exportSelectedToCsvLabel": {
+    "description": "Label for export selected to CSV action"
+  },
+  "applyActionsLabel": "Apply Actions",
+  "@applyActionsLabel": {
+    "description": "Label for apply actions button"
+  },
+  "confirmDeleteSelectedProjectsMessage": "Are you sure you want to delete {count} selected projects? This action cannot be undone.",
+  "@confirmDeleteSelectedProjectsMessage": {
+    "description": "Confirmation message for deleting selected projects with count",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "bulkDeleteSuccessMessage": "{count} projects deleted successfully",
+  "@bulkDeleteSuccessMessage": {
+    "description": "Success message for bulk delete operation with count",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "priorityLabel": "Priority",
+  "@priorityLabel": {
+    "description": "Label for priority field"
+  },
+  "tagsLabel": "Tags",
+  "@tagsLabel": {
+    "description": "Label for tags field"
+  },
+  "nameLabel": "Name",
+  "@nameLabel": {
+    "description": "Label for name field"
+  },
+  "startDateLabel": "Start Date",
+  "@startDateLabel": {
+    "description": "Label for start date field"
+  },
+  "dueDateLabel": "Due Date",
+  "@dueDateLabel": {
+    "description": "Label for due date field"
+  },
+  "exportingPdfMessage": "Exporting PDF...",
+  "@exportingPdfMessage": {
+    "description": "Message shown while exporting PDF"
+  },
+  "pdfExportErrorMessage": "Failed to export PDF",
+  "@pdfExportErrorMessage": {
+    "description": "Error message for PDF export failure"
+  },
+  "projectsReportTitle": "Projects Report",
+  "@projectsReportTitle": {
+    "description": "Title for projects PDF report"
+  },
+  "generatedOnLabel": "Generated on",
+  "@generatedOnLabel": {
+    "description": "Label for report generation date"
+  },
+  "activeFiltersLabel": "Active Filters",
+  "@activeFiltersLabel": {
+    "description": "Label for active filters section in report"
+  },
+  "summaryLabel": "Summary",
+  "@summaryLabel": {
+    "description": "Label for summary section"
+  },
+  "totalProjectsLabel": "Total Projects",
+  "@totalProjectsLabel": {
+    "description": "Label for total projects count"
+  },
+  "priorityDistributionLabel": "Priority Distribution",
+  "@priorityDistributionLabel": {
+    "description": "Label for priority distribution chart"
+  },
+  "pdfExportedMessage": "PDF exported successfully",
+  "@pdfExportedMessage": {
+    "description": "Success message for PDF export"
+  },
+  "projectListLabel": "Project List",
+  "@projectListLabel": {
+    "description": "Label for project list section"
+  },
+  "recentFiltersTooltip": "Recent filters",
+  "@recentFiltersTooltip": {
+    "description": "Tooltip for recent filters button"
+  },
+  "ownerLabel": "Owner",
+  "@ownerLabel": {
+    "description": "Label for owner field"
+  },
+  "ascendingLabel": "ascending",
+  "@ascendingLabel": {
+    "description": "Label for ascending sort order"
+  },
+  "descendingLabel": "descending",
+  "@descendingLabel": {
+    "description": "Label for descending sort order"
+  },
+  "allProjectsLabel": "All Projects",
+  "@allProjectsLabel": {
+    "description": "Label for all projects option"
+  },
+  "unnamedFilterLabel": "Unnamed Filter",
+  "@unnamedFilterLabel": {
+    "description": "Label for unnamed filter"
   }
 }
