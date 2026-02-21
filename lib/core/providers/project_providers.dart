@@ -2,7 +2,7 @@ import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:my_project_management_app/models/project_model.dart';
 import 'package:my_project_management_app/core/repository/project_repository.dart';
-import 'package:my_project_management_app/core/repository/i_project_repository.dart';
+import 'package:my_project_management_app/core/repository/i_project_repository.dart' as repo;
 import 'package:my_project_management_app/core/services/app_logger.dart';
 import 'auth_providers.dart'; // Import for auth provider access
 import 'package:my_project_management_app/core/repository/project_meta_repository.dart';
@@ -24,7 +24,7 @@ class _CacheEntry<T> {
 
 /// Provider for project repository with abstract interface
 /// Easy to swap implementations for testing or different backends
-final projectRepositoryProvider = Provider<IProjectRepository>((ref) {
+final projectRepositoryProvider = Provider<repo.IProjectRepository>((ref) {
   return ProjectRepository();
 });
 
@@ -108,7 +108,7 @@ class ProjectPaginationParams {
 
 /// Notifier for managing projects with caching and error handling
 class ProjectsNotifier extends Notifier<AsyncValue<List<ProjectModel>>> {
-  late IProjectRepository _repository;
+  late repo.IProjectRepository _repository;
   _CacheEntry<List<ProjectModel>>? _cache;
   static const _cacheTtl = Duration(minutes: 5); // Configurable TTL
 
@@ -128,7 +128,7 @@ class ProjectsNotifier extends Notifier<AsyncValue<List<ProjectModel>>> {
 
   /// Initialize method for testing compatibility
   /// TODO: Remove when tests are updated to not require this
-  Future<void> initialize(IProjectRepository repository) async {
+  Future<void> initialize(repo.IProjectRepository repository) async {
     _repository = repository;
     state = await AsyncValue.guard(() => _repository.getAllProjects());
   }
@@ -337,3 +337,69 @@ final visibleProjectsProvider = Provider<AsyncValue<List<ProjectModel>>>((ref) {
     error: (e, s) => AsyncValue.error(e, s),
   );
 });
+/// Combined parameters for pagination, filter, and sort
+class ProjectParams {
+  final int page;
+  final int limit;
+  final ProjectFilter filter;
+  final String sortBy; // e.g., 'name', 'progress', 'createdAt', 'status'
+  final bool sortAscending;
+
+  const ProjectParams({
+    required this.page,
+    required this.limit,
+    required this.filter,
+    this.sortBy = 'name',
+    this.sortAscending = true,
+  });
+}
+
+// helper used by the combined provider
+List<ProjectModel> _sortProjects(List<ProjectModel> projects, String sortBy, bool ascending) {
+  projects.sort((a, b) {
+    int cmp;
+    switch (sortBy) {
+      case 'name':
+        cmp = a.name.compareTo(b.name);
+        break;
+      case 'progress':
+        cmp = a.progress.compareTo(b.progress);
+        break;
+      case 'status':
+        cmp = a.status.compareTo(b.status);
+        break;
+      // 'createdAt' is not on model yet; fallback to name
+      default:
+        cmp = 0;
+    }
+    return ascending ? cmp : -cmp;
+  });
+  return projects;
+}
+
+/// Combined projects provider with pagination, filtering and sorting
+final projectsCombinedProvider = FutureProvider.autoDispose.family<List<ProjectModel>, ProjectParams>(
+  (ref, params) async {
+    final repository = ref.watch(projectRepositoryProvider);
+
+    // build a repo filter from provider params
+    final repoFilter = repo.ProjectFilter(
+      status: params.filter.status,
+      searchQuery: params.filter.searchQuery,
+    );
+
+    var filtered = await repository.getFilteredProjects(repoFilter);
+    // provider-level userId filter; repo doesn't handle shared-users
+    if (params.filter.userId != null) {
+      filtered = filtered.where((p) => p.sharedUsers.contains(params.filter.userId!)).toList();
+    }
+
+    // sort in-memory (dataset is expected to be moderate in size)
+    filtered = _sortProjects(filtered, params.sortBy, params.sortAscending);
+
+    // paginate
+    final startIndex = (params.page - 1) * params.limit;
+    if (startIndex >= filtered.length) return [];
+    return filtered.skip(startIndex).take(params.limit).toList();
+  },
+);
