@@ -161,26 +161,8 @@ class ProjectManagementPage extends ConsumerStatefulWidget {
 
 class _ProjectManagementPageState extends ConsumerState<ProjectManagementPage> {
   @override
-  void initState() {
-    super.initState();
-    // Initialize projects from Hive on page load
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _initializeProjects();
-    });
-  }
-
-  Future<void> _initializeProjects() async {
-    final repository =
-        ref.read(projectRepositoryProvider);
-    await ref
-        .read(projectsProvider.notifier)
-        .initialize(repository);
-  }
-
-  @override
   Widget build(BuildContext context) {
-    // TODO: migrate to projectsPaginatedProvider (issue #004)
-    final projectsAsync = ref.watch(projectsProvider);
+    final projectsAsync = ref.watch(projectsPaginatedProvider(ProjectPaginationParams(page: 1, limit: 100)));
 
     return Scaffold(
       appBar: AppBar(title: const Text('Projects')),
@@ -236,14 +218,14 @@ class _ProjectManagementPageState extends ConsumerState<ProjectManagementPage> {
   }
 
   Future<void> _addNewProject() async {
-    final notifier = ref.read(projectsProvider.notifier);
+    final repository = ref.read(projectRepositoryProvider);
     final newProject = ProjectModel(
       id: DateTime.now().millisecondsSinceEpoch.toString(),
       name: 'New Project',
       progress: 0.0,
       tasks: [],
     );
-    await notifier.addProject(newProject);
+    await repository.addProject(newProject);
   }
 
   void _editProject(ProjectModel project) {
@@ -270,8 +252,8 @@ class _ProjectManagementPageState extends ConsumerState<ProjectManagementPage> {
     );
 
     if (confirmed ?? false) {
-      final notifier = ref.read(projectsProvider.notifier);
-      await notifier.deleteProject(projectId);
+      final repository = ref.read(projectRepositoryProvider);
+      await repository.deleteProject(projectId);
     }
   }
 }
@@ -282,7 +264,7 @@ class _ProjectManagementPageState extends ConsumerState<ProjectManagementPage> {
 
 // The offline-first functionality is automatically handled by:
 // 1. ProjectRepository.getAllProjects() loads from local Hive storage
-// 2. ProjectsNotifier.build() initializes with local data
+// 2. projectsPaginatedProvider fetches data reactively from repository
 // 3. When a user adds/updates/deletes, Hive is updated immediately
 // 4. The UI updates automatically via Riverpod's reactive system
 // 5. When internet is available, sync with backend (implement separately)

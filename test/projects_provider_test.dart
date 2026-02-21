@@ -128,30 +128,20 @@ void main() {
       status: 'In Progress',
     );
     final repository = FakeProjectRepository(seed: [project]);
-    final container = ProviderContainer();
+    final container = ProviderContainer(overrides: [projectRepositoryProvider.overrideWithValue(repository)]);
     addTearDown(container.dispose);
 
-    // TODO: migrate to projectsPaginatedProvider (issue #004)
-    final notifier = container.read(projectsProvider.notifier);
-    await notifier.initialize(repository);
-
-    // TODO: migrate to projectsPaginatedProvider (issue #004)
-    final state = container.read(projectsProvider);
-    expect(state.hasValue, true);
-    expect(state.value?.length, 1);
-    expect(state.value?.first.name, 'Alpha');
+    final state = await container.read(projectsPaginatedProvider(ProjectPaginationParams(page: 1, limit: 100)).future);
+    expect(state.length, 1);
+    expect(state.first.name, 'Alpha');
   });
 
   test('ProjectsNotifier addProject updates state', () async {
     final repository = FakeProjectRepository();
-    final container = ProviderContainer();
+    final container = ProviderContainer(overrides: [projectRepositoryProvider.overrideWithValue(repository)]);
     addTearDown(container.dispose);
 
-    // TODO: migrate to projectsPaginatedProvider (issue #004)
-    final notifier = container.read(projectsProvider.notifier);
-    await notifier.initialize(repository);
-
-    await notifier.addProject(
+    await repository.addProject(
       const ProjectModel(
         id: 'p2',
         name: 'Beta',
@@ -160,10 +150,9 @@ void main() {
       ),
     );
 
-    final state = container.read(projectsProvider);
-    expect(state.hasValue, true);
-    expect(state.value?.length, 1);
-    expect(state.value?.first.id, 'p2');
+    final state = await container.read(projectsPaginatedProvider(ProjectPaginationParams(page: 1, limit: 100)).future);
+    expect(state.length, 1);
+    expect(state.first.id, 'p2');
   });
 
   test('ProjectsNotifier updateProgress changes project', () async {
@@ -177,19 +166,13 @@ void main() {
         ),
       ],
     );
-    final container = ProviderContainer();
+    final container = ProviderContainer(overrides: [projectRepositoryProvider.overrideWithValue(repository)]);
     addTearDown(container.dispose);
 
-    // TODO: migrate to projectsPaginatedProvider (issue #004)
-    final notifier = container.read(projectsProvider.notifier);
-    await notifier.initialize(repository);
+    await repository.updateProgress('p3', 0.9);
 
-    await notifier.updateProgress('p3', 0.9);
-
-    // TODO: migrate to projectsPaginatedProvider (issue #004)
-    final state = container.read(projectsProvider);
-    expect(state.hasValue, true);
-    expect(state.value?.first.progress, 0.9);
+    final state = await container.read(projectsPaginatedProvider(ProjectPaginationParams(page: 1, limit: 100)).future);
+    expect(state.first.progress, 0.9);
   });
 
   test('ProjectsNotifier deleteProject removes project', () async {
@@ -203,18 +186,12 @@ void main() {
         ),
       ],
     );
-    final container = ProviderContainer();
+    final container = ProviderContainer(overrides: [projectRepositoryProvider.overrideWithValue(repository)]);
     addTearDown(container.dispose);
 
-    // TODO: migrate to projectsPaginatedProvider (issue #004)
-    final notifier = container.read(projectsProvider.notifier);
-    await notifier.initialize(repository);
+    await repository.deleteProject('p4');
 
-    await notifier.deleteProject('p4');
-
-    // TODO: migrate to projectsPaginatedProvider (issue #004)
-    final state = container.read(projectsProvider);
-    expect(state.hasValue, true);
-    expect(state.value?.isEmpty, true);
+    final state = await container.read(projectsPaginatedProvider(ProjectPaginationParams(page: 1, limit: 100)).future);
+    expect(state.isEmpty, true);
   });
 }

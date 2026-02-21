@@ -14,8 +14,7 @@ class ProjectListWidget extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // TODO: migrate to projectsPaginatedProvider (issue #004)
-    final projectsAsync = ref.watch(projectsProvider);
+    final projectsAsync = ref.watch(projectsPaginatedProvider(ProjectPaginationParams(page: 1, limit: 100)));
 
     return projectsAsync.when(
       data: (projects) {
@@ -299,15 +298,16 @@ class ProjectDetailsWidget extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // TODO: migrate to projectsPaginatedProvider (issue #004)
-    final projectsAsync = ref.watch(projectsProvider);
+    final projectAsync = ref.watch(projectByIdProvider(projectId));
 
-    return projectsAsync.when(
-      data: (projects) {
-        final project = projects.firstWhere(
-          (p) => p.id == projectId,
-          orElse: () => throw Exception('Project not found'),
-        );
+    return projectAsync.when(
+      data: (project) {
+        if (project == null) {
+          return Scaffold(
+            appBar: AppBar(title: const Text('Project Not Found')),
+            body: const Center(child: Text('Project not found')),
+          );
+        }
 
         return Scaffold(
           appBar: AppBar(title: Text(project.name)),

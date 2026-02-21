@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:my_project_management_app/models/project_requirements.dart';
 import 'package:my_project_management_app/core/repository/i_dashboard_repository.dart';
 import 'package:my_project_management_app/core/repository/dashboard_repository.dart';
+import 'project_providers.dart';
 
 /// Notifier for managing dashboard configuration with persistence
 /// TODO: Add undo/redo functionality
@@ -70,21 +71,10 @@ final dashboardRepositoryProvider = Provider<IDashboardRepository>((ref) {
 /// TODO: Add caching for requirements
 /// TODO: Add offline requirements storage
 final projectRequirementsProvider = FutureProvider.family<ProjectRequirements, String>((ref, projectId) async {
-  // TODO: Import projectsProvider when available
-  // final projectsAsync = ref.watch(projectsProvider);
-  // For now, return empty requirements
-  return const ProjectRequirements();
-
-  // Original implementation (commented until projectsProvider is available):
-  /*
-  // TODO: migrate to projectsPaginatedProvider (issue #004)
-  final projectsAsync = ref.watch(projectsProvider);
-  return projectsAsync.maybeWhen(
-    data: (projects) {
-      final project = projects.firstWhere(
-        (p) => p.id == projectId,
-        orElse: () => throw Exception('Project not found'),
-      );
+  final projectAsync = ref.watch(projectByIdProvider(projectId));
+  return projectAsync.maybeWhen(
+    data: (project) {
+      if (project == null) return const ProjectRequirements();
 
       final repository = ref.read(dashboardRepositoryProvider);
 
@@ -98,5 +88,4 @@ final projectRequirementsProvider = FutureProvider.family<ProjectRequirements, S
     },
     orElse: () => const ProjectRequirements(),
   );
-  */
 });
