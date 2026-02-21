@@ -64,7 +64,6 @@ final projectByIdProvider = FutureProvider.autoDispose.family<ProjectModel?, Str
 
 /// Family provider for filtered projects (e.g., by status, user, etc.)
 /// Extensible for future filtering needs
-/// TODO: Add more filter parameters as needed
 final filteredProjectsProvider = FutureProvider.autoDispose.family<List<ProjectModel>, ProjectFilter>((ref, filter) async {
   final repository = ref.watch(projectRepositoryProvider);
   
@@ -75,7 +74,6 @@ final filteredProjectsProvider = FutureProvider.autoDispose.family<List<ProjectM
     if (filter.status != null && project.status != filter.status) return false;
     // Fix: ProjectModel does not have 'createdBy', use sharedUsers for userId filtering
     if (filter.userId != null && !project.sharedUsers.contains(filter.userId)) return false;
-    // TODO: Add more filter conditions as needed
     return true;
   }).toList();
 });
@@ -86,13 +84,7 @@ class ProjectFilter {
   final String? status;
   final String? userId;
   final String? searchQuery;
-  // TODO: Add more filter fields (date range, priority, etc.)
-  
-  const ProjectFilter({
-    this.status,
-    this.userId,
-    this.searchQuery,
-  });
+
 }
 
 class ProjectPaginationParams {
