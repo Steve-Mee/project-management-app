@@ -3,7 +3,7 @@
 library;
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:my_project_management_app/core/providers/project_providers.dart' show projectRepositoryProvider;
+import 'package:my_project_management_app/core/providers/project_providers.dart' show projectRepositoryProvider, projectByIdProvider;
 import 'package:my_project_management_app/core/providers/notification_providers.dart';
 import '../../core/services/app_logger.dart';
 import '../../models/task_model.dart';
@@ -43,8 +43,8 @@ class TaskNotifier extends AsyncNotifier<List<Task>> {
       var tasks = repository.getTasksForProject(projectId);
 
       if (tasks.isEmpty) {
-        final projectRepository = ref.read(projectRepositoryProvider);
-        final project = await projectRepository.getProjectById(projectId);
+        // Migrated to use projectByIdProvider for consistency with Riverpod patterns.
+        final project = await ref.read(projectByIdProvider(projectId).future);
         final legacyTitles = project?.tasks ?? const <String>[];
         if (legacyTitles.isNotEmpty) {
           tasks = List.generate(legacyTitles.length, (index) {

@@ -1622,11 +1622,11 @@ class _BulkActionsBottomSheetState extends ConsumerState<BulkActionsBottomSheet>
 
   Future<void> _exportSelectedProjects(BuildContext context, WidgetRef ref, AppLocalizations l10n) async {
     try {
-      final repository = ref.read(projectRepositoryProvider);
+      // Migrated to use projectByIdProvider for consistency with Riverpod patterns.
       final projects = <ProjectModel>[];
       
       for (final id in widget.selectedProjectIds) {
-        final project = await repository.getProjectById(id);
+        final project = await ref.read(projectByIdProvider(id).future);
         if (project != null) {
           projects.add(project);
         }
@@ -1678,11 +1678,11 @@ class _BulkActionsBottomSheetState extends ConsumerState<BulkActionsBottomSheet>
 
   Future<void> _exportSelectedProjectsToPdf(BuildContext context, WidgetRef ref, AppLocalizations l10n) async {
     try {
-      final repository = ref.read(projectRepositoryProvider);
+      // Migrated to use projectByIdProvider for consistency with Riverpod patterns.
       final projects = <ProjectModel>[];
 
       for (final id in widget.selectedProjectIds) {
-        final project = await repository.getProjectById(id);
+        final project = await ref.read(projectByIdProvider(id).future);
         if (project != null) {
           projects.add(project);
         }

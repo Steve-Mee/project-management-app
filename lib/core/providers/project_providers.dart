@@ -595,8 +595,8 @@ class ProjectsNotifier extends Notifier<AsyncValue<List<ProjectModel>>> {
     state = await AsyncValue.guard(_loadProjects);
   }
 
-  @Deprecated('Use projectByIdProvider instead for better performance')
-  /// Get project by ID (consider using projectByIdProvider family provider instead)
+  @Deprecated('Use projectByIdProvider(id) family provider instead. It provides better performance by only loading the specific project when needed and auto-disposing when no longer watched. Migration: replace ref.read(projectsProvider.notifier).getProjectById(id) with ref.watch(projectByIdProvider(id)) or ref.read(projectByIdProvider(id).future)')
+  /// Use projectByIdProvider family provider instead for better performance and Riverpod patterns.
   Future<ProjectModel?> getProjectById(String id) async {
     final projects = state.maybeWhen(
       data: (data) => data,
@@ -971,9 +971,10 @@ class ProjectFilterNotifier extends StateNotifier<ProjectFilter> {
   }
 
   Future<void> bulkUpdatePriority(Set<String> projectIds, String priority, WidgetRef ref) async {
+    // Migrated to use projectByIdProvider for consistency with Riverpod patterns.
     final repository = ref.read(projectRepositoryProvider);
     for (final id in projectIds) {
-      final project = await repository.getProjectById(id);
+      final project = await ref.read(projectByIdProvider(id).future);
       if (project != null) {
         final updated = ProjectModel(
           id: project.id,
@@ -1001,9 +1002,10 @@ class ProjectFilterNotifier extends StateNotifier<ProjectFilter> {
   }
 
   Future<void> bulkUpdateStatus(Set<String> projectIds, String status, WidgetRef ref) async {
+    // Migrated to use projectByIdProvider for consistency with Riverpod patterns.
     final repository = ref.read(projectRepositoryProvider);
     for (final id in projectIds) {
-      final project = await repository.getProjectById(id);
+      final project = await ref.read(projectByIdProvider(id).future);
       if (project != null) {
         final updated = ProjectModel(
           id: project.id,
