@@ -308,6 +308,14 @@
   "@projectSortPriority": {
     "description": "Auto-generated description for projectSortPriority."
   },
+  "projectSortCreatedDate": "作成日",
+  "@projectSortCreatedDate": {
+    "description": "Auto-generated description for projectSortCreatedDate."
+  },
+  "projectSortStatus": "状態",
+  "@projectSortStatus": {
+    "description": "Auto-generated description for projectSortStatus."
+  },
   "allLabel": "すべて",
   "@allLabel": {
     "description": "Auto-generated description for allLabel."

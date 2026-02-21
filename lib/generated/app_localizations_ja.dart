@@ -238,6 +238,12 @@ class AppLocalizationsJa extends AppLocalizations {
   String get projectSortPriority => '優先度';
 
   @override
+  String get projectSortCreatedDate => '作成日';
+
+  @override
+  String get projectSortStatus => '状態';
+
+  @override
   String get allLabel => 'すべて';
 
   @override

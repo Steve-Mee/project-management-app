@@ -308,6 +308,14 @@
   "@projectSortPriority": {
     "description": "Auto-generated description for projectSortPriority."
   },
+  "projectSortCreatedDate": "निर्माण तिथि",
+  "@projectSortCreatedDate": {
+    "description": "Auto-generated description for projectSortCreatedDate."
+  },
+  "projectSortStatus": "स्थिति",
+  "@projectSortStatus": {
+    "description": "Auto-generated description for projectSortStatus."
+  },
   "allLabel": "सभी",
   "@allLabel": {
     "description": "Auto-generated description for allLabel."

@@ -552,6 +552,18 @@ abstract class AppLocalizations {
   /// **'Priority'**
   String get projectSortPriority;
 
+  /// Auto-generated description for projectSortCreatedDate.
+  ///
+  /// In en, this message translates to:
+  /// **'Created date'**
+  String get projectSortCreatedDate;
+
+  /// Auto-generated description for projectSortStatus.
+  ///
+  /// In en, this message translates to:
+  /// **'Status'**
+  String get projectSortStatus;
+
   /// Auto-generated description for allLabel.
   ///
   /// In en, this message translates to:

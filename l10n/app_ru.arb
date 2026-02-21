@@ -308,6 +308,14 @@
   "@projectSortPriority": {
     "description": "Auto-generated description for projectSortPriority."
   },
+  "projectSortCreatedDate": "Дата создания",
+  "@projectSortCreatedDate": {
+    "description": "Auto-generated description for projectSortCreatedDate."
+  },
+  "projectSortStatus": "Статус",
+  "@projectSortStatus": {
+    "description": "Auto-generated description for projectSortStatus."
+  },
   "allLabel": "Все",
   "@allLabel": {
     "description": "Auto-generated description for allLabel."

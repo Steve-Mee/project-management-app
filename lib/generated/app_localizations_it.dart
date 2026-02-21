@@ -240,6 +240,12 @@ class AppLocalizationsIt extends AppLocalizations {
   String get projectSortPriority => 'Priorita';
 
   @override
+  String get projectSortCreatedDate => 'Data di creazione';
+
+  @override
+  String get projectSortStatus => 'Stato';
+
+  @override
   String get allLabel => 'Tutti';
 
   @override

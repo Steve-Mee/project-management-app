@@ -308,6 +308,14 @@
   "@projectSortPriority": {
     "description": "Auto-generated description for projectSortPriority."
   },
+  "projectSortCreatedDate": "创建日期",
+  "@projectSortCreatedDate": {
+    "description": "Auto-generated description for projectSortCreatedDate."
+  },
+  "projectSortStatus": "状态",
+  "@projectSortStatus": {
+    "description": "Auto-generated description for projectSortStatus."
+  },
   "allLabel": "全部",
   "@allLabel": {
     "description": "Auto-generated description for allLabel."

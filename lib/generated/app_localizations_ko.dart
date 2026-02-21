@@ -238,6 +238,12 @@ class AppLocalizationsKo extends AppLocalizations {
   String get projectSortPriority => '우선순위';
 
   @override
+  String get projectSortCreatedDate => '생성 날짜';
+
+  @override
+  String get projectSortStatus => '상태';
+
+  @override
   String get allLabel => '전체';
 
   @override

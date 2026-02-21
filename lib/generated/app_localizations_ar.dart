@@ -240,6 +240,12 @@ class AppLocalizationsAr extends AppLocalizations {
   String get projectSortPriority => 'الاولوية';
 
   @override
+  String get projectSortCreatedDate => 'تاريخ الإنشاء';
+
+  @override
+  String get projectSortStatus => 'الحالة';
+
+  @override
   String get allLabel => 'الكل';
 
   @override

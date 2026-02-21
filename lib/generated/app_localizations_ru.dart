@@ -240,6 +240,12 @@ class AppLocalizationsRu extends AppLocalizations {
   String get projectSortPriority => 'Приоритет';
 
   @override
+  String get projectSortCreatedDate => 'Дата создания';
+
+  @override
+  String get projectSortStatus => 'Статус';
+
+  @override
   String get allLabel => 'Все';
 
   @override

@@ -237,6 +237,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get projectSortPriority => '优先级';
 
   @override
+  String get projectSortCreatedDate => '创建日期';
+
+  @override
+  String get projectSortStatus => '状态';
+
+  @override
   String get allLabel => '全部';
 
   @override

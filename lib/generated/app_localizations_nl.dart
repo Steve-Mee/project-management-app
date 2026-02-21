@@ -241,6 +241,12 @@ class AppLocalizationsNl extends AppLocalizations {
   String get projectSortPriority => 'Prioriteit';
 
   @override
+  String get projectSortCreatedDate => 'Aanmaakdatum';
+
+  @override
+  String get projectSortStatus => 'Status';
+
+  @override
   String get allLabel => 'Alles';
 
   @override
