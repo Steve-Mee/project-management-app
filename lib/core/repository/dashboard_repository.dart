@@ -1,6 +1,7 @@
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:my_project_management_app/core/repository/i_dashboard_repository.dart';
 import 'package:my_project_management_app/core/services/requirements_service.dart';
+import 'package:my_project_management_app/models/project_requirements.dart';
 
 /// Concrete implementation of IDashboardRepository using Hive for persistence
 class DashboardRepository implements IDashboardRepository {
