@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' hide AuthUser;
 import 'package:local_auth/local_auth.dart';
 import 'package:my_project_management_app/core/repository/auth_repository.dart';
+import 'package:my_project_management_app/core/repository/i_auth_repository.dart';
 import 'package:my_project_management_app/core/auth/auth_user.dart';
 import 'package:my_project_management_app/core/repository/settings_repository.dart';
 import 'package:my_project_management_app/core/services/cloud_sync_service.dart';
@@ -12,7 +13,7 @@ import 'package:my_project_management_app/core/auth/permissions.dart';
 import 'package:my_project_management_app/core/config/ai_config.dart' as ai_config;
 
 /// Provider for auth repository (exposed via interface to allow swapping)
-final authRepositoryProvider = Provider<AuthRepository>((ref) {
+final authRepositoryProvider = Provider<IAuthRepository>((ref) {
   return AuthRepository();
 });
 
@@ -136,6 +137,12 @@ class AuthNotifier extends Notifier<AuthState> {
   /// Login with error handling and rate limiting considerations
   /// Login with error handling and rate limiting
   Future<bool> login(String username, String password, {bool enableAutoLogin = false}) async {
+    // Check rate limiting before attempting login
+    if (!_loginRateLimiter.canAttempt(username.trim().toLowerCase())) {
+      state = state.copyWith(error: 'Too many login attempts. Please try again later.');
+      return false;
+    }
+
     try {
       await Supabase.instance.client.auth.signInWithPassword(
         email: username.trim(),
@@ -458,7 +465,7 @@ final currentUserProvider = FutureProvider<AppUser?>((ref) async {
     return null;
   }
 
-  final AuthRepository repo = ref.read(authRepositoryProvider);
+  final repo = ref.read(authRepositoryProvider);
   // repo is guaranteed non-null since provider returns a value
   return repo.getUserByUsername(authState.username!);
 });
