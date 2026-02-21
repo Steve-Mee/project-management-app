@@ -45,6 +45,9 @@ class _ProjectFilterDialogState extends State<ProjectFilterDialog> with TickerPr
   // AI Smart Filter state
   ProjectFilter? _aiSuggestedFilter;
   bool _isProcessingAiRequest = false;
+  
+  // Dashboard toggle state
+  bool _addToDashboard = true;
 
   @override
   void initState() {
@@ -334,31 +337,53 @@ class _ProjectFilterDialogState extends State<ProjectFilterDialog> with TickerPr
         // Save current as new view
         Padding(
           padding: const EdgeInsets.all(16),
-          child: Row(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Expanded(
-                child: TextField(
-                  controller: _viewNameController,
-                  decoration: InputDecoration(
-                    labelText: l10n.viewNameLabel,
-                    hintText: l10n.viewNameHint,
-                  ),
+              TextField(
+                controller: _viewNameController,
+                decoration: InputDecoration(
+                  labelText: l10n.viewNameLabel,
+                  hintText: l10n.viewNameHint,
                 ),
               ),
-              const SizedBox(width: 8),
-              ElevatedButton.icon(
-                onPressed: () {
-                  final name = _viewNameController.text.trim();
-                  if (name.isNotEmpty && widget.onSaveView != null) {
-                    widget.onSaveView!(_filter, name);
-                    _viewNameController.clear();
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text(l10n.viewSavedMessage)),
-                    );
-                  }
-                },
-                icon: const Icon(Icons.save),
-                label: Text(l10n.saveCurrentAsViewLabel),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(
+                    child: SwitchListTile(
+                      title: const Text('Add to Dashboard'),
+                      subtitle: const Text('Show this view on your dashboard'),
+                      value: _addToDashboard,
+                      onChanged: (value) {
+                        setState(() {
+                          _addToDashboard = value;
+                        });
+                      },
+                      contentPadding: EdgeInsets.zero,
+                      dense: true,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: () {
+                    final name = _viewNameController.text.trim();
+                    if (name.isNotEmpty && widget.onSaveView != null) {
+                      final filterWithDashboard = _filter.copyWith(addToDashboard: _addToDashboard);
+                      widget.onSaveView!(filterWithDashboard, name);
+                      _viewNameController.clear();
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text(l10n.viewSavedMessage)),
+                      );
+                    }
+                  },
+                  icon: const Icon(Icons.save),
+                  label: Text(l10n.saveCurrentAsViewLabel),
+                ),
               ),
             ],
           ),

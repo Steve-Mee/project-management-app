@@ -1053,7 +1053,7 @@ abstract class AppLocalizations {
     Object pendingPercent,
   );
 
-  /// Auto-generated description for progressLabel.
+  /// Label for progress.
   ///
   /// In en, this message translates to:
   /// **'Progress'**
@@ -2101,7 +2101,7 @@ abstract class AppLocalizations {
   /// **'Name'**
   String get nameLabel;
 
-  /// Label for start date field
+  /// Label for start date.
   ///
   /// In en, this message translates to:
   /// **'Start Date'**
@@ -2208,6 +2208,120 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Unnamed Filter'**
   String get unnamedFilterLabel;
+
+  /// Title for comments section.
+  ///
+  /// In en, this message translates to:
+  /// **'Comments'**
+  String get commentsTitle;
+
+  /// Hint text for comment input field.
+  ///
+  /// In en, this message translates to:
+  /// **'Add a comment...'**
+  String get addCommentHint;
+
+  /// Message when there are no comments.
+  ///
+  /// In en, this message translates to:
+  /// **'No comments yet'**
+  String get noCommentsYet;
+
+  /// Label indicating a comment was edited.
+  ///
+  /// In en, this message translates to:
+  /// **'edited'**
+  String get editedLabel;
+
+  /// Label for mentioned users.
+  ///
+  /// In en, this message translates to:
+  /// **'Mentioned'**
+  String get mentionedLabel;
+
+  /// Tooltip for delete comment button.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete comment'**
+  String get deleteCommentTooltip;
+
+  /// Title for Gantt chart view.
+  ///
+  /// In en, this message translates to:
+  /// **'Gantt Chart'**
+  String get ganttViewTitle;
+
+  /// Tooltip for zoom in button.
+  ///
+  /// In en, this message translates to:
+  /// **'Zoom in'**
+  String get zoomInTooltip;
+
+  /// Tooltip for zoom out button.
+  ///
+  /// In en, this message translates to:
+  /// **'Zoom out'**
+  String get zoomOutTooltip;
+
+  /// Tooltip for reset zoom button.
+  ///
+  /// In en, this message translates to:
+  /// **'Reset zoom'**
+  String get resetZoomTooltip;
+
+  /// Button to jump to today's date.
+  ///
+  /// In en, this message translates to:
+  /// **'Today'**
+  String get todayButton;
+
+  /// Label for project timeline section.
+  ///
+  /// In en, this message translates to:
+  /// **'Project Timeline'**
+  String get projectTimelineLabel;
+
+  /// Label for task timeline section.
+  ///
+  /// In en, this message translates to:
+  /// **'Task Timeline'**
+  String get taskTimelineLabel;
+
+  /// Label for end date.
+  ///
+  /// In en, this message translates to:
+  /// **'End Date'**
+  String get endDateLabel;
+
+  /// Label for duration.
+  ///
+  /// In en, this message translates to:
+  /// **'Duration'**
+  String get durationLabel;
+
+  /// Tooltip for select date range button.
+  ///
+  /// In en, this message translates to:
+  /// **'Select date range'**
+  String get selectDateRangeTooltip;
+
+  /// Message when no projects have dates for Gantt chart.
+  ///
+  /// In en, this message translates to:
+  /// **'No projects with dates to display'**
+  String get noProjectsForGantt;
+
+  /// Message suggesting to add projects with dates.
+  ///
+  /// In en, this message translates to:
+  /// **'Add projects with start and end dates to see the timeline'**
+  String get addProjectsWithDates;
+
+  /// Tooltip for open project button.
+  ///
+  /// In en, this message translates to:
+  /// **'Open project'**
+  String get openProjectTooltip;
 }
 
 class _AppLocalizationsDelegate

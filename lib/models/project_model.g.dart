@@ -37,13 +37,16 @@ class ProjectModelAdapter extends TypeAdapter<ProjectModel> {
       priority: fields[15] as String?,
       startDate: fields[16] as DateTime?,
       dueDate: fields[17] as DateTime?,
+      tags: (fields[18] as List).cast<String>(),
+      customFields: (fields[19] as Map?)?.cast<String, dynamic>(),
+      comments: (fields[20] as List).cast<CommentModel>(),
     );
   }
 
   @override
   void write(BinaryWriter writer, ProjectModel obj) {
     writer
-      ..writeByte(18)
+      ..writeByte(21)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -79,7 +82,13 @@ class ProjectModelAdapter extends TypeAdapter<ProjectModel> {
       ..writeByte(16)
       ..write(obj.startDate)
       ..writeByte(17)
-      ..write(obj.dueDate);
+      ..write(obj.dueDate)
+      ..writeByte(18)
+      ..write(obj.tags)
+      ..writeByte(19)
+      ..write(obj.customFields)
+      ..writeByte(20)
+      ..write(obj.comments);
   }
 
   @override

@@ -21,6 +21,7 @@ import '../ai_chat/ai_chat_modal.dart';
 import 'widgets/error_state_widget.dart';
 import 'widgets/loading_more_widget.dart';
 import 'widgets/project_card_widget.dart';
+import 'widgets/saved_view_widget.dart';
 import '../project/widgets/project_filter_dialog.dart';
 
 /// Filter state for projects list
@@ -59,6 +60,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   final ScrollController _scrollController = ScrollController();
   Timer? _debounce;
   static const int _pageSize = 9;
+
+  // View mode: projects or saved views dashboard
+  bool _showSavedViewsDashboard = false;
 
   // pagination state
   int _page = 1;
@@ -245,6 +249,21 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                           ),
                         ],
                       ),
+                    ),
+                    const SizedBox(width: 8),
+                    // Dashboard toggle button
+                    IconButton(
+                      icon: Icon(_showSavedViewsDashboard ? Icons.view_list : Icons.dashboard),
+                      tooltip: _showSavedViewsDashboard ? 'Show Projects' : 'Show Dashboard',
+                      onPressed: () {
+                        setState(() {
+                          _showSavedViewsDashboard = !_showSavedViewsDashboard;
+                          if (_showSavedViewsDashboard) {
+                            // Reset pagination when switching to dashboard view
+                            _resetPagination();
+                          }
+                        });
+                      },
                     ),
                     const SizedBox(width: 8),
                     Badge.count(
@@ -777,6 +796,123 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     _applyAdvancedFilters();
   }
 
+  /// Build saved views dashboard
+  Widget _buildSavedViewsDashboard(BuildContext context, AppLocalizations l10n) {
+    final savedViews = ref.watch(dashboardViewsProvider);
+
+    if (savedViews.isEmpty) {
+      return _buildEmptySavedViewsState(context, l10n);
+    }
+
+    return RefreshIndicator(
+      onRefresh: () async {
+        // Refresh saved views from Supabase
+        await ref.read(savedProjectViewsProvider.notifier).syncFromSupabase();
+      },
+      child: CustomScrollView(
+        controller: _scrollController,
+        slivers: [
+          // Quick Overview Header
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: EdgeInsets.all(16.w),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Quick Overview',
+                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  SizedBox(height: 8.h),
+                  // Global stats could go here
+                  Text(
+                    'Your saved project views at a glance',
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+
+          // Saved Views Grid
+          SliverPadding(
+            padding: EdgeInsets.symmetric(horizontal: 16.w),
+            sliver: SliverGrid(
+              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: MediaQuery.of(context).size.width > 600 ? 3 : 2,
+                crossAxisSpacing: 8.w,
+                mainAxisSpacing: 8.h,
+                childAspectRatio: 1.2,
+              ),
+              delegate: SliverChildBuilderDelegate(
+                (context, index) {
+                  final savedView = savedViews[index];
+                  return SavedViewWidget(savedFilter: savedView);
+                },
+                childCount: savedViews.length,
+              ),
+            ),
+          ),
+
+          // Bottom padding
+          SliverPadding(
+            padding: EdgeInsets.only(bottom: 16.h),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEmptySavedViewsState(BuildContext context, AppLocalizations l10n) {
+    return Center(
+      child: Padding(
+        padding: EdgeInsets.all(32.w),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.dashboard_outlined,
+              size: 64.sp,
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
+            SizedBox(height: 16.h),
+            Text(
+              'No saved views yet',
+              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                fontWeight: FontWeight.w600,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            SizedBox(height: 8.h),
+            Text(
+              'Create your first saved view in the filter dialog to see it here on your dashboard.',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            SizedBox(height: 24.h),
+            FilledButton.icon(
+              onPressed: () {
+                // Switch to projects view and show filter dialog
+                setState(() {
+                  _showSavedViewsDashboard = false;
+                });
+                // The filter button will be available in the projects view
+              },
+              icon: const Icon(Icons.filter_list),
+              label: const Text('Create Saved View'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildShimmerLoading() {
     return AnimatedOpacity(
       opacity: 1.0,
@@ -925,17 +1061,23 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     });
 
     Widget bodyContent;
-    if (pageState.isLoading && _projects.isEmpty) {
-      bodyContent = _buildShimmerLoading();
-    } else if (pageState.hasError && _projects.isEmpty) {
-      bodyContent = ErrorStateWidget(
-        error: pageState.error!,
-        onRetry: () {
-          _resetPagination();
-        },
-      );
+    if (_showSavedViewsDashboard) {
+      // Show saved views dashboard
+      bodyContent = _buildSavedViewsDashboard(context, l10n);
     } else {
-      bodyContent = _buildListView();
+      // Show projects list (existing functionality)
+      if (pageState.isLoading && _projects.isEmpty) {
+        bodyContent = _buildShimmerLoading();
+      } else if (pageState.hasError && _projects.isEmpty) {
+        bodyContent = ErrorStateWidget(
+          error: pageState.error!,
+          onRetry: () {
+            _resetPagination();
+          },
+        );
+      } else {
+        bodyContent = _buildListView();
+      }
     }
 
     return Scaffold(
@@ -953,6 +1095,45 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
         child: SafeArea(
           child: Column(
             children: [
+              // Realtime notifications banner
+              Consumer(
+                builder: (context, ref, child) {
+                  final notifications = ref.watch(filterChangeNotificationsProvider);
+                  if (notifications.isEmpty) return const SizedBox.shrink();
+                  
+                  final latestNotification = notifications.last;
+                  return MaterialBanner(
+                    content: Text(
+                      'View "${latestNotification.viewName}" was ${latestNotification.changeType}d by another user',
+                      style: Theme.of(context).textTheme.bodyMedium,
+                    ),
+                    leading: Icon(
+                      latestNotification.changeType == 'save' ? Icons.save : Icons.delete,
+                      color: Theme.of(context).colorScheme.primary,
+                    ),
+                    actions: [
+                      TextButton(
+                        onPressed: () {
+                          ref.read(filterChangeNotificationsProvider.notifier).dismissNotification(latestNotification.id);
+                        },
+                        child: const Text('Dismiss'),
+                      ),
+                      if (latestNotification.changeType == 'save')
+                        TextButton(
+                          onPressed: () {
+                            // Switch to dashboard view to see the new view
+                            setState(() {
+                              _showSavedViewsDashboard = true;
+                            });
+                            ref.read(filterChangeNotificationsProvider.notifier).dismissNotification(latestNotification.id);
+                          },
+                          child: const Text('View Dashboard'),
+                        ),
+                    ],
+                    backgroundColor: Theme.of(context).colorScheme.secondaryContainer,
+                  );
+                },
+              ),
               _buildFilterBar(context, filter),
               Expanded(child: bodyContent),
             ],

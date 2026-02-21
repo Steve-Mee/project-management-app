@@ -1144,4 +1144,62 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get unnamedFilterLabel => 'Unnamed Filter';
+
+  @override
+  String get commentsTitle => 'Comments';
+
+  @override
+  String get addCommentHint => 'Add a comment...';
+
+  @override
+  String get noCommentsYet => 'No comments yet';
+
+  @override
+  String get editedLabel => 'edited';
+
+  @override
+  String get mentionedLabel => 'Mentioned';
+
+  @override
+  String get deleteCommentTooltip => 'Delete comment';
+
+  @override
+  String get ganttViewTitle => 'Gantt Chart';
+
+  @override
+  String get zoomInTooltip => 'Zoom in';
+
+  @override
+  String get zoomOutTooltip => 'Zoom out';
+
+  @override
+  String get resetZoomTooltip => 'Reset zoom';
+
+  @override
+  String get todayButton => 'Today';
+
+  @override
+  String get projectTimelineLabel => 'Project Timeline';
+
+  @override
+  String get taskTimelineLabel => 'Task Timeline';
+
+  @override
+  String get endDateLabel => 'End Date';
+
+  @override
+  String get durationLabel => 'Duration';
+
+  @override
+  String get selectDateRangeTooltip => 'Select date range';
+
+  @override
+  String get noProjectsForGantt => 'No projects with dates to display';
+
+  @override
+  String get addProjectsWithDates =>
+      'Add projects with start and end dates to see the timeline';
+
+  @override
+  String get openProjectTooltip => 'Open project';
 }

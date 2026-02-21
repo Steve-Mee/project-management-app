@@ -1,6 +1,7 @@
 import 'package:hive/hive.dart';
 import 'package:uuid/uuid.dart';
 import '../core/config/ai_config.dart';
+import 'comment_model.dart';
 
 part 'project_model.g.dart';
 
@@ -74,6 +75,9 @@ class ProjectModel {
   @HiveField(19)
   final Map<String, dynamic>? customFields;
 
+  @HiveField(20)
+  final List<CommentModel> comments;
+
   const ProjectModel({
     required this.id,
     required this.name,
@@ -95,6 +99,7 @@ class ProjectModel {
     this.dueDate,
     this.tags = const [],
     this.customFields,
+    this.comments = const [],
   });
 
   /// Factory for creating a project with a guaranteed UUID.
@@ -119,6 +124,7 @@ class ProjectModel {
     DateTime? dueDate,
     List<String> tags = const [],
     Map<String, dynamic>? customFields,
+    List<CommentModel> comments = const [],
   }) {
     final resolvedId = (id == null || id.isEmpty) ? _uuid.v4() : id;
     return ProjectModel(
@@ -142,6 +148,7 @@ class ProjectModel {
       dueDate: dueDate,
       tags: tags,
       customFields: customFields,
+      comments: comments,
     );
   }
 
@@ -174,6 +181,7 @@ class ProjectModel {
       dueDate: json['dueDate'] != null ? DateTime.parse(json['dueDate'] as String) : null,
       tags: (json['tags'] as List<dynamic>?)?.cast<String>() ?? const [],
       customFields: (json['customFields'] as Map<String, dynamic>?)?.cast<String, dynamic>(),
+      comments: (json['comments'] as List<dynamic>?)?.map((c) => CommentModel.fromJson(c as Map<String, dynamic>)).toList() ?? const [],
     );
   }
 
@@ -200,6 +208,7 @@ class ProjectModel {
       'dueDate': dueDate?.toIso8601String(),
       'tags': tags,
       'customFields': customFields,
+      'comments': comments.map((c) => c.toJson()).toList(),
     };
   }
 

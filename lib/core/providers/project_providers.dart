@@ -302,7 +302,8 @@ class ProjectFilter {
   final bool sortAscending;
   final String? viewName;
   final bool isSaved;
-  final String viewMode; // 'list', 'kanban', 'table'
+  final String viewMode; // 'list', 'kanban', 'table', 'gantt'
+  final bool addToDashboard;
 
   static const List<String> sortOptions = [
     'name',
@@ -329,6 +330,7 @@ class ProjectFilter {
     this.viewName,
     this.isSaved = false,
     this.viewMode = 'list',
+    this.addToDashboard = false,
   });
 
   ProjectFilter copyWith({
@@ -348,6 +350,7 @@ class ProjectFilter {
     String? viewName,
     bool? isSaved,
     String? viewMode,
+    bool? addToDashboard,
   }) {
     return ProjectFilter(
       status: status ?? this.status,
@@ -366,6 +369,7 @@ class ProjectFilter {
       viewName: viewName ?? this.viewName,
       isSaved: isSaved ?? this.isSaved,
       viewMode: viewMode ?? this.viewMode,
+      addToDashboard: addToDashboard ?? this.addToDashboard,
     );
   }
 
@@ -385,6 +389,7 @@ class ProjectFilter {
       'viewName': viewName,
       'isSaved': isSaved,
       'viewMode': viewMode,
+      'addToDashboard': addToDashboard,
       // extraConditions not persisted as they are complex
     };
   }
@@ -405,6 +410,7 @@ class ProjectFilter {
       viewName: json['viewName'] as String?,
       isSaved: json['isSaved'] as bool? ?? false,
       viewMode: json['viewMode'] as String? ?? 'list',
+      addToDashboard: json['addToDashboard'] as bool? ?? false,
     );
   }
 
@@ -770,15 +776,76 @@ class ProjectFilterNotifier extends StateNotifier<ProjectFilter> {
   static const String _defaultKey = 'default_project_filter';
   static const String _recentFiltersKey = 'recent_filters';
   static const int _maxRecentFilters = 5;
+  static const String _channelName = 'project_filters';
+
+  RealtimeChannel? _channel;
+  StreamSubscription? _channelSubscription;
+  List<ProjectFilter> _recentFilters = [];
 
   ProjectFilterNotifier() : super(const ProjectFilter()) {
     _loadFilter();
     _loadRecentFilters();
+    _initializeRealtime();
   }
 
-  List<ProjectFilter> _recentFilters = [];
+  Future<void> _initializeRealtime() async {
+    try {
+      final supabase = Supabase.instance.client;
+      _channel = supabase.channel(_channelName);
 
-  List<ProjectFilter> get recentFilters => _recentFilters;
+      _channel!.onBroadcast(
+        event: 'filter_change',
+        callback: (payload, [_]) {
+          _handleRealtimeFilterChange(payload);
+        },
+      ).subscribe();
+
+      // Track our presence for collaborative features
+      final user = supabase.auth.currentUser;
+      if (user != null) {
+        await _channel!.track({
+          'user_id': user.id,
+          'user_email': user.email,
+        });
+      }
+    } catch (e) {
+      AppLogger.instance.e('Failed to initialize filter realtime: $e');
+    }
+  }
+
+  void _handleRealtimeFilterChange(Map<String, dynamic> payload) {
+    // This will be handled by a separate notification provider
+    // that listens to this notifier and shows UI notifications
+  }
+
+  Future<void> _broadcastFilterChange(String changeType, {String? viewName}) async {
+    if (_channel == null) return;
+
+    try {
+      final supabase = Supabase.instance.client;
+      final user = supabase.auth.currentUser;
+      if (user == null) return;
+
+      await _channel!.sendBroadcastMessage(
+        event: 'filter_change',
+        payload: {
+          'userId': user.id,
+          'viewName': viewName,
+          'changeType': changeType,
+          'timestamp': DateTime.now().toIso8601String(),
+        },
+      );
+    } catch (e) {
+      AppLogger.instance.e('Failed to broadcast filter change: $e');
+    }
+  }
+
+  @override
+  void dispose() {
+    _channelSubscription?.cancel();
+    _channel?.unsubscribe();
+    super.dispose();
+  }
 
   Future<void> _loadFilter() async {
     try {
@@ -861,6 +928,7 @@ class ProjectFilterNotifier extends StateNotifier<ProjectFilter> {
     state = newFilter;
     _saveFilter(newFilter);
     _addToRecentFilters(newFilter);
+    _broadcastFilterChange('apply');
   }
 
   void _addToRecentFilters(ProjectFilter filter) {
@@ -882,6 +950,7 @@ class ProjectFilterNotifier extends StateNotifier<ProjectFilter> {
     _saveFilter(savedFilter);
     // Also save to saved views
     // This will be handled by the SavedViewsNotifier
+    await _broadcastFilterChange('save', viewName: name);
   }
 
   Future<void> loadView(ProjectFilter view) async {
@@ -895,7 +964,10 @@ class ProjectFilterNotifier extends StateNotifier<ProjectFilter> {
       await _loadDefaultFilter();
     }
     // The actual deletion is handled by SavedViewsNotifier
+    await _broadcastFilterChange('delete', viewName: viewName);
   }
+
+  List<ProjectFilter> get recentFilters => _recentFilters;
 
   /// Bulk operations for selected projects
   Future<void> bulkDeleteProjects(Set<String> projectIds, WidgetRef ref) async {
@@ -979,9 +1051,134 @@ final persistentProjectFilterProvider = StateNotifierProvider<ProjectFilterNotif
 });
 
 /// Provider for saved project filter views loaded from Hive box 'saved_views'
-final savedProjectViewsProvider = StateNotifierProvider<SavedViewsNotifier, List<ProjectFilter>>((ref) {
-  return SavedViewsNotifier();
+/// Provider for realtime filter change notifications
+final filterChangeNotificationsProvider = StateNotifierProvider<FilterNotificationNotifier, List<FilterChangeNotification>>((ref) {
+  return FilterNotificationNotifier();
 });
+
+/// Notification model for filter changes
+class FilterChangeNotification {
+  final String userId;
+  final String? userEmail;
+  final String? viewName;
+  final String changeType; // 'apply', 'save', 'delete', 'reset'
+  final DateTime timestamp;
+  final bool isRead;
+
+  const FilterChangeNotification({
+    required this.userId,
+    required this.changeType,
+    required this.timestamp,
+    this.userEmail,
+    this.viewName,
+    this.isRead = false,
+  });
+
+  FilterChangeNotification copyWith({
+    String? userId,
+    String? userEmail,
+    String? viewName,
+    String? changeType,
+    DateTime? timestamp,
+    bool? isRead,
+  }) {
+    return FilterChangeNotification(
+      userId: userId ?? this.userId,
+      userEmail: userEmail ?? this.userEmail,
+      viewName: viewName ?? this.viewName,
+      changeType: changeType ?? this.changeType,
+      timestamp: timestamp ?? this.timestamp,
+      isRead: isRead ?? this.isRead,
+    );
+  }
+
+  String get id => '${userId}_${timestamp.millisecondsSinceEpoch}';
+}
+
+/// Notifier for managing filter change notifications
+class FilterNotificationNotifier extends StateNotifier<List<FilterChangeNotification>> {
+  static const String _channelName = 'project_filters';
+  static const Duration _notificationTimeout = Duration(seconds: 30);
+
+  RealtimeChannel? _channel;
+  Timer? _cleanupTimer;
+
+  FilterNotificationNotifier() : super([]) {
+    _initializeRealtime();
+    _startCleanupTimer();
+  }
+
+  Future<void> _initializeRealtime() async {
+    try {
+      final supabase = Supabase.instance.client;
+      _channel = supabase.channel(_channelName);
+
+      _channel!.onBroadcast(
+        event: 'filter_change',
+        callback: (payload, [_]) {
+          _handleFilterChangeNotification(payload);
+        },
+      ).subscribe();
+    } catch (e) {
+      AppLogger.instance.e('Failed to initialize notification realtime: $e');
+    }
+  }
+
+  void _handleFilterChangeNotification(Map<String, dynamic> payload) {
+    final userId = payload['userId'] as String?;
+    final viewName = payload['viewName'] as String?;
+    final changeType = payload['changeType'] as String?;
+    final timestamp = payload['timestamp'] as String?;
+
+    if (userId == null || changeType == null) return;
+
+    // Don't show notifications for our own changes
+    final supabase = Supabase.instance.client;
+    final currentUser = supabase.auth.currentUser;
+    if (currentUser?.id == userId) return;
+
+    final notification = FilterChangeNotification(
+      userId: userId,
+      viewName: viewName,
+      changeType: changeType,
+      timestamp: timestamp != null ? DateTime.parse(timestamp) : DateTime.now(),
+    );
+
+    // Add to state (limit to last 10 notifications)
+    state = [...state, notification].take(10).toList();
+  }
+
+  void markAsRead(String notificationId) {
+    state = state.map((notification) {
+      if ('${notification.userId}_${notification.timestamp.millisecondsSinceEpoch}' == notificationId) {
+        return notification.copyWith(isRead: true);
+      }
+      return notification;
+    }).toList();
+  }
+
+  void dismissNotification(String notificationId) {
+    state = state.where((notification) => notification.id != notificationId).toList();
+  }
+
+  void clearAll() {
+    state = [];
+  }
+
+  void _startCleanupTimer() {
+    _cleanupTimer = Timer.periodic(_notificationTimeout, (_) {
+      final cutoff = DateTime.now().subtract(_notificationTimeout);
+      state = state.where((notification) => notification.timestamp.isAfter(cutoff)).toList();
+    });
+  }
+
+  @override
+  void dispose() {
+    _cleanupTimer?.cancel();
+    _channel?.unsubscribe();
+    super.dispose();
+  }
+}
 /// Provider for selected project IDs in bulk selection mode
 final selectedProjectIdsProvider = StateProvider<Set<String>>((ref) => {});
 
@@ -989,10 +1186,14 @@ final selectedProjectIdsProvider = StateProvider<Set<String>>((ref) => {});
 final isSelectionModeProvider = StateProvider<bool>((ref) => false);
 class SavedViewsNotifier extends StateNotifier<List<ProjectFilter>> {
   static const String _boxName = 'saved_views';
+  static const String _channelName = 'project_filters';
+
+  RealtimeChannel? _channel;
 
   SavedViewsNotifier() : super([]) {
     _loadViews();
-    _syncFromSupabase();
+    syncFromSupabase();
+    _initializeRealtime();
   }
 
   Future<void> _loadViews() async {
@@ -1028,7 +1229,7 @@ class SavedViewsNotifier extends StateNotifier<List<ProjectFilter>> {
     }
   }
 
-  Future<void> _syncFromSupabase() async {
+  Future<void> syncFromSupabase() async {
     try {
       final supabase = Supabase.instance.client;
       final user = supabase.auth.currentUser;
@@ -1059,8 +1260,38 @@ class SavedViewsNotifier extends StateNotifier<List<ProjectFilter>> {
       state = localViews.values.toList();
       await _saveViews();
     } catch (e) {
-      // If Supabase sync fails, continue with local data
+      // Log error but don't fail
     }
+  }
+
+  Future<void> _initializeRealtime() async {
+    try {
+      final supabase = Supabase.instance.client;
+      _channel = supabase.channel(_channelName);
+
+      // Listen for filter changes from other users
+      _channel!.onBroadcast(
+        event: 'filter_change',
+        callback: (payload, [_]) {
+          // This will trigger a refresh of saved views if needed
+          _handleRealtimeFilterChange(payload);
+        },
+      ).subscribe();
+    } catch (e) {
+      AppLogger.instance.e('Failed to initialize saved views realtime: $e');
+    }
+  }
+
+  void _handleRealtimeFilterChange(Map<String, dynamic> payload) {
+    // Refresh saved views when other users make changes
+    // This ensures the dashboard stays in sync
+    syncFromSupabase();
+  }
+
+  @override
+  void dispose() {
+    _channel?.unsubscribe();
+    super.dispose();
   }
 
   Future<void> _syncToSupabase(ProjectFilter filter) async {
@@ -1090,6 +1321,7 @@ class SavedViewsNotifier extends StateNotifier<List<ProjectFilter>> {
     }
     await _saveViews();
     await _syncToSupabase(savedFilter);
+    await _broadcastViewChange('save', viewName: name);
   }
 
   Future<void> deleteView(String viewName) async {
@@ -1111,4 +1343,37 @@ class SavedViewsNotifier extends StateNotifier<List<ProjectFilter>> {
       // If Supabase sync fails, continue locally
     }
   }
+
+  Future<void> _broadcastViewChange(String changeType, {String? viewName}) async {
+    if (_channel == null) return;
+
+    try {
+      final supabase = Supabase.instance.client;
+      final user = supabase.auth.currentUser;
+      if (user == null) return;
+
+      await _channel!.sendBroadcastMessage(
+        event: 'filter_change',
+        payload: {
+          'userId': user.id,
+          'viewName': viewName,
+          'changeType': changeType,
+          'timestamp': DateTime.now().toIso8601String(),
+        },
+      );
+    } catch (e) {
+      AppLogger.instance.e('Failed to broadcast view change: $e');
+    }
+  }
 }
+
+/// Provider for saved project views
+final savedProjectViewsProvider = StateNotifierProvider<SavedViewsNotifier, List<ProjectFilter>>(
+  (ref) => SavedViewsNotifier(),
+);
+
+/// Provider for dashboard views (only views marked for dashboard)
+final dashboardViewsProvider = Provider<List<ProjectFilter>>((ref) {
+  final allViews = ref.watch(savedProjectViewsProvider);
+  return allViews.where((view) => view.addToDashboard).toList();
+});

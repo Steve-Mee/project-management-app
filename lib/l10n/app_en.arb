@@ -1532,5 +1532,89 @@
   "unnamedFilterLabel": "Unnamed Filter",
   "@unnamedFilterLabel": {
     "description": "Label for unnamed filter"
+  },
+  "commentsTitle": "Comments",
+  "@commentsTitle": {
+    "description": "Title for comments section."
+  },
+  "addCommentHint": "Add a comment...",
+  "@addCommentHint": {
+    "description": "Hint text for comment input field."
+  },
+  "noCommentsYet": "No comments yet",
+  "@noCommentsYet": {
+    "description": "Message when there are no comments."
+  },
+  "editedLabel": "edited",
+  "@editedLabel": {
+    "description": "Label indicating a comment was edited."
+  },
+  "mentionedLabel": "Mentioned",
+  "@mentionedLabel": {
+    "description": "Label for mentioned users."
+  },
+  "deleteCommentTooltip": "Delete comment",
+  "@deleteCommentTooltip": {
+    "description": "Tooltip for delete comment button."
+  },
+  "ganttViewTitle": "Gantt Chart",
+  "@ganttViewTitle": {
+    "description": "Title for Gantt chart view."
+  },
+  "zoomInTooltip": "Zoom in",
+  "@zoomInTooltip": {
+    "description": "Tooltip for zoom in button."
+  },
+  "zoomOutTooltip": "Zoom out",
+  "@zoomOutTooltip": {
+    "description": "Tooltip for zoom out button."
+  },
+  "resetZoomTooltip": "Reset zoom",
+  "@resetZoomTooltip": {
+    "description": "Tooltip for reset zoom button."
+  },
+  "todayButton": "Today",
+  "@todayButton": {
+    "description": "Button to jump to today's date."
+  },
+  "projectTimelineLabel": "Project Timeline",
+  "@projectTimelineLabel": {
+    "description": "Label for project timeline section."
+  },
+  "taskTimelineLabel": "Task Timeline",
+  "@taskTimelineLabel": {
+    "description": "Label for task timeline section."
+  },
+  "startDateLabel": "Start Date",
+  "@startDateLabel": {
+    "description": "Label for start date."
+  },
+  "endDateLabel": "End Date",
+  "@endDateLabel": {
+    "description": "Label for end date."
+  },
+  "durationLabel": "Duration",
+  "@durationLabel": {
+    "description": "Label for duration."
+  },
+  "progressLabel": "Progress",
+  "@progressLabel": {
+    "description": "Label for progress."
+  },
+  "selectDateRangeTooltip": "Select date range",
+  "@selectDateRangeTooltip": {
+    "description": "Tooltip for select date range button."
+  },
+  "noProjectsForGantt": "No projects with dates to display",
+  "@noProjectsForGantt": {
+    "description": "Message when no projects have dates for Gantt chart."
+  },
+  "addProjectsWithDates": "Add projects with start and end dates to see the timeline",
+  "@addProjectsWithDates": {
+    "description": "Message suggesting to add projects with dates."
+  },
+  "openProjectTooltip": "Open project",
+  "@openProjectTooltip": {
+    "description": "Tooltip for open project button."
   }
 }

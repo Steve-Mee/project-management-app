@@ -1568,5 +1568,61 @@
   "allProjectsLabel": "All Projects",
   "@allProjectsLabel": {
     "description": "Label for showing all projects (no filters)."
+  },
+  "ganttViewTitle": "Gantt Chart",
+  "@ganttViewTitle": {
+    "description": "Title for the Gantt chart view."
+  },
+  "zoomInTooltip": "Zoom in",
+  "@zoomInTooltip": {
+    "description": "Tooltip for zoom in button."
+  },
+  "zoomOutTooltip": "Zoom out",
+  "@zoomOutTooltip": {
+    "description": "Tooltip for zoom out button."
+  },
+  "selectDateRangeTooltip": "Select date range",
+  "@selectDateRangeTooltip": {
+    "description": "Tooltip for date range picker button."
+  },
+  "noProjectsForGantt": "No projects to display",
+  "@noProjectsForGantt": {
+    "description": "Message when no projects have dates for Gantt view."
+  },
+  "addProjectsWithDates": "Add projects with start and due dates to see them in the timeline.",
+  "@addProjectsWithDates": {
+    "description": "Help text for adding projects with dates."
+  },
+  "openProjectTooltip": "Open project",
+  "@openProjectTooltip": {
+    "description": "Tooltip for opening a project."
+  },
+  "tasksTitle": "Tasks",
+  "@tasksTitle": {
+    "description": "Title for tasks section."
+  },
+  "commentsTitle": "Comments",
+  "@commentsTitle": {
+    "description": "Title for comments section."
+  },
+  "addCommentHint": "Add a comment...",
+  "@addCommentHint": {
+    "description": "Hint text for comment input field."
+  },
+  "noCommentsYet": "No comments yet",
+  "@noCommentsYet": {
+    "description": "Message when there are no comments."
+  },
+  "editedLabel": "edited",
+  "@editedLabel": {
+    "description": "Label indicating a comment was edited."
+  },
+  "mentionedLabel": "Mentioned",
+  "@mentionedLabel": {
+    "description": "Label for mentioned users."
+  },
+  "deleteCommentTooltip": "Delete comment",
+  "@deleteCommentTooltip": {
+    "description": "Tooltip for delete comment button."
   }
 }
