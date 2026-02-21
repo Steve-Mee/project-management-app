@@ -22,6 +22,7 @@ class ProjectFilterParams {
   final String? priority;
   final String? ownerId;
   final List<String>? tags;
+  final List<repo.ProjectFilterConditions>? extraConditions;
 
   const ProjectFilterParams({
     this.status,
@@ -31,7 +32,30 @@ class ProjectFilterParams {
     this.priority,
     this.ownerId,
     this.tags,
+    this.extraConditions,
   });
+
+  ProjectFilterParams copyWith({
+    String? status,
+    String? searchQuery,
+    DateTime? startDate,
+    DateTime? endDate,
+    String? priority,
+    String? ownerId,
+    List<String>? tags,
+    List<repo.ProjectFilterConditions>? extraConditions,
+  }) {
+    return ProjectFilterParams(
+      status: status ?? this.status,
+      searchQuery: searchQuery ?? this.searchQuery,
+      startDate: startDate ?? this.startDate,
+      endDate: endDate ?? this.endDate,
+      priority: priority ?? this.priority,
+      ownerId: ownerId ?? this.ownerId,
+      tags: tags ?? this.tags,
+      extraConditions: extraConditions ?? this.extraConditions,
+    );
+  }
 }
 
 /// Cache entry with TTL for project data
@@ -93,6 +117,7 @@ final filteredProjectsProvider = FutureProvider.autoDispose.family<List<ProjectM
       ownerId: params.ownerId,
       tags: params.tags,
     ),
+    extraConditions: params.extraConditions ?? [],
   );
 });
 // Ready for UI integration
@@ -126,6 +151,7 @@ final filteredProjectsPaginatedProvider = FutureProvider.autoDispose.family<List
       ownerId: params.filter.ownerId,
       tags: params.filter.tags,
     ),
+    extraConditions: params.filter.extraConditions ?? [],
   );
 
   // Then paginate in-memory (since we need the full filtered set for accurate pagination)

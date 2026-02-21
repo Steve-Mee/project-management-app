@@ -110,11 +110,18 @@ abstract class IProjectRepository {
   Future<List<ProjectModel>> getProjectsByStatus(String status);
 
   /// Advanced filtering with multiple criteria
-  Future<List<ProjectModel>> getFilteredProjects(ProjectFilter filter);
+  Future<List<ProjectModel>> getFilteredProjects(ProjectFilter filter, {List<ProjectFilterConditions> extraConditions = const []});
 
   /// Sync methods for future Supabase integration
   /// TODO: Implement sync methods when Supabase sync is added
   // Future<void> syncProjectsToSupabase();
   // Future<void> syncProjectsFromSupabase();
   // Future<void> resolveSyncConflicts(List<SyncConflict> conflicts);
+}
+
+/// Advanced filter conditions for projects
+class ProjectFilterConditions {
+  final bool Function(ProjectModel) condition;
+
+  const ProjectFilterConditions(this.condition);
 }

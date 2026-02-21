@@ -10,6 +10,7 @@ import 'package:animate_do/animate_do.dart';
 import 'package:my_project_management_app/generated/app_localizations.dart';
 import 'package:my_project_management_app/core/auth/permissions.dart';
 import 'package:my_project_management_app/core/providers/project_providers.dart';
+import 'package:my_project_management_app/core/repository/i_project_repository.dart' as repo;
 import '../../core/providers/auth_providers.dart';
 import '../../core/theme.dart';
 import '../../models/project_meta.dart';
@@ -63,6 +64,16 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   bool _isLoading = false;
   List<ProjectModel> _projects = [];
 
+  // advanced filters state
+  bool _showAdvancedFilters = false;
+  RangeValues _progressRange = const RangeValues(0, 100);
+  // ignore: prefer_final_fields
+  Set<String> _selectedPriorities = {};
+  // ignore: prefer_final_fields
+  List<String> _selectedTags = [];
+  String? _customConditionType;
+  String? _customConditionValue;
+
   // we no longer keep local sort/status values; read from providers
 
   @override
@@ -107,68 +118,467 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
       }
     }
 
+    return Column(
+      children: [
+        Card(
+          elevation: 2,
+          color: theme.colorScheme.surfaceContainerHighest,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
+          child: Padding(
+            padding: const EdgeInsets.all(12.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        decoration: InputDecoration(
+                          hintText: l10n.searchTasksHint,
+                          prefixIcon: const Icon(Icons.search),
+                          filled: true,
+                          fillColor: theme.colorScheme.surface,
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8.r),
+                            borderSide: BorderSide.none,
+                          ),
+                        ),
+                        onChanged: _updateSearch,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    DropdownButton<ProjectSort>(
+                      value: sort,
+                      dropdownColor: theme.colorScheme.surface,
+                      style: theme.textTheme.bodyMedium,
+                      items: ProjectSort.values
+                          .map((s) => DropdownMenuItem(
+                                value: s,
+                                child: Text(sortLabel(s)),
+                              ))
+                          .toList(),
+                      onChanged: (s) {
+                        if (s != null) {
+                          _updateSort(s);
+                        }
+                      },
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Wrap(
+                        spacing: 8,
+                        children: ['All', 'In Progress', 'Completed', 'On Hold', 'Cancelled']
+                            .map((status) => FilterChip(
+                                  label: Text(status),
+                                  selected: (filter.status ?? 'All') == status,
+                                  selectedColor: theme.colorScheme.secondaryContainer,
+                                  checkmarkColor: theme.colorScheme.onSecondaryContainer,
+                                  onSelected: (_) => _updateStatus(status),
+                                ))
+                            .toList(),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    FilledButton.tonal(
+                      onPressed: () {
+                        setState(() {
+                          _showAdvancedFilters = !_showAdvancedFilters;
+                        });
+                      },
+                      style: FilledButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text('Advanced'),
+                          const SizedBox(width: 4),
+                          Icon(
+                            _showAdvancedFilters ? Icons.expand_less : Icons.expand_more,
+                            size: 16,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+        AnimatedSwitcher(
+          duration: const Duration(milliseconds: 300),
+          transitionBuilder: (child, animation) {
+            return SizeTransition(
+              sizeFactor: animation,
+              axisAlignment: -1.0,
+              child: child,
+            );
+          },
+          child: _showAdvancedFilters ? _buildAdvancedFiltersCard(context, filter) : const SizedBox.shrink(),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildAdvancedFiltersCard(BuildContext context, ProjectFilterParams filter) {
+    final theme = Theme.of(context);
+
     return Card(
+      key: const ValueKey('advanced_filters'),
       elevation: 2,
-      color: theme.colorScheme.surfaceContainerHighest,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
+      margin: const EdgeInsets.only(top: 8),
+      color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.8),
+      surfaceTintColor: theme.colorScheme.surfaceTint,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: Padding(
-        padding: const EdgeInsets.all(12.0),
+        padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    decoration: InputDecoration(
-                      hintText: l10n.searchTasksHint,
-                      prefixIcon: const Icon(Icons.search),
-                      filled: true,
-                      fillColor: theme.colorScheme.surface,
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8.r),
-                        borderSide: BorderSide.none,
-                      ),
-                    ),
-                    onChanged: _updateSearch,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                DropdownButton<ProjectSort>(
-                  value: sort,
-                  dropdownColor: theme.colorScheme.surface,
-                  style: theme.textTheme.bodyMedium,
-                  items: ProjectSort.values
-                      .map((s) => DropdownMenuItem(
-                            value: s,
-                            child: Text(sortLabel(s)),
-                          ))
-                      .toList(),
-                  onChanged: (s) {
-                    if (s != null) {
-                      _updateSort(s);
-                    }
-                  },
-                ),
-              ],
+            Text(
+              'Advanced Filters',
+              style: theme.textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 16),
+
+            // Progress Range Slider
+            Text(
+              'Progress Range',
+              style: theme.textTheme.bodyMedium?.copyWith(
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            const SizedBox(height: 8),
+            RangeSlider(
+              values: _progressRange,
+              min: 0,
+              max: 100,
+              divisions: 20,
+              labels: RangeLabels(
+                '${_progressRange.start.round()}%',
+                '${_progressRange.end.round()}%',
+              ),
+              onChanged: (values) {
+                setState(() {
+                  _progressRange = values;
+                });
+                _applyAdvancedFilters();
+              },
+              activeColor: theme.colorScheme.primary,
+              inactiveColor: theme.colorScheme.surfaceContainerHighest,
+            ),
+
+            const SizedBox(height: 16),
+
+            // Priority Multi-select Chips (using complexity as priority)
+            Text(
+              'Complexity',
+              style: theme.textTheme.bodyMedium?.copyWith(
+                fontWeight: FontWeight.w500,
+              ),
             ),
             const SizedBox(height: 8),
             Wrap(
               spacing: 8,
-              children: ['All', 'In Progress', 'Completed', 'On Hold', 'Cancelled']
-                  .map((status) => FilterChip(
-                        label: Text(status),
-                        selected: (filter.status ?? 'All') == status,
-                        selectedColor: theme.colorScheme.secondaryContainer,
-                        checkmarkColor: theme.colorScheme.onSecondaryContainer,
-                        onSelected: (_) => _updateStatus(status),
-                      ))
-                  .toList(),
+              runSpacing: 8,
+              children: [
+                _buildComplexityChip('simpel', Colors.green),
+                _buildComplexityChip('middel', Colors.orange),
+                _buildComplexityChip('complex', Colors.red),
+              ],
+            ),
+
+            const SizedBox(height: 16),
+
+            // Category Multi-select
+            Text(
+              'Category',
+              style: theme.textTheme.bodyMedium?.copyWith(
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                ..._selectedTags.map((tag) {
+                  return InputChip(
+                    label: Text(tag),
+                    onDeleted: () {
+                      setState(() {
+                        _selectedTags.remove(tag);
+                      });
+                      _applyAdvancedFilters();
+                    },
+                    deleteIcon: const Icon(Icons.close, size: 16),
+                    backgroundColor: theme.colorScheme.secondaryContainer,
+                    labelStyle: TextStyle(color: theme.colorScheme.onSecondaryContainer),
+                  );
+                }),
+                ActionChip(
+                  label: const Text('+ Add Category'),
+                  onPressed: _showAddCategoryDialog,
+                  backgroundColor: theme.colorScheme.surface,
+                ),
+              ],
+            ),
+
+            const SizedBox(height: 16),
+
+            // Custom Condition Builder
+            Text(
+              'Custom Conditions',
+              style: theme.textTheme.bodyMedium?.copyWith(
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Expanded(
+                  flex: 2,
+                  child: DropdownButtonFormField<String>(
+                    decoration: InputDecoration(
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      filled: true,
+                      fillColor: theme.colorScheme.surface,
+                    ),
+                    hint: const Text('Condition'),
+                    initialValue: _customConditionType,
+                    items: const [
+                      DropdownMenuItem(value: 'progress_gt', child: Text('Progress >')),
+                      DropdownMenuItem(value: 'progress_lt', child: Text('Progress <')),
+                      DropdownMenuItem(value: 'name_contains', child: Text('Name contains')),
+                      DropdownMenuItem(value: 'description_contains', child: Text('Description contains')),
+                    ],
+                    onChanged: (value) {
+                      setState(() {
+                        _customConditionType = value;
+                      });
+                    },
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  flex: 1,
+                  child: TextField(
+                    decoration: InputDecoration(
+                      hintText: 'Value',
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      filled: true,
+                      fillColor: theme.colorScheme.surface,
+                    ),
+                    onChanged: (value) {
+                      _customConditionValue = value;
+                      _applyAdvancedFilters();
+                    },
+                  ),
+                ),
+              ],
+            ),
+
+            const SizedBox(height: 16),
+
+            // Action Buttons
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: _clearAdvancedFilters,
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                    ),
+                    child: const Text('Clear Advanced'),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: FilledButton(
+                    onPressed: _applyAdvancedFilters,
+                    style: FilledButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                    ),
+                    child: const Text('Apply'),
+                  ),
+                ),
+              ],
             ),
           ],
         ),
       ),
     );
+  }
+
+  Widget _buildComplexityChip(String complexity, Color color) {
+    final isSelected = _selectedPriorities.contains(complexity);
+
+    return FilterChip(
+      label: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 8,
+            height: 8,
+            decoration: BoxDecoration(
+              color: color,
+              shape: BoxShape.circle,
+            ),
+          ),
+          const SizedBox(width: 6),
+          Text(complexity),
+        ],
+      ),
+      selected: isSelected,
+      selectedColor: color.withValues(alpha: 0.2),
+      checkmarkColor: color,
+      onSelected: (selected) {
+        setState(() {
+          if (selected) {
+            _selectedPriorities.add(complexity);
+          } else {
+            _selectedPriorities.remove(complexity);
+          }
+        });
+        _applyAdvancedFilters();
+      },
+    );
+  }
+
+  void _showAddCategoryDialog() {
+    final controller = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Add Category'),
+        content: TextField(
+          controller: controller,
+          decoration: const InputDecoration(hintText: 'Enter category name'),
+          onSubmitted: (value) {
+            if (value.isNotEmpty && !_selectedTags.contains(value)) {
+              setState(() {
+                _selectedTags.add(value);
+              });
+              _applyAdvancedFilters();
+            }
+            Navigator.of(context).pop();
+          },
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () {
+              final value = controller.text.trim();
+              if (value.isNotEmpty && !_selectedTags.contains(value)) {
+                setState(() {
+                  _selectedTags.add(value);
+                });
+                _applyAdvancedFilters();
+              }
+              Navigator.of(context).pop();
+            },
+            child: const Text('Add'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _applyAdvancedFilters() {
+    final conditions = <repo.ProjectFilterConditions>[];
+
+    // Progress range condition
+    if (_progressRange.start > 0 || _progressRange.end < 100) {
+      conditions.add(repo.ProjectFilterConditions(
+        (project) => project.progress >= _progressRange.start && project.progress <= _progressRange.end,
+      ));
+    }
+
+    // Complexity conditions (using complexity as priority)
+    if (_selectedPriorities.isNotEmpty) {
+      conditions.add(repo.ProjectFilterConditions(
+        (project) => _selectedPriorities.contains(project.complexity.name),
+      ));
+    }
+
+    // Category conditions (using category as tags)
+    if (_selectedTags.isNotEmpty) {
+      conditions.add(repo.ProjectFilterConditions(
+        (project) => project.category != null && _selectedTags.contains(project.category!),
+      ));
+    }
+
+    // Custom condition
+    if (_customConditionType != null && _customConditionValue != null && _customConditionValue!.isNotEmpty) {
+      switch (_customConditionType) {
+        case 'progress_gt':
+          final value = double.tryParse(_customConditionValue!);
+          if (value != null) {
+            conditions.add(repo.ProjectFilterConditions(
+              (project) => project.progress > value,
+            ));
+          }
+          break;
+        case 'progress_lt':
+          final value = double.tryParse(_customConditionValue!);
+          if (value != null) {
+            conditions.add(repo.ProjectFilterConditions(
+              (project) => project.progress < value,
+            ));
+          }
+          break;
+        case 'name_contains':
+          conditions.add(repo.ProjectFilterConditions(
+            (project) => project.name.toLowerCase().contains(_customConditionValue!.toLowerCase()),
+          ));
+          break;
+        case 'description_contains':
+          conditions.add(repo.ProjectFilterConditions(
+            (project) => (project.description ?? '').toLowerCase().contains(_customConditionValue!.toLowerCase()),
+          ));
+          break;
+      }
+    }
+
+    // Update the filter provider with extra conditions
+    ref.read(currentProjectFilterProvider.notifier).update(
+      (state) => state.copyWith(extraConditions: conditions),
+    );
+
+    // Reset pagination to page 1
+    setState(() {
+      _page = 1;
+      _projects = [];
+      _hasMore = true;
+    });
+    // Projects will be reloaded automatically by the provider
+  }
+
+  void _clearAdvancedFilters() {
+    setState(() {
+      _progressRange = const RangeValues(0, 100);
+      _selectedPriorities.clear();
+      _selectedTags.clear();
+      _customConditionType = null;
+      _customConditionValue = null;
+    });
+    _applyAdvancedFilters();
   }
 
   Widget _buildShimmerLoading() {
