@@ -38,6 +38,7 @@ class _ProjectScreenState extends ConsumerState<ProjectScreen> {
 
   String _selectedStatus = 'All';
   ProjectSort _sortBy = ProjectSort.name;
+  bool _sortAscending = true;
   String? _loadError;
 
   @override
@@ -90,16 +91,20 @@ class _ProjectScreenState extends ConsumerState<ProjectScreen> {
     if (_isLoading || !_hasMore) return;
     setState(() => _isLoading = true);
     try {
-      final params = ProjectPaginationParams(
-        page: _page,
-        limit: _pageSize,
-        statusFilter: _selectedStatus == 'All' ? null : _selectedStatus,
+      final filter = ProjectFilter(
+        status: _selectedStatus == 'All' ? null : _selectedStatus,
         searchQuery: ref.watch(searchQueryProvider).isEmpty
             ? null
             : ref.watch(searchQueryProvider),
       );
-      final newItems =
-          await ref.read(projectsPaginatedProvider(params).future);
+      final params = ProjectParams(
+        page: _page,
+        limit: _pageSize,
+        filter: filter,
+        sortBy: _sortBy.name,
+        sortAscending: _sortAscending,
+      );
+      final newItems = await ref.read(projectsCombinedProvider(params).future);
       if (newItems.isEmpty || newItems.length < _pageSize) {
         _hasMore = false;
       }
@@ -455,35 +460,40 @@ class _ProjectScreenState extends ConsumerState<ProjectScreen> {
     final screenWidth = MediaQuery.of(context).size.width;
     final isCompact = screenWidth < 400;
 
+    final options = <Map<String, dynamic>>[
+      {'label': 'Name (A-Z)', 'sort': ProjectSort.name, 'asc': true},
+      {'label': 'Name (Z-A)', 'sort': ProjectSort.name, 'asc': false},
+      {'label': 'Progress (High→Low)', 'sort': ProjectSort.progress, 'asc': false},
+      {'label': 'Progress (Low→High)', 'sort': ProjectSort.progress, 'asc': true},
+      {'label': 'Created (Newest)', 'sort': ProjectSort.createdDate, 'asc': false},
+      {'label': 'Created (Oldest)', 'sort': ProjectSort.createdDate, 'asc': true},
+      {'label': 'Status', 'sort': ProjectSort.status, 'asc': true},
+    ];
+
     if (isCompact) {
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            l10n.sortByLabel,
-            style: Theme.of(context).textTheme.bodySmall,
-          ),
-          SizedBox(height: 4.h),
-          DropdownButton<ProjectSort>(
-            value: _sortBy,
-            onChanged: (value) {
-              if (value == null) {
-                return;
-              }
-              setState(() {
-                _sortBy = value;
-              });
-            },
-            items: ProjectSort.values
-                .map(
-                  (sort) => DropdownMenuItem(
-                    value: sort,
-                    child: Text(_projectSortLabel(sort, l10n)),
-                  ),
-                )
-                .toList(),
-          ),
-        ],
+      return PopupMenuButton<int>(
+        initialValue: options.indexWhere((o) => o['sort'] == _sortBy && o['asc'] == _sortAscending),
+        onSelected: (i) {
+          setState(() {
+            _sortBy = options[i]['sort'] as ProjectSort;
+            _sortAscending = options[i]['asc'] as bool;
+          });
+          _resetPagination();
+        },
+        itemBuilder: (context) => options
+            .asMap()
+            .entries
+            .map((e) => PopupMenuItem<int>(
+                  value: e.key,
+                  child: Text(e.value['label'] as String),
+                ))
+            .toList(),
+        child: Row(
+          children: [
+            Text(l10n.sortByLabel),
+            Icon(Icons.arrow_drop_down),
+          ],
+        ),
       );
     }
 
@@ -494,28 +504,33 @@ class _ProjectScreenState extends ConsumerState<ProjectScreen> {
           style: Theme.of(context).textTheme.bodySmall,
         ),
         SizedBox(width: 12.w),
-        DropdownButton<ProjectSort>(
-          value: _sortBy,
-          onChanged: (value) {
-            if (value == null) {
-              return;
-            }
-              setState(() {
-                _sortBy = value;
-              });
-            },
-            items: ProjectSort.values
-                .map(
-                  (sort) => DropdownMenuItem(
-                    value: sort,
-                    child: Text(_projectSortLabel(sort, l10n)),
-                  ),
-                )
-                .toList(),
+        PopupMenuButton<int>(
+          initialValue: options.indexWhere((o) => o['sort'] == _sortBy && o['asc'] == _sortAscending),
+          onSelected: (i) {
+            setState(() {
+              _sortBy = options[i]['sort'] as ProjectSort;
+              _sortAscending = options[i]['asc'] as bool;
+            });
+            _resetPagination();
+          },
+          itemBuilder: (context) => options
+              .asMap()
+              .entries
+              .map((e) => PopupMenuItem<int>(
+                    value: e.key,
+                    child: Text(e.value['label'] as String),
+                  ))
+              .toList(),
+          child: Row(
+            children: [
+              Text(_sortAscending ? '${_sortBy.toString().split('.').last} ↑' : '${_sortBy.toString().split('.').last} ↓'),
+              Icon(Icons.arrow_drop_down),
+            ],
           ),
-        ],
-      );
-    }
+        ),
+      ],
+    );
+  }
 
   Widget _buildLoadError(BuildContext context, Object error) {
     final l10n = AppLocalizations.of(context)!;
@@ -1043,20 +1058,6 @@ class _ProjectScreenState extends ConsumerState<ProjectScreen> {
     );
   }
 
-  String _projectSortLabel(ProjectSort sort, AppLocalizations l10n) {
-    switch (sort) {
-      case ProjectSort.name:
-        return l10n.projectSortName;
-      case ProjectSort.progress:
-        return l10n.projectSortProgress;
-      case ProjectSort.priority:
-        return l10n.projectSortPriority;
-      case ProjectSort.createdDate:
-        return l10n.projectSortCreatedDate;
-      case ProjectSort.status:
-        return l10n.projectSortStatus;
-    }
-  }
 
   String _urgencyLabel(UrgencyLevel level, AppLocalizations l10n) {
     switch (level) {
