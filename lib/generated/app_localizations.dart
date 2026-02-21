@@ -2022,6 +2022,78 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Tags'**
   String get tagsLabel;
+
+  /// Label for the export to PDF button.
+  ///
+  /// In en, this message translates to:
+  /// **'Export to PDF'**
+  String get exportToPdfLabel;
+
+  /// Message shown while generating PDF.
+  ///
+  /// In en, this message translates to:
+  /// **'Generating PDF report...'**
+  String get exportingPdfMessage;
+
+  /// Success message when PDF is exported.
+  ///
+  /// In en, this message translates to:
+  /// **'PDF exported successfully'**
+  String get pdfExportedMessage;
+
+  /// Error message when PDF export fails.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to export PDF'**
+  String get pdfExportErrorMessage;
+
+  /// Title for the PDF projects report.
+  ///
+  /// In en, this message translates to:
+  /// **'Projects Report'**
+  String get projectsReportTitle;
+
+  /// Label for the generation date in PDF.
+  ///
+  /// In en, this message translates to:
+  /// **'Generated on'**
+  String get generatedOnLabel;
+
+  /// Label for active filters section in PDF.
+  ///
+  /// In en, this message translates to:
+  /// **'Active Filters'**
+  String get activeFiltersLabel;
+
+  /// Label for the summary section in PDF.
+  ///
+  /// In en, this message translates to:
+  /// **'Summary'**
+  String get summaryLabel;
+
+  /// Label for total projects count.
+  ///
+  /// In en, this message translates to:
+  /// **'Total Projects'**
+  String get totalProjectsLabel;
+
+  /// Label for priority distribution chart.
+  ///
+  /// In en, this message translates to:
+  /// **'Priority Distribution'**
+  String get priorityDistributionLabel;
+
+  /// Label for due dates chart.
+  ///
+  /// In en, this message translates to:
+  /// **'Due Dates'**
+  String get dueDatesLabel;
+
+  /// Label for the project list section.
+  ///
+  /// In en, this message translates to:
+  /// **'Project List'**
+  String get projectListLabel;
 }
 
 class _AppLocalizationsDelegate

@@ -1057,4 +1057,40 @@ class AppLocalizationsHi extends AppLocalizations {
 
   @override
   String get tagsLabel => 'Tags';
+
+  @override
+  String get exportToPdfLabel => 'Export to PDF';
+
+  @override
+  String get exportingPdfMessage => 'Generating PDF report...';
+
+  @override
+  String get pdfExportedMessage => 'PDF exported successfully';
+
+  @override
+  String get pdfExportErrorMessage => 'Failed to export PDF';
+
+  @override
+  String get projectsReportTitle => 'Projects Report';
+
+  @override
+  String get generatedOnLabel => 'Generated on';
+
+  @override
+  String get activeFiltersLabel => 'Active Filters';
+
+  @override
+  String get summaryLabel => 'Summary';
+
+  @override
+  String get totalProjectsLabel => 'Total Projects';
+
+  @override
+  String get priorityDistributionLabel => 'Priority Distribution';
+
+  @override
+  String get dueDatesLabel => 'Due Dates';
+
+  @override
+  String get projectListLabel => 'Project List';
 }

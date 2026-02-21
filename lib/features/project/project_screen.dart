@@ -11,6 +11,7 @@ import 'package:intl/intl.dart';
 import 'package:csv/csv.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:my_project_management_app/features/project/pdf_export.dart';
 // ignore_for_file: use_build_context_synchronously, unnecessary_underscores
 import 'package:my_project_management_app/core/providers/project_providers.dart';
 import '../../core/providers/auth_providers.dart';
@@ -1353,6 +1354,12 @@ class _BulkActionsBottomSheetState extends ConsumerState<BulkActionsBottomSheet>
             icon: const Icon(Icons.download),
             label: Text(l10n.exportSelectedToCsvLabel),
           ),
+          SizedBox(height: 8.h),
+          OutlinedButton.icon(
+            onPressed: () => _exportSelectedProjectsToPdf(context, ref, l10n),
+            icon: const Icon(Icons.picture_as_pdf),
+            label: Text(l10n.exportToPdfLabel),
+          ),
           SizedBox(height: 16.h),
           // Apply actions
           Row(
@@ -1467,6 +1474,36 @@ class _BulkActionsBottomSheetState extends ConsumerState<BulkActionsBottomSheet>
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Export failed: $e')),
+        );
+      }
+    }
+  }
+
+  Future<void> _exportSelectedProjectsToPdf(BuildContext context, WidgetRef ref, AppLocalizations l10n) async {
+    try {
+      final repository = ref.read(projectRepositoryProvider);
+      final projects = <ProjectModel>[];
+
+      for (final id in widget.selectedProjectIds) {
+        final project = await repository.getProjectById(id);
+        if (project != null) {
+          projects.add(project);
+        }
+      }
+
+      // Create a filter for selected projects
+      final filter = ProjectFilter(); // Empty filter since we're exporting selected projects
+
+      await PdfExporter.exportProjectsToPdf(
+        context: context,
+        projects: projects,
+        filter: filter,
+        searchQuery: 'Selected Projects (${projects.length})',
+      );
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('PDF export failed: $e')),
         );
       }
     }

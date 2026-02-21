@@ -1464,5 +1464,53 @@
   "tagsLabel": "Tags",
   "@tagsLabel": {
     "description": "Label for the tags column in tables."
+  },
+  "exportToPdfLabel": "Export to PDF",
+  "@exportToPdfLabel": {
+    "description": "Label for the export to PDF button."
+  },
+  "exportingPdfMessage": "Generating PDF report...",
+  "@exportingPdfMessage": {
+    "description": "Message shown while generating PDF."
+  },
+  "pdfExportedMessage": "PDF exported successfully",
+  "@pdfExportedMessage": {
+    "description": "Success message when PDF is exported."
+  },
+  "pdfExportErrorMessage": "Failed to export PDF",
+  "@pdfExportErrorMessage": {
+    "description": "Error message when PDF export fails."
+  },
+  "projectsReportTitle": "Projects Report",
+  "@projectsReportTitle": {
+    "description": "Title for the PDF projects report."
+  },
+  "generatedOnLabel": "Generated on",
+  "@generatedOnLabel": {
+    "description": "Label for the generation date in PDF."
+  },
+  "activeFiltersLabel": "Active Filters",
+  "@activeFiltersLabel": {
+    "description": "Label for active filters section in PDF."
+  },
+  "summaryLabel": "Summary",
+  "@summaryLabel": {
+    "description": "Label for the summary section in PDF."
+  },
+  "totalProjectsLabel": "Total Projects",
+  "@totalProjectsLabel": {
+    "description": "Label for total projects count."
+  },
+  "priorityDistributionLabel": "Priority Distribution",
+  "@priorityDistributionLabel": {
+    "description": "Label for priority distribution chart."
+  },
+  "dueDatesLabel": "Due Dates",
+  "@dueDatesLabel": {
+    "description": "Label for due dates chart."
+  },
+  "projectListLabel": "Project List",
+  "@projectListLabel": {
+    "description": "Label for the project list section."
   }
 }
