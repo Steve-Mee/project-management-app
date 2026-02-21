@@ -13,6 +13,27 @@ import 'package:my_project_management_app/core/repository/project_meta_repositor
 import 'package:my_project_management_app/models/project_meta.dart';
 import 'package:my_project_management_app/core/auth/permissions.dart';
 
+/// Parameters for the filtered projects family provider
+class ProjectFilterParams {
+  final String? status;
+  final String? searchQuery;
+  final DateTime? startDate;
+  final DateTime? endDate;
+  final String? priority;
+  final String? ownerId;
+  final List<String>? tags;
+
+  const ProjectFilterParams({
+    this.status,
+    this.searchQuery,
+    this.startDate,
+    this.endDate,
+    this.priority,
+    this.ownerId,
+    this.tags,
+  });
+}
+
 /// Cache entry with TTL for project data
 class _CacheEntry<T> {
   final T data;
@@ -73,19 +94,21 @@ final projectByIdProvider = FutureProvider.autoDispose.family<ProjectModel?, Str
 
 /// Family provider for filtered projects (e.g., by status, user, etc.)
 /// Extensible for future filtering needs
-final filteredProjectsProvider = FutureProvider.autoDispose.family<List<ProjectModel>, ProjectFilter>((ref, filter) async {
+final filteredProjectsProvider = FutureProvider.autoDispose.family<List<ProjectModel>, ProjectFilterParams>((ref, params) async {
   final repository = ref.watch(projectRepositoryProvider);
-  
-  final allProjects = await repository.getAllProjects();
-  
-  // Apply filters
-  return allProjects.where((project) {
-    if (filter.status != null && project.status != filter.status) return false;
-    // Fix: ProjectModel does not have 'createdBy', use sharedUsers for userId filtering
-    if (filter.userId != null && !project.sharedUsers.contains(filter.userId)) return false;
-    return true;
-  }).toList();
+  return repository.getFilteredProjects(
+    repo.ProjectFilter( // map params to repository filter
+      status: params.status,
+      searchQuery: params.searchQuery,
+      startDate: params.startDate,
+      endDate: params.endDate,
+      priority: params.priority,
+      ownerId: params.ownerId,
+      tags: params.tags,
+    ),
+  );
 });
+// Ready for UI integration
 
 /// Dedicated paginated projects provider
 /// Use this for lists that need efficient loading (dashboard, projects page, etc.)
