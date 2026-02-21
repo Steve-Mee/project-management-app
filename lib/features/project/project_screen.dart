@@ -23,6 +23,7 @@ import '../../models/project_sort.dart';
 import 'widgets/project_filter_dialog.dart';
 import 'widgets/project_views.dart';
 import 'widgets/active_viewers_indicator.dart';
+import 'widgets/recent_filters_menu.dart';
 
 /// Project management screen - displays list of all projects
 class ProjectScreen extends ConsumerStatefulWidget {
@@ -300,6 +301,9 @@ class _ProjectScreenState extends ConsumerState<ProjectScreen> {
                             }
                           },
                         ),
+                        const SizedBox(width: 8),
+                        // Recent Filters Menu
+                        const RecentFiltersMenu(),
                         const SizedBox(width: 8),
                         // Active Viewers Indicator
                         const ActiveViewersIndicator(),

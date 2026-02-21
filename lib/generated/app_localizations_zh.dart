@@ -1096,4 +1096,22 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get projectListLabel => 'Project List';
+
+  @override
+  String get recentFiltersTooltip => 'Recent filters';
+
+  @override
+  String get unnamedFilterLabel => 'Unnamed Filter';
+
+  @override
+  String get ownerLabel => 'Owner';
+
+  @override
+  String get ascendingLabel => 'ascending';
+
+  @override
+  String get descendingLabel => 'descending';
+
+  @override
+  String get allProjectsLabel => 'All Projects';
 }

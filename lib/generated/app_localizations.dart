@@ -528,7 +528,7 @@ abstract class AppLocalizations {
   /// **'Loading more projects...'**
   String get loadingMoreProjects;
 
-  /// Auto-generated description for sortByLabel.
+  /// Label for sort by field.
   ///
   /// In en, this message translates to:
   /// **'Sort by'**
@@ -1143,7 +1143,7 @@ abstract class AppLocalizations {
   /// **'Ideal trend'**
   String get idealTrendLabel;
 
-  /// Label for the status column in tables.
+  /// Label for status field.
   ///
   /// In en, this message translates to:
   /// **'Status'**
@@ -2023,7 +2023,7 @@ abstract class AppLocalizations {
   /// **'Name'**
   String get nameLabel;
 
-  /// Label for the priority column in tables.
+  /// Label for priority field.
   ///
   /// In en, this message translates to:
   /// **'Priority'**
@@ -2041,7 +2041,7 @@ abstract class AppLocalizations {
   /// **'Due Date'**
   String get dueDateLabel;
 
-  /// Label for the tags column in tables.
+  /// Label for tags field.
   ///
   /// In en, this message translates to:
   /// **'Tags'**
@@ -2118,6 +2118,42 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Project List'**
   String get projectListLabel;
+
+  /// Tooltip for the recent filters menu button.
+  ///
+  /// In en, this message translates to:
+  /// **'Recent filters'**
+  String get recentFiltersTooltip;
+
+  /// Label for filters without a custom name.
+  ///
+  /// In en, this message translates to:
+  /// **'Unnamed Filter'**
+  String get unnamedFilterLabel;
+
+  /// Label for owner field.
+  ///
+  /// In en, this message translates to:
+  /// **'Owner'**
+  String get ownerLabel;
+
+  /// Label for ascending sort direction.
+  ///
+  /// In en, this message translates to:
+  /// **'ascending'**
+  String get ascendingLabel;
+
+  /// Label for descending sort direction.
+  ///
+  /// In en, this message translates to:
+  /// **'descending'**
+  String get descendingLabel;
+
+  /// Label for showing all projects (no filters).
+  ///
+  /// In en, this message translates to:
+  /// **'All Projects'**
+  String get allProjectsLabel;
 }
 
 class _AppLocalizationsDelegate

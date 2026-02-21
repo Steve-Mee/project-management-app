@@ -768,10 +768,17 @@ class ProjectFilterNotifier extends StateNotifier<ProjectFilter> {
   static const String _boxName = 'project_filters';
   static const String _key = 'current_filter';
   static const String _defaultKey = 'default_project_filter';
+  static const String _recentFiltersKey = 'recent_filters';
+  static const int _maxRecentFilters = 5;
 
   ProjectFilterNotifier() : super(const ProjectFilter()) {
     _loadFilter();
+    _loadRecentFilters();
   }
+
+  List<ProjectFilter> _recentFilters = [];
+
+  List<ProjectFilter> get recentFilters => _recentFilters;
 
   Future<void> _loadFilter() async {
     try {
@@ -789,17 +796,27 @@ class ProjectFilterNotifier extends StateNotifier<ProjectFilter> {
     }
   }
 
-  Future<void> _loadDefaultFilter() async {
+  Future<void> _loadRecentFilters() async {
     try {
       final box = await Hive.openBox(_boxName);
-      final json = box.get(_defaultKey);
-      if (json != null && json is Map) {
-        state = ProjectFilter.fromJson(Map<String, dynamic>.from(json));
-      } else {
-        state = const ProjectFilter();
+      final jsonList = box.get(_recentFiltersKey);
+      if (jsonList != null && jsonList is List) {
+        _recentFilters = jsonList
+            .map((json) => ProjectFilter.fromJson(Map<String, dynamic>.from(json)))
+            .toList();
       }
     } catch (e) {
-      state = const ProjectFilter();
+      _recentFilters = [];
+    }
+  }
+
+  Future<void> _saveRecentFilters() async {
+    try {
+      final box = await Hive.openBox(_boxName);
+      final jsonList = _recentFilters.map((filter) => filter.toJson()).toList();
+      await box.put(_recentFiltersKey, jsonList);
+    } catch (e) {
+      // Log error but don't fail
     }
   }
 
@@ -829,6 +846,19 @@ class ProjectFilterNotifier extends StateNotifier<ProjectFilter> {
   void updateFilter(ProjectFilter newFilter) {
     state = newFilter;
     _saveFilter(newFilter);
+    _addToRecentFilters(newFilter);
+  }
+
+  void _addToRecentFilters(ProjectFilter filter) {
+    // Remove if already exists (to move to front)
+    _recentFilters.removeWhere((f) => f == filter);
+    // Add to front
+    _recentFilters.insert(0, filter);
+    // Keep only the most recent 5
+    if (_recentFilters.length > _maxRecentFilters) {
+      _recentFilters = _recentFilters.sublist(0, _maxRecentFilters);
+    }
+    _saveRecentFilters();
   }
 
   Future<void> saveView(String name) async {

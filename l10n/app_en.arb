@@ -1528,5 +1528,45 @@
   "projectListLabel": "Project List",
   "@projectListLabel": {
     "description": "Label for the project list section."
+  },
+  "recentFiltersTooltip": "Recent filters",
+  "@recentFiltersTooltip": {
+    "description": "Tooltip for the recent filters menu button."
+  },
+  "unnamedFilterLabel": "Unnamed Filter",
+  "@unnamedFilterLabel": {
+    "description": "Label for filters without a custom name."
+  },
+  "statusLabel": "Status",
+  "@statusLabel": {
+    "description": "Label for status field."
+  },
+  "priorityLabel": "Priority",
+  "@priorityLabel": {
+    "description": "Label for priority field."
+  },
+  "tagsLabel": "Tags",
+  "@tagsLabel": {
+    "description": "Label for tags field."
+  },
+  "ownerLabel": "Owner",
+  "@ownerLabel": {
+    "description": "Label for owner field."
+  },
+  "sortByLabel": "Sort by",
+  "@sortByLabel": {
+    "description": "Label for sort by field."
+  },
+  "ascendingLabel": "ascending",
+  "@ascendingLabel": {
+    "description": "Label for ascending sort direction."
+  },
+  "descendingLabel": "descending",
+  "@descendingLabel": {
+    "description": "Label for descending sort direction."
+  },
+  "allProjectsLabel": "All Projects",
+  "@allProjectsLabel": {
+    "description": "Label for showing all projects (no filters)."
   }
 }
