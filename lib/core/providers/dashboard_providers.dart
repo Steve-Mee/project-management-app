@@ -1,49 +1,26 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:hive_flutter/hive_flutter.dart';
 import 'package:my_project_management_app/models/project_requirements.dart';
-import 'package:my_project_management_app/core/services/requirements_service.dart';
-
-/// Dashboard item configuration
-/// TODO: Add validation for widgetType
-/// TODO: Add position constraints/boundaries
-class DashboardItem {
-  final String widgetType;
-  final Map<String, dynamic> position;
-
-  const DashboardItem({
-    required this.widgetType,
-    required this.position,
-  });
-
-  Map<String, dynamic> toJson() => {
-        'widgetType': widgetType,
-        'position': position,
-      };
-
-  factory DashboardItem.fromJson(Map<String, dynamic> json) => DashboardItem(
-        widgetType: json['widgetType'],
-        position: json['position'],
-      );
-}
+import 'package:my_project_management_app/core/repository/i_dashboard_repository.dart';
+import 'package:my_project_management_app/core/repository/dashboard_repository.dart';
 
 /// Notifier for managing dashboard configuration with persistence
 /// TODO: Add undo/redo functionality
 /// TODO: Add dashboard templates
 /// TODO: Add collaborative dashboard sharing
 class DashboardConfigNotifier extends Notifier<List<DashboardItem>> {
+  late final IDashboardRepository _repository;
+
   @override
   List<DashboardItem> build() {
+    _repository = ref.read(dashboardRepositoryProvider);
     loadConfig();
     return [];
   }
 
   Future<void> loadConfig() async {
     try {
-      final box = await Hive.openBox<List>('dashboard_config');
-      final data = box.get('config', defaultValue: []);
-      if (data != null) {
-        state = data.map((map) => DashboardItem.fromJson(map as Map<String, dynamic>)).toList();
-      }
+      final items = await _repository.loadDashboardConfig();
+      state = items;
     } catch (e) {
       // TODO: Add error handling/logging
       state = [];
@@ -52,9 +29,7 @@ class DashboardConfigNotifier extends Notifier<List<DashboardItem>> {
 
   Future<void> saveConfig(List<DashboardItem> items) async {
     try {
-      final box = await Hive.openBox<List>('dashboard_config');
-      final data = items.map((item) => item.toJson()).toList();
-      await box.put('config', data);
+      await _repository.saveDashboardConfig(items);
       state = items;
     } catch (e) {
       // TODO: Add error handling/logging
@@ -64,26 +39,20 @@ class DashboardConfigNotifier extends Notifier<List<DashboardItem>> {
 
   /// Add a new dashboard item
   Future<void> addItem(DashboardItem item) async {
-    final newItems = [...state, item];
-    await saveConfig(newItems);
+    await _repository.addDashboardItem(item);
+    await loadConfig(); // Refresh state
   }
 
   /// Remove a dashboard item by index
   Future<void> removeItem(int index) async {
-    if (index < 0 || index >= state.length) return;
-    final newItems = List<DashboardItem>.from(state)..removeAt(index);
-    await saveConfig(newItems);
+    await _repository.removeDashboardItem(index);
+    await loadConfig(); // Refresh state
   }
 
   /// Update item position
   Future<void> updateItemPosition(int index, Map<String, dynamic> newPosition) async {
-    if (index < 0 || index >= state.length) return;
-    final newItems = List<DashboardItem>.from(state);
-    newItems[index] = DashboardItem(
-      widgetType: newItems[index].widgetType,
-      position: newPosition,
-    );
-    await saveConfig(newItems);
+    await _repository.updateDashboardItemPosition(index, newPosition);
+    await loadConfig(); // Refresh state
   }
 }
 
@@ -92,10 +61,9 @@ final dashboardConfigProvider = NotifierProvider<DashboardConfigNotifier, List<D
   DashboardConfigNotifier.new,
 );
 
-/// Provider for requirements service
-/// TODO: Consider using an abstract interface for easy testing/swapping
-final requirementsServiceProvider = Provider<RequirementsService>((ref) {
-  return RequirementsService();
+/// Provider for dashboard repository
+final dashboardRepositoryProvider = Provider<IDashboardRepository>((ref) {
+  return DashboardRepository();
 });
 
 /// Provider for project requirements by project ID with error handling
@@ -118,11 +86,11 @@ final projectRequirementsProvider = FutureProvider.family<ProjectRequirements, S
         orElse: () => throw Exception('Project not found'),
       );
 
-      final service = ref.read(requirementsServiceProvider);
+      final repository = ref.read(dashboardRepositoryProvider);
 
       // If project has a category, try to fetch from API
       if (project.category != null && project.category!.isNotEmpty) {
-        return service.fetchRequirements(project.category!);
+        return repository.fetchRequirements(project.category!);
       }
 
       // Otherwise return empty requirements
