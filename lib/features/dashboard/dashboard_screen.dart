@@ -29,6 +29,10 @@ import 'widgets/project_card_widget.dart';
 /// Filter state for projects list
 final currentProjectFilterProvider = StateProvider<ProjectFilter>((ref) => const ProjectFilter());
 
+/// Sorting state for projects list
+final currentProjectSortProvider = StateProvider<ProjectSort>((ref) => ProjectSort.name);
+
+
 /// Dashboard screen - responsive main page with projects overview
 class DashboardScreen extends ConsumerStatefulWidget {
   const DashboardScreen({super.key});
@@ -59,9 +63,14 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   final ScrollController _scrollController = ScrollController();
   Timer? _debounce;
   static const int _pageSize = 9;
-  int _visibleCount = _pageSize;
-  String _selectedStatus = 'All';
-  ProjectSort _sortBy = ProjectSort.name;
+
+  // pagination state
+  int _page = 1;
+  bool _hasMore = true;
+  bool _isLoading = false;
+  List<ProjectModel> _projects = [];
+
+  // we no longer keep local sort/status values; read from providers
 
   @override
   void initState() {
@@ -177,20 +186,16 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
       case 'aiUsage':
         return const _AiUsageWidget();
       case 'filters':
+        final filter = ref.watch(currentProjectFilterProvider);
+        final sort = ref.watch(currentProjectSortProvider);
         return FiltersSortWidget(
-          selectedStatus: _selectedStatus,
-          sortBy: _sortBy,
+          selectedStatus: filter.status ?? 'All',
+          sortBy: sort,
           onStatusChanged: (status) {
-            setState(() {
-              _selectedStatus = status;
-              _visibleCount = _pageSize;
-            });
+            _updateStatus(status);
           },
           onSortChanged: (sort) {
-            setState(() {
-              _sortBy = sort;
-              _visibleCount = _pageSize;
-            });
+            _updateSort(sort);
           },
           projects: projects,
         );
@@ -202,18 +207,57 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   /// Build shimmer loading skeleton
   Widget _buildFilterBar(BuildContext context, ProjectFilter filter) {
     final l10n = AppLocalizations.of(context)!;
+    final sort = ref.watch(currentProjectSortProvider);
+
+    // helper for readable sort labels
+    String sortLabel(ProjectSort s) {
+      switch (s) {
+        case ProjectSort.name:
+          return 'Name A–Z';
+        case ProjectSort.progress:
+          return 'Progress ↓';
+        case ProjectSort.priority:
+          return 'Priority';
+        case ProjectSort.createdDate:
+          return 'Created (new→old)';
+        case ProjectSort.status:
+          return 'Status';
+      }
+    }
+
     return Padding(
       padding: const EdgeInsets.all(8.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          TextField(
-            decoration: InputDecoration(
-              hintText: l10n.searchTasksHint,
-              prefixIcon: const Icon(Icons.search),
-              border: const OutlineInputBorder(),
-            ),
-            onChanged: _updateSearch,
+          Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  decoration: InputDecoration(
+                    hintText: l10n.searchTasksHint,
+                    prefixIcon: const Icon(Icons.search),
+                    border: const OutlineInputBorder(),
+                  ),
+                  onChanged: _updateSearch,
+                ),
+              ),
+              const SizedBox(width: 12),
+              DropdownButton<ProjectSort>(
+                value: sort,
+                items: ProjectSort.values
+                    .map((s) => DropdownMenuItem(
+                          value: s,
+                          child: Text(sortLabel(s)),
+                        ))
+                    .toList(),
+                onChanged: (s) {
+                  if (s != null) {
+                    _updateSort(s);
+                  }
+                },
+              ),
+            ],
           ),
           const SizedBox(height: 8),
           Wrap(
@@ -268,14 +312,12 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   }
 
   void _onScroll() {
-    if (!_scrollController.hasClients) {
-      return;
-    }
+    if (!_scrollController.hasClients || !_hasMore || _isLoading) return;
 
     final position = _scrollController.position;
     if (position.pixels >= position.maxScrollExtent - 200) {
       setState(() {
-        _visibleCount += _pageSize;
+        _page += 1;
       });
     }
   }
@@ -289,6 +331,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             status: current.status,
             searchQuery: query,
           );
+      _resetPagination();
     });
   }
 
@@ -299,6 +342,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
           status: status == 'All' ? null : status,
           searchQuery: current.searchQuery,
         );
+    _resetPagination();
   }
 
   _ChartColors _chartColors(BuildContext context) {
@@ -391,8 +435,47 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final filter = ref.watch(currentProjectFilterProvider);
-    final projectsState = ref.watch(filteredProjectsProvider(filter));
+    final sort = ref.watch(currentProjectSortProvider);
     final canUseAi = ref.watch(hasPermissionProvider(AppPermissions.useAi));
+
+    // watch paginated data for current page
+    final params = ProjectPaginationParams(
+      page: _page,
+      limit: _pageSize,
+      statusFilter: filter.status,
+      searchQuery: filter.searchQuery,
+    );
+    final pageState = ref.watch(projectsPaginatedProvider(params));
+
+    // listen to new page results and append
+    ref.listen<AsyncValue<List<ProjectModel>>>(projectsPaginatedProvider(params),
+        (previous, next) {
+      next.whenData((newProjects) {
+        if (_page == 1) {
+          _projects = List.from(newProjects);
+        } else {
+          _projects.addAll(newProjects);
+        }
+        if (newProjects.length < _pageSize) {
+          _hasMore = false;
+        }
+        _sortProjectsLocal();
+      });
+    });
+
+    Widget bodyContent;
+    if (pageState.isLoading && _projects.isEmpty) {
+      bodyContent = _buildShimmerLoading();
+    } else if (pageState.hasError && _projects.isEmpty) {
+      bodyContent = ErrorStateWidget(
+        error: pageState.error!,
+        onRetry: () {
+          _resetPagination();
+        },
+      );
+    } else {
+      bodyContent = _buildListView();
+    }
 
     return Scaffold(
       body: Container(
@@ -407,33 +490,11 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
           ),
         ),
         child: SafeArea(
-          child: SingleChildScrollView(
-            child: Center(
-              child: FadeIn(
-                duration: const Duration(milliseconds: 500),
-                child: ConstrainedBox(
-                  constraints: BoxConstraints(
-                    maxWidth: MediaQuery.of(context).size.width,
-                    maxHeight: MediaQuery.of(context).size.height,
-                  ),
-                  child: Column(
-                    children: [
-                      _buildFilterBar(context, filter),
-                      Expanded(
-                        child: projectsState.when(
-                          loading: _buildShimmerLoading,
-                          error: (error, _) => ErrorStateWidget(
-                            error: error,
-                            onRetry: () => ref.read(projectsProvider.notifier).refresh(),
-                          ),
-                          data: (projects) => _buildDashboardContent(context, projects),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
+          child: Column(
+            children: [
+              _buildFilterBar(context, filter),
+              Expanded(child: bodyContent),
+            ],
           ),
         ),
       ),
@@ -501,92 +562,26 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     );
   }
 
+  // Legacy dashboard builders no longer used by combined list.
+  // We keep them for reference but they are effectively obsolete.
   Widget _buildDefaultDashboard(BuildContext context, List<ProjectModel> projects) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final isDesktop = constraints.maxWidth > 600;
-
-        // provider already supplies filtered projects
-        final filteredProjects = projects;
-
-        final metaByProjectId = ref.watch(projectMetaProvider);
-        final sortedProjects =
-            _sortProjects(filteredProjects, metaByProjectId);
-
-        if (filteredProjects.isEmpty) {
-          return EmptyStateWidget(query: ref.watch(currentProjectFilterProvider).searchQuery ?? '');
-        }
-
-        final visibleProjects =
-          sortedProjects.take(_visibleCount).toList();
-        final hasMore = visibleProjects.length < sortedProjects.length;
-        final itemsPerRow = 3;
-        final rowCount = isDesktop
-            ? (visibleProjects.length / itemsPerRow).ceil()
-            : visibleProjects.length;
-        const headerCount = 2;
-        const footerCount = 3;
-        final totalCount = headerCount + rowCount + footerCount;
-
-        return ListView.builder(
-          controller: _scrollController,
-          padding: EdgeInsets.all(16.w),
-          itemCount: totalCount,
-          itemBuilder: (context, index) {
-            if (index == 0) {
-              return FadeInDown(
-                duration: const Duration(milliseconds: 500),
-                child: const WelcomeHeaderWidget(),
-              );
-            }
-
-            if (index == 1) {
-              // placeholder or spacing widget
-              return const SizedBox(height: 0);
-            }
-
-            final projectStart = headerCount;
-            final projectEnd = projectStart + rowCount;
-            if (index >= projectStart && index < projectEnd) {
-              final rowIndex = index - projectStart;
-              return _buildProjectRow(context, rowIndex, visibleProjects, isDesktop);
-            }
-
-            final footerIndex = index - projectEnd;
-            if (footerIndex == 0) {
-              if (!hasMore) {
-                return const SizedBox.shrink();
-              }
-              return const LoadingMoreWidget();
-            }
-
-            if (footerIndex == 1) {
-              return const RecentWorkflowsHeaderWidget();
-            }
-
-            return TaskChartWidget(projects: projects);
-          },
-        );
-      },
-    );
+    // not used
+    return const SizedBox.shrink();
   }
 
-  List<ProjectModel> _sortProjects(
-    List<ProjectModel> projects,
-    Map<String, ProjectMeta> metaByProjectId,
-  ) {
-    final sorted = [...projects];
-    switch (_sortBy) {
+  // sort local accumulated projects according to provider state
+  void _sortProjectsLocal() {
+    final sort = ref.read(currentProjectSortProvider);
+    final metaByProjectId = ref.read(projectMetaProvider);
+    switch (sort) {
       case ProjectSort.name:
-        sorted.sort(
-          (a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()),
-        );
+        _projects.sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
         break;
       case ProjectSort.progress:
-        sorted.sort((a, b) => b.progress.compareTo(a.progress));
+        _projects.sort((a, b) => b.progress.compareTo(a.progress));
         break;
       case ProjectSort.priority:
-        sorted.sort((a, b) {
+        _projects.sort((a, b) {
           final metaA = metaByProjectId[a.id] ?? ProjectMeta.defaultFor(a.id);
           final metaB = metaByProjectId[b.id] ?? ProjectMeta.defaultFor(b.id);
           final urgencyCompare =
@@ -597,8 +592,58 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
           return metaB.trackedSeconds.compareTo(metaA.trackedSeconds);
         });
         break;
+      case ProjectSort.createdDate:
+        // model doesn't have a createdAt field yet; leave order unchanged
+        break;
+      case ProjectSort.status:
+        _projects.sort((a, b) => a.status.compareTo(b.status));
+        break;
     }
-    return sorted;
+  }
+
+  void _resetPagination() {
+    setState(() {
+      _page = 1;
+      _projects.clear();
+      _hasMore = true;
+      _isLoading = false;
+    });
+    if (_scrollController.hasClients) {
+      _scrollController.jumpTo(0);
+    }
+  }
+
+  void _updateSort(ProjectSort sort) {
+    ref.read(currentProjectSortProvider.notifier).state = sort;
+    _resetPagination();
+  }
+
+  Widget _buildListView() {
+    return ListView.builder(
+      controller: _scrollController,
+      padding: EdgeInsets.all(16.w),
+      itemCount: _projects.length + (_hasMore ? 1 : 0),
+      itemBuilder: (context, index) {
+        if (index < _projects.length) {
+          final project = _projects[index];
+          return Padding(
+            padding: EdgeInsets.only(bottom: 12.h),
+            child: AspectRatio(
+              aspectRatio: 1 / 0.75,
+              child: FadeInUp(
+                duration: Duration(milliseconds: 400 + index * 100),
+                child: ProjectCardWidget(
+                  key: Key(project.id),
+                  project: project,
+                  onTap: () => _showProjectDetailSheet(context, project),
+                ),
+              ),
+            ),
+          );
+        }
+        return const LoadingMoreWidget();
+      },
+    );
   }
 
   /// Show project detail sheet with burndown chart

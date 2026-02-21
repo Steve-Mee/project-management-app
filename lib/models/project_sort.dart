@@ -2,17 +2,23 @@ enum ProjectSort {
   name,
   progress,
   priority,
+  createdDate,
+  status,
 }
 
 extension ProjectSortX on ProjectSort {
   String get label {
     switch (this) {
       case ProjectSort.name:
-        return 'Naam';
+        return 'Name';
       case ProjectSort.progress:
-        return 'Voortgang';
+        return 'Progress';
       case ProjectSort.priority:
-        return 'Prioriteit';
+        return 'Priority';
+      case ProjectSort.createdDate:
+        return 'Created';
+      case ProjectSort.status:
+        return 'Status';
     }
   }
 }
