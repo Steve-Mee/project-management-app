@@ -1,7 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:my_project_management_app/core/services/login_rate_limiter.dart';
-import 'package:my_project_management_app/core/services/app_logger.dart';
 
 void main() {
   setUpAll(() async {
@@ -57,7 +56,6 @@ void main() {
     test('cleans old attempts (sliding window)', () async {
       // Simulate attempts over time
       final limiter = LoginRateLimiter.instance;
-      final now = DateTime.now();
 
       // Add 5 attempts just within window
       for (int i = 0; i < 5; i++) {
