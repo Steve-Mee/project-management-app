@@ -91,7 +91,6 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     final l10n = AppLocalizations.of(context)!;
     final sort = ref.watch(currentProjectSortProvider);
     final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
 
     // helper for readable sort labels
     String sortLabel(ProjectSort s) {
