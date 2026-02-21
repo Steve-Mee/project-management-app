@@ -44,6 +44,7 @@ class AuthRepository implements IAuthRepository {
   AuthRepository({RemoteAuthService? remote})
       : _remote = remote ?? RemoteAuthService();
 
+  @override
   Future<void> initialize() async {
     await Hive.initFlutter();
     if (!Hive.isBoxOpen(_boxName)) {
@@ -55,6 +56,7 @@ class AuthRepository implements IAuthRepository {
 
   Box get _box => Hive.box(_boxName);
 
+  @override
   List<AppUser> getUsers() {
     final raw = _box.get(_usersKey);
     if (raw is List) {
@@ -67,6 +69,7 @@ class AuthRepository implements IAuthRepository {
     return [];
   }
 
+  @override
   AppUser? getUserByUsername(String username) {
     final trimmed = username.trim().toLowerCase();
     if (trimmed.isEmpty) {
@@ -81,6 +84,7 @@ class AuthRepository implements IAuthRepository {
     return null;
   }
 
+  @override
   List<RoleDefinition> getRoles() {
     final raw = _box.get(_rolesKey);
     if (raw is List) {
@@ -93,6 +97,7 @@ class AuthRepository implements IAuthRepository {
     return [];
   }
 
+  @override
   RoleDefinition? getRoleById(String roleId) {
     for (final role in getRoles()) {
       if (role.id == roleId) {
@@ -102,6 +107,7 @@ class AuthRepository implements IAuthRepository {
     return null;
   }
 
+  @override
   Future<void> upsertRole(RoleDefinition role) async {
     final roles = getRoles();
     roles.removeWhere((item) => item.id == role.id);
@@ -112,6 +118,7 @@ class AuthRepository implements IAuthRepository {
     );
   }
 
+  @override
   Future<void> deleteRole(String roleId) async {
     if (roleId == adminRoleId || roleId == defaultUserRoleId) {
       return;
@@ -123,6 +130,7 @@ class AuthRepository implements IAuthRepository {
     );
   }
 
+  @override
   List<GroupDefinition> getGroups() {
     final raw = _box.get(_groupsKey);
     if (raw is List) {
@@ -135,6 +143,7 @@ class AuthRepository implements IAuthRepository {
     return [];
   }
 
+  @override
   GroupDefinition? getGroupById(String groupId) {
     for (final group in getGroups()) {
       if (group.id == groupId) {
@@ -144,6 +153,7 @@ class AuthRepository implements IAuthRepository {
     return null;
   }
 
+  @override
   List<GroupDefinition> getGroupsForUser(String username) {
     final trimmed = username.trim().toLowerCase();
     if (trimmed.isEmpty) {
@@ -157,6 +167,7 @@ class AuthRepository implements IAuthRepository {
         .toList();
   }
 
+  @override
   Future<void> upsertGroup(GroupDefinition group) async {
     final groups = getGroups();
     groups.removeWhere((item) => item.id == group.id);
@@ -167,6 +178,7 @@ class AuthRepository implements IAuthRepository {
     );
   }
 
+  @override
   Future<void> deleteGroup(String groupId) async {
     final groups = getGroups()..removeWhere((item) => item.id == groupId);
     await _box.put(
@@ -175,6 +187,7 @@ class AuthRepository implements IAuthRepository {
     );
   }
 
+  @override
   Future<void> addUserToGroup(String groupId, String username) async {
     final group = getGroupById(groupId);
     if (group == null) {
@@ -193,6 +206,7 @@ class AuthRepository implements IAuthRepository {
     );
   }
 
+  @override
   Future<void> removeUserFromGroup(String groupId, String username) async {
     final group = getGroupById(groupId);
     if (group == null) {
@@ -212,6 +226,7 @@ class AuthRepository implements IAuthRepository {
     );
   }
 
+  @override
   Future<void> updateUserRole(String username, String roleId) async {
     final users = getUsers();
     final updated = users.map((user) {
@@ -231,6 +246,7 @@ class AuthRepository implements IAuthRepository {
     );
   }
 
+  @override
   Future<void> addUser(AppUser user) async {
     // NOTE: Integreer Firebase Auth later; if (useRemote) { ... } else { local add }.
     final users = getUsers();
@@ -252,6 +268,7 @@ class AuthRepository implements IAuthRepository {
     // NOTE: Integreer Firebase Auth later; register remote user when online.
   }
 
+  @override
   Future<void> deleteUser(String username) async {
     final users = getUsers();
     users.removeWhere(
@@ -268,6 +285,7 @@ class AuthRepository implements IAuthRepository {
     }
   }
 
+  @override
   AppUser? validateUser(String username, String password) {
     // NOTE: Integreer Firebase Auth later; if (useRemote) { ... } else { local validate }.
     final users = getUsers();
@@ -288,6 +306,7 @@ class AuthRepository implements IAuthRepository {
     return null;
   }
 
+  @override
   String? getCurrentUser() {
     final value = _box.get(_currentUserKey);
     if (value is String && value.isNotEmpty) {
@@ -296,6 +315,7 @@ class AuthRepository implements IAuthRepository {
     return null;
   }
 
+  @override
   Future<void> setCurrentUser(String? username) async {
     if (username == null || username.isEmpty) {
       await _box.delete(_currentUserKey);
@@ -304,6 +324,7 @@ class AuthRepository implements IAuthRepository {
     await _box.put(_currentUserKey, username);
   }
 
+  @override
   Future<void> logout() async {
     await _remote.signOut();
     await setCurrentUser(null);
