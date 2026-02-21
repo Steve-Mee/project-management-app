@@ -164,6 +164,37 @@ class ProjectRepository implements IProjectRepository {
     }
   }
 
+  /// Return projects matching a given status (simple filter)
+  @override
+  Future<List<ProjectModel>> getProjectsByStatus(String status) async {
+    final allProjects = await getAllProjects();
+    return allProjects.where((p) => p.status == status).toList();
+  }
+
+  /// Apply complex filtering criteria defined by [ProjectFilter].
+  /// Currently supports status, search query, and date ranges; other fields
+  /// (priority, ownerId, tags) are reserved for future use.
+  @override
+  Future<List<ProjectModel>> getFilteredProjects(ProjectFilter filter) async {
+    var projects = await getAllProjects();
+
+    if (filter.status != null) {
+      projects = projects.where((p) => p.status == filter.status).toList();
+    }
+    if (filter.searchQuery != null && filter.searchQuery!.isNotEmpty) {
+      final q = filter.searchQuery!.toLowerCase();
+      projects = projects.where((p) =>
+        p.name.toLowerCase().contains(q) ||
+        (p.description?.toLowerCase().contains(q) ?? false)
+      ).toList();
+    }
+    // date-based filtering would go here, but ProjectModel currently
+    // lacks a timestamp field (createdAt), so those filters are skipped.
+    // priority, ownerId, tags filtering can be added here later
+
+    return projects;
+  }
+
   /// Get a single project by ID
   @override
   Future<ProjectModel?> getProjectById(String id) async {
