@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:my_project_management_app/core/auth/permissions.dart';
 import 'package:my_project_management_app/core/auth/role_models.dart';
 import 'package:my_project_management_app/core/repository/auth_repository.dart';
-import 'package:my_project_management_app/core/providers.dart';
+import 'package:my_project_management_app/core/providers/auth_providers.dart';
 import 'package:my_project_management_app/generated/app_localizations.dart';
 
 class AdminScreen extends ConsumerStatefulWidget {

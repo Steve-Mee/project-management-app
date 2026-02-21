@@ -83,24 +83,4 @@ final searchQueryProvider = NotifierProvider<SearchQueryNotifier, String>(
   SearchQueryNotifier.new,
 );
 
-/// Notifier for notifications toggle
-class NotificationsNotifier extends Notifier<bool> {
-  @override
-  bool build() {
-    final settingsAsync = ref.watch(settingsRepositoryProvider);
-    return settingsAsync.maybeWhen(
-      data: (settings) => settings.getNotificationsEnabled() ?? true,
-      orElse: () => true,
-    );
-  }
 
-  Future<void> setEnabled(bool enabled) async {
-    state = enabled;
-    final settings = await ref.read(settingsRepositoryProvider.future);
-    await settings.setNotificationsEnabled(enabled);
-  }
-}
-
-final notificationsProvider = NotifierProvider<NotificationsNotifier, bool>(
-  NotificationsNotifier.new,
-);

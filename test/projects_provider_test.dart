@@ -1,6 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:my_project_management_app/core/providers.dart';
+import 'package:my_project_management_app/core/providers/project_providers.dart';
 import 'package:my_project_management_app/core/repository/project_repository.dart';
 import 'package:my_project_management_app/models/project_model.dart';
 

@@ -9,7 +9,8 @@ import 'package:my_project_management_app/features/dashboard/widgets/filters_sor
 import 'package:my_project_management_app/features/dashboard/widgets/recent_workflows_header_widget.dart';
 import 'package:my_project_management_app/models/project_model.dart';
 import 'package:my_project_management_app/models/project_sort.dart';
-import 'package:my_project_management_app/core/providers.dart';
+import 'package:my_project_management_app/core/providers/dashboard_providers.dart';
+import 'package:my_project_management_app/core/providers/project_providers.dart';
 
 class CustomizeDashboardScreen extends ConsumerStatefulWidget {
   const CustomizeDashboardScreen({super.key});

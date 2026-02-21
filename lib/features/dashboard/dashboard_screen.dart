@@ -9,7 +9,8 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:animate_do/animate_do.dart';
 import 'package:my_project_management_app/generated/app_localizations.dart';
 import 'package:my_project_management_app/core/auth/permissions.dart';
-import '../../core/providers.dart';
+import 'package:my_project_management_app/core/providers/project_providers.dart';
+import '../../core/providers/auth_providers.dart';
 import '../../core/theme.dart';
 import '../../models/project_meta.dart';
 import '../../models/project_model.dart';
@@ -89,6 +90,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   Widget _buildFilterBar(BuildContext context, ProjectFilter filter) {
     final l10n = AppLocalizations.of(context)!;
     final sort = ref.watch(currentProjectSortProvider);
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
 
     // helper for readable sort labels
     String sortLabel(ProjectSort s) {
@@ -106,52 +109,66 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
       }
     }
 
-    return Padding(
-      padding: const EdgeInsets.all(8.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Expanded(
-                child: TextField(
-                  decoration: InputDecoration(
-                    hintText: l10n.searchTasksHint,
-                    prefixIcon: const Icon(Icons.search),
-                    border: const OutlineInputBorder(),
+    return Card(
+      elevation: 2,
+      color: theme.colorScheme.surfaceContainerHighest,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
+      child: Padding(
+        padding: const EdgeInsets.all(12.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    decoration: InputDecoration(
+                      hintText: l10n.searchTasksHint,
+                      prefixIcon: const Icon(Icons.search),
+                      filled: true,
+                      fillColor: theme.colorScheme.surface,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8.r),
+                        borderSide: BorderSide.none,
+                      ),
+                    ),
+                    onChanged: _updateSearch,
                   ),
-                  onChanged: _updateSearch,
                 ),
-              ),
-              const SizedBox(width: 12),
-              DropdownButton<ProjectSort>(
-                value: sort,
-                items: ProjectSort.values
-                    .map((s) => DropdownMenuItem(
-                          value: s,
-                          child: Text(sortLabel(s)),
-                        ))
-                    .toList(),
-                onChanged: (s) {
-                  if (s != null) {
-                    _updateSort(s);
-                  }
-                },
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Wrap(
-            spacing: 8,
-            children: ['All', 'In Progress', 'Completed', 'On Hold', 'Cancelled']
-                .map((status) => FilterChip(
-                      label: Text(status),
-                      selected: (filter.status ?? 'All') == status,
-                      onSelected: (_) => _updateStatus(status),
-                    ))
-                .toList(),
-          ),
-        ],
+                const SizedBox(width: 12),
+                DropdownButton<ProjectSort>(
+                  value: sort,
+                  dropdownColor: theme.colorScheme.surface,
+                  style: theme.textTheme.bodyMedium,
+                  items: ProjectSort.values
+                      .map((s) => DropdownMenuItem(
+                            value: s,
+                            child: Text(sortLabel(s)),
+                          ))
+                      .toList(),
+                  onChanged: (s) {
+                    if (s != null) {
+                      _updateSort(s);
+                    }
+                  },
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              children: ['All', 'In Progress', 'Completed', 'On Hold', 'Cancelled']
+                  .map((status) => FilterChip(
+                        label: Text(status),
+                        selected: (filter.status ?? 'All') == status,
+                        selectedColor: theme.colorScheme.secondaryContainer,
+                        checkmarkColor: theme.colorScheme.onSecondaryContainer,
+                        onSelected: (_) => _updateStatus(status),
+                      ))
+                  .toList(),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -470,7 +487,15 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
       return Center(
         child: ConstrainedBox(
           constraints: BoxConstraints(maxWidth: min(1000.w, maxWidth)),
-          child: content,
+          child: Card(
+            elevation: 2,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16.r),
+            ),
+            color: Theme.of(context).colorScheme.surface,
+            clipBehavior: Clip.antiAlias,
+            child: content,
+          ),
         ),
       );
     });

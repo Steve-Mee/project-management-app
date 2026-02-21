@@ -7,8 +7,10 @@ import 'package:my_project_management_app/generated/app_localizations.dart';
 import 'package:my_project_management_app/core/auth/permissions.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-// ignore_for_file: use_build_context_synchronously
-import '../../core/providers.dart';
+// ignore_for_file: use_build_context_synchronously, unnecessary_underscores
+import 'package:my_project_management_app/core/providers/project_providers.dart';
+import '../../core/providers/auth_providers.dart';
+import '../../core/providers/theme_providers.dart';
 import '../../models/project_meta.dart';
 import '../../models/project_model.dart';
 import '../../models/project_sort.dart';

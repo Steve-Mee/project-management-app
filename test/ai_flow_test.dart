@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:my_project_management_app/core/providers/ai/index.dart';
-import 'package:my_project_management_app/core/providers/task_provider.dart';
+import 'package:my_project_management_app/core/providers.dart';
 import 'package:my_project_management_app/features/ai_chat/ai_chat_modal.dart';
 import 'package:my_project_management_app/generated/app_localizations.dart';
 import 'package:my_project_management_app/models/chat_message_model.dart';

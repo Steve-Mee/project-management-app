@@ -1,22 +1,21 @@
+/// Task-related providers
+/// (moved from providers.dart – part 2/4)
+library;
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../core/providers.dart';
+import 'package:my_project_management_app/core/providers/project_providers.dart' show projectRepositoryProvider, projectMetaRepositoryProvider;
+import 'package:my_project_management_app/core/providers/notification_providers.dart';
 import '../../core/services/app_logger.dart';
 import '../../models/task_model.dart';
 import 'package:my_project_management_app/core/repository/task_repository.dart';
-import 'package:my_project_management_app/core/services/notification_service.dart';
+import 'package:my_project_management_app/core/repository/sub_task_repository.dart';
+import 'package:my_project_management_app/models/sub_task_model.dart';
 
 /// Repository provider for tasks
 final taskRepositoryProvider = FutureProvider<TaskRepository>((ref) async {
   final repository = TaskRepository();
   await repository.initialize();
   return repository;
-});
-
-/// Provider for notification service
-final notificationServiceProvider = Provider<NotificationService>((ref) {
-  final service = NotificationService();
-  service.initialize();
-  return service;
 });
 
 /// Task state notifier for managing tasks
@@ -197,8 +196,8 @@ class TaskNotifier extends AsyncNotifier<List<Task>> {
       final projectRepository = ref.read(projectRepositoryProvider);
       final titles = tasks.map((task) => task.title).toList();
       await projectRepository.updateTasks(projectId, titles);
-    } catch (e, st) {
-      state = AsyncValue.error(e, st);
+    } catch (e) {
+      // ignore
     }
   }
 
@@ -321,3 +320,91 @@ class TaskStats {
     required this.completionPercentage,
   });
 }
+
+// -----------------------------------------------------------------------------
+// Sub-task related providers (previously in sub_task_provider.dart)
+
+
+// -----------------------------------------------------------------------------
+// Sub-task related providers (previously in sub_task_provider.dart)
+
+/// Repository provider for sub-tasks
+final subTaskRepositoryProvider = FutureProvider<SubTaskRepository>((ref) async {
+  final repo = SubTaskRepository();
+  await repo.init();
+  return repo;
+});
+
+/// Provider for all sub-tasks
+final subTasksProvider = FutureProvider<List<SubTask>>((ref) async {
+  final repo = await ref.watch(subTaskRepositoryProvider.future);
+  return repo.getAllSubTasks();
+});
+
+/// Provider for sub-tasks by task ID
+final subTasksByTaskProvider = FutureProvider.family<List<SubTask>, String>((ref, taskId) async {
+  final repo = await ref.watch(subTaskRepositoryProvider.future);
+  return repo.getSubTasksByTaskId(taskId);
+});
+
+/// Provider for sub-task expansion state
+final taskExpansionProvider = NotifierProvider<TaskExpansionNotifier, Map<String, bool>>(() {
+  return TaskExpansionNotifier();
+});
+
+/// Notifier for managing task expansion states
+class TaskExpansionNotifier extends Notifier<Map<String, bool>> {
+  @override
+  Map<String, bool> build() {
+    return {};
+  }
+
+  void toggleExpansion(String taskId) {
+    state = {
+      ...state,
+      taskId: !(state[taskId] ?? false),
+    };
+  }
+
+  void setExpansion(String taskId, bool expanded) {
+    state = {
+      ...state,
+      taskId: expanded,
+    };
+  }
+}
+
+/// Provider for sub-task generation loading state
+final subTaskGenerationProvider = NotifierProvider<SubTaskGenerationNotifier, Map<String, AsyncValue<List<SubTask>>>>(() {
+  return SubTaskGenerationNotifier();
+});
+
+/// Notifier for managing sub-task generation
+class SubTaskGenerationNotifier extends Notifier<Map<String, AsyncValue<List<SubTask>>>> {
+  @override
+  Map<String, AsyncValue<List<SubTask>>> build() {
+    return {};
+  }
+
+  void startGeneration(String taskId) {
+    state = {
+      ...state,
+      taskId: const AsyncValue.loading(),
+    };
+  }
+
+  void completeGeneration(String taskId, List<SubTask> subTasks) {
+    state = {
+      ...state,
+      taskId: AsyncValue.data(subTasks),
+    };
+  }
+
+  void failGeneration(String taskId, Object error) {
+    state = {
+      ...state,
+      taskId: AsyncValue.error(error, StackTrace.current),
+    };
+  }
+}
+

@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:my_project_management_app/core/providers.dart';
+import 'package:my_project_management_app/core/providers/project_providers.dart';
+import 'package:my_project_management_app/core/providers/task_providers.dart';
+import 'package:my_project_management_app/core/providers/ai/index.dart' show aiChatProvider;
+import 'package:my_project_management_app/core/providers/auth_providers.dart';
 import 'package:my_project_management_app/models/project_model.dart';
 import 'package:my_project_management_app/models/task_model.dart';
 import 'package:my_project_management_app/core/repository/auth_repository.dart';

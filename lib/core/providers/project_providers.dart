@@ -1,5 +1,7 @@
-/// Pagination Provider Setup Complete (issue #004)
-/// All new UI should use projectsPaginatedProvider
+/*
+Pagination Provider Setup Complete (issue #004)
+All new UI should use projectsPaginatedProvider
+*/
 import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:my_project_management_app/models/project_model.dart';
@@ -26,11 +28,15 @@ class _CacheEntry<T> {
 
 /// Simple in-memory cache for individual projects (auto-expire after 5 minutes)
 final projectCacheProvider = StateProvider.family<ProjectModel?, String>((ref, id) {
-  ref.onDispose(() {
-    Future.delayed(const Duration(minutes: 5), () {
-      ref.invalidate(projectCacheProvider(id));
-    });
-  });
+  // schedule invalidation after TTL without referencing the provider itself
+  // TODO: re-enable TTL invalidation when cycle issue is resolved
+  // ref.onDispose(() {
+  //   Future.delayed(const Duration(minutes: 5), () {
+  //     if (ref.mounted) {
+  //       ref.invalidateSelf();
+  //     }
+  //   });
+  // });
   return null;
 });
 
