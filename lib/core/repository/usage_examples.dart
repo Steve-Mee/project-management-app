@@ -179,6 +179,7 @@ class _ProjectManagementPageState extends ConsumerState<ProjectManagementPage> {
 
   @override
   Widget build(BuildContext context) {
+    // TODO: migrate to projectsPaginatedProvider (issue #004)
     final projectsAsync = ref.watch(projectsProvider);
 
     return Scaffold(

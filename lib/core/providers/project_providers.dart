@@ -1,3 +1,5 @@
+/// Pagination Provider Setup Complete (issue #004)
+/// All new UI should use projectsPaginatedProvider
 import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:my_project_management_app/models/project_model.dart';
@@ -28,6 +30,8 @@ final projectRepositoryProvider = Provider<repo.IProjectRepository>((ref) {
   return ProjectRepository();
 });
 
+/// @deprecated Use projectsPaginatedProvider instead for better performance
+/// (kept for backward compatibility)
 /// Provider for projects with caching and TTL
 /// Uses AsyncValue.guard() for robust error handling
 final projectsProvider = NotifierProvider<ProjectsNotifier, AsyncValue<List<ProjectModel>>>(

@@ -14,6 +14,7 @@ class ProjectListWidget extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // TODO: migrate to projectsPaginatedProvider (issue #004)
     final projectsAsync = ref.watch(projectsProvider);
 
     return projectsAsync.when(
@@ -298,6 +299,7 @@ class ProjectDetailsWidget extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // TODO: migrate to projectsPaginatedProvider (issue #004)
     final projectsAsync = ref.watch(projectsProvider);
 
     return projectsAsync.when(

@@ -131,9 +131,11 @@ void main() {
     final container = ProviderContainer();
     addTearDown(container.dispose);
 
+    // TODO: migrate to projectsPaginatedProvider (issue #004)
     final notifier = container.read(projectsProvider.notifier);
     await notifier.initialize(repository);
 
+    // TODO: migrate to projectsPaginatedProvider (issue #004)
     final state = container.read(projectsProvider);
     expect(state.hasValue, true);
     expect(state.value?.length, 1);
@@ -145,6 +147,7 @@ void main() {
     final container = ProviderContainer();
     addTearDown(container.dispose);
 
+    // TODO: migrate to projectsPaginatedProvider (issue #004)
     final notifier = container.read(projectsProvider.notifier);
     await notifier.initialize(repository);
 
@@ -177,11 +180,13 @@ void main() {
     final container = ProviderContainer();
     addTearDown(container.dispose);
 
+    // TODO: migrate to projectsPaginatedProvider (issue #004)
     final notifier = container.read(projectsProvider.notifier);
     await notifier.initialize(repository);
 
     await notifier.updateProgress('p3', 0.9);
 
+    // TODO: migrate to projectsPaginatedProvider (issue #004)
     final state = container.read(projectsProvider);
     expect(state.hasValue, true);
     expect(state.value?.first.progress, 0.9);
@@ -201,11 +206,13 @@ void main() {
     final container = ProviderContainer();
     addTearDown(container.dispose);
 
+    // TODO: migrate to projectsPaginatedProvider (issue #004)
     final notifier = container.read(projectsProvider.notifier);
     await notifier.initialize(repository);
 
     await notifier.deleteProject('p4');
 
+    // TODO: migrate to projectsPaginatedProvider (issue #004)
     final state = container.read(projectsProvider);
     expect(state.hasValue, true);
     expect(state.value?.isEmpty, true);

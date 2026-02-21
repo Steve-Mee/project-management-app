@@ -109,6 +109,7 @@ final projectRequirementsProvider = FutureProvider.family<ProjectRequirements, S
 
   // Original implementation (commented until projectsProvider is available):
   /*
+  // TODO: migrate to projectsPaginatedProvider (issue #004)
   final projectsAsync = ref.watch(projectsProvider);
   return projectsAsync.maybeWhen(
     data: (projects) {
