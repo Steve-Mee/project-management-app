@@ -110,6 +110,43 @@ final filteredProjectsProvider = FutureProvider.autoDispose.family<List<ProjectM
 });
 // Ready for UI integration
 
+/// Combined parameters for filtered pagination
+class FilteredPaginationParams {
+  final ProjectFilterParams filter;
+  final int page;
+  final int limit;
+
+  const FilteredPaginationParams({
+    required this.filter,
+    required this.page,
+    required this.limit,
+  });
+}
+
+/// Provider for filtered and paginated projects
+/// Combines filtering with pagination for infinite scroll
+final filteredProjectsPaginatedProvider = FutureProvider.autoDispose.family<List<ProjectModel>, FilteredPaginationParams>((ref, params) async {
+  final repository = ref.watch(projectRepositoryProvider);
+
+  // First get all filtered projects
+  final allFiltered = await repository.getFilteredProjects(
+    repo.ProjectFilter(
+      status: params.filter.status,
+      searchQuery: params.filter.searchQuery,
+      startDate: params.filter.startDate,
+      endDate: params.filter.endDate,
+      priority: params.filter.priority,
+      ownerId: params.filter.ownerId,
+      tags: params.filter.tags,
+    ),
+  );
+
+  // Then paginate in-memory (since we need the full filtered set for accurate pagination)
+  final startIndex = (params.page - 1) * params.limit;
+  if (startIndex >= allFiltered.length) return [];
+  return allFiltered.skip(startIndex).take(params.limit).toList();
+});
+
 /// Dedicated paginated projects provider
 /// Use this for lists that need efficient loading (dashboard, projects page, etc.)
 final projectsPaginatedProvider = FutureProvider.autoDispose.family<List<ProjectModel>, ProjectPaginationParams>(
