@@ -21,8 +21,6 @@ Onderstaand een gegroepeerde lijst van alle "TODO"-aantekeningen die in de codeb
   - Verwachte actie: Breid filterimplementatie in `filteredProjectsProvider` uit.
 - TODO: Add more filter fields (date range, priority, etc.)
   - Verwachte actie: Zie boven.
-- TODO: Remove when tests are updated to not require this
-  - Verwachte actie: Herzie en vereenvoudig `ProjectsNotifier.initialize()` zodra tests aangepast zijn.
 - TODO: Deprecate in favor of projectByIdProvider for better performance
   - Verwachte actie: Migreer interne callers naar `projectByIdProvider` en markeer `getProjectById` als deprecated.
 

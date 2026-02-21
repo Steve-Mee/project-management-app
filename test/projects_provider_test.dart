@@ -1,8 +1,17 @@
+import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:my_project_management_app/core/providers/project_providers.dart';
+import 'package:my_project_management_app/core/providers/auth_providers.dart';
 import 'package:my_project_management_app/core/repository/project_repository.dart';
 import 'package:my_project_management_app/models/project_model.dart';
+
+class FakeAuthNotifier extends AuthNotifier {
+  @override
+  AuthState build() {
+    return const AuthState(isAuthenticated: true, username: 'test');
+  }
+}
 
 class FakeProjectRepository extends ProjectRepository {
   final Map<String, ProjectModel> _store = {};
@@ -128,20 +137,41 @@ void main() {
       status: 'In Progress',
     );
     final repository = FakeProjectRepository(seed: [project]);
-    final container = ProviderContainer(overrides: [projectRepositoryProvider.overrideWithValue(repository)]);
+    final container = ProviderContainer(overrides: [
+      projectRepositoryProvider.overrideWithValue(repository),
+      authProvider.overrideWith(() => FakeAuthNotifier()),
+    ]);
     addTearDown(container.dispose);
 
-    final state = await container.read(projectsPaginatedProvider(ProjectPaginationParams(page: 1, limit: 100)).future);
-    expect(state.length, 1);
-    expect(state.first.name, 'Alpha');
+    // Wait for the notifier to load data
+    await Future.delayed(Duration.zero);
+    // Since build() starts with loading and then loads data asynchronously,
+    // we need to wait for the state to become data
+    final completer = Completer<void>();
+    final subscription = container.listen(projectsProvider, (previous, next) {
+      if (next is AsyncData) {
+        completer.complete();
+      }
+    });
+    await completer.future;
+    subscription.close();
+
+    final state = container.read(projectsProvider);
+    expect(state, isA<AsyncData<List<ProjectModel>>>());
+    expect(state.asData!.value.length, 1);
+    expect(state.asData!.value.first.name, 'Alpha');
   });
 
   test('ProjectsNotifier addProject updates state', () async {
     final repository = FakeProjectRepository();
-    final container = ProviderContainer(overrides: [projectRepositoryProvider.overrideWithValue(repository)]);
+    final container = ProviderContainer(overrides: [
+      projectRepositoryProvider.overrideWithValue(repository),
+      authProvider.overrideWith(() => FakeAuthNotifier()),
+    ]);
     addTearDown(container.dispose);
 
-    await repository.addProject(
+    final notifier = container.read(projectsProvider.notifier);
+    await notifier.addProject(
       const ProjectModel(
         id: 'p2',
         name: 'Beta',
@@ -150,9 +180,10 @@ void main() {
       ),
     );
 
-    final state = await container.read(projectsPaginatedProvider(ProjectPaginationParams(page: 1, limit: 100)).future);
-    expect(state.length, 1);
-    expect(state.first.id, 'p2');
+    final state = container.read(projectsProvider);
+    expect(state, isA<AsyncData<List<ProjectModel>>>());
+    expect(state.asData!.value.length, 1);
+    expect(state.asData!.value.first.id, 'p2');
   });
 
   test('ProjectsNotifier updateProgress changes project', () async {
@@ -166,13 +197,21 @@ void main() {
         ),
       ],
     );
-    final container = ProviderContainer(overrides: [projectRepositoryProvider.overrideWithValue(repository)]);
+    final container = ProviderContainer(overrides: [
+      projectRepositoryProvider.overrideWithValue(repository),
+      authProvider.overrideWith(() => FakeAuthNotifier()),
+    ]);
     addTearDown(container.dispose);
 
-    await repository.updateProgress('p3', 0.9);
+    // Wait for initial load
+    await Future.delayed(Duration.zero);
 
-    final state = await container.read(projectsPaginatedProvider(ProjectPaginationParams(page: 1, limit: 100)).future);
-    expect(state.first.progress, 0.9);
+    final notifier = container.read(projectsProvider.notifier);
+    await notifier.updateProgress('p3', 0.9);
+
+    final state = container.read(projectsProvider);
+    expect(state, isA<AsyncData<List<ProjectModel>>>());
+    expect(state.asData!.value.first.progress, 0.9);
   });
 
   test('ProjectsNotifier deleteProject removes project', () async {
@@ -186,12 +225,20 @@ void main() {
         ),
       ],
     );
-    final container = ProviderContainer(overrides: [projectRepositoryProvider.overrideWithValue(repository)]);
+    final container = ProviderContainer(overrides: [
+      projectRepositoryProvider.overrideWithValue(repository),
+      authProvider.overrideWith(() => FakeAuthNotifier()),
+    ]);
     addTearDown(container.dispose);
 
-    await repository.deleteProject('p4');
+    // Wait for initial load
+    await Future.delayed(Duration.zero);
 
-    final state = await container.read(projectsPaginatedProvider(ProjectPaginationParams(page: 1, limit: 100)).future);
-    expect(state.isEmpty, true);
+    final notifier = container.read(projectsProvider.notifier);
+    await notifier.deleteProject('p4');
+
+    final state = container.read(projectsProvider);
+    expect(state, isA<AsyncData<List<ProjectModel>>>());
+    expect(state.asData!.value.isEmpty, true);
   });
 }

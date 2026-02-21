@@ -491,13 +491,6 @@ class ProjectsNotifier extends Notifier<AsyncValue<List<ProjectModel>>> {
     return AsyncValue.loading();
   }
 
-  /// Initialize method for testing compatibility
-  /// TODO: Remove when tests are updated to not require this
-  Future<void> initialize(repo.IProjectRepository repository) async {
-    _repository = repository;
-    state = await AsyncValue.guard(() => _repository.getAllProjects());
-  }
-
   /// Load projects with error handling
   Future<List<ProjectModel>> _loadProjects() async {
     final projects = await _repository.getAllProjects();

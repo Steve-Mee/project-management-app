@@ -77,37 +77,49 @@ void main() async {
 ### Initialize in First Widget
 
 ```dart
-class MyApp extends ConsumerStatefulWidget {
+class MyApp extends ConsumerWidget {
   @override
-  ConsumerState<MyApp> createState() => _MyAppState();
-}
-
-class _MyAppState extends ConsumerState<MyApp> {
-  @override
-  void initState() {
-    super.initState();
-    // Initialize projects from Hive on app load
-    WidgetsBinding.instance.addPostFrameCallback((_) async {
-      final repository = await ref.read(projectRepositoryProvider.future);
-      await ref.read(projectsProvider.notifier).initialize(repository);
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      home: HomePage(),
+  Widget build(BuildContext context, WidgetRef ref) {
+    // Projects provider automatically initializes via build() - no manual init needed
+    final projectsAsync = ref.watch(projectsProvider);
+    
+    return projectsAsync.when(
+      loading: () => CircularProgressIndicator(),
+      error: (error, stack) => Text('Error: $error'),
+      data: (projects) => MaterialApp(
+        home: ProjectListWidget(projects: projects),
+      ),
     );
   }
 }
 ```
 
-### Watch Projects in UI
+### Testing with ProviderContainer + Overrides
 
 ```dart
-class ProjectListWidget extends ConsumerWidget {
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
+// Example test using Riverpod best practices
+test('ProjectsNotifier loads data correctly', () async {
+  final fakeRepository = FakeProjectRepository(seed: [testProject]);
+  final container = ProviderContainer(overrides: [
+    projectRepositoryProvider.overrideWithValue(fakeRepository),
+    authProvider.overrideWith(() => FakeAuthNotifier()),
+  ]);
+  addTearDown(container.dispose);
+
+  // Wait for async loading in build()
+  await Future.delayed(Duration.zero);
+  final completer = Completer<void>();
+  final subscription = container.listen(projectsProvider, (previous, next) {
+    if (next is AsyncData) completer.complete();
+  });
+  await completer.future;
+  subscription.close();
+
+  final state = container.read(projectsProvider);
+  expect(state.asData!.value.length, 1);
+  expect(state.asData!.value.first.name, 'Test Project');
+});
+```
     final projectsAsync = ref.watch(projectsProvider);
 
     return projectsAsync.when(

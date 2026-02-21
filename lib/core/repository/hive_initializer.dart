@@ -5,7 +5,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:my_project_management_app/core/providers/project_providers.dart';
 import 'package:my_project_management_app/core/providers/notification_providers.dart';
 import 'package:my_project_management_app/core/providers/task_providers.dart';
 import 'package:my_project_management_app/core/services/app_logger.dart';
@@ -286,11 +285,7 @@ class _ProjectsInitializerState extends ConsumerState<ProjectsInitializer> {
 
   Future<void> _initializeProjects() async {
     try {
-      // Get the repository instance
-      final repository = ref.read(projectRepositoryProvider);
-      
-      // Initialize the projects notifier with the repository
-      await ref.read(projectsProvider.notifier).initialize(repository);
+      // Projects notifier automatically initializes with repository in build()
 
       final notificationsEnabled = ref.read(notificationsProvider);
       if (notificationsEnabled) {
