@@ -1800,6 +1800,180 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Apply Filters'**
   String get applyFiltersLabel;
+
+  /// Label for the saved views tab in filter dialog.
+  ///
+  /// In en, this message translates to:
+  /// **'Saved Views'**
+  String get savedViewsTabLabel;
+
+  /// Label for the filters tab in filter dialog.
+  ///
+  /// In en, this message translates to:
+  /// **'Filters'**
+  String get filtersTabLabel;
+
+  /// Label for the view name text field.
+  ///
+  /// In en, this message translates to:
+  /// **'View Name'**
+  String get viewNameLabel;
+
+  /// Hint text for the view name text field.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a name for this view'**
+  String get viewNameHint;
+
+  /// Label for the save current filter as view button.
+  ///
+  /// In en, this message translates to:
+  /// **'Save Current'**
+  String get saveCurrentAsViewLabel;
+
+  /// Message shown when a view is saved.
+  ///
+  /// In en, this message translates to:
+  /// **'View saved successfully'**
+  String get viewSavedMessage;
+
+  /// Message shown when there are no saved views.
+  ///
+  /// In en, this message translates to:
+  /// **'No saved views yet'**
+  String get noSavedViewsMessage;
+
+  /// Label for the saved views dropdown.
+  ///
+  /// In en, this message translates to:
+  /// **'Saved Views'**
+  String get savedViewsLabel;
+
+  /// Label for showing all views in dropdown.
+  ///
+  /// In en, this message translates to:
+  /// **'All Views'**
+  String get allViewsLabel;
+
+  /// Tooltip for the filter projects button.
+  ///
+  /// In en, this message translates to:
+  /// **'Filter projects'**
+  String get filterProjectsTooltip;
+
+  /// Title shown when in selection mode with count of selected items.
+  ///
+  /// In en, this message translates to:
+  /// **'Select Projects ({count})'**
+  String selectProjectsTitle(int count);
+
+  /// Tooltip for the bulk actions button.
+  ///
+  /// In en, this message translates to:
+  /// **'Bulk actions'**
+  String get bulkActionsTooltip;
+
+  /// Tooltip for exiting selection mode.
+  ///
+  /// In en, this message translates to:
+  /// **'Exit selection mode'**
+  String get exitSelectionModeTooltip;
+
+  /// Title for the bulk actions bottom sheet.
+  ///
+  /// In en, this message translates to:
+  /// **'Bulk Actions ({count} selected)'**
+  String bulkActionsTitle(int count);
+
+  /// Label for the delete selected projects button.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete Selected Projects'**
+  String get deleteSelectedProjectsLabel;
+
+  /// Label for the priority change dropdown.
+  ///
+  /// In en, this message translates to:
+  /// **'Change Priority'**
+  String get changePriorityLabel;
+
+  /// Label for the status change dropdown.
+  ///
+  /// In en, this message translates to:
+  /// **'Change Status'**
+  String get changeStatusLabel;
+
+  /// Label for the user assignment dropdown.
+  ///
+  /// In en, this message translates to:
+  /// **'Assign to User'**
+  String get assignToUserLabel;
+
+  /// Label for the export selected projects to CSV button.
+  ///
+  /// In en, this message translates to:
+  /// **'Export Selected to CSV'**
+  String get exportSelectedToCsvLabel;
+
+  /// Label for the apply actions button.
+  ///
+  /// In en, this message translates to:
+  /// **'Apply Actions'**
+  String get applyActionsLabel;
+
+  /// Confirmation message for deleting selected projects.
+  ///
+  /// In en, this message translates to:
+  /// **'Are you sure you want to delete {count} selected projects? This action cannot be undone.'**
+  String confirmDeleteSelectedProjectsMessage(int count);
+
+  /// Success message after bulk deleting projects.
+  ///
+  /// In en, this message translates to:
+  /// **'Successfully deleted {count} projects.'**
+  String bulkDeleteSuccessMessage(int count);
+
+  /// Success message after applying bulk actions.
+  ///
+  /// In en, this message translates to:
+  /// **'Applied {actions} action(s) to {count} projects.'**
+  String bulkActionsAppliedMessage(int actions, int count);
+
+  /// Label for the search projects text field.
+  ///
+  /// In en, this message translates to:
+  /// **'Search Projects'**
+  String get searchProjectsLabel;
+
+  /// Hint text for the search projects text field.
+  ///
+  /// In en, this message translates to:
+  /// **'Search by name, description, or tags...'**
+  String get searchProjectsHint;
+
+  /// Label for the tags filter section.
+  ///
+  /// In en, this message translates to:
+  /// **'Tags'**
+  String get filterTagsLabel;
+
+  /// Label for adding a new tag.
+  ///
+  /// In en, this message translates to:
+  /// **'Add Tag'**
+  String get addTagLabel;
+
+  /// Hint for the add tag text field.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter tag name'**
+  String get addTagHint;
+
+  /// Label showing available tags to select from.
+  ///
+  /// In en, this message translates to:
+  /// **'Available tags:'**
+  String get availableTagsLabel;
 }
 
 class _AppLocalizationsDelegate

@@ -13,26 +13,46 @@ class ProjectFilterDialog extends StatefulWidget {
   final ProjectFilter initialFilter;
   final VoidCallback? onSaveAsDefault;
   final List<ProjectModel>? filteredProjects;
+  final List<ProjectFilter>? savedViews;
+  final Function(ProjectFilter, String)? onSaveView;
+  final Function(String)? onDeleteView;
+  final Function(ProjectFilter)? onLoadView;
 
   const ProjectFilterDialog({
     super.key,
     required this.initialFilter,
     this.onSaveAsDefault,
     this.filteredProjects,
+    this.savedViews,
+    this.onSaveView,
+    this.onDeleteView,
+    this.onLoadView,
   });
 
   @override
   State<ProjectFilterDialog> createState() => _ProjectFilterDialogState();
 }
 
-class _ProjectFilterDialogState extends State<ProjectFilterDialog> {
+class _ProjectFilterDialogState extends State<ProjectFilterDialog> with TickerProviderStateMixin {
   late ProjectFilter _filter;
   String? _activePreset;
+  late TabController _tabController;
+  final TextEditingController _viewNameController = TextEditingController();
+  final TextEditingController _tagController = TextEditingController();
 
   @override
   void initState() {
     super.initState();
     _filter = widget.initialFilter;
+    _tabController = TabController(length: 2, vsync: this);
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    _viewNameController.dispose();
+    _tagController.dispose();
+    super.dispose();
   }
 
   Widget _buildPresetButton(String presetKey, String label) {
@@ -179,178 +199,312 @@ class _ProjectFilterDialogState extends State<ProjectFilterDialog> {
     }
   }
 
+  Widget _buildSavedViewsTab(BuildContext context, AppLocalizations l10n) {
+    final savedViews = widget.savedViews ?? [];
+
+    return Column(
+      children: [
+        // Save current as new view
+        Padding(
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: _viewNameController,
+                  decoration: InputDecoration(
+                    labelText: l10n.viewNameLabel,
+                    hintText: l10n.viewNameHint,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              ElevatedButton.icon(
+                onPressed: () {
+                  final name = _viewNameController.text.trim();
+                  if (name.isNotEmpty && widget.onSaveView != null) {
+                    widget.onSaveView!(_filter, name);
+                    _viewNameController.clear();
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text(l10n.viewSavedMessage)),
+                    );
+                  }
+                },
+                icon: const Icon(Icons.save),
+                label: Text(l10n.saveCurrentAsViewLabel),
+              ),
+            ],
+          ),
+        ),
+        const Divider(),
+        // List of saved views
+        Expanded(
+          child: savedViews.isEmpty
+              ? Center(child: Text(l10n.noSavedViewsMessage))
+              : ListView.builder(
+                  itemCount: savedViews.length,
+                  itemBuilder: (context, index) {
+                    final view = savedViews[index];
+                    return ListTile(
+                      title: Text(view.viewName ?? ''),
+                      subtitle: _buildViewPreview(view, l10n),
+                      trailing: IconButton(
+                        icon: const Icon(Icons.delete),
+                        onPressed: () {
+                          if (widget.onDeleteView != null && view.viewName != null) {
+                            widget.onDeleteView!(view.viewName!);
+                          }
+                        },
+                      ),
+                      onTap: () {
+                        if (widget.onLoadView != null) {
+                          widget.onLoadView!(view);
+                          Navigator.of(context).pop(view);
+                        }
+                      },
+                    );
+                  },
+                ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildViewPreview(ProjectFilter filter, AppLocalizations l10n) {
+    final chips = <Widget>[];
+
+    if (filter.status != null) {
+      chips.add(Chip(label: Text(filter.status!), backgroundColor: Colors.blue.shade100));
+    }
+    if (filter.priority != null) {
+      chips.add(Chip(label: Text(filter.priority!), backgroundColor: _getPriorityColor(filter.priority!)));
+    }
+    if (filter.searchQuery != null && filter.searchQuery!.isNotEmpty) {
+      chips.add(Chip(label: Text('"${filter.searchQuery!}"'), backgroundColor: Colors.grey.shade200));
+    }
+    if (filter.tags != null && filter.tags!.isNotEmpty) {
+      for (final tag in filter.tags!) {
+        chips.add(Chip(label: Text('#$tag'), backgroundColor: Colors.purple.shade100));
+      }
+    }
+    if (filter.startDate != null) {
+      chips.add(Chip(label: Text('From ${DateFormat('MMM dd').format(filter.startDate!)}'), backgroundColor: Colors.green.shade100));
+    }
+    if (filter.endDate != null) {
+      chips.add(Chip(label: Text('To ${DateFormat('MMM dd').format(filter.endDate!)}'), backgroundColor: Colors.red.shade100));
+    }
+
+    return Wrap(
+      spacing: 4,
+      children: chips.take(3).toList(), // Limit to 3 chips for preview
+    );
+  }
+
+  Widget _buildFiltersTab(BuildContext context, AppLocalizations l10n) {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Quick Preset Buttons
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: [
+                _buildPresetButton('all', l10n.allProjectsPresetLabel),
+                const SizedBox(width: 8),
+                _buildPresetButton('high', l10n.highPriorityPresetLabel),
+                const SizedBox(width: 8),
+                _buildPresetButton('week', l10n.dueThisWeekPresetLabel),
+                const SizedBox(width: 8),
+                _buildPresetButton('overdue', l10n.overduePresetLabel),
+                const SizedBox(width: 8),
+                _buildPresetButton('my', l10n.myProjectsPresetLabel),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+          // Sort by Dropdown
+          DropdownButtonFormField<String>(
+            initialValue: _filter.sortBy ?? 'name',
+            decoration: InputDecoration(
+              labelText: l10n.sortByLabel,
+            ),
+            items: ProjectFilter.sortOptions.map((option) {
+              return DropdownMenuItem<String>(
+                value: option,
+                child: Text(_getSortLabel(option, l10n)),
+              );
+            }).toList(),
+            onChanged: (value) {
+              if (value != null) {
+                setState(() {
+                  _filter = _filter.copyWith(sortBy: value);
+                });
+              }
+            },
+          ),
+          const SizedBox(height: 8),
+          // Sort Direction
+          Row(
+            children: [
+              Text(l10n.sortDirectionLabel, style: Theme.of(context).textTheme.bodyMedium),
+              const Spacer(),
+              SegmentedButton<bool>(
+                segments: [
+                  ButtonSegment<bool>(
+                    value: true,
+                    label: Text(l10n.sortAscendingLabel),
+                    icon: const Icon(Icons.arrow_upward, size: 16),
+                  ),
+                  ButtonSegment<bool>(
+                    value: false,
+                    label: Text(l10n.sortDescendingLabel),
+                    icon: const Icon(Icons.arrow_downward, size: 16),
+                  ),
+                ],
+                selected: {_filter.sortAscending},
+                onSelectionChanged: (Set<bool> selected) {
+                  setState(() {
+                    _filter = _filter.copyWith(sortAscending: selected.first);
+                  });
+                },
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          // Search Query
+          TextField(
+            controller: TextEditingController(text: _filter.searchQuery ?? ''),
+            decoration: InputDecoration(
+              labelText: l10n.searchProjectsLabel,
+              hintText: l10n.searchProjectsHint,
+              suffixIcon: IconButton(
+                icon: const Icon(Icons.clear),
+                onPressed: () {
+                  setState(() {
+                    _filter = _filter.copyWith(searchQuery: null);
+                  });
+                },
+              ),
+            ),
+            onChanged: (value) {
+              setState(() {
+                _filter = _filter.copyWith(searchQuery: value.isEmpty ? null : value);
+              });
+            },
+          ),
+          const SizedBox(height: 16),
+          // Tags Multi-Select
+          _buildTagsSection(context, l10n),
+          const SizedBox(height: 16),
+          // Priority Dropdown
+          DropdownButtonFormField<String?>(
+            initialValue: _filter.priority,
+            decoration: InputDecoration(
+              labelText: l10n.filterPriorityLabel,
+            ),
+            items: [
+              _buildPriorityDropdownItem(null, 'All'),
+              _buildPriorityDropdownItem('Low', l10n.priorityLow),
+              _buildPriorityDropdownItem('Medium', l10n.priorityMedium),
+              _buildPriorityDropdownItem('High', l10n.priorityHigh),
+            ],
+            onChanged: (value) {
+              setState(() {
+                _filter = _filter.copyWith(priority: value);
+              });
+            },
+          ),
+          const SizedBox(height: 16),
+          // Start Date
+          TextFormField(
+            decoration: InputDecoration(
+              labelText: l10n.filterStartDateLabel,
+              suffixIcon: IconButton(
+                icon: const Icon(Icons.calendar_today),
+                onPressed: () async {
+                  final date = await showDatePicker(
+                    context: context,
+                    initialDate: _filter.startDate ?? DateTime.now(),
+                    firstDate: DateTime(2000),
+                    lastDate: DateTime(2100),
+                  );
+                  if (date != null) {
+                    setState(() {
+                      _filter = _filter.copyWith(startDate: date);
+                    });
+                  }
+                },
+              ),
+            ),
+            readOnly: true,
+            controller: TextEditingController(
+              text: _filter.startDate != null
+                  ? _filter.startDate!.toLocal().toString().split(' ')[0]
+                  : '',
+            ),
+          ),
+          const SizedBox(height: 16),
+          // End Date
+          TextFormField(
+            decoration: InputDecoration(
+              labelText: l10n.filterEndDateLabel,
+              suffixIcon: IconButton(
+                icon: const Icon(Icons.calendar_today),
+                onPressed: () async {
+                  final date = await showDatePicker(
+                    context: context,
+                    initialDate: _filter.endDate ?? DateTime.now(),
+                    firstDate: DateTime(2000),
+                    lastDate: DateTime(2100),
+                  );
+                  if (date != null) {
+                    setState(() {
+                      _filter = _filter.copyWith(endDate: date);
+                    });
+                  }
+                },
+              ),
+            ),
+            readOnly: true,
+            controller: TextEditingController(
+              text: _filter.endDate != null
+                  ? _filter.endDate!.toLocal().toString().split(' ')[0]
+                  : '',
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
 
     return AlertDialog(
       title: Text(l10n.projectFiltersTitle),
-      content: SingleChildScrollView(
+      content: SizedBox(
+        width: double.maxFinite,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // Quick Preset Buttons
-            SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: Row(
+            TabBar(
+              controller: _tabController,
+              tabs: [
+                Tab(text: l10n.savedViewsTabLabel),
+                Tab(text: l10n.filtersTabLabel),
+              ],
+            ),
+            SizedBox(
+              height: 400,
+              child: TabBarView(
+                controller: _tabController,
                 children: [
-                  _buildPresetButton('all', l10n.allProjectsPresetLabel),
-                  const SizedBox(width: 8),
-                  _buildPresetButton('high', l10n.highPriorityPresetLabel),
-                  const SizedBox(width: 8),
-                  _buildPresetButton('week', l10n.dueThisWeekPresetLabel),
-                  const SizedBox(width: 8),
-                  _buildPresetButton('overdue', l10n.overduePresetLabel),
-                  const SizedBox(width: 8),
-                  _buildPresetButton('my', l10n.myProjectsPresetLabel),
+                  _buildSavedViewsTab(context, l10n),
+                  _buildFiltersTab(context, l10n),
                 ],
-              ),
-            ),
-            const SizedBox(height: 16),
-            // Sort by Dropdown
-            DropdownButtonFormField<String>(
-              initialValue: _filter.sortBy ?? 'name',
-              decoration: InputDecoration(
-                labelText: l10n.sortByLabel,
-              ),
-              items: ProjectFilter.sortOptions.map((option) {
-                return DropdownMenuItem<String>(
-                  value: option,
-                  child: Text(_getSortLabel(option, l10n)),
-                );
-              }).toList(),
-              onChanged: (value) {
-                if (value != null) {
-                  setState(() {
-                    _filter = _filter.copyWith(sortBy: value);
-                  });
-                }
-              },
-            ),
-            const SizedBox(height: 8),
-            // Sort Direction
-            Row(
-              children: [
-                Text(l10n.sortDirectionLabel, style: Theme.of(context).textTheme.bodyMedium),
-                const Spacer(),
-                SegmentedButton<bool>(
-                  segments: [
-                    ButtonSegment<bool>(
-                      value: true,
-                      label: Text(l10n.sortAscendingLabel),
-                      icon: const Icon(Icons.arrow_upward, size: 16),
-                    ),
-                    ButtonSegment<bool>(
-                      value: false,
-                      label: Text(l10n.sortDescendingLabel),
-                      icon: const Icon(Icons.arrow_downward, size: 16),
-                    ),
-                  ],
-                  selected: {_filter.sortAscending},
-                  onSelectionChanged: (Set<bool> selected) {
-                    setState(() {
-                      _filter = _filter.copyWith(sortAscending: selected.first);
-                    });
-                  },
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            // Priority Dropdown
-            DropdownButtonFormField<String?>(
-              initialValue: _filter.priority,
-              decoration: InputDecoration(
-                labelText: l10n.filterPriorityLabel,
-              ),
-              items: [
-                _buildPriorityDropdownItem(null, 'All'),
-                _buildPriorityDropdownItem('Low', l10n.priorityLow),
-                _buildPriorityDropdownItem('Medium', l10n.priorityMedium),
-                _buildPriorityDropdownItem('High', l10n.priorityHigh),
-              ],
-              onChanged: (value) {
-                setState(() {
-                  _filter = ProjectFilter(
-                    status: _filter.status,
-                    ownerId: _filter.ownerId,
-                    searchQuery: _filter.searchQuery,
-                    priority: value,
-                    startDate: _filter.startDate,
-                    endDate: _filter.endDate,
-                  );
-                });
-              },
-            ),
-            const SizedBox(height: 16),
-            // Start Date
-            TextFormField(
-              decoration: InputDecoration(
-                labelText: l10n.filterStartDateLabel,
-                suffixIcon: IconButton(
-                  icon: const Icon(Icons.calendar_today),
-                  onPressed: () async {
-                    final date = await showDatePicker(
-                      context: context,
-                      initialDate: _filter.startDate ?? DateTime.now(),
-                      firstDate: DateTime(2000),
-                      lastDate: DateTime(2100),
-                    );
-                    if (date != null) {
-                      setState(() {
-                        _filter = ProjectFilter(
-                          status: _filter.status,
-                          ownerId: _filter.ownerId,
-                          searchQuery: _filter.searchQuery,
-                          priority: _filter.priority,
-                          startDate: date,
-                          endDate: _filter.endDate,
-                        );
-                      });
-                    }
-                  },
-                ),
-              ),
-              readOnly: true,
-              controller: TextEditingController(
-                text: _filter.startDate != null
-                    ? _filter.startDate!.toLocal().toString().split(' ')[0]
-                    : '',
-              ),
-            ),
-            const SizedBox(height: 16),
-            // End Date
-            TextFormField(
-              decoration: InputDecoration(
-                labelText: l10n.filterEndDateLabel,
-                suffixIcon: IconButton(
-                  icon: const Icon(Icons.calendar_today),
-                  onPressed: () async {
-                    final date = await showDatePicker(
-                      context: context,
-                      initialDate: _filter.endDate ?? DateTime.now(),
-                      firstDate: DateTime(2000),
-                      lastDate: DateTime(2100),
-                    );
-                    if (date != null) {
-                      setState(() {
-                        _filter = ProjectFilter(
-                          status: _filter.status,
-                          ownerId: _filter.ownerId,
-                          searchQuery: _filter.searchQuery,
-                          priority: _filter.priority,
-                          startDate: _filter.startDate,
-                          endDate: date,
-                        );
-                      });
-                    }
-                  },
-                ),
-              ),
-              readOnly: true,
-              controller: TextEditingController(
-                text: _filter.endDate != null
-                    ? _filter.endDate!.toLocal().toString().split(' ')[0]
-                    : '',
               ),
             ),
           ],
@@ -396,6 +550,87 @@ class _ProjectFilterDialogState extends State<ProjectFilterDialog> {
       ],
     );
   }
+
+  Widget _buildTagsSection(BuildContext context, AppLocalizations l10n) {
+    final allTags = _getAllAvailableTags();
+    final selectedTags = _filter.tags ?? [];
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(l10n.filterTagsLabel, style: Theme.of(context).textTheme.titleSmall),
+        const SizedBox(height: 8),
+        // Selected tags chips
+        if (selectedTags.isNotEmpty) ...[
+          Wrap(
+            spacing: 4,
+            children: selectedTags.map((tag) => Chip(
+              label: Text('#$tag'),
+              deleteIcon: const Icon(Icons.close, size: 16),
+              onDeleted: () {
+                setState(() {
+                  final newTags = List<String>.from(selectedTags)..remove(tag);
+                  _filter = _filter.copyWith(tags: newTags.isEmpty ? null : newTags);
+                });
+              },
+            )).toList(),
+          ),
+          const SizedBox(height: 8),
+        ],
+        // Add new tag input
+        Row(
+          children: [
+            Expanded(
+              child: TextField(
+                controller: _tagController,
+                decoration: InputDecoration(
+                  labelText: l10n.addTagLabel,
+                  hintText: l10n.addTagHint,
+                ),
+                onSubmitted: (value) => _addTag(value.trim()),
+              ),
+            ),
+            IconButton(
+              icon: const Icon(Icons.add),
+              onPressed: () => _addTag(_tagController.text.trim()),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        // Available tags
+        if (allTags.isNotEmpty) ...[
+          Text(l10n.availableTagsLabel, style: Theme.of(context).textTheme.bodySmall),
+          const SizedBox(height: 4),
+          Wrap(
+            spacing: 4,
+            children: allTags.where((tag) => !selectedTags.contains(tag)).map((tag) => ActionChip(
+              label: Text('#$tag'),
+              onPressed: () => _addTag(tag),
+            )).toList(),
+          ),
+        ],
+      ],
+    );
+  }
+
+  List<String> _getAllAvailableTags() {
+    final allTags = <String>{};
+    for (final project in widget.filteredProjects ?? []) {
+      allTags.addAll(project.tags);
+    }
+    return allTags.toList()..sort();
+  }
+
+  void _addTag(String tag) {
+    if (tag.isEmpty) return;
+    final selectedTags = _filter.tags ?? [];
+    if (!selectedTags.contains(tag)) {
+      setState(() {
+        _filter = _filter.copyWith(tags: [...selectedTags, tag]);
+      });
+    }
+    _tagController.clear();
+  }
 }
 
 /// Function to show the project filter dialog
@@ -404,6 +639,10 @@ Future<ProjectFilter?> showProjectFilterDialog(
   ProjectFilter initialFilter,
   VoidCallback? onSaveAsDefault, [
   List<ProjectModel>? filteredProjects,
+  List<ProjectFilter>? savedViews,
+  Function(ProjectFilter, String)? onSaveView,
+  Function(String)? onDeleteView,
+  Function(ProjectFilter)? onLoadView,
 ]) {
   return showDialog<ProjectFilter>(
     context: context,
@@ -411,6 +650,10 @@ Future<ProjectFilter?> showProjectFilterDialog(
       initialFilter: initialFilter,
       onSaveAsDefault: onSaveAsDefault,
       filteredProjects: filteredProjects,
+      savedViews: savedViews,
+      onSaveView: onSaveView,
+      onDeleteView: onDeleteView,
+      onLoadView: onLoadView,
     ),
   );
 }

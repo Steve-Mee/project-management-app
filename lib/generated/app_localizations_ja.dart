@@ -928,4 +928,101 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get applyFiltersLabel => 'Apply Filters';
+
+  @override
+  String get savedViewsTabLabel => 'Saved Views';
+
+  @override
+  String get filtersTabLabel => 'Filters';
+
+  @override
+  String get viewNameLabel => 'View Name';
+
+  @override
+  String get viewNameHint => 'Enter a name for this view';
+
+  @override
+  String get saveCurrentAsViewLabel => 'Save Current';
+
+  @override
+  String get viewSavedMessage => 'View saved successfully';
+
+  @override
+  String get noSavedViewsMessage => 'No saved views yet';
+
+  @override
+  String get savedViewsLabel => 'Saved Views';
+
+  @override
+  String get allViewsLabel => 'All Views';
+
+  @override
+  String get filterProjectsTooltip => 'Filter projects';
+
+  @override
+  String selectProjectsTitle(int count) {
+    return 'Select Projects ($count)';
+  }
+
+  @override
+  String get bulkActionsTooltip => 'Bulk actions';
+
+  @override
+  String get exitSelectionModeTooltip => 'Exit selection mode';
+
+  @override
+  String bulkActionsTitle(int count) {
+    return 'Bulk Actions ($count selected)';
+  }
+
+  @override
+  String get deleteSelectedProjectsLabel => 'Delete Selected Projects';
+
+  @override
+  String get changePriorityLabel => 'Change Priority';
+
+  @override
+  String get changeStatusLabel => 'Change Status';
+
+  @override
+  String get assignToUserLabel => 'Assign to User';
+
+  @override
+  String get exportSelectedToCsvLabel => 'Export Selected to CSV';
+
+  @override
+  String get applyActionsLabel => 'Apply Actions';
+
+  @override
+  String confirmDeleteSelectedProjectsMessage(int count) {
+    return 'Are you sure you want to delete $count selected projects? This action cannot be undone.';
+  }
+
+  @override
+  String bulkDeleteSuccessMessage(int count) {
+    return 'Successfully deleted $count projects.';
+  }
+
+  @override
+  String bulkActionsAppliedMessage(int actions, int count) {
+    return 'Applied $actions action(s) to $count projects.';
+  }
+
+  @override
+  String get searchProjectsLabel => 'Search Projects';
+
+  @override
+  String get searchProjectsHint => 'Search by name, description, or tags...';
+
+  @override
+  String get filterTagsLabel => 'Tags';
+
+  @override
+  String get addTagLabel => 'Add Tag';
+
+  @override
+  String get addTagHint => 'Enter tag name';
+
+  @override
+  String get availableTagsLabel => 'Available tags:';
 }

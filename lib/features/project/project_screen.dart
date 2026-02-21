@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -7,6 +8,10 @@ import 'package:my_project_management_app/generated/app_localizations.dart';
 import 'package:my_project_management_app/core/auth/permissions.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'package:intl/intl.dart';
+import 'package:csv/csv.dart';
+import 'package:share_plus/share_plus.dart';
+import 'package:path_provider/path_provider.dart';
 // ignore_for_file: use_build_context_synchronously, unnecessary_underscores
 import 'package:my_project_management_app/core/providers/project_providers.dart';
 import '../../core/providers/auth_providers.dart';
@@ -14,6 +19,7 @@ import '../../core/providers/theme_providers.dart';
 import '../../models/project_meta.dart';
 import '../../models/project_model.dart';
 import '../../models/project_sort.dart';
+import 'widgets/project_filter_dialog.dart';
 
 /// Project management screen - displays list of all projects
 class ProjectScreen extends ConsumerStatefulWidget {
@@ -119,11 +125,58 @@ class _ProjectScreenState extends ConsumerState<ProjectScreen> {
     }
   }
 
+  void _toggleSelectionMode() {
+    final isSelectionMode = ref.read(isSelectionModeProvider);
+    if (isSelectionMode) {
+      // Exit selection mode
+      ref.read(selectedProjectIdsProvider.notifier).state = {};
+      ref.read(isSelectionModeProvider.notifier).state = false;
+    } else {
+      // Enter selection mode
+      ref.read(isSelectionModeProvider.notifier).state = true;
+    }
+  }
+
+  void _toggleProjectSelection(String projectId) {
+    final selectedIds = ref.read(selectedProjectIdsProvider);
+    final newSelectedIds = Set<String>.from(selectedIds);
+    if (newSelectedIds.contains(projectId)) {
+      newSelectedIds.remove(projectId);
+    } else {
+      newSelectedIds.add(projectId);
+    }
+    ref.read(selectedProjectIdsProvider.notifier).state = newSelectedIds;
+
+    // Exit selection mode if no items selected
+    if (newSelectedIds.isEmpty) {
+      ref.read(isSelectionModeProvider.notifier).state = false;
+    }
+  }
+
+  void _showBulkActionsSheet() {
+    final selectedIds = ref.read(selectedProjectIdsProvider);
+    if (selectedIds.isEmpty) return;
+
+    showModalBottomSheet(
+      context: context,
+      builder: (context) => BulkActionsBottomSheet(
+        selectedProjectIds: selectedIds,
+        onActionCompleted: () {
+          Navigator.of(context).pop();
+          _resetPagination();
+          _toggleSelectionMode();
+        },
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final metaByProjectId = ref.watch(projectMetaProvider);
     final canEditProjects =
         ref.watch(hasPermissionProvider(AppPermissions.editProjects));
+    final isSelectionMode = ref.watch(isSelectionModeProvider);
+    final selectedIds = ref.watch(selectedProjectIdsProvider);
 
     if (_projects.isEmpty && _isLoading) {
       return _buildLoadingContent(context, canEditProjects);
@@ -136,6 +189,8 @@ class _ProjectScreenState extends ConsumerState<ProjectScreen> {
       _projects,
       metaByProjectId,
       canEditProjects,
+      isSelectionMode,
+      selectedIds,
     );
   }
 
@@ -144,6 +199,8 @@ class _ProjectScreenState extends ConsumerState<ProjectScreen> {
     List<ProjectModel> projects,
     Map<String, ProjectMeta> metaByProjectId,
     bool canEditProjects,
+    bool isSelectionMode,
+    Set<String> selectedIds,
   ) {
     final l10n = AppLocalizations.of(context)!;
     final filtered = _filterProjects(projects);
@@ -168,12 +225,91 @@ class _ProjectScreenState extends ConsumerState<ProjectScreen> {
                 children: [
                   Expanded(
                     child: Text(
-                      l10n.projectsTitle,
+                      isSelectionMode
+                          ? l10n.selectProjectsTitle(selectedIds.length)
+                          : l10n.projectsTitle,
                       style: Theme.of(context).textTheme.headlineMedium,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
                   ),
+                  SizedBox(width: 16.w),
+                  // Selection mode actions or Filter and Saved Views
+                  if (isSelectionMode) ...[
+                    if (selectedIds.isNotEmpty) ...[
+                      IconButton(
+                        icon: const Icon(Icons.checklist),
+                        tooltip: l10n.bulkActionsTooltip,
+                        onPressed: _showBulkActionsSheet,
+                      ),
+                      SizedBox(width: 8.w),
+                    ],
+                    IconButton(
+                      icon: const Icon(Icons.close),
+                      tooltip: l10n.exitSelectionModeTooltip,
+                      onPressed: _toggleSelectionMode,
+                    ),
+                  ] else ...[
+                    Row(
+                      children: [
+                        // Saved Views Dropdown
+                        Consumer(
+                          builder: (context, ref, child) {
+                            final savedViews = ref.watch(savedProjectViewsProvider);
+                            final currentFilter = ref.watch(persistentProjectFilterProvider);
+                            return DropdownButton<String>(
+                              value: currentFilter.viewName,
+                              hint: Text(l10n.savedViewsLabel),
+                              items: [
+                                DropdownMenuItem<String>(
+                                  value: null,
+                                  child: Text(l10n.allViewsLabel),
+                                ),
+                                ...savedViews.map((view) => DropdownMenuItem<String>(
+                                  value: view.viewName,
+                                  child: Text(view.viewName!),
+                                )),
+                              ],
+                              onChanged: (value) {
+                                if (value == null) {
+                                  // Load default filter
+                                  ref.read(persistentProjectFilterProvider.notifier).updateFilter(const ProjectFilter());
+                                } else {
+                                  final view = savedViews.firstWhere((v) => v.viewName == value);
+                                  ref.read(persistentProjectFilterProvider.notifier).loadView(view);
+                                }
+                                _resetPagination();
+                              },
+                            );
+                          },
+                        ),
+                        SizedBox(width: 8.w),
+                        // Filter Button
+                        IconButton(
+                          icon: const Icon(Icons.filter_list),
+                          tooltip: l10n.filterProjectsTooltip,
+                          onPressed: () async {
+                            final currentFilter = ref.watch(persistentProjectFilterProvider);
+                            final savedViews = ref.watch(savedProjectViewsProvider);
+                            final result = await showProjectFilterDialog(
+                              context,
+                              currentFilter,
+                              () => ref.read(persistentProjectFilterProvider.notifier).saveAsDefault(),
+                              null, // filteredProjects
+                              savedViews,
+                              (filter, name) => ref.read(savedProjectViewsProvider.notifier).saveView(filter, name),
+                              (viewName) => ref.read(savedProjectViewsProvider.notifier).deleteView(viewName),
+                              (view) => ref.read(persistentProjectFilterProvider.notifier).loadView(view),
+                            );
+                            if (result != null) {
+                              ref.read(persistentProjectFilterProvider.notifier).updateFilter(result);
+                              _resetPagination();
+                            }
+                          },
+                        ),
+                      ],
+                    ),
+                  ],
                   SizedBox(width: 16.w),
                   Flexible(
                     child: FloatingActionButton.extended(
@@ -195,21 +331,36 @@ class _ProjectScreenState extends ConsumerState<ProjectScreen> {
           // search field
           return Padding(
             padding: EdgeInsets.only(top: 12.h, bottom: 12.h),
-            child: TextField(
-              controller: _searchController,
-              decoration: InputDecoration(
-                hintText: 'Search projects',
-                prefixIcon: const Icon(Icons.search),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8.r),
+            child: Column(
+              children: [
+                TextField(
+                  controller: _searchController,
+                  decoration: InputDecoration(
+                    hintText: 'Search projects...',
+                    prefixIcon: const Icon(Icons.search),
+                    suffixIcon: _searchController.text.isNotEmpty
+                        ? IconButton(
+                            icon: const Icon(Icons.clear),
+                            onPressed: () {
+                              _searchController.clear();
+                              ref.read(searchQueryProvider.notifier).setQuery('');
+                            },
+                          )
+                        : null,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8.r),
+                    ),
+                  ),
+                  onChanged: (value) {
+                    _searchDebounce?.cancel();
+                    _searchDebounce = Timer(const Duration(milliseconds: 300), () {
+                      ref.read(searchQueryProvider.notifier).setQuery(value);
+                    });
+                  },
                 ),
-              ),
-              onChanged: (value) {
-                _searchDebounce?.cancel();
-                _searchDebounce = Timer(const Duration(milliseconds: 300), () {
-                  ref.read(searchQueryProvider.notifier).setQuery(value);
-                });
-              },
+                // Tag suggestions
+                if (_searchController.text.isNotEmpty) _buildTagSuggestions(context, ref),
+              ],
             ),
           );
         }
@@ -249,6 +400,14 @@ class _ProjectScreenState extends ConsumerState<ProjectScreen> {
             id: project.id,
             title: project.name,
             status: project.status,
+            isSelectionMode: isSelectionMode,
+            isSelected: selectedIds.contains(project.id),
+            onLongPress: () => _toggleProjectSelection(project.id),
+            onSelectionChanged: (selected) {
+              if (selected) {
+                _toggleProjectSelection(project.id);
+              }
+            },
           );
         }
 
@@ -534,6 +693,58 @@ class _ProjectScreenState extends ConsumerState<ProjectScreen> {
     );
   }
 
+  Widget _buildTagSuggestions(BuildContext context, WidgetRef ref) {
+    final projects = ref.watch(filteredProjectsProvider(ref.watch(persistentProjectFilterProvider))).maybeWhen(
+      data: (data) => data,
+      orElse: () => <ProjectModel>[],
+    );
+
+    final allTags = <String>{};
+    for (final project in projects) {
+      allTags.addAll(project.tags);
+    }
+
+    final query = _searchController.text.toLowerCase();
+    final matchingTags = allTags.where((tag) => tag.toLowerCase().contains(query)).toList()..sort();
+
+    if (matchingTags.isEmpty) return const SizedBox.shrink();
+
+    return Container(
+      margin: EdgeInsets.only(top: 4.h),
+      padding: EdgeInsets.all(8.w),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
+        borderRadius: BorderRadius.circular(8.r),
+        border: Border.all(color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.3)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Tag suggestions:',
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
+          ),
+          SizedBox(height: 4.h),
+          Wrap(
+            spacing: 4.w,
+            runSpacing: 4.h,
+            children: matchingTags.take(5).map((tag) => ActionChip(
+              label: Text('#$tag'),
+              onPressed: () {
+                final currentQuery = _searchController.text;
+                final newQuery = currentQuery.isEmpty ? '#$tag' : '$currentQuery #$tag';
+                _searchController.text = newQuery;
+                ref.read(searchQueryProvider.notifier).setQuery(newQuery);
+              },
+            )).toList(),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildLoadError(BuildContext context, Object error) {
     final l10n = AppLocalizations.of(context)!;
     return Padding(
@@ -560,6 +771,10 @@ class _ProjectScreenState extends ConsumerState<ProjectScreen> {
     required String id,
     required String title,
     required String status,
+    required bool isSelectionMode,
+    required bool isSelected,
+    required VoidCallback onLongPress,
+    required ValueChanged<bool> onSelectionChanged,
   }) {
     final l10n = AppLocalizations.of(context)!;
     Color statusColor;
@@ -584,17 +799,26 @@ class _ProjectScreenState extends ConsumerState<ProjectScreen> {
     }
 
     return GestureDetector(
-      onTap: () {
+      onLongPress: isSelectionMode ? null : onLongPress,
+      onTap: isSelectionMode ? () => onSelectionChanged(!isSelected) : () {
         context.go('/projects/$id');
       },
       child: Semantics(
         label: l10n.projectSemanticsLabel(title),
         child: Card(
           margin: EdgeInsets.only(bottom: 12.h),
+          color: isSelected ? Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.3) : null,
           child: Padding(
             padding: EdgeInsets.all(16.w),
             child: Row(
               children: [
+                if (isSelectionMode) ...[
+                  Checkbox(
+                    value: isSelected,
+                    onChanged: (value) => onSelectionChanged(value ?? false),
+                  ),
+                  SizedBox(width: 12.w),
+                ],
                 Container(
                   padding: EdgeInsets.all(12.w),
                   decoration: BoxDecoration(
@@ -1069,6 +1293,264 @@ class _ProjectScreenState extends ConsumerState<ProjectScreen> {
         return l10n.urgencyMedium;
       case UrgencyLevel.high:
         return l10n.urgencyHigh;
+    }
+  }
+}
+
+/// Bottom sheet for bulk actions on selected projects
+class BulkActionsBottomSheet extends ConsumerStatefulWidget {
+  const BulkActionsBottomSheet({
+    super.key,
+    required this.selectedProjectIds,
+    required this.onActionCompleted,
+  });
+
+  final Set<String> selectedProjectIds;
+  final VoidCallback onActionCompleted;
+
+  @override
+  ConsumerState<BulkActionsBottomSheet> createState() => _BulkActionsBottomSheetState();
+}
+
+class _BulkActionsBottomSheetState extends ConsumerState<BulkActionsBottomSheet> {
+  String? _selectedPriority;
+  String? _selectedStatus;
+  String? _selectedUserId;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final usersAsync = ref.watch(authUsersProvider);
+
+    return Container(
+      padding: EdgeInsets.all(16.w),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(
+            l10n.bulkActionsTitle(widget.selectedProjectIds.length),
+            style: Theme.of(context).textTheme.headlineSmall,
+            textAlign: TextAlign.center,
+          ),
+          SizedBox(height: 16.h),
+          // Delete action
+          ElevatedButton.icon(
+            onPressed: () => _showDeleteConfirmation(context, ref, l10n),
+            icon: const Icon(Icons.delete, color: Colors.white),
+            label: Text(l10n.deleteSelectedProjectsLabel),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+            ),
+          ),
+          SizedBox(height: 12.h),
+          // Priority dropdown
+          DropdownButtonFormField<String>(
+            initialValue: _selectedPriority,
+            decoration: InputDecoration(
+              labelText: l10n.changePriorityLabel,
+              border: const OutlineInputBorder(),
+            ),
+            items: [
+              DropdownMenuItem(value: 'High', child: Text(l10n.priorityHigh)),
+              DropdownMenuItem(value: 'Medium', child: Text(l10n.priorityMedium)),
+              DropdownMenuItem(value: 'Low', child: Text(l10n.priorityLow)),
+            ],
+            onChanged: (value) => setState(() => _selectedPriority = value),
+          ),
+          SizedBox(height: 12.h),
+          // Status dropdown
+          DropdownButtonFormField<String>(
+            initialValue: _selectedStatus,
+            decoration: InputDecoration(
+              labelText: l10n.changeStatusLabel,
+              border: const OutlineInputBorder(),
+            ),
+            items: const [
+              DropdownMenuItem(value: 'In Progress', child: Text('In Progress')),
+              DropdownMenuItem(value: 'In Review', child: Text('In Review')),
+              DropdownMenuItem(value: 'Completed', child: Text('Completed')),
+            ],
+            onChanged: (value) => setState(() => _selectedStatus = value),
+          ),
+          SizedBox(height: 12.h),
+          // User assignment
+          usersAsync.when(
+            data: (users) => DropdownButtonFormField<String>(
+              initialValue: _selectedUserId,
+              decoration: InputDecoration(
+                labelText: l10n.assignToUserLabel,
+                border: const OutlineInputBorder(),
+              ),
+              items: users.map((user) => DropdownMenuItem(
+                value: user.username,
+                child: Text(user.username),
+              )).toList(),
+              onChanged: (value) => setState(() => _selectedUserId = value),
+            ),
+            loading: () => const CircularProgressIndicator(),
+            error: (error, stack) => Text('Error loading users: $error'),
+          ),
+          SizedBox(height: 12.h),
+          // Export action
+          OutlinedButton.icon(
+            onPressed: () => _exportSelectedProjects(context, ref, l10n),
+            icon: const Icon(Icons.download),
+            label: Text(l10n.exportSelectedToCsvLabel),
+          ),
+          SizedBox(height: 16.h),
+          // Apply actions
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: Text(l10n.cancelLabel),
+                ),
+              ),
+              SizedBox(width: 12.w),
+              Expanded(
+                child: ElevatedButton(
+                  onPressed: () => _applyActions(context, ref, l10n),
+                  child: Text(l10n.applyActionsLabel),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _showDeleteConfirmation(BuildContext context, WidgetRef ref, AppLocalizations l10n) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(l10n.deleteUserDialogTitle),
+        content: Text(l10n.confirmDeleteSelectedProjectsMessage(widget.selectedProjectIds.length)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: Text(l10n.cancelLabel),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: Text(l10n.deleteButton),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true && context.mounted) {
+      try {
+        await ref.read(persistentProjectFilterProvider.notifier).bulkDeleteProjects(widget.selectedProjectIds, ref);
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(l10n.bulkDeleteSuccessMessage(widget.selectedProjectIds.length))),
+          );
+        }
+        widget.onActionCompleted();
+      } catch (e) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Failed to delete projects: $e')),
+          );
+        }
+      }
+    }
+  }
+
+  Future<void> _exportSelectedProjects(BuildContext context, WidgetRef ref, AppLocalizations l10n) async {
+    try {
+      final repository = ref.read(projectRepositoryProvider);
+      final projects = <ProjectModel>[];
+      
+      for (final id in widget.selectedProjectIds) {
+        final project = await repository.getProjectById(id);
+        if (project != null) {
+          projects.add(project);
+        }
+      }
+
+      final csvData = [
+        ['ID', 'Name', 'Priority', 'Status', 'Start Date', 'Due Date', 'Progress', 'Assigned User'],
+        ...projects.map((project) => [
+          project.id,
+          project.name,
+          project.priority ?? '',
+          project.status,
+          project.startDate != null ? DateFormat('dd MMM yyyy').format(project.startDate!) : '',
+          project.dueDate != null ? DateFormat('dd MMM yyyy').format(project.dueDate!) : '',
+          '${(project.progress * 100).round()}%',
+          project.sharedUsers.isNotEmpty ? project.sharedUsers.first : '',
+        ]),
+      ];
+
+      final csvString = const ListToCsvConverter().convert(csvData);
+
+      // Save to Downloads folder
+      final directory = await getDownloadsDirectory();
+      if (directory == null) return;
+
+      final fileName = 'selected_projects_export_${DateFormat('yyyyMMdd_HHmmss').format(DateTime.now())}.csv';
+      final file = File('${directory.path}/$fileName');
+      await file.writeAsString(csvString);
+
+      // Share the file
+      await Share.shareXFiles(
+        [XFile(file.path)],
+        text: 'Selected projects export',
+      );
+
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(l10n.csvExportSuccessMessage)),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Export failed: $e')),
+        );
+      }
+    }
+  }
+
+  Future<void> _applyActions(BuildContext context, WidgetRef ref, l10n) async {
+    try {
+      final notifier = ref.read(persistentProjectFilterProvider.notifier);
+      int actionsApplied = 0;
+
+      if (_selectedPriority != null) {
+        await notifier.bulkUpdatePriority(widget.selectedProjectIds, _selectedPriority!, ref);
+        actionsApplied++;
+      }
+
+      if (_selectedStatus != null) {
+        await notifier.bulkUpdateStatus(widget.selectedProjectIds, _selectedStatus!, ref);
+        actionsApplied++;
+      }
+
+      if (_selectedUserId != null) {
+        await notifier.bulkAssignUser(widget.selectedProjectIds, _selectedUserId!, ref);
+        actionsApplied++;
+      }
+
+      if (context.mounted && actionsApplied > 0) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(l10n.bulkActionsAppliedMessage(actionsApplied, widget.selectedProjectIds.length))),
+        );
+      }
+
+      widget.onActionCompleted();
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to apply actions: $e')),
+        );
+      }
     }
   }
 }

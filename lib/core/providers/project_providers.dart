@@ -1,7 +1,3 @@
-/*
-Pagination Provider Setup Complete (issue #004)
-All new UI should use projectsPaginatedProvider
-*/
 import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive/hive.dart';
@@ -13,6 +9,7 @@ import 'auth_providers.dart'; // Import for auth provider access
 import 'package:my_project_management_app/core/repository/project_meta_repository.dart';
 import 'package:my_project_management_app/models/project_meta.dart';
 import 'package:my_project_management_app/core/auth/permissions.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 /// Parameters for the filtered projects family provider
 class ProjectFilterParams {
@@ -111,7 +108,7 @@ final filteredProjectsProvider = FutureProvider.autoDispose.family<List<ProjectM
   var projects = await repository.getFilteredProjects(
     repo.ProjectFilter( // map params to repository filter
       status: params.status,
-      searchQuery: params.searchQuery,
+      searchQuery: null, // handle search client-side for fuzzy matching
       startDate: null, // dates handled client-side below
       endDate: null,
       priority: null, // priority handled client-side below
@@ -120,6 +117,17 @@ final filteredProjectsProvider = FutureProvider.autoDispose.family<List<ProjectM
     ),
     extraConditions: [],
   );
+
+  // Apply fuzzy search on name, description, and tags
+  if (params.searchQuery != null && params.searchQuery!.isNotEmpty) {
+    final query = params.searchQuery!.toLowerCase();
+    projects = projects.where((p) => _matchesFuzzySearch(p, query)).toList();
+  }
+
+  // Apply tags filter
+  if (params.tags != null && params.tags!.isNotEmpty) {
+    projects = projects.where((p) => params.tags!.any((tag) => p.tags.contains(tag))).toList();
+  }
 
   // Apply priority filter: exact match if specified
   if (params.priority != null) {
@@ -188,6 +196,33 @@ List<ProjectModel> _applySort(List<ProjectModel> projects, String sortBy, bool a
     return ascending ? compare : -compare;
   });
   return projects;
+}
+
+/// Fuzzy search implementation for project name, description, and tags
+bool _matchesFuzzySearch(ProjectModel project, String query) {
+  final searchFields = [
+    project.name.toLowerCase(),
+    project.description?.toLowerCase() ?? '',
+    ...project.tags.map((tag) => tag.toLowerCase()),
+  ];
+
+  // Simple fuzzy search: check if query words are contained in any field
+  final queryWords = query.split(' ').where((word) => word.isNotEmpty);
+  
+  for (final field in searchFields) {
+    // Exact match gets highest priority
+    if (field.contains(query)) return true;
+    
+    // Check if all query words are present in the field (fuzzy match)
+    if (queryWords.every((word) => field.contains(word))) return true;
+    
+    // Check for partial matches (e.g., "proj" matches "project")
+    for (final word in queryWords) {
+      if (field.contains(word)) return true;
+    }
+  }
+  
+  return false;
 }
 // Ready for UI integration
 
@@ -259,6 +294,8 @@ class ProjectFilter {
   final List<repo.ProjectFilterConditions>? extraConditions;
   final String? sortBy; // values: "name", "priority", "startDate", "dueDate", "createdAt", "status"
   final bool sortAscending;
+  final String? viewName;
+  final bool isSaved;
 
   static const List<String> sortOptions = [
     'name',
@@ -281,6 +318,8 @@ class ProjectFilter {
     this.extraConditions,
     this.sortBy,
     this.sortAscending = true,
+    this.viewName,
+    this.isSaved = false,
   });
 
   ProjectFilter copyWith({
@@ -296,6 +335,8 @@ class ProjectFilter {
     List<repo.ProjectFilterConditions>? extraConditions,
     String? sortBy,
     bool? sortAscending,
+    String? viewName,
+    bool? isSaved,
   }) {
     return ProjectFilter(
       status: status ?? this.status,
@@ -310,6 +351,8 @@ class ProjectFilter {
       extraConditions: extraConditions ?? this.extraConditions,
       sortBy: sortBy ?? this.sortBy,
       sortAscending: sortAscending ?? this.sortAscending,
+      viewName: viewName ?? this.viewName,
+      isSaved: isSaved ?? this.isSaved,
     );
   }
 
@@ -323,8 +366,11 @@ class ProjectFilter {
       'endDate': endDate?.toIso8601String(),
       'dueDateStart': dueDateStart?.toIso8601String(),
       'dueDateEnd': dueDateEnd?.toIso8601String(),
+      'tags': tags,
       'sortBy': sortBy,
       'sortAscending': sortAscending,
+      'viewName': viewName,
+      'isSaved': isSaved,
       // extraConditions not persisted as they are complex
     };
   }
@@ -339,8 +385,11 @@ class ProjectFilter {
       endDate: json['endDate'] != null ? DateTime.parse(json['endDate'] as String) : null,
       dueDateStart: json['dueDateStart'] != null ? DateTime.parse(json['dueDateStart'] as String) : null,
       dueDateEnd: json['dueDateEnd'] != null ? DateTime.parse(json['dueDateEnd'] as String) : null,
+      tags: (json['tags'] as List<dynamic>?)?.cast<String>(),
       sortBy: json['sortBy'] as String?,
       sortAscending: json['sortAscending'] as bool? ?? true,
+      viewName: json['viewName'] as String?,
+      isSaved: json['isSaved'] as bool? ?? false,
     );
   }
 
@@ -359,7 +408,9 @@ class ProjectFilter {
         other.sortBy == sortBy &&
         other.sortAscending == sortAscending &&
         other.tags == tags &&
-        other.extraConditions == extraConditions;
+        other.extraConditions == extraConditions &&
+        other.viewName == viewName &&
+        other.isSaved == isSaved;
   }
 
   @override
@@ -377,6 +428,8 @@ class ProjectFilter {
       sortAscending,
       tags,
       extraConditions,
+      viewName,
+      isSaved,
     );
   }
 }
@@ -760,9 +813,241 @@ class ProjectFilterNotifier extends StateNotifier<ProjectFilter> {
     state = newFilter;
     _saveFilter(newFilter);
   }
+
+  Future<void> saveView(String name) async {
+    final savedFilter = state.copyWith(viewName: name, isSaved: true);
+    // Update the current filter to reflect it's saved
+    state = savedFilter;
+    _saveFilter(savedFilter);
+    // Also save to saved views
+    // This will be handled by the SavedViewsNotifier
+  }
+
+  Future<void> loadView(ProjectFilter view) async {
+    state = view;
+    _saveFilter(view);
+  }
+
+  Future<void> deleteView(String viewName) async {
+    // If current filter is the deleted view, reset to default
+    if (state.viewName == viewName) {
+      await _loadDefaultFilter();
+    }
+    // The actual deletion is handled by SavedViewsNotifier
+  }
+
+  /// Bulk operations for selected projects
+  Future<void> bulkDeleteProjects(Set<String> projectIds, WidgetRef ref) async {
+    final repository = ref.read(projectRepositoryProvider);
+    for (final id in projectIds) {
+      await repository.deleteProject(id);
+    }
+  }
+
+  Future<void> bulkUpdatePriority(Set<String> projectIds, String priority, WidgetRef ref) async {
+    final repository = ref.read(projectRepositoryProvider);
+    for (final id in projectIds) {
+      final project = await repository.getProjectById(id);
+      if (project != null) {
+        final updated = ProjectModel(
+          id: project.id,
+          name: project.name,
+          progress: project.progress,
+          directoryPath: project.directoryPath,
+          tasks: project.tasks,
+          status: project.status,
+          description: project.description,
+          category: project.category,
+          aiAssistant: project.aiAssistant,
+          planJson: project.planJson,
+          helpLevel: project.helpLevel,
+          complexity: project.complexity,
+          history: project.history,
+          sharedUsers: project.sharedUsers,
+          sharedGroups: project.sharedGroups,
+          priority: priority,
+          startDate: project.startDate,
+          dueDate: project.dueDate,
+        );
+        await repository.updateProject(id, updated);
+      }
+    }
+  }
+
+  Future<void> bulkUpdateStatus(Set<String> projectIds, String status, WidgetRef ref) async {
+    final repository = ref.read(projectRepositoryProvider);
+    for (final id in projectIds) {
+      final project = await repository.getProjectById(id);
+      if (project != null) {
+        final updated = ProjectModel(
+          id: project.id,
+          name: project.name,
+          progress: project.progress,
+          directoryPath: project.directoryPath,
+          tasks: project.tasks,
+          status: status,
+          description: project.description,
+          category: project.category,
+          aiAssistant: project.aiAssistant,
+          planJson: project.planJson,
+          helpLevel: project.helpLevel,
+          complexity: project.complexity,
+          history: project.history,
+          sharedUsers: project.sharedUsers,
+          sharedGroups: project.sharedGroups,
+          priority: project.priority,
+          startDate: project.startDate,
+          dueDate: project.dueDate,
+        );
+        await repository.updateProject(id, updated);
+      }
+    }
+  }
+
+  Future<void> bulkAssignUser(Set<String> projectIds, String username, WidgetRef ref) async {
+    final repository = ref.read(projectRepositoryProvider);
+    for (final id in projectIds) {
+      await repository.addSharedUser(id, username);
+    }
+  }
 }
 
 /// Persistent project filter provider
 final persistentProjectFilterProvider = StateNotifierProvider<ProjectFilterNotifier, ProjectFilter>((ref) {
   return ProjectFilterNotifier();
 });
+
+/// Provider for saved project filter views loaded from Hive box 'saved_views'
+final savedProjectViewsProvider = StateNotifierProvider<SavedViewsNotifier, List<ProjectFilter>>((ref) {
+  return SavedViewsNotifier();
+});
+/// Provider for selected project IDs in bulk selection mode
+final selectedProjectIdsProvider = StateProvider<Set<String>>((ref) => {});
+
+/// Provider for bulk selection mode state
+final isSelectionModeProvider = StateProvider<bool>((ref) => false);
+class SavedViewsNotifier extends StateNotifier<List<ProjectFilter>> {
+  static const String _boxName = 'saved_views';
+
+  SavedViewsNotifier() : super([]) {
+    _loadViews();
+    _syncFromSupabase();
+  }
+
+  Future<void> _loadViews() async {
+    try {
+      final box = await Hive.openBox(_boxName);
+      final views = <ProjectFilter>[];
+      for (final key in box.keys) {
+        final json = box.get(key);
+        if (json != null && json is Map) {
+          final filter = ProjectFilter.fromJson(Map<String, dynamic>.from(json));
+          if (filter.isSaved && filter.viewName != null) {
+            views.add(filter);
+          }
+        }
+      }
+      state = views;
+    } catch (e) {
+      state = [];
+    }
+  }
+
+  Future<void> _saveViews() async {
+    try {
+      final box = await Hive.openBox(_boxName);
+      await box.clear();
+      for (final view in state) {
+        if (view.viewName != null) {
+          await box.put(view.viewName!, view.toJson());
+        }
+      }
+    } catch (e) {
+      // Log error but don't fail
+    }
+  }
+
+  Future<void> _syncFromSupabase() async {
+    try {
+      final supabase = Supabase.instance.client;
+      final user = supabase.auth.currentUser;
+      if (user == null) return;
+
+      final response = await supabase
+          .from('user_views')
+          .select('view_name, filter_data')
+          .eq('user_id', user.id);
+
+      final remoteViews = <ProjectFilter>[];
+      for (final row in response) {
+        final filterData = row['filter_data'] as Map<String, dynamic>;
+        final filter = ProjectFilter.fromJson(filterData);
+        final viewWithName = filter.copyWith(viewName: row['view_name'], isSaved: true);
+        remoteViews.add(viewWithName);
+      }
+
+      // Merge with local views (remote takes precedence)
+      final localViews = Map<String, ProjectFilter>.fromEntries(
+        state.where((v) => v.viewName != null).map((v) => MapEntry(v.viewName!, v))
+      );
+
+      for (final remoteView in remoteViews) {
+        localViews[remoteView.viewName!] = remoteView;
+      }
+
+      state = localViews.values.toList();
+      await _saveViews();
+    } catch (e) {
+      // If Supabase sync fails, continue with local data
+    }
+  }
+
+  Future<void> _syncToSupabase(ProjectFilter filter) async {
+    try {
+      final supabase = Supabase.instance.client;
+      final user = supabase.auth.currentUser;
+      if (user == null || filter.viewName == null) return;
+
+      await supabase.from('user_views').upsert({
+        'user_id': user.id,
+        'view_name': filter.viewName,
+        'filter_data': filter.toJson(),
+        'updated_at': DateTime.now().toIso8601String(),
+      });
+    } catch (e) {
+      // If Supabase sync fails, continue locally
+    }
+  }
+
+  Future<void> saveView(ProjectFilter filter, String name) async {
+    final savedFilter = filter.copyWith(viewName: name, isSaved: true);
+    final existingIndex = state.indexWhere((v) => v.viewName == name);
+    if (existingIndex >= 0) {
+      state = [...state]..[existingIndex] = savedFilter;
+    } else {
+      state = [...state, savedFilter];
+    }
+    await _saveViews();
+    await _syncToSupabase(savedFilter);
+  }
+
+  Future<void> deleteView(String viewName) async {
+    state = state.where((v) => v.viewName != viewName).toList();
+    await _saveViews();
+
+    // Sync deletion to Supabase
+    try {
+      final supabase = Supabase.instance.client;
+      final user = supabase.auth.currentUser;
+      if (user != null) {
+        await supabase
+            .from('user_views')
+            .delete()
+            .eq('user_id', user.id)
+            .eq('view_name', viewName);
+      }
+    } catch (e) {
+      // If Supabase sync fails, continue locally
+    }
+  }
+}

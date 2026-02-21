@@ -78,6 +78,8 @@ class HiveInitializer {
         'project_meta': await _exportProjectMetaBox(),
         'settings': await _exportGenericBox('settings'),
         'auth': await _exportGenericBox('auth'),
+        'project_filters': await _exportGenericBox('project_filters'),
+        'saved_views': await _exportGenericBox('saved_views'),
       },
     };
 
@@ -112,6 +114,8 @@ class HiveInitializer {
     await _restoreProjectMetaBox(boxes['project_meta']);
     await _restoreGenericBox('settings', boxes['settings']);
     await _restoreGenericBox('auth', boxes['auth']);
+    await _restoreGenericBox('project_filters', boxes['project_filters']);
+    await _restoreGenericBox('saved_views', boxes['saved_views']);
   }
 
   static Future<Map<String, dynamic>> _exportProjectsBox() async {

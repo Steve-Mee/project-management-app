@@ -69,6 +69,17 @@ CREATE TABLE IF NOT EXISTS ab_configs (
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
+-- User saved filter views table
+CREATE TABLE IF NOT EXISTS user_views (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id UUID NOT NULL,
+  view_name TEXT NOT NULL,
+  filter_data JSONB NOT NULL,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  UNIQUE(user_id, view_name)
+);
+
 -- Create indexes for better performance
 CREATE INDEX IF NOT EXISTS idx_project_members_project_id ON project_members(project_id);
 CREATE INDEX IF NOT EXISTS idx_project_members_user_id ON project_members(user_id);
@@ -79,3 +90,5 @@ CREATE INDEX IF NOT EXISTS idx_tasks_project_id ON tasks(project_id);
 CREATE INDEX IF NOT EXISTS idx_analytics_event ON analytics(event);
 CREATE INDEX IF NOT EXISTS idx_analytics_user_id ON analytics(user_id);
 CREATE INDEX IF NOT EXISTS idx_analytics_timestamp ON analytics(timestamp);
+CREATE INDEX IF NOT EXISTS idx_user_views_user_id ON user_views(user_id);
+CREATE INDEX IF NOT EXISTS idx_user_views_view_name ON user_views(view_name);

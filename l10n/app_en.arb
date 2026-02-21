@@ -1280,5 +1280,149 @@
   "applyFiltersLabel": "Apply Filters",
   "@applyFiltersLabel": {
     "description": "Label for apply filters button."
+  },
+  "savedViewsTabLabel": "Saved Views",
+  "@savedViewsTabLabel": {
+    "description": "Label for the saved views tab in filter dialog."
+  },
+  "filtersTabLabel": "Filters",
+  "@filtersTabLabel": {
+    "description": "Label for the filters tab in filter dialog."
+  },
+  "viewNameLabel": "View Name",
+  "@viewNameLabel": {
+    "description": "Label for the view name text field."
+  },
+  "viewNameHint": "Enter a name for this view",
+  "@viewNameHint": {
+    "description": "Hint text for the view name text field."
+  },
+  "saveCurrentAsViewLabel": "Save Current",
+  "@saveCurrentAsViewLabel": {
+    "description": "Label for the save current filter as view button."
+  },
+  "viewSavedMessage": "View saved successfully",
+  "@viewSavedMessage": {
+    "description": "Message shown when a view is saved."
+  },
+  "noSavedViewsMessage": "No saved views yet",
+  "@noSavedViewsMessage": {
+    "description": "Message shown when there are no saved views."
+  },
+  "savedViewsLabel": "Saved Views",
+  "@savedViewsLabel": {
+    "description": "Label for the saved views dropdown."
+  },
+  "allViewsLabel": "All Views",
+  "@allViewsLabel": {
+    "description": "Label for showing all views in dropdown."
+  },
+  "filterProjectsTooltip": "Filter projects",
+  "@filterProjectsTooltip": {
+    "description": "Tooltip for the filter projects button."
+  },
+  "selectProjectsTitle": "Select Projects ({count})",
+  "@selectProjectsTitle": {
+    "description": "Title shown when in selection mode with count of selected items.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "bulkActionsTooltip": "Bulk actions",
+  "@bulkActionsTooltip": {
+    "description": "Tooltip for the bulk actions button."
+  },
+  "exitSelectionModeTooltip": "Exit selection mode",
+  "@exitSelectionModeTooltip": {
+    "description": "Tooltip for exiting selection mode."
+  },
+  "bulkActionsTitle": "Bulk Actions ({count} selected)",
+  "@bulkActionsTitle": {
+    "description": "Title for the bulk actions bottom sheet.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "deleteSelectedProjectsLabel": "Delete Selected Projects",
+  "@deleteSelectedProjectsLabel": {
+    "description": "Label for the delete selected projects button."
+  },
+  "changePriorityLabel": "Change Priority",
+  "@changePriorityLabel": {
+    "description": "Label for the priority change dropdown."
+  },
+  "changeStatusLabel": "Change Status",
+  "@changeStatusLabel": {
+    "description": "Label for the status change dropdown."
+  },
+  "assignToUserLabel": "Assign to User",
+  "@assignToUserLabel": {
+    "description": "Label for the user assignment dropdown."
+  },
+  "exportSelectedToCsvLabel": "Export Selected to CSV",
+  "@exportSelectedToCsvLabel": {
+    "description": "Label for the export selected projects to CSV button."
+  },
+  "applyActionsLabel": "Apply Actions",
+  "@applyActionsLabel": {
+    "description": "Label for the apply actions button."
+  },
+  "confirmDeleteSelectedProjectsMessage": "Are you sure you want to delete {count} selected projects? This action cannot be undone.",
+  "@confirmDeleteSelectedProjectsMessage": {
+    "description": "Confirmation message for deleting selected projects.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "bulkDeleteSuccessMessage": "Successfully deleted {count} projects.",
+  "@bulkDeleteSuccessMessage": {
+    "description": "Success message after bulk deleting projects.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "bulkActionsAppliedMessage": "Applied {actions} action(s) to {count} projects.",
+  "@bulkActionsAppliedMessage": {
+    "description": "Success message after applying bulk actions.",
+    "placeholders": {
+      "actions": {
+        "type": "int"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "searchProjectsLabel": "Search Projects",
+  "@searchProjectsLabel": {
+    "description": "Label for the search projects text field."
+  },
+  "searchProjectsHint": "Search by name, description, or tags...",
+  "@searchProjectsHint": {
+    "description": "Hint text for the search projects text field."
+  },
+  "filterTagsLabel": "Tags",
+  "@filterTagsLabel": {
+    "description": "Label for the tags filter section."
+  },
+  "addTagLabel": "Add Tag",
+  "@addTagLabel": {
+    "description": "Label for adding a new tag."
+  },
+  "addTagHint": "Enter tag name",
+  "@addTagHint": {
+    "description": "Hint for the add tag text field."
+  },
+  "availableTagsLabel": "Available tags:",
+  "@availableTagsLabel": {
+    "description": "Label showing available tags to select from."
   }
 }

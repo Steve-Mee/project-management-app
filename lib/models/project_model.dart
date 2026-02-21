@@ -68,6 +68,9 @@ class ProjectModel {
   @HiveField(17)
   final DateTime? dueDate;
 
+  @HiveField(18)
+  final List<String> tags;
+
   const ProjectModel({
     required this.id,
     required this.name,
@@ -87,6 +90,7 @@ class ProjectModel {
     this.priority,
     this.startDate,
     this.dueDate,
+    this.tags = const [],
   });
 
   /// Factory for creating a project with a guaranteed UUID.
@@ -109,6 +113,7 @@ class ProjectModel {
     String? priority,
     DateTime? startDate,
     DateTime? dueDate,
+    List<String> tags = const [],
   }) {
     final resolvedId = (id == null || id.isEmpty) ? _uuid.v4() : id;
     return ProjectModel(
@@ -130,6 +135,7 @@ class ProjectModel {
       priority: priority,
       startDate: startDate,
       dueDate: dueDate,
+      tags: tags,
     );
   }
 
@@ -160,6 +166,7 @@ class ProjectModel {
       priority: json['priority'] as String?,
       startDate: json['startDate'] != null ? DateTime.parse(json['startDate'] as String) : null,
       dueDate: json['dueDate'] != null ? DateTime.parse(json['dueDate'] as String) : null,
+      tags: (json['tags'] as List<dynamic>?)?.cast<String>() ?? const [],
     );
   }
 
@@ -184,6 +191,7 @@ class ProjectModel {
       'priority': priority,
       'startDate': startDate?.toIso8601String(),
       'dueDate': dueDate?.toIso8601String(),
+      'tags': tags,
     };
   }
 
