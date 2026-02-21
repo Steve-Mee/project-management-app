@@ -7,7 +7,6 @@ import 'package:shimmer/shimmer.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:animate_do/animate_do.dart';
 import 'package:my_project_management_app/generated/app_localizations.dart';
-import 'package:go_router/go_router.dart';
 import 'package:my_project_management_app/core/auth/permissions.dart';
 import '../../core/providers.dart';
 import '../../core/theme.dart';
@@ -15,11 +14,8 @@ import '../../models/project_meta.dart';
 import '../../models/project_model.dart';
 import '../../models/project_sort.dart';
 import '../ai_chat/ai_chat_modal.dart';
-import 'widgets/welcome_header_widget.dart';
-import 'widgets/filters_sort_widget.dart';
 import 'widgets/error_state_widget.dart';
 import 'widgets/loading_more_widget.dart';
-import 'widgets/task_chart_widget.dart';
 import 'widgets/project_card_widget.dart';
 
 /// Filter state for projects list
@@ -259,61 +255,6 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
         .join(', ');
   }
 
-  Widget _buildProjectRow(BuildContext context, int rowIndex, List<ProjectModel> visibleProjects, bool isDesktop) {
-    if (isDesktop) {
-      const itemsPerRow = 3;
-      final start = rowIndex * itemsPerRow;
-      final end = min(start + itemsPerRow, visibleProjects.length);
-      final rowProjects = visibleProjects.sublist(start, end);
-
-      return Padding(
-        padding: EdgeInsets.only(bottom: 12.h),
-        child: Row(
-          children: List.generate(itemsPerRow, (colIndex) {
-            if (colIndex >= rowProjects.length) {
-              return const Spacer();
-            }
-
-            final project = rowProjects[colIndex];
-            return Expanded(
-              child: Padding(
-                padding: EdgeInsets.only(
-                  right: colIndex == itemsPerRow - 1 ? 0 : 12.w,
-                ),
-                child: AspectRatio(
-                  aspectRatio: 1 / 0.75,
-                  child: FadeInUp(
-                    duration: Duration(milliseconds: 400 + (rowIndex * itemsPerRow + colIndex) * 50),
-                    child: ProjectCardWidget(
-                      key: Key(project.id),
-                      project: project,
-                      onTap: () => _showProjectDetailSheet(context, project),
-                    ),
-                  ),
-                ),
-              ),
-            );
-          }),
-        ),
-      );
-    } else {
-      final project = visibleProjects[rowIndex];
-      return Padding(
-        padding: EdgeInsets.only(bottom: 12.h),
-        child: AspectRatio(
-          aspectRatio: 1 / 0.75,
-          child: FadeInUp(
-            duration: Duration(milliseconds: 400 + rowIndex * 100),
-            child: ProjectCardWidget(
-              key: Key(project.id),
-              project: project,
-              onTap: () => _showProjectDetailSheet(context, project),
-            ),
-          ),
-        ),
-      );
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -402,12 +343,6 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   /// Build main dashboard content with responsive layout
   // legacy dashboard helpers removed; combined list UI no longer uses them
 
-  // Legacy dashboard builders no longer used by combined list.
-  // We keep them for reference but they are effectively obsolete.
-  Widget _buildDefaultDashboard(BuildContext context, List<ProjectModel> projects) {
-    // not used
-    return const SizedBox.shrink();
-  }
 
   // sort local accumulated projects according to provider state
   void _sortProjectsLocal() {
@@ -825,205 +760,6 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
           ],
         ),
       ),
-    );
-  }
-}
-
-/// AI Usage Widget - displays token usage with chart and compliance note
-class _AiUsageWidget extends ConsumerWidget {
-  const _AiUsageWidget();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final aiUsageAsync = ref.watch(aiUsageProvider);
-    final theme = Theme.of(context);
-    final colors = _ChartColors(
-      primary: theme.colorScheme.primary,
-      secondary: theme.colorScheme.secondary,
-      success: theme.colorScheme.tertiary,
-      neutral: theme.colorScheme.outlineVariant,
-      grid: theme.colorScheme.outlineVariant.withValues(alpha: 0.4),
-      surface: theme.colorScheme.surface,
-    );
-
-    return aiUsageAsync.when(
-      loading: () => const Center(child: CircularProgressIndicator()),
-      error: (error, _) => Center(
-        child: Text(
-          'Error loading AI usage: $error',
-          style: Theme.of(context).textTheme.bodySmall,
-        ),
-      ),
-      data: (aiUsage) {
-        // Mock monthly data for chart - in production, fetch from Supabase
-        final monthlyData = [
-          FlSpot(1, 12000), // Jan
-          FlSpot(2, 15000), // Feb
-          FlSpot(3, 18000), // Mar
-          FlSpot(4, 14000), // Apr
-          FlSpot(5, 22000), // May
-          FlSpot(6, aiUsage.tokensUsed.toDouble()), // Current month
-        ];
-
-        final usagePercentage = aiUsage.tokensUsed / aiUsage.monthlyLimit;
-
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'AI Usage',
-              style: Theme.of(context).textTheme.titleLarge,
-            ),
-            const SizedBox(height: 16),
-            // Current usage display
-            Row(
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Tokens Used: ${aiUsage.tokensUsed.toStringAsFixed(0)}',
-                        style: Theme.of(context).textTheme.bodyLarge,
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        'Monthly Limit: ${aiUsage.monthlyLimit.toStringAsFixed(0)}',
-                        style: Theme.of(context).textTheme.bodyMedium,
-                      ),
-                    ],
-                  ),
-                ),
-                CircularProgressIndicator(
-                  value: usagePercentage.clamp(0.0, 1.0),
-                  backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
-                  valueColor: AlwaysStoppedAnimation<Color>(
-                    usagePercentage > 0.8
-                        ? Theme.of(context).colorScheme.error
-                        : Theme.of(context).colorScheme.primary,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            // Monthly breakdown chart
-            Text(
-              'Monthly Usage Trend',
-              style: Theme.of(context).textTheme.titleMedium,
-            ),
-            const SizedBox(height: 8),
-            SizedBox(
-              height: 200,
-              child: LineChart(
-                LineChartData(
-                  gridData: FlGridData(
-                    show: true,
-                    drawVerticalLine: true,
-                    horizontalInterval: 5000,
-                    verticalInterval: 1,
-                    getDrawingHorizontalLine: (value) {
-                      return FlLine(color: colors.grid, strokeWidth: 0.5);
-                    },
-                    getDrawingVerticalLine: (value) {
-                      return FlLine(color: colors.grid, strokeWidth: 0.5);
-                    },
-                  ),
-                  titlesData: FlTitlesData(
-                    show: true,
-                    rightTitles: const AxisTitles(
-                      sideTitles: SideTitles(showTitles: false),
-                    ),
-                    topTitles: const AxisTitles(
-                      sideTitles: SideTitles(showTitles: false),
-                    ),
-                    bottomTitles: AxisTitles(
-                      sideTitles: SideTitles(
-                        showTitles: true,
-                        reservedSize: 30,
-                        interval: 1,
-                        getTitlesWidget: (value, meta) {
-                          const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'];
-                          if (value.toInt() >= 1 && value.toInt() <= months.length) {
-                            return Text(
-                              months[value.toInt() - 1],
-                              style: TextStyle(fontSize: 10.sp),
-                            );
-                          }
-                          return const Text('');
-                        },
-                      ),
-                    ),
-                    leftTitles: AxisTitles(
-                      sideTitles: SideTitles(
-                        showTitles: true,
-                        reservedSize: 40,
-                        interval: 5000,
-                        getTitlesWidget: (value, meta) {
-                          return Text(
-                            '${(value / 1000).toStringAsFixed(0)}k',
-                            style: TextStyle(fontSize: 10.sp),
-                          );
-                        },
-                      ),
-                    ),
-                  ),
-                  borderData: FlBorderData(show: false),
-                  lineBarsData: [
-                    LineChartBarData(
-                      spots: monthlyData,
-                      isCurved: true,
-                      color: colors.primary,
-                      barWidth: 3,
-                      belowBarData: BarAreaData(
-                        show: true,
-                        color: colors.primary.withValues(alpha: 0.1),
-                      ),
-                      dotData: FlDotData(
-                        show: true,
-                        getDotPainter: (spot, percent, barData, index) {
-                          return FlDotCirclePainter(
-                            radius: 4,
-                            color: colors.primary,
-                            strokeWidth: 2,
-                            strokeColor: colors.surface,
-                          );
-                        },
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(height: 16),
-            // Compliance note
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.surfaceContainerHighest,
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Row(
-                children: [
-                  Icon(
-                    Icons.security,
-                    size: 20,
-                    color: Theme.of(context).colorScheme.primary,
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      'AI usage is monitored for compliance with worldwide privacy regulations (GDPR, CCPA, etc.). Only aggregate usage data is stored.',
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: Theme.of(context).colorScheme.onSurfaceVariant,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        );
-      },
     );
   }
 }

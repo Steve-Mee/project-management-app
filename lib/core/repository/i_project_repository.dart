@@ -1,5 +1,6 @@
 /// Abstract interface for project repository
 /// Allows easy swapping of implementations (Hive, Supabase, mock for tests, etc.)
+library;
 import 'package:my_project_management_app/models/project_model.dart';
 
 /// Filter criteria for projects
