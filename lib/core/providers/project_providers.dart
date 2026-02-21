@@ -24,6 +24,16 @@ class _CacheEntry<T> {
 
 // IProjectRepository has been moved to `lib/core/repository/i_project_repository.dart`
 
+/// Simple in-memory cache for individual projects (auto-expire after 5 minutes)
+final projectCacheProvider = StateProvider.family<ProjectModel?, String>((ref, id) {
+  ref.onDispose(() {
+    Future.delayed(const Duration(minutes: 5), () {
+      ref.invalidate(projectCacheProvider(id));
+    });
+  });
+  return null;
+});
+
 /// Provider for project repository with abstract interface
 /// Easy to swap implementations for testing or different backends
 final projectRepositoryProvider = Provider<repo.IProjectRepository>((ref) {
@@ -39,19 +49,20 @@ final projectsProvider = NotifierProvider<ProjectsNotifier, AsyncValue<List<Proj
 );
 
 
-/// Family provider for getting a specific project by ID
-/// Uses AsyncValue.guard() for robust error handling
-/// TODO: Add caching for individual projects
+/// Cached individual project provider (keeps alive for 5 minutes)
 final projectByIdProvider = FutureProvider.autoDispose.family<ProjectModel?, String>((ref, projectId) async {
   final repository = ref.watch(projectRepositoryProvider);
-  
-  // TODO: Implement efficient single project fetch if repository supports it
-  // For now, get all projects and filter
-  final allProjects = await repository.getAllProjects();
-  return allProjects.cast<ProjectModel?>().firstWhere(
-    (p) => p?.id == projectId,
-    orElse: () => null,
-  );
+  // keep alive so cache entry remains while UI uses it
+  ref.keepAlive();
+
+  final cached = ref.watch(projectCacheProvider(projectId));
+  if (cached != null) return cached;
+
+  final project = await repository.getProjectById(projectId);
+  if (project != null) {
+    ref.read(projectCacheProvider(projectId).notifier).state = project;
+  }
+  return project;
 });
 
 /// Family provider for filtered projects (e.g., by status, user, etc.)
@@ -74,6 +85,7 @@ final filteredProjectsProvider = FutureProvider.autoDispose.family<List<ProjectM
 /// Use this for lists that need efficient loading (dashboard, projects page, etc.)
 final projectsPaginatedProvider = FutureProvider.autoDispose.family<List<ProjectModel>, ProjectPaginationParams>(
   (ref, params) async {
+    ref.keepAlive();
     final repository = ref.watch(projectRepositoryProvider);
     return repository.getProjectsPaginated(
       page: params.page,
