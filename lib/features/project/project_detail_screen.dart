@@ -21,6 +21,8 @@ import 'package:my_project_management_app/features/project/project_chat.dart';
 import 'package:my_project_management_app/features/project/task_help_dialog.dart';
 import 'package:my_project_management_app/features/project/requirements_icon_list_view.dart';
 
+// Caching integrated – projectByIdProvider now uses 5-minute TTL cache (issue 006 part 5/5)
+
 /// Project detail screen with responsive layout
 class ProjectDetailScreen extends ConsumerStatefulWidget {
   final String projectId;
@@ -122,51 +124,87 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen>
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: _buildAppBar(context),
-      body: ConstrainedBox(
-        constraints: BoxConstraints(
-          maxWidth: MediaQuery.of(context).size.width,
-          maxHeight: MediaQuery.of(context).size.height - kToolbarHeight - MediaQuery.of(context).padding.top,
-        ),
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            final isDesktop = constraints.maxWidth > 900;
+    final projectAsync = ref.watch(projectByIdProvider(widget.projectId));
+    final isFromCache = ref.watch(projectCacheProvider(widget.projectId)) != null;
 
-            return isDesktop
-                ? _buildDesktopLayout(context)
-                : _buildMobileLayout(context);
-          },
-        ),
+    return projectAsync.when(
+      loading: () => const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => _showChatBottomSheet(context),
-        tooltip: 'Project AI Assistant',
-        child: const Icon(Icons.chat),
+      error: (error, stack) => Scaffold(
+        appBar: AppBar(title: const Text('Error')),
+        body: Center(child: Text('Failed to load project: $error')),
       ),
+      data: (project) => project == null
+          ? Scaffold(
+              appBar: AppBar(title: const Text('Project Not Found')),
+              body: const Center(child: Text('Project not found')),
+            )
+          : Scaffold(
+              appBar: _buildAppBar(context, project, isFromCache),
+              body: ConstrainedBox(
+                constraints: BoxConstraints(
+                  maxWidth: MediaQuery.of(context).size.width,
+                  maxHeight: MediaQuery.of(context).size.height - kToolbarHeight - MediaQuery.of(context).padding.top,
+                ),
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    final isDesktop = constraints.maxWidth > 900;
+
+                    return isDesktop
+                        ? _buildDesktopLayout(context)
+                        : _buildMobileLayout(context);
+                  },
+                ),
+              ),
+              floatingActionButton: FloatingActionButton(
+                onPressed: () => _showChatBottomSheet(context),
+                tooltip: 'Project AI Assistant',
+                child: const Icon(Icons.chat),
+              ),
+            ),
     );
   }
 
   /// Build app bar
-  PreferredSizeWidget _buildAppBar(BuildContext context) {
+  PreferredSizeWidget _buildAppBar(BuildContext context, ProjectModel project, bool isFromCache) {
     final l10n = AppLocalizations.of(context)!;
     final screenWidth = MediaQuery.of(context).size.width;
     final isCompact = screenWidth < 400;
 
     return AppBar(
       toolbarHeight: isCompact ? 56.h : 64.h,
-      title: FittedBox(
-        fit: BoxFit.scaleDown,
-        alignment: Alignment.centerLeft,
-        child: Text(
-          l10n.projectDetailsTitle,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: Theme.of(context).textTheme.titleLarge,
-        ),
+      title: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: Text(
+              project.name,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: Theme.of(context).textTheme.titleLarge,
+            ),
+          ),
+          if (isFromCache)
+            Text(
+              'Loaded from cache',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: Theme.of(context).colorScheme.secondary,
+                fontSize: 10.sp,
+              ),
+            ),
+        ],
       ),
       elevation: 0,
       actions: [
+        IconButton(
+          icon: const Icon(Icons.refresh),
+          tooltip: 'Refresh project data',
+          onPressed: () => ref.invalidate(projectByIdProvider(widget.projectId)),
+        ),
         if (!isCompact)
           Tooltip(
             message: l10n.aiChatWithProjectFilesTooltip,

@@ -13,8 +13,6 @@ Onderstaand een gegroepeerde lijst van alle "TODO"-aantekeningen die in de codeb
   - Verwachte actie: Voeg filter-functies toe aan repository en expose via providers/families.
 - TODO: Add filtering/sorting parameters via family provider
   - Verwachte actie: Maak `projectsProvider` of `filteredProjectsProvider` uitbreidbaar met parameters (status, zoekquery, sortering).
-- TODO: Add caching for individual projects
-  - Verwachte actie: Implementeer cache voor `projectByIdProvider` of verplaats caching-logica naar repository.
 - TODO: Implement efficient single project fetch if repository supports it
   - Verwachte actie: Voeg `getProjectById` efficient implementatie toe aan `IProjectRepository` en concrete repositoryen.
 - TODO: Add more filter parameters as needed

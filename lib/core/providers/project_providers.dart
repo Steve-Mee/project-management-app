@@ -47,17 +47,14 @@ class _CacheEntry<T> {
 
 // IProjectRepository has been moved to `lib/core/repository/i_project_repository.dart`
 
-/// Simple in-memory cache for individual projects (auto-expire after 5 minutes)
+/// In-memory cache for individual projects (key = project ID)
 final projectCacheProvider = StateProvider.family<ProjectModel?, String>((ref, id) {
-  // schedule invalidation after TTL without referencing the provider itself
-  // TODO: re-enable TTL invalidation when cycle issue is resolved
-  // ref.onDispose(() {
-  //   Future.delayed(const Duration(minutes: 5), () {
-  //     if (ref.mounted) {
-  //       ref.invalidateSelf();
-  //     }
-  //   });
-  // });
+  // Auto-expire cache after 5 minutes
+  ref.onDispose(() {
+    Future.delayed(const Duration(minutes: 5), () {
+      ref.invalidateSelf();
+    });
+  });
   return null;
 });
 
@@ -77,17 +74,14 @@ final projectsProvider = NotifierProvider<ProjectsNotifier, AsyncValue<List<Proj
 
 
 /// Cached individual project provider (keeps alive for 5 minutes)
-final projectByIdProvider = FutureProvider.autoDispose.family<ProjectModel?, String>((ref, projectId) async {
-  final repository = ref.watch(projectRepositoryProvider);
-  // keep alive so cache entry remains while UI uses it
-  ref.keepAlive();
-
-  final cached = ref.watch(projectCacheProvider(projectId));
+final projectByIdProvider = FutureProvider.autoDispose.family<ProjectModel?, String>((ref, id) async {
+  final cached = ref.watch(projectCacheProvider(id));
   if (cached != null) return cached;
 
-  final project = await repository.getProjectById(projectId);
+  final repository = ref.watch(projectRepositoryProvider);
+  final project = await repository.getProjectById(id);
   if (project != null) {
-    ref.read(projectCacheProvider(projectId).notifier).state = project;
+    ref.read(projectCacheProvider(id).notifier).state = project;
   }
   return project;
 });
