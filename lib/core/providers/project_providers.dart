@@ -75,15 +75,8 @@ final projectsProvider = NotifierProvider<ProjectsNotifier, AsyncValue<List<Proj
 
 /// Cached individual project provider (keeps alive for 5 minutes)
 final projectByIdProvider = FutureProvider.autoDispose.family<ProjectModel?, String>((ref, id) async {
-  final cached = ref.watch(projectCacheProvider(id));
-  if (cached != null) return cached;
-
   final repository = ref.watch(projectRepositoryProvider);
-  final project = await repository.getProjectById(id);
-  if (project != null) {
-    ref.read(projectCacheProvider(id).notifier).state = project;
-  }
-  return project;
+  return repository.getProjectById(id);
 });
 
 /// Family provider for filtered projects (e.g., by status, user, etc.)
@@ -315,8 +308,8 @@ class ProjectsNotifier extends Notifier<AsyncValue<List<ProjectModel>>> {
     state = await AsyncValue.guard(_loadProjects);
   }
 
+  @Deprecated('Use projectByIdProvider instead for better performance')
   /// Get project by ID (consider using projectByIdProvider family provider instead)
-  /// TODO: Deprecate in favor of projectByIdProvider for better performance
   Future<ProjectModel?> getProjectById(String id) async {
     final projects = state.maybeWhen(
       data: (data) => data,

@@ -198,26 +198,8 @@ class ProjectRepository implements IProjectRepository {
   /// Get a single project by ID
   @override
   Future<ProjectModel?> getProjectById(String id) async {
-    try {
-      final data = _projectsBox.get(id);
-      if (data != null) {
-        final projectData = Map<String, dynamic>.from(data);
-        final project = ProjectModel.fromJson(projectData);
-        if (!_isValidUuid(project.id) || project.id.startsWith('project_')) {
-          final migrated = _withNewId(project, _uuid.v4());
-          _projectsBox.delete(id);
-          _projectsBox.put(migrated.id, migrated.toJson());
-          AppLogger.instance.i(
-            'Migrated project id from $id to ${migrated.id}',
-          );
-          return migrated;
-        }
-        return project;
-      }
-    } catch (e) {
-      AppLogger.instance.e('Error reading project $id from Hive', error: e);
-    }
-    return null;
+    final box = await Hive.openBox<ProjectModel>('projects');
+    return box.get(id);
   }
 
   /// Update project progress
