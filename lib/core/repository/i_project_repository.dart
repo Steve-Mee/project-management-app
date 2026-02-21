@@ -2,6 +2,27 @@
 /// Allows easy swapping of implementations (Hive, Supabase, mock for tests, etc.)
 import 'package:my_project_management_app/models/project_model.dart';
 
+/// Filter criteria for projects
+class ProjectFilter {
+  final String? status;
+  final String? searchQuery;
+  final DateTime? startDate;
+  final DateTime? endDate;
+  final String? priority;
+  final String? ownerId;
+  final List<String>? tags;
+
+  const ProjectFilter({
+    this.status,
+    this.searchQuery,
+    this.startDate,
+    this.endDate,
+    this.priority,
+    this.ownerId,
+    this.tags,
+  });
+}
+
 /// Define abstract class `IProjectRepository`.
 /// Keep method signatures narrow and backend-agnostic to allow swapping.
 abstract class IProjectRepository {
@@ -81,4 +102,10 @@ abstract class IProjectRepository {
     String? statusFilter,
     String? searchQuery,
   });
+
+  /// Fetch projects filtered by a single status
+  Future<List<ProjectModel>> getProjectsByStatus(String status);
+
+  /// Advanced filtering with multiple criteria
+  Future<List<ProjectModel>> getFilteredProjects(ProjectFilter filter);
 }
