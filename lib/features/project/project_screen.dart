@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:my_project_management_app/generated/app_localizations.dart';
@@ -33,6 +34,157 @@ class ProjectScreen extends ConsumerStatefulWidget {
   ConsumerState<ProjectScreen> createState() => _ProjectScreenState();
 }
 
+/// Keyboard shortcut intents for project screen
+class FocusSearchIntent extends Intent {
+  const FocusSearchIntent();
+}
+
+class OpenFilterDialogIntent extends Intent {
+  const OpenFilterDialogIntent();
+}
+
+class QuickSwitchViewIntent extends Intent {
+  const QuickSwitchViewIntent();
+}
+
+class ExportCsvIntent extends Intent {
+  const ExportCsvIntent();
+}
+
+/// Keyboard shortcut actions for project screen
+class FocusSearchAction extends Action<FocusSearchIntent> {
+  final FocusNode searchFocusNode;
+
+  FocusSearchAction({required this.searchFocusNode});
+
+  @override
+  void invoke(covariant FocusSearchIntent intent) {
+    searchFocusNode.requestFocus();
+  }
+}
+
+class OpenFilterDialogAction extends Action<OpenFilterDialogIntent> {
+  final BuildContext context;
+  final WidgetRef ref;
+
+  OpenFilterDialogAction({required this.context, required this.ref});
+
+  @override
+  Future<void> invoke(covariant OpenFilterDialogIntent intent) async {
+    final currentFilter = ref.read(persistentProjectFilterProvider);
+    final savedViews = ref.read(savedProjectViewsProvider);
+    final result = await showProjectFilterDialog(
+      context,
+      currentFilter,
+      () => ref.read(persistentProjectFilterProvider.notifier).saveAsDefault(),
+      null, // filteredProjects
+      savedViews,
+      (filter, name) => ref.read(savedProjectViewsProvider.notifier).saveView(filter, name),
+      (viewName) => ref.read(savedProjectViewsProvider.notifier).deleteView(viewName),
+      (view) => ref.read(persistentProjectFilterProvider.notifier).loadView(view),
+    );
+    if (result != null) {
+      ref.read(persistentProjectFilterProvider.notifier).updateFilter(result);
+      // Note: _resetPagination() is called in the screen state, but we can't access it here
+      // The screen will handle pagination reset through the filter change
+    }
+  }
+}
+
+class QuickSwitchViewAction extends Action<QuickSwitchViewIntent> {
+  final BuildContext context;
+  final WidgetRef ref;
+
+  QuickSwitchViewAction({required this.context, required this.ref});
+
+  @override
+  Future<void> invoke(covariant QuickSwitchViewIntent intent) async {
+    final savedViews = ref.read(savedProjectViewsProvider);
+    if (savedViews.isEmpty) return;
+
+    // Show a simple dialog to select a view
+    final selectedView = await showDialog<ProjectFilter>(
+      context: context,
+      builder: (context) => SimpleDialog(
+        title: const Text('Quick Switch View'),
+        children: [
+          ...savedViews.map((view) => SimpleDialogOption(
+            onPressed: () => Navigator.of(context).pop(view),
+            child: Text(view.viewName ?? 'Unnamed View'),
+          )),
+          SimpleDialogOption(
+            onPressed: () => Navigator.of(context).pop(null),
+            child: const Text('Cancel'),
+          ),
+        ],
+      ),
+    );
+
+    if (selectedView != null) {
+      ref.read(persistentProjectFilterProvider.notifier).loadView(selectedView);
+    }
+  }
+}
+
+class ExportCsvAction extends Action<ExportCsvIntent> {
+  final BuildContext context;
+  final WidgetRef ref;
+
+  ExportCsvAction({required this.context, required this.ref});
+
+  @override
+  Future<void> invoke(covariant ExportCsvIntent intent) async {
+    try {
+      final projects = ref.read(visibleProjectsProvider);
+      final currentFilter = ref.read(persistentProjectFilterProvider);
+
+      if (projects is AsyncData<List<ProjectModel>>) {
+        final filteredProjects = projects.value.where((project) {
+          // Apply current filter logic here (simplified)
+          if (currentFilter.status != null && project.status != currentFilter.status) return false;
+          if (currentFilter.priority != null && project.priority != currentFilter.priority) return false;
+          if (currentFilter.searchQuery != null && currentFilter.searchQuery!.isNotEmpty) {
+            final query = currentFilter.searchQuery!.toLowerCase();
+            if (!project.name.toLowerCase().contains(query) &&
+                !(project.description?.toLowerCase().contains(query) ?? false)) {
+              return false;
+            }
+          }
+          return true;
+        }).toList();
+
+        await _exportToCsv(context, filteredProjects);
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Export failed: $e')),
+      );
+    }
+  }
+
+  Future<void> _exportToCsv(BuildContext context, List<ProjectModel> projects) async {
+    final csvData = [
+      ['Name', 'Status', 'Priority', 'Progress', 'Start Date', 'Due Date', 'Description'],
+      ...projects.map((p) => [
+        p.name,
+        p.status,
+        p.priority,
+        '${p.progress}%',
+        p.startDate?.toString() ?? '',
+        p.dueDate?.toString() ?? '',
+        p.description ?? '',
+      ]),
+    ];
+
+    final csv = const ListToCsvConverter().convert(csvData);
+    final directory = await getApplicationDocumentsDirectory();
+    final file = File('${directory.path}/projects_export.csv');
+    await file.writeAsString(csv);
+
+    await Share.shareXFiles([XFile(file.path)], text: 'Projects export');
+  }
+}
+
 class _ProjectScreenState extends ConsumerState<ProjectScreen> {
   final ScrollController _scrollController = ScrollController();
   late final ProviderSubscription<String> _searchSubscription;
@@ -48,10 +200,12 @@ class _ProjectScreenState extends ConsumerState<ProjectScreen> {
   bool _isLoading = false;
   bool _hasMore = true;
 
-  String _selectedStatus = 'All';
-  ProjectSort _sortBy = ProjectSort.name;
-  bool _sortAscending = true;
-  String? _loadError;
+  // Focus node for search field to enable keyboard shortcuts
+  final FocusNode _searchFocusNode = FocusNode();
+
+  // Keyboard shortcuts definitions
+  late final Map<ShortcutActivator, Intent> _shortcuts;
+  late final Map<Type, Action<Intent>> _actions;
 
   @override
   void initState() {
@@ -66,7 +220,31 @@ class _ProjectScreenState extends ConsumerState<ProjectScreen> {
     );
     _searchController.text = ref.read(searchQueryProvider);
     WidgetsBinding.instance.addPostFrameCallback((_) => _resetPagination());
+
+    // Initialize shortcuts and actions
+    _shortcuts = <ShortcutActivator, Intent>{
+      // Ctrl/Cmd + F: Focus search field
+      const SingleActivator(LogicalKeyboardKey.keyF, control: true): const FocusSearchIntent(),
+      // Ctrl/Cmd + Shift + F: Open filter dialog
+      const SingleActivator(LogicalKeyboardKey.keyF, control: true, shift: true): const OpenFilterDialogIntent(),
+      // Ctrl/Cmd + K: Quick switch saved view
+      const SingleActivator(LogicalKeyboardKey.keyK, control: true): const QuickSwitchViewIntent(),
+      // Ctrl/Cmd + E: Export CSV
+      const SingleActivator(LogicalKeyboardKey.keyE, control: true): const ExportCsvIntent(),
+    };
+
+    _actions = <Type, Action<Intent>>{
+      FocusSearchIntent: FocusSearchAction(searchFocusNode: _searchFocusNode),
+      OpenFilterDialogIntent: OpenFilterDialogAction(context: context, ref: ref),
+      QuickSwitchViewIntent: QuickSwitchViewAction(context: context, ref: ref),
+      ExportCsvIntent: ExportCsvAction(context: context, ref: ref),
+    };
   }
+
+  String _selectedStatus = 'All';
+  ProjectSort _sortBy = ProjectSort.name;
+  bool _sortAscending = true;
+  String? _loadError;
 
   @override
   void dispose() {
@@ -74,6 +252,7 @@ class _ProjectScreenState extends ConsumerState<ProjectScreen> {
     _scrollController.dispose();
     _searchDebounce?.cancel();
     _searchController.dispose();
+    _searchFocusNode.dispose();
     super.dispose();
   }
 
@@ -173,14 +352,20 @@ class _ProjectScreenState extends ConsumerState<ProjectScreen> {
     if (_loadError != null && _projects.isEmpty) {
       return _buildErrorContent(context, _loadError!, canEditProjects);
     }
-    return _buildProjectView(
-      context,
-      _projects,
-      metaByProjectId,
-      canEditProjects,
-      isSelectionMode,
-      selectedIds,
-      currentFilter.viewMode,
+    return Shortcuts(
+      shortcuts: _shortcuts,
+      child: Actions(
+        actions: _actions,
+        child: _buildProjectView(
+          context,
+          _projects,
+          metaByProjectId,
+          canEditProjects,
+          isSelectionMode,
+          selectedIds,
+          currentFilter.viewMode,
+        ),
+      ),
     );
   }
 
@@ -335,6 +520,7 @@ class _ProjectScreenState extends ConsumerState<ProjectScreen> {
               children: [
                 TextField(
                   controller: _searchController,
+                  focusNode: _searchFocusNode,
                   decoration: InputDecoration(
                     hintText: 'Search projects...',
                     prefixIcon: const Icon(Icons.search),
