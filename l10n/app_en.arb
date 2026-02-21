@@ -1424,5 +1424,45 @@
   "availableTagsLabel": "Available tags:",
   "@availableTagsLabel": {
     "description": "Label showing available tags to select from."
+  },
+  "listViewTooltip": "List view",
+  "@listViewTooltip": {
+    "description": "Tooltip for the list view mode button."
+  },
+  "kanbanViewTooltip": "Kanban view",
+  "@kanbanViewTooltip": {
+    "description": "Tooltip for the kanban view mode button."
+  },
+  "tableViewTooltip": "Table view",
+  "@tableViewTooltip": {
+    "description": "Tooltip for the table view mode button."
+  },
+  "nameLabel": "Name",
+  "@nameLabel": {
+    "description": "Label for the name column in tables."
+  },
+  "statusLabel": "Status",
+  "@statusLabel": {
+    "description": "Label for the status column in tables."
+  },
+  "priorityLabel": "Priority",
+  "@priorityLabel": {
+    "description": "Label for the priority column in tables."
+  },
+  "startDateLabel": "Start Date",
+  "@startDateLabel": {
+    "description": "Label for the start date column in tables."
+  },
+  "dueDateLabel": "Due Date",
+  "@dueDateLabel": {
+    "description": "Label for the due date column in tables."
+  },
+  "progressLabel": "Progress",
+  "@progressLabel": {
+    "description": "Label for the progress column in tables."
+  },
+  "tagsLabel": "Tags",
+  "@tagsLabel": {
+    "description": "Label for the tags column in tables."
   }
 }

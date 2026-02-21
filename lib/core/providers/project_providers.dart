@@ -296,6 +296,7 @@ class ProjectFilter {
   final bool sortAscending;
   final String? viewName;
   final bool isSaved;
+  final String viewMode; // 'list', 'kanban', 'table'
 
   static const List<String> sortOptions = [
     'name',
@@ -320,6 +321,7 @@ class ProjectFilter {
     this.sortAscending = true,
     this.viewName,
     this.isSaved = false,
+    this.viewMode = 'list',
   });
 
   ProjectFilter copyWith({
@@ -337,6 +339,7 @@ class ProjectFilter {
     bool? sortAscending,
     String? viewName,
     bool? isSaved,
+    String? viewMode,
   }) {
     return ProjectFilter(
       status: status ?? this.status,
@@ -353,6 +356,7 @@ class ProjectFilter {
       sortAscending: sortAscending ?? this.sortAscending,
       viewName: viewName ?? this.viewName,
       isSaved: isSaved ?? this.isSaved,
+      viewMode: viewMode ?? this.viewMode,
     );
   }
 
@@ -371,6 +375,7 @@ class ProjectFilter {
       'sortAscending': sortAscending,
       'viewName': viewName,
       'isSaved': isSaved,
+      'viewMode': viewMode,
       // extraConditions not persisted as they are complex
     };
   }
@@ -390,6 +395,7 @@ class ProjectFilter {
       sortAscending: json['sortAscending'] as bool? ?? true,
       viewName: json['viewName'] as String?,
       isSaved: json['isSaved'] as bool? ?? false,
+      viewMode: json['viewMode'] as String? ?? 'list',
     );
   }
 
@@ -410,7 +416,8 @@ class ProjectFilter {
         other.tags == tags &&
         other.extraConditions == extraConditions &&
         other.viewName == viewName &&
-        other.isSaved == isSaved;
+        other.isSaved == isSaved &&
+        other.viewMode == viewMode;
   }
 
   @override
@@ -430,6 +437,7 @@ class ProjectFilter {
       extraConditions,
       viewName,
       isSaved,
+      viewMode,
     );
   }
 }

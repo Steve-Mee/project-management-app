@@ -1095,7 +1095,7 @@ abstract class AppLocalizations {
     Object pendingPercent,
   );
 
-  /// Auto-generated description for progressLabel.
+  /// Label for the progress column in tables.
   ///
   /// In en, this message translates to:
   /// **'Progress'**
@@ -1143,7 +1143,7 @@ abstract class AppLocalizations {
   /// **'Ideal trend'**
   String get idealTrendLabel;
 
-  /// Auto-generated description for statusLabel.
+  /// Label for the status column in tables.
   ///
   /// In en, this message translates to:
   /// **'Status'**
@@ -1974,6 +1974,54 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Available tags:'**
   String get availableTagsLabel;
+
+  /// Tooltip for the list view mode button.
+  ///
+  /// In en, this message translates to:
+  /// **'List view'**
+  String get listViewTooltip;
+
+  /// Tooltip for the kanban view mode button.
+  ///
+  /// In en, this message translates to:
+  /// **'Kanban view'**
+  String get kanbanViewTooltip;
+
+  /// Tooltip for the table view mode button.
+  ///
+  /// In en, this message translates to:
+  /// **'Table view'**
+  String get tableViewTooltip;
+
+  /// Label for the name column in tables.
+  ///
+  /// In en, this message translates to:
+  /// **'Name'**
+  String get nameLabel;
+
+  /// Label for the priority column in tables.
+  ///
+  /// In en, this message translates to:
+  /// **'Priority'**
+  String get priorityLabel;
+
+  /// Label for the start date column in tables.
+  ///
+  /// In en, this message translates to:
+  /// **'Start Date'**
+  String get startDateLabel;
+
+  /// Label for the due date column in tables.
+  ///
+  /// In en, this message translates to:
+  /// **'Due Date'**
+  String get dueDateLabel;
+
+  /// Label for the tags column in tables.
+  ///
+  /// In en, this message translates to:
+  /// **'Tags'**
+  String get tagsLabel;
 }
 
 class _AppLocalizationsDelegate

@@ -3,7 +3,6 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:go_router/go_router.dart';
 import 'package:my_project_management_app/generated/app_localizations.dart';
 import 'package:my_project_management_app/core/auth/permissions.dart';
 import 'dart:convert';
@@ -20,6 +19,7 @@ import '../../models/project_meta.dart';
 import '../../models/project_model.dart';
 import '../../models/project_sort.dart';
 import 'widgets/project_filter_dialog.dart';
+import 'widgets/project_views.dart';
 
 /// Project management screen - displays list of all projects
 class ProjectScreen extends ConsumerStatefulWidget {
@@ -137,22 +137,6 @@ class _ProjectScreenState extends ConsumerState<ProjectScreen> {
     }
   }
 
-  void _toggleProjectSelection(String projectId) {
-    final selectedIds = ref.read(selectedProjectIdsProvider);
-    final newSelectedIds = Set<String>.from(selectedIds);
-    if (newSelectedIds.contains(projectId)) {
-      newSelectedIds.remove(projectId);
-    } else {
-      newSelectedIds.add(projectId);
-    }
-    ref.read(selectedProjectIdsProvider.notifier).state = newSelectedIds;
-
-    // Exit selection mode if no items selected
-    if (newSelectedIds.isEmpty) {
-      ref.read(isSelectionModeProvider.notifier).state = false;
-    }
-  }
-
   void _showBulkActionsSheet() {
     final selectedIds = ref.read(selectedProjectIdsProvider);
     if (selectedIds.isEmpty) return;
@@ -177,6 +161,7 @@ class _ProjectScreenState extends ConsumerState<ProjectScreen> {
         ref.watch(hasPermissionProvider(AppPermissions.editProjects));
     final isSelectionMode = ref.watch(isSelectionModeProvider);
     final selectedIds = ref.watch(selectedProjectIdsProvider);
+    final currentFilter = ref.watch(persistentProjectFilterProvider);
 
     if (_projects.isEmpty && _isLoading) {
       return _buildLoadingContent(context, canEditProjects);
@@ -184,32 +169,32 @@ class _ProjectScreenState extends ConsumerState<ProjectScreen> {
     if (_loadError != null && _projects.isEmpty) {
       return _buildErrorContent(context, _loadError!, canEditProjects);
     }
-    return _buildProjectList(
+    return _buildProjectView(
       context,
       _projects,
       metaByProjectId,
       canEditProjects,
       isSelectionMode,
       selectedIds,
+      currentFilter.viewMode,
     );
   }
 
-  Widget _buildProjectList(
+  Widget _buildProjectView(
     BuildContext context,
     List<ProjectModel> projects,
     Map<String, ProjectMeta> metaByProjectId,
     bool canEditProjects,
     bool isSelectionMode,
     Set<String> selectedIds,
+    String viewMode,
   ) {
     final l10n = AppLocalizations.of(context)!;
     final filtered = _filterProjects(projects);
     final sorted = _sortProjects(filtered, metaByProjectId);
-    final visible = sorted; // pagination applied at repo level
-    final hasMore = _hasMore;
 
-    const baseCount = 3; // title + search + filters/sort
-    final itemCount = baseCount + (sorted.isEmpty ? 1 : visible.length + 1);
+    const baseCount = 4; // title + search + filters/sort + view mode
+    final itemCount = baseCount; // view content handles empty state internally
 
     return ListView.builder(
       controller: _scrollController,
@@ -233,6 +218,9 @@ class _ProjectScreenState extends ConsumerState<ProjectScreen> {
                       overflow: TextOverflow.ellipsis,
                     ),
                   ),
+                  SizedBox(width: 16.w),
+                  // View mode switcher
+                  _buildViewModeSwitcher(context, ref),
                   SizedBox(width: 16.w),
                   // Selection mode actions or Filter and Saved Views
                   if (isSelectionMode) ...[
@@ -377,61 +365,144 @@ class _ProjectScreenState extends ConsumerState<ProjectScreen> {
             ),
           );
         }
-
-        if (sorted.isEmpty) {
+        if (index == 3) {
+          // View mode content
           return Padding(
-            padding: EdgeInsets.only(top: 24.h),
-            child: Center(
-              child: Text(
-                ref.watch(searchQueryProvider).isEmpty
-                    ? l10n.noProjectsYet
-                    : l10n.noProjectsFound,
-                style: Theme.of(context).textTheme.titleMedium,
-              ),
-            ),
+            padding: EdgeInsets.only(top: 16.h),
+            child: _buildViewContent(context, sorted, metaByProjectId, canEditProjects, isSelectionMode, selectedIds, viewMode),
           );
         }
-
-        final projectIndex = index - baseCount;
-        if (projectIndex < visible.length) {
-          final project = visible[projectIndex];
-          return _buildProjectListItem(
-            context,
-            id: project.id,
-            title: project.name,
-            status: project.status,
-            isSelectionMode: isSelectionMode,
-            isSelected: selectedIds.contains(project.id),
-            onLongPress: () => _toggleProjectSelection(project.id),
-            onSelectionChanged: (selected) {
-              if (selected) {
-                _toggleProjectSelection(project.id);
-              }
-            },
-          );
-        }
-
-        if (!hasMore) {
-          return const SizedBox.shrink();
-        }
-
-        return Padding(
-          padding: EdgeInsets.only(top: 16.h, bottom: 8.h),
-          child: Center(
-            child: Column(
-              children: [
-                const CircularProgressIndicator(),
-                SizedBox(height: 8.h),
-                Text(
-                  l10n.loadingMoreProjects,
-                  style: Theme.of(context).textTheme.bodySmall,
-                ),
-              ],
-            ),
-          ),
-        );
+        // This should never be reached, but satisfies the analyzer
+        return const SizedBox.shrink();
       },
     );
+  }
+
+  Widget _buildViewModeSwitcher(BuildContext context, WidgetRef ref) {
+    final currentFilter = ref.watch(persistentProjectFilterProvider);
+    final l10n = AppLocalizations.of(context)!;
+
+    return SegmentedButton<String>(
+      segments: [
+        ButtonSegment<String>(
+          value: 'list',
+          icon: const Icon(Icons.list),
+          tooltip: l10n.listViewTooltip,
+        ),
+        ButtonSegment<String>(
+          value: 'kanban',
+          icon: const Icon(Icons.view_kanban),
+          tooltip: l10n.kanbanViewTooltip,
+        ),
+        ButtonSegment<String>(
+          value: 'table',
+          icon: const Icon(Icons.table_chart),
+          tooltip: l10n.tableViewTooltip,
+        ),
+      ],
+      selected: {currentFilter.viewMode},
+      onSelectionChanged: (Set<String> selected) {
+        final newViewMode = selected.first;
+        ref.read(persistentProjectFilterProvider.notifier).updateFilter(
+          currentFilter.copyWith(viewMode: newViewMode),
+        );
+      },
+      showSelectedIcon: false,
+    );
+  }
+
+  Widget _buildViewContent(
+    BuildContext context,
+    List<ProjectModel> projects,
+    Map<String, ProjectMeta> metaByProjectId,
+    bool canEditProjects,
+    bool isSelectionMode,
+    Set<String> selectedIds,
+    String viewMode,
+  ) {
+    switch (viewMode) {
+      case 'kanban':
+        return ProjectKanbanView(
+          projects: projects,
+          metaByProjectId: metaByProjectId,
+          canEditProjects: canEditProjects,
+          isSelectionMode: isSelectionMode,
+          selectedIds: selectedIds,
+          onLongPress: _toggleSelectionMode,
+          onSelectionChanged: (selected) {
+            // Selection is handled internally by the view widgets
+          },
+          onStatusChanged: (projectId, newStatus) => _updateProjectStatus(projectId, newStatus),
+        );
+      case 'table':
+        return ProjectTableView(
+          projects: projects,
+          metaByProjectId: metaByProjectId,
+          canEditProjects: canEditProjects,
+          isSelectionMode: isSelectionMode,
+          selectedIds: selectedIds,
+          onLongPress: _toggleSelectionMode,
+          onSelectionChanged: (selected) {
+            // Selection is handled internally by the view widgets
+          },
+          onStatusChanged: (projectId, newStatus) => _updateProjectStatus(projectId, newStatus),
+        );
+      case 'list':
+      default:
+        return ProjectListView(
+          projects: projects,
+          metaByProjectId: metaByProjectId,
+          canEditProjects: canEditProjects,
+          isSelectionMode: isSelectionMode,
+          selectedIds: selectedIds,
+          onLongPress: _toggleSelectionMode,
+          onSelectionChanged: (selected) {
+            // Selection is handled internally by the view widgets
+          },
+          onStatusChanged: (projectId, newStatus) => _updateProjectStatus(projectId, newStatus),
+        );
+    }
+  }
+
+  Future<void> _updateProjectStatus(String projectId, String newStatus) async {
+    try {
+      // Find the current project
+      final currentProject = _projects.firstWhere((p) => p.id == projectId);
+      final updatedProject = ProjectModel(
+        id: currentProject.id,
+        name: currentProject.name,
+        progress: currentProject.progress,
+        directoryPath: currentProject.directoryPath,
+        tasks: currentProject.tasks,
+        status: newStatus, // Updated status
+        description: currentProject.description,
+        category: currentProject.category,
+        aiAssistant: currentProject.aiAssistant,
+        planJson: currentProject.planJson,
+        helpLevel: currentProject.helpLevel,
+        complexity: currentProject.complexity,
+        history: currentProject.history,
+        sharedUsers: currentProject.sharedUsers,
+        sharedGroups: currentProject.sharedGroups,
+        priority: currentProject.priority,
+        startDate: currentProject.startDate,
+        dueDate: currentProject.dueDate,
+        tags: currentProject.tags,
+      );
+      
+      await ref.read(projectsProvider.notifier).updateProject(
+        projectId,
+        updatedProject,
+        changeDescription: 'Status changed to $newStatus via drag-and-drop',
+      );
+      // The provider will handle realtime updates via Supabase
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to update project status: $e')),
+        );
+      }
+    }
   }
 
   Widget _buildLoadingContent(BuildContext context, bool canEditProjects) {
@@ -762,123 +833,6 @@ class _ProjectScreenState extends ConsumerState<ProjectScreen> {
             textAlign: TextAlign.center,
           ),
         ],
-      ),
-    );
-  }
-
-  Widget _buildProjectListItem(
-    BuildContext context, {
-    required String id,
-    required String title,
-    required String status,
-    required bool isSelectionMode,
-    required bool isSelected,
-    required VoidCallback onLongPress,
-    required ValueChanged<bool> onSelectionChanged,
-  }) {
-    final l10n = AppLocalizations.of(context)!;
-    Color statusColor;
-    IconData statusIcon;
-
-    switch (status) {
-      case 'In Progress':
-        statusColor = Colors.blue;
-        statusIcon = Icons.autorenew;
-        break;
-      case 'In Review':
-        statusColor = Colors.orange;
-        statusIcon = Icons.visibility;
-        break;
-      case 'Completed':
-        statusColor = Colors.green;
-        statusIcon = Icons.check_circle;
-        break;
-      default:
-        statusColor = Colors.grey;
-        statusIcon = Icons.schedule;
-    }
-
-    return GestureDetector(
-      onLongPress: isSelectionMode ? null : onLongPress,
-      onTap: isSelectionMode ? () => onSelectionChanged(!isSelected) : () {
-        context.go('/projects/$id');
-      },
-      child: Semantics(
-        label: l10n.projectSemanticsLabel(title),
-        child: Card(
-          margin: EdgeInsets.only(bottom: 12.h),
-          color: isSelected ? Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.3) : null,
-          child: Padding(
-            padding: EdgeInsets.all(16.w),
-            child: Row(
-              children: [
-                if (isSelectionMode) ...[
-                  Checkbox(
-                    value: isSelected,
-                    onChanged: (value) => onSelectionChanged(value ?? false),
-                  ),
-                  SizedBox(width: 12.w),
-                ],
-                Container(
-                  padding: EdgeInsets.all(12.w),
-                  decoration: BoxDecoration(
-                    color: Theme.of(context)
-                        .colorScheme
-                        .primary
-                        .withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(8.r),
-                  ),
-                  child: Icon(
-                    Icons.folder,
-                    color: Theme.of(context).colorScheme.primary,
-                    size: 32.sp,
-                  ),
-                ),
-                SizedBox(width: 16.w),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        title,
-                        style: Theme.of(context).textTheme.titleMedium,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      SizedBox(height: 4.h),
-                      Row(
-                        children: [
-                          Semantics(
-                            label: l10n.statusSemanticsLabel(status),
-                            child: Icon(
-                              statusIcon,
-                              size: 16.sp,
-                              color: statusColor,
-                            ),
-                          ),
-                          SizedBox(width: 4.w),
-                          Text(
-                            status,
-                            style: TextStyle(
-                              color: statusColor,
-                              fontSize: 12.sp,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-                Icon(
-                  Icons.arrow_forward_ios,
-                  size: 16.sp,
-                  color: Theme.of(context).colorScheme.primary,
-                ),
-              ],
-            ),
-          ),
-        ),
       ),
     );
   }

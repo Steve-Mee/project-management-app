@@ -1031,4 +1031,28 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get availableTagsLabel => 'Available tags:';
+
+  @override
+  String get listViewTooltip => 'List view';
+
+  @override
+  String get kanbanViewTooltip => 'Kanban view';
+
+  @override
+  String get tableViewTooltip => 'Table view';
+
+  @override
+  String get nameLabel => 'Name';
+
+  @override
+  String get priorityLabel => 'Priority';
+
+  @override
+  String get startDateLabel => 'Start Date';
+
+  @override
+  String get dueDateLabel => 'Due Date';
+
+  @override
+  String get tagsLabel => 'Tags';
 }
