@@ -316,6 +316,34 @@
   "@projectSortStatus": {
     "description": "Auto-generated description for projectSortStatus."
   },
+  "projectSortStartDate": "开始日期",
+  "@projectSortStartDate": {
+    "description": "Label for sorting projects by start date."
+  },
+  "projectSortDueDate": "截止日期",
+  "@projectSortDueDate": {
+    "description": "Label for sorting projects by due date."
+  },
+  "sortDirectionLabel": "方向",
+  "@sortDirectionLabel": {
+    "description": "Label for sort direction selection."
+  },
+  "sortAscendingLabel": "升序",
+  "@sortAscendingLabel": {
+    "description": "Label for ascending sort order."
+  },
+  "sortDescendingLabel": "降序",
+  "@sortDescendingLabel": {
+    "description": "Label for descending sort order."
+  },
+  "exportToCsvLabel": "导出到 CSV",
+  "@exportToCsvLabel": {
+    "description": "Label for CSV export button."
+  },
+  "csvExportSuccessMessage": "CSV 导出并分享成功",
+  "@csvExportSuccessMessage": {
+    "description": "Success message after CSV export."
+  },
   "allLabel": "全部",
   "@allLabel": {
     "description": "Auto-generated description for allLabel."

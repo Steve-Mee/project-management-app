@@ -534,7 +534,7 @@ abstract class AppLocalizations {
   /// **'Sort by'**
   String get sortByLabel;
 
-  /// Auto-generated description for projectSortName.
+  /// Sort option for project name.
   ///
   /// In en, this message translates to:
   /// **'Name'**
@@ -546,7 +546,7 @@ abstract class AppLocalizations {
   /// **'Progress'**
   String get projectSortProgress;
 
-  /// Auto-generated description for projectSortPriority.
+  /// Sort option for project priority.
   ///
   /// In en, this message translates to:
   /// **'Priority'**
@@ -558,11 +558,53 @@ abstract class AppLocalizations {
   /// **'Created date'**
   String get projectSortCreatedDate;
 
-  /// Auto-generated description for projectSortStatus.
+  /// Sort option for project status.
   ///
   /// In en, this message translates to:
   /// **'Status'**
   String get projectSortStatus;
+
+  /// Sort option for project start date.
+  ///
+  /// In en, this message translates to:
+  /// **'Start Date'**
+  String get projectSortStartDate;
+
+  /// Sort option for project due date.
+  ///
+  /// In en, this message translates to:
+  /// **'Due Date'**
+  String get projectSortDueDate;
+
+  /// Label for sort direction control.
+  ///
+  /// In en, this message translates to:
+  /// **'Direction'**
+  String get sortDirectionLabel;
+
+  /// Label for ascending sort direction.
+  ///
+  /// In en, this message translates to:
+  /// **'Ascending'**
+  String get sortAscendingLabel;
+
+  /// Label for descending sort direction.
+  ///
+  /// In en, this message translates to:
+  /// **'Descending'**
+  String get sortDescendingLabel;
+
+  /// Label for CSV export button.
+  ///
+  /// In en, this message translates to:
+  /// **'Export to CSV'**
+  String get exportToCsvLabel;
+
+  /// Success message after CSV export.
+  ///
+  /// In en, this message translates to:
+  /// **'Projects exported successfully'**
+  String get csvExportSuccessMessage;
 
   /// Auto-generated description for allLabel.
   ///
@@ -1602,6 +1644,162 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'No backup file yet'**
   String get backupNoFileMessage;
+
+  /// Tooltip for the filter button.
+  ///
+  /// In en, this message translates to:
+  /// **'Filter projects'**
+  String get filterButtonTooltip;
+
+  /// Label for priority filter.
+  ///
+  /// In en, this message translates to:
+  /// **'Priority'**
+  String get filterPriorityLabel;
+
+  /// Low priority label.
+  ///
+  /// In en, this message translates to:
+  /// **'Low'**
+  String get priorityLow;
+
+  /// Medium priority label.
+  ///
+  /// In en, this message translates to:
+  /// **'Medium'**
+  String get priorityMedium;
+
+  /// High priority label.
+  ///
+  /// In en, this message translates to:
+  /// **'High'**
+  String get priorityHigh;
+
+  /// Label for date range filter.
+  ///
+  /// In en, this message translates to:
+  /// **'Date Range'**
+  String get filterDateRangeLabel;
+
+  /// Label for start date filter.
+  ///
+  /// In en, this message translates to:
+  /// **'Start Date'**
+  String get filterStartDateLabel;
+
+  /// Label for end date filter.
+  ///
+  /// In en, this message translates to:
+  /// **'End Date'**
+  String get filterEndDateLabel;
+
+  /// Active filter chip text for priority.
+  ///
+  /// In en, this message translates to:
+  /// **'Priority: {priority}'**
+  String activeFilterPriority(String priority);
+
+  /// Active filter chip text for start date.
+  ///
+  /// In en, this message translates to:
+  /// **'From {date}'**
+  String activeFilterStartDate(String date);
+
+  /// Active filter chip text for end date.
+  ///
+  /// In en, this message translates to:
+  /// **'To {date}'**
+  String activeFilterEndDate(String date);
+
+  /// Text showing current count of displayed projects.
+  ///
+  /// In en, this message translates to:
+  /// **'Showing {count} of {total} projects'**
+  String showingProjectsCount(int count, int total);
+
+  /// Label for button to clear all filters.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear All Filters'**
+  String get clearAllFiltersButtonLabel;
+
+  /// Title when no projects match the current filters.
+  ///
+  /// In en, this message translates to:
+  /// **'No projects match your filters'**
+  String get noProjectsMatchFiltersTitle;
+
+  /// Subtitle when no projects match the current filters.
+  ///
+  /// In en, this message translates to:
+  /// **'Try changing or clearing your filters'**
+  String get noProjectsMatchFiltersSubtitle;
+
+  /// Title for the project filters dialog.
+  ///
+  /// In en, this message translates to:
+  /// **'Project Filters'**
+  String get projectFiltersTitle;
+
+  /// Label for all projects preset filter.
+  ///
+  /// In en, this message translates to:
+  /// **'All Projects'**
+  String get allProjectsPresetLabel;
+
+  /// Label for high priority preset filter.
+  ///
+  /// In en, this message translates to:
+  /// **'High Priority'**
+  String get highPriorityPresetLabel;
+
+  /// Label for due this week preset filter.
+  ///
+  /// In en, this message translates to:
+  /// **'Due This Week'**
+  String get dueThisWeekPresetLabel;
+
+  /// Label for overdue preset filter.
+  ///
+  /// In en, this message translates to:
+  /// **'Overdue'**
+  String get overduePresetLabel;
+
+  /// Label for my projects preset filter.
+  ///
+  /// In en, this message translates to:
+  /// **'My Projects'**
+  String get myProjectsPresetLabel;
+
+  /// Label for cancel button.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel'**
+  String get cancelLabel;
+
+  /// Label for clear all button.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear All'**
+  String get clearAllLabel;
+
+  /// Success message when saving filter as default.
+  ///
+  /// In en, this message translates to:
+  /// **'Filter saved as default'**
+  String get saveAsDefaultSuccessMessage;
+
+  /// Label for save as default button.
+  ///
+  /// In en, this message translates to:
+  /// **'Save as Default'**
+  String get saveAsDefaultViewLabel;
+
+  /// Label for apply filters button.
+  ///
+  /// In en, this message translates to:
+  /// **'Apply Filters'**
+  String get applyFiltersLabel;
 }
 
 class _AppLocalizationsDelegate

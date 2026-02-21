@@ -316,6 +316,34 @@
   "@projectSortStatus": {
     "description": "Auto-generated description for projectSortStatus."
   },
+  "projectSortStartDate": "Data de início",
+  "@projectSortStartDate": {
+    "description": "Label for sorting projects by start date."
+  },
+  "projectSortDueDate": "Data de vencimento",
+  "@projectSortDueDate": {
+    "description": "Label for sorting projects by due date."
+  },
+  "sortDirectionLabel": "Direção",
+  "@sortDirectionLabel": {
+    "description": "Label for sort direction selection."
+  },
+  "sortAscendingLabel": "Crescente",
+  "@sortAscendingLabel": {
+    "description": "Label for ascending sort order."
+  },
+  "sortDescendingLabel": "Decrescente",
+  "@sortDescendingLabel": {
+    "description": "Label for descending sort order."
+  },
+  "exportToCsvLabel": "Exportar para CSV",
+  "@exportToCsvLabel": {
+    "description": "Label for CSV export button."
+  },
+  "csvExportSuccessMessage": "CSV exportado e compartilhado com sucesso",
+  "@csvExportSuccessMessage": {
+    "description": "Success message after CSV export."
+  },
   "allLabel": "Todos",
   "@allLabel": {
     "description": "Auto-generated description for allLabel."

@@ -188,9 +188,8 @@ class ProjectRepository implements IProjectRepository {
         (p.description?.toLowerCase().contains(q) ?? false)
       ).toList();
     }
-    // date-based filtering would go here, but ProjectModel currently
-    // lacks a timestamp field (createdAt), so those filters are skipped.
-    // priority, ownerId, tags filtering can be added here later
+    // Date-based and priority filtering are now handled client-side in the provider for better performance
+    // ownerId, tags filtering can be added here later if needed
 
     for (final cond in extraConditions) {
       projects = projects.where((p) => cond.condition(p)).toList();

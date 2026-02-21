@@ -59,6 +59,15 @@ class ProjectModel {
   @HiveField(8)
   final List<String> sharedGroups;
 
+  @HiveField(15)
+  final String? priority;
+
+  @HiveField(16)
+  final DateTime? startDate;
+
+  @HiveField(17)
+  final DateTime? dueDate;
+
   const ProjectModel({
     required this.id,
     required this.name,
@@ -75,6 +84,9 @@ class ProjectModel {
     this.history = const [],
     this.sharedUsers = const [],
     this.sharedGroups = const [],
+    this.priority,
+    this.startDate,
+    this.dueDate,
   });
 
   /// Factory for creating a project with a guaranteed UUID.
@@ -94,6 +106,9 @@ class ProjectModel {
     List<Map<String, dynamic>> history = const [],
     List<String> sharedUsers = const [],
     List<String> sharedGroups = const [],
+    String? priority,
+    DateTime? startDate,
+    DateTime? dueDate,
   }) {
     final resolvedId = (id == null || id.isEmpty) ? _uuid.v4() : id;
     return ProjectModel(
@@ -112,6 +127,9 @@ class ProjectModel {
       history: history,
       sharedUsers: sharedUsers,
       sharedGroups: sharedGroups,
+      priority: priority,
+      startDate: startDate,
+      dueDate: dueDate,
     );
   }
 
@@ -139,6 +157,9 @@ class ProjectModel {
           (json['sharedUsers'] as List<dynamic>?)?.cast<String>() ?? const [],
       sharedGroups:
           (json['sharedGroups'] as List<dynamic>?)?.cast<String>() ?? const [],
+      priority: json['priority'] as String?,
+      startDate: json['startDate'] != null ? DateTime.parse(json['startDate'] as String) : null,
+      dueDate: json['dueDate'] != null ? DateTime.parse(json['dueDate'] as String) : null,
     );
   }
 
@@ -160,6 +181,9 @@ class ProjectModel {
       'history': history,
       'sharedUsers': sharedUsers,
       'sharedGroups': sharedGroups,
+      'priority': priority,
+      'startDate': startDate?.toIso8601String(),
+      'dueDate': dueDate?.toIso8601String(),
     };
   }
 

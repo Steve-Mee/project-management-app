@@ -549,6 +549,18 @@ abstract class AppLocalizations {
   /// **'Priority'**
   String get projectSortPriority;
 
+  /// Label for sorting projects by creation date.
+  ///
+  /// In en, this message translates to:
+  /// **'Created date'**
+  String get projectSortCreatedDate;
+
+  /// Label for sorting projects by status.
+  ///
+  /// In en, this message translates to:
+  /// **'Status'**
+  String get projectSortStatus;
+
   /// Auto-generated description for allLabel.
   ///
   /// In en, this message translates to:
@@ -1580,6 +1592,174 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'No backup file yet'**
   String get backupNoFileMessage;
+
+  /// Label for priority filter
+  ///
+  /// In en, this message translates to:
+  /// **'Priority'**
+  String get filterPriorityLabel;
+
+  /// Label for start date filter
+  ///
+  /// In en, this message translates to:
+  /// **'Start Date'**
+  String get filterStartDateLabel;
+
+  /// Label for end date filter
+  ///
+  /// In en, this message translates to:
+  /// **'End Date'**
+  String get filterEndDateLabel;
+
+  /// Low priority option
+  ///
+  /// In en, this message translates to:
+  /// **'Low'**
+  String get priorityLow;
+
+  /// Medium priority option
+  ///
+  /// In en, this message translates to:
+  /// **'Medium'**
+  String get priorityMedium;
+
+  /// High priority option
+  ///
+  /// In en, this message translates to:
+  /// **'High'**
+  String get priorityHigh;
+
+  /// Label for date range filter section
+  ///
+  /// In en, this message translates to:
+  /// **'Date Range'**
+  String get filterDateRangeLabel;
+
+  /// Label for apply filters button
+  ///
+  /// In en, this message translates to:
+  /// **'Apply Filters'**
+  String get applyFiltersLabel;
+
+  /// Label for reset all filters button
+  ///
+  /// In en, this message translates to:
+  /// **'Reset All'**
+  String get resetAllLabel;
+
+  /// Label for cancel button
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel'**
+  String get cancelLabel;
+
+  /// Title for project filters dialog
+  ///
+  /// In en, this message translates to:
+  /// **'Project Filters'**
+  String get projectFiltersTitle;
+
+  /// Tooltip for filter button
+  ///
+  /// In en, this message translates to:
+  /// **'Filter projects'**
+  String get filterButtonTooltip;
+
+  /// Active filter chip for priority
+  ///
+  /// In en, this message translates to:
+  /// **'Priority: {value}'**
+  String activeFilterPriority(String value);
+
+  /// Active filter chip for start date
+  ///
+  /// In en, this message translates to:
+  /// **'Start: {date}'**
+  String activeFilterStartDate(String date);
+
+  /// Active filter chip for end date
+  ///
+  /// In en, this message translates to:
+  /// **'End: {date}'**
+  String activeFilterEndDate(String date);
+
+  /// Hint shown when no filters are active
+  ///
+  /// In en, this message translates to:
+  /// **'All projects'**
+  String get allProjectsHint;
+
+  /// Label for clearing all filters
+  ///
+  /// In en, this message translates to:
+  /// **'Clear All'**
+  String get clearAllLabel;
+
+  /// Label for saving current filter as default view
+  ///
+  /// In en, this message translates to:
+  /// **'Save as Default View'**
+  String get saveAsDefaultViewLabel;
+
+  /// Success message when default view is saved
+  ///
+  /// In en, this message translates to:
+  /// **'Default view saved successfully'**
+  String get saveAsDefaultSuccessMessage;
+
+  /// Label for all projects preset filter
+  ///
+  /// In en, this message translates to:
+  /// **'All Projects'**
+  String get allProjectsPresetLabel;
+
+  /// Label for high priority preset filter
+  ///
+  /// In en, this message translates to:
+  /// **'High Priority'**
+  String get highPriorityPresetLabel;
+
+  /// Label for due this week preset filter
+  ///
+  /// In en, this message translates to:
+  /// **'Due This Week'**
+  String get dueThisWeekPresetLabel;
+
+  /// Label for overdue preset filter
+  ///
+  /// In en, this message translates to:
+  /// **'Overdue'**
+  String get overduePresetLabel;
+
+  /// Label for my projects preset filter
+  ///
+  /// In en, this message translates to:
+  /// **'My Projects'**
+  String get myProjectsPresetLabel;
+
+  /// Summary showing filtered project count
+  ///
+  /// In en, this message translates to:
+  /// **'Showing {count} of {total} projects'**
+  String showingProjectsCount(int count, int total);
+
+  /// Title for empty state when filters have no results
+  ///
+  /// In en, this message translates to:
+  /// **'No projects match your filters'**
+  String get noProjectsMatchFiltersTitle;
+
+  /// Subtitle for empty state when filters have no results
+  ///
+  /// In en, this message translates to:
+  /// **'Try changing or clearing your filters'**
+  String get noProjectsMatchFiltersSubtitle;
+
+  /// Button label to clear all active filters
+  ///
+  /// In en, this message translates to:
+  /// **'Clear All Filters'**
+  String get clearAllFiltersButtonLabel;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

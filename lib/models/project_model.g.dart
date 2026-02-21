@@ -34,13 +34,16 @@ class ProjectModelAdapter extends TypeAdapter<ProjectModel> {
           .toList(),
       sharedUsers: (fields[7] as List).cast<String>(),
       sharedGroups: (fields[8] as List).cast<String>(),
+      priority: fields[15] as String?,
+      startDate: fields[16] as DateTime?,
+      dueDate: fields[17] as DateTime?,
     );
   }
 
   @override
   void write(BinaryWriter writer, ProjectModel obj) {
     writer
-      ..writeByte(15)
+      ..writeByte(18)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -70,7 +73,13 @@ class ProjectModelAdapter extends TypeAdapter<ProjectModel> {
       ..writeByte(7)
       ..write(obj.sharedUsers)
       ..writeByte(8)
-      ..write(obj.sharedGroups);
+      ..write(obj.sharedGroups)
+      ..writeByte(15)
+      ..write(obj.priority)
+      ..writeByte(16)
+      ..write(obj.startDate)
+      ..writeByte(17)
+      ..write(obj.dueDate);
   }
 
   @override

@@ -9,6 +9,8 @@ Wat toe te voegen:
 - Breid `ProjectFilter` uit met date-range en priority.
 - Pas UI voorbeelden/documentatie aan.
 
+Status: Completed - Fields added to ProjectModel, filtering implemented in provider, UI updated in dashboard.
+
 Prioriteit: Laag
 
 Labels: `enhancement`

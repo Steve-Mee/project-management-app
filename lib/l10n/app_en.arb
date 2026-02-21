@@ -1089,5 +1089,140 @@
   "backupNoFileMessage": "No backup file yet",
   "@backupNoFileMessage": {
     "description": "Shown when no backup file path is available."
+  },
+  "filterPriorityLabel": "Priority",
+  "@filterPriorityLabel": {
+    "description": "Label for priority filter"
+  },
+  "filterStartDateLabel": "Start Date",
+  "@filterStartDateLabel": {
+    "description": "Label for start date filter"
+  },
+  "filterEndDateLabel": "End Date",
+  "@filterEndDateLabel": {
+    "description": "Label for end date filter"
+  },
+  "priorityLow": "Low",
+  "@priorityLow": {
+    "description": "Low priority option"
+  },
+  "priorityMedium": "Medium",
+  "@priorityMedium": {
+    "description": "Medium priority option"
+  },
+  "priorityHigh": "High",
+  "@priorityHigh": {
+    "description": "High priority option"
+  },
+  "filterDateRangeLabel": "Date Range",
+  "@filterDateRangeLabel": {
+    "description": "Label for date range filter section"
+  },
+  "applyFiltersLabel": "Apply Filters",
+  "@applyFiltersLabel": {
+    "description": "Label for apply filters button"
+  },
+  "resetAllLabel": "Reset All",
+  "@resetAllLabel": {
+    "description": "Label for reset all filters button"
+  },
+  "cancelLabel": "Cancel",
+  "@cancelLabel": {
+    "description": "Label for cancel button"
+  },
+  "projectFiltersTitle": "Project Filters",
+  "@projectFiltersTitle": {
+    "description": "Title for project filters dialog"
+  },
+  "filterButtonTooltip": "Filter projects",
+  "@filterButtonTooltip": {
+    "description": "Tooltip for filter button"
+  },
+  "activeFilterPriority": "Priority: {value}",
+  "@activeFilterPriority": {
+    "description": "Active filter chip for priority",
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "activeFilterStartDate": "Start: {date}",
+  "@activeFilterStartDate": {
+    "description": "Active filter chip for start date",
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "activeFilterEndDate": "End: {date}",
+  "@activeFilterEndDate": {
+    "description": "Active filter chip for end date",
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "allProjectsHint": "All projects",
+  "@allProjectsHint": {
+    "description": "Hint shown when no filters are active"
+  },
+  "clearAllLabel": "Clear All",
+  "@clearAllLabel": {
+    "description": "Label for clearing all filters"
+  },
+  "saveAsDefaultViewLabel": "Save as Default View",
+  "@saveAsDefaultViewLabel": {
+    "description": "Label for saving current filter as default view"
+  },
+  "saveAsDefaultSuccessMessage": "Default view saved successfully",
+  "@saveAsDefaultSuccessMessage": {
+    "description": "Success message when default view is saved"
+  },
+  "allProjectsPresetLabel": "All Projects",
+  "@allProjectsPresetLabel": {
+    "description": "Label for all projects preset filter"
+  },
+  "highPriorityPresetLabel": "High Priority",
+  "@highPriorityPresetLabel": {
+    "description": "Label for high priority preset filter"
+  },
+  "dueThisWeekPresetLabel": "Due This Week",
+  "@dueThisWeekPresetLabel": {
+    "description": "Label for due this week preset filter"
+  },
+  "overduePresetLabel": "Overdue",
+  "@overduePresetLabel": {
+    "description": "Label for overdue preset filter"
+  },
+  "myProjectsPresetLabel": "My Projects",
+  "@myProjectsPresetLabel": {
+    "description": "Label for my projects preset filter"
+  },
+  "showingProjectsCount": "Showing {count} of {total} projects",
+  "@showingProjectsCount": {
+    "description": "Summary showing filtered project count",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "noProjectsMatchFiltersTitle": "No projects match your filters",
+  "@noProjectsMatchFiltersTitle": {
+    "description": "Title for empty state when filters have no results"
+  },
+  "noProjectsMatchFiltersSubtitle": "Try changing or clearing your filters",
+  "@noProjectsMatchFiltersSubtitle": {
+    "description": "Subtitle for empty state when filters have no results"
+  },
+  "clearAllFiltersButtonLabel": "Clear All Filters",
+  "@clearAllFiltersButtonLabel": {
+    "description": "Button label to clear all active filters"
   }
 }

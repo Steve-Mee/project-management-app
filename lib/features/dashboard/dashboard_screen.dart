@@ -7,6 +7,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:shimmer/shimmer.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:animate_do/animate_do.dart';
+import 'package:intl/intl.dart';
 import 'package:my_project_management_app/generated/app_localizations.dart';
 import 'package:my_project_management_app/core/auth/permissions.dart';
 import 'package:my_project_management_app/core/providers/project_providers.dart';
@@ -20,9 +21,10 @@ import '../ai_chat/ai_chat_modal.dart';
 import 'widgets/error_state_widget.dart';
 import 'widgets/loading_more_widget.dart';
 import 'widgets/project_card_widget.dart';
+import '../project/widgets/project_filter_dialog.dart';
 
 /// Filter state for projects list
-final currentProjectFilterProvider = StateProvider<ProjectFilterParams>((ref) => const ProjectFilterParams());
+// final currentProjectFilterProvider = StateProvider<ProjectFilterParams>((ref) => const ProjectFilterParams());
 
 /// Sorting state for projects list
 final currentProjectSortProvider = StateProvider<ProjectSort>((ref) => ProjectSort.name);
@@ -73,6 +75,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   List<String> _selectedTags = [];
   String? _customConditionType;
   String? _customConditionValue;
+  String? _selectedPriority;
+  DateTime? _startDate;
+  DateTime? _endDate;
 
   // we no longer keep local sort/status values; read from providers
 
@@ -97,7 +102,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   // custom widget formatter removed; not needed for combined list UI
 
   /// Build shimmer loading skeleton
-  Widget _buildFilterBar(BuildContext context, ProjectFilterParams filter) {
+  Widget _buildFilterBar(BuildContext context, ProjectFilter filter) {
     final l10n = AppLocalizations.of(context)!;
     final sort = ref.watch(currentProjectSortProvider);
     final theme = Theme.of(context);
@@ -115,6 +120,37 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
           return 'Created (new→old)';
         case ProjectSort.status:
           return 'Status';
+      }
+    }
+
+    int countActiveFilters(ProjectFilter filter) {
+      int count = 0;
+      if (filter.priority != null) count++;
+      if (filter.status != null && filter.status != 'All') count++;
+      if (filter.ownerId != null) count++;
+      if (filter.searchQuery?.isNotEmpty == true) count++;
+      if (filter.startDate != null) count++;
+      if (filter.endDate != null) count++;
+      if (filter.dueDateStart != null) count++;
+      if (filter.dueDateEnd != null) count++;
+      return count;
+    }
+
+    String getSortChipLabel(ProjectFilter filter, AppLocalizations l10n) {
+      final sortBy = filter.sortBy ?? 'name';
+      switch (sortBy) {
+        case 'name':
+          return l10n.projectSortName;
+        case 'priority':
+          return l10n.projectSortPriority;
+        case 'startDate':
+          return l10n.projectSortStartDate;
+        case 'dueDate':
+          return l10n.projectSortDueDate;
+        case 'status':
+          return l10n.projectSortStatus;
+        default:
+          return sortBy;
       }
     }
 
@@ -171,15 +207,71 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                     Expanded(
                       child: Wrap(
                         spacing: 8,
-                        children: ['All', 'In Progress', 'Completed', 'On Hold', 'Cancelled']
-                            .map((status) => FilterChip(
-                                  label: Text(status),
-                                  selected: (filter.status ?? 'All') == status,
-                                  selectedColor: theme.colorScheme.secondaryContainer,
-                                  checkmarkColor: theme.colorScheme.onSecondaryContainer,
-                                  onSelected: (_) => _updateStatus(status),
-                                ))
-                            .toList(),
+                        children: [
+                          ...['All', 'In Progress', 'Completed', 'On Hold', 'Cancelled']
+                              .map((status) => FilterChip(
+                                    label: Text(status),
+                                    selected: (filter.status ?? 'All') == status,
+                                    selectedColor: theme.colorScheme.secondaryContainer,
+                                    checkmarkColor: theme.colorScheme.onSecondaryContainer,
+                                    onSelected: (_) => _updateStatus(status),
+                                  )),
+                          // Sort Chip
+                          FilterChip(
+                            label: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(getSortChipLabel(filter, l10n)),
+                                const SizedBox(width: 4),
+                                Icon(
+                                  filter.sortAscending ? Icons.arrow_upward : Icons.arrow_downward,
+                                  size: 16,
+                                ),
+                              ],
+                            ),
+                            selected: false,
+                            onSelected: (_) async {
+                              final newFilter = await showProjectFilterDialog(
+                                context,
+                                filter,
+                                () => ref.read(persistentProjectFilterProvider.notifier).saveAsDefault(),
+                                _projects,
+                              );
+                              if (newFilter != null) {
+                                ref.read(persistentProjectFilterProvider.notifier).updateFilter(newFilter);
+                              }
+                            },
+                            avatar: const Icon(Icons.sort, size: 16),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Badge.count(
+                      count: countActiveFilters(filter),
+                      isLabelVisible: countActiveFilters(filter) > 0,
+                      child: IconButton(
+                        icon: const Icon(Icons.filter_list),
+                        tooltip: l10n.filterButtonTooltip,
+                        onPressed: () async {
+                          final currentFilter = ProjectFilter(
+                            status: filter.status,
+                            ownerId: filter.ownerId,
+                            searchQuery: filter.searchQuery,
+                            priority: filter.priority,
+                            startDate: filter.startDate,
+                            endDate: filter.endDate,
+                          );
+                          final newFilter = await showProjectFilterDialog(
+                            context,
+                            currentFilter,
+                            () => ref.read(persistentProjectFilterProvider.notifier).saveAsDefault(),
+                            _projects, // Pass current filtered projects for export
+                          );
+                          if (newFilter != null) {
+                            ref.read(persistentProjectFilterProvider.notifier).updateFilter(newFilter);
+                          }
+                        },
                       ),
                     ),
                     const SizedBox(width: 8),
@@ -225,7 +317,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     );
   }
 
-  Widget _buildAdvancedFiltersCard(BuildContext context, ProjectFilterParams filter) {
+  Widget _buildAdvancedFiltersCard(BuildContext context, ProjectFilter filter) {
     final theme = Theme.of(context);
 
     return Card(
@@ -292,6 +384,99 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                 _buildComplexityChip('simpel', Colors.green),
                 _buildComplexityChip('middel', Colors.orange),
                 _buildComplexityChip('complex', Colors.red),
+              ],
+            ),
+
+            const SizedBox(height: 16),
+
+            // Priority Dropdown
+            Text(
+              AppLocalizations.of(context)!.filterPriorityLabel,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            const SizedBox(height: 8),
+            DropdownButton<String?>(
+              value: _selectedPriority,
+              hint: const Text('Select Priority'),
+              items: [
+                const DropdownMenuItem(value: null, child: Text('Any')),
+                DropdownMenuItem(value: 'Low', child: Text(AppLocalizations.of(context)!.priorityLow)),
+                DropdownMenuItem(value: 'Medium', child: Text(AppLocalizations.of(context)!.priorityMedium)),
+                DropdownMenuItem(value: 'High', child: Text(AppLocalizations.of(context)!.priorityHigh)),
+              ],
+              onChanged: (value) {
+                setState(() {
+                  _selectedPriority = value;
+                });
+                _applyAdvancedFilters();
+              },
+            ),
+
+            const SizedBox(height: 16),
+
+            // Date Range
+            Text(
+              AppLocalizations.of(context)!.filterDateRangeLabel,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Expanded(
+                  child: TextFormField(
+                    decoration: InputDecoration(
+                      labelText: AppLocalizations.of(context)!.filterStartDateLabel,
+                    ),
+                    readOnly: true,
+                    controller: TextEditingController(
+                      text: _startDate != null ? _startDate!.toLocal().toString().split(' ')[0] : '',
+                    ),
+                    onTap: () async {
+                      final date = await showDatePicker(
+                        context: context,
+                        initialDate: _startDate ?? DateTime.now(),
+                        firstDate: DateTime(2000),
+                        lastDate: DateTime(2100),
+                      );
+                      if (date != null) {
+                        setState(() {
+                          _startDate = date;
+                        });
+                        _applyAdvancedFilters();
+                      }
+                    },
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: TextFormField(
+                    decoration: InputDecoration(
+                      labelText: AppLocalizations.of(context)!.filterEndDateLabel,
+                    ),
+                    readOnly: true,
+                    controller: TextEditingController(
+                      text: _endDate != null ? _endDate!.toLocal().toString().split(' ')[0] : '',
+                    ),
+                    onTap: () async {
+                      final date = await showDatePicker(
+                        context: context,
+                        initialDate: _endDate ?? DateTime.now(),
+                        firstDate: DateTime(2000),
+                        lastDate: DateTime(2100),
+                      );
+                      if (date != null) {
+                        setState(() {
+                          _endDate = date;
+                        });
+                        _applyAdvancedFilters();
+                      }
+                    },
+                  ),
+                ),
               ],
             ),
 
@@ -557,8 +742,16 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     }
 
     // Update the filter provider with extra conditions
-    ref.read(currentProjectFilterProvider.notifier).update(
-      (state) => state.copyWith(extraConditions: conditions),
+    ref.read(persistentProjectFilterProvider.notifier).updateFilter(
+      ProjectFilter(
+        status: ref.read(persistentProjectFilterProvider).status,
+        ownerId: ref.read(persistentProjectFilterProvider).ownerId,
+        searchQuery: ref.read(persistentProjectFilterProvider).searchQuery,
+        priority: _selectedPriority,
+        startDate: _startDate,
+        endDate: _endDate,
+        extraConditions: conditions,
+      ),
     );
 
     // Reset pagination to page 1
@@ -577,6 +770,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
       _selectedTags.clear();
       _customConditionType = null;
       _customConditionValue = null;
+      _selectedPriority = null;
+      _startDate = null;
+      _endDate = null;
     });
     _applyAdvancedFilters();
   }
@@ -650,23 +846,19 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   void _updateSearch(String query) {
     _debounce?.cancel();
     _debounce = Timer(const Duration(milliseconds: 300), () {
-      final current = ref.read(currentProjectFilterProvider);
-      ref.read(currentProjectFilterProvider.notifier).state =
-          ProjectFilterParams(
-            status: current.status,
-            searchQuery: query.isEmpty ? null : query,
-          );
+      final current = ref.read(persistentProjectFilterProvider);
+      ref.read(persistentProjectFilterProvider.notifier).updateFilter(
+        current.copyWith(searchQuery: query.isEmpty ? null : query),
+      );
       _resetPagination();
     });
   }
 
   void _updateStatus(String status) {
-    final current = ref.read(currentProjectFilterProvider);
-    ref.read(currentProjectFilterProvider.notifier).state =
-        ProjectFilterParams(
-          status: status == 'All' ? null : status,
-          searchQuery: current.searchQuery,
-        );
+    final current = ref.read(persistentProjectFilterProvider);
+    ref.read(persistentProjectFilterProvider.notifier).updateFilter(
+      current.copyWith(status: status == 'All' ? null : status),
+    );
     _resetPagination();
   }
 
@@ -704,7 +896,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    final filter = ref.watch(currentProjectFilterProvider);
+    final filter = ref.watch(persistentProjectFilterProvider);
     final canUseAi = ref.watch(hasPermissionProvider(AppPermissions.useAi));
 
     // watch paginated filtered projects data
@@ -827,6 +1019,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   }
 
   Widget _buildListView() {
+    final filter = ref.watch(persistentProjectFilterProvider);
+    final l10n = AppLocalizations.of(context)!;
     // center the list on wide layouts and cap the overall width so cards don't stretch
     return LayoutBuilder(builder: (context, constraints) {
       final maxWidth = constraints.maxWidth;
@@ -836,6 +1030,69 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
         columns = 3;
       } else if (maxWidth > 800) {
         columns = 2;
+      }
+
+      List<Widget> activeFilterChips = [];
+
+      Color getPriorityColor(String priority) {
+        switch (priority) {
+          case 'High':
+            return Colors.red.shade600;
+          case 'Medium':
+            return Colors.orange.shade600;
+          case 'Low':
+            return Colors.green.shade600;
+          default:
+            return Theme.of(context).colorScheme.onSurface;
+        }
+      }
+
+      if (filter.priority != null) {
+        activeFilterChips.add(FilterChip(
+          label: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                Icons.circle,
+                size: 12,
+                color: getPriorityColor(filter.priority!),
+              ),
+              const SizedBox(width: 4),
+              Text(l10n.activeFilterPriority(filter.priority!)),
+            ],
+          ),
+          selected: false,
+          onSelected: (_) {},
+          onDeleted: () {
+            ref.read(persistentProjectFilterProvider.notifier).updateFilter(
+              ref.read(persistentProjectFilterProvider).copyWith(priority: null),
+            );
+          },
+        ));
+      }
+      if (filter.startDate != null) {
+        activeFilterChips.add(FilterChip(
+          label: Text(l10n.activeFilterStartDate(DateFormat('dd MMM').format(filter.startDate!))),
+          selected: false,
+          onSelected: (_) {},
+          onDeleted: () {
+            ref.read(persistentProjectFilterProvider.notifier).updateFilter(
+              ref.read(persistentProjectFilterProvider).copyWith(startDate: null),
+            );
+          },
+        ));
+      }
+      if (filter.endDate != null) {
+        activeFilterChips.add(FilterChip(
+          label: Text(l10n.activeFilterEndDate(DateFormat('dd MMM').format(filter.endDate!))),
+          selected: false,
+          onSelected: (_) {},
+          onDeleted: () {
+            ref.read(persistentProjectFilterProvider.notifier).updateFilter(
+              ref.read(persistentProjectFilterProvider).copyWith(endDate: null),
+            );
+          },
+        ));
       }
 
       Widget content;
@@ -899,6 +1156,73 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
         );
       }
 
+      Widget filterIndicator;
+      if (activeFilterChips.isNotEmpty) {
+        final allProjectsAsync = ref.watch(projectsProvider);
+        final totalCount = allProjectsAsync.maybeWhen(
+          data: (projects) => projects.length,
+          orElse: () => 0,
+        );
+        filterIndicator = Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                l10n.showingProjectsCount(_projects.length, totalCount),
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Expanded(
+                    child: Wrap(spacing: 8, children: activeFilterChips),
+                  ),
+                  TextButton.icon(
+                    onPressed: () {
+                      ref.read(persistentProjectFilterProvider.notifier).clearAll();
+                    },
+                    icon: Icon(Icons.clear_all, color: Theme.of(context).colorScheme.error),
+                    label: Text(l10n.clearAllFiltersButtonLabel),
+                    style: TextButton.styleFrom(
+                      foregroundColor: Theme.of(context).colorScheme.error,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        );
+      } else {
+        final allProjectsAsync = ref.watch(projectsProvider);
+        final totalCount = allProjectsAsync.maybeWhen(
+          data: (projects) => projects.length,
+          orElse: () => 0,
+        );
+        filterIndicator = Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          child: Text(
+            l10n.showingProjectsCount(_projects.length, totalCount),
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
+          ),
+        );
+      }
+
+      content = Column(
+        children: [
+          filterIndicator,
+          Expanded(
+            child: _projects.isEmpty && activeFilterChips.isNotEmpty
+                ? _buildEmptyState()
+                : content,
+          ),
+        ],
+      );
+
       return Center(
         child: ConstrainedBox(
           constraints: BoxConstraints(maxWidth: min(1000.w, maxWidth)),
@@ -914,6 +1238,51 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
         ),
       );
     });
+  }
+
+  Widget _buildEmptyState() {
+    final l10n = AppLocalizations.of(context)!;
+    final theme = Theme.of(context);
+
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.filter_list_off,
+              size: 64,
+              color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              l10n.noProjectsMatchFiltersTitle,
+              style: theme.textTheme.headlineSmall?.copyWith(
+                color: theme.colorScheme.onSurface,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              l10n.noProjectsMatchFiltersSubtitle,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 24),
+            FilledButton.icon(
+              onPressed: () {
+                ref.read(persistentProjectFilterProvider.notifier).clearAll();
+              },
+              icon: const Icon(Icons.clear_all),
+              label: Text(l10n.clearAllFiltersButtonLabel),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   /// Show project detail sheet with burndown chart

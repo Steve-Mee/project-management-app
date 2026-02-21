@@ -4,6 +4,7 @@ All new UI should use projectsPaginatedProvider
 */
 import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:hive/hive.dart';
 import 'package:my_project_management_app/models/project_model.dart';
 import 'package:my_project_management_app/core/repository/project_repository.dart';
 import 'package:my_project_management_app/core/repository/i_project_repository.dart' as repo;
@@ -105,26 +106,94 @@ final projectByIdProvider = FutureProvider.autoDispose.family<ProjectModel?, Str
 
 /// Family provider for filtered projects (e.g., by status, user, etc.)
 /// Extensible for future filtering needs
-final filteredProjectsProvider = FutureProvider.autoDispose.family<List<ProjectModel>, ProjectFilterParams>((ref, params) async {
+final filteredProjectsProvider = FutureProvider.autoDispose.family<List<ProjectModel>, ProjectFilter>((ref, params) async {
   final repository = ref.watch(projectRepositoryProvider);
-  return repository.getFilteredProjects(
+  var projects = await repository.getFilteredProjects(
     repo.ProjectFilter( // map params to repository filter
       status: params.status,
       searchQuery: params.searchQuery,
-      startDate: params.startDate,
-      endDate: params.endDate,
-      priority: params.priority,
+      startDate: null, // dates handled client-side below
+      endDate: null,
+      priority: null, // priority handled client-side below
       ownerId: params.ownerId,
-      tags: params.tags,
+      tags: null,
     ),
-    extraConditions: params.extraConditions ?? [],
+    extraConditions: [],
   );
+
+  // Apply priority filter: exact match if specified
+  if (params.priority != null) {
+    projects = projects.where((p) => p.priority == params.priority).toList();
+  }
+
+  // Apply start date filter: include projects with startDate on or after the filter startDate
+  if (params.startDate != null) {
+    projects = projects.where((p) => p.startDate != null && p.startDate!.isAfter(params.startDate!.subtract(const Duration(days: 1)))).toList();
+  }
+
+  // Apply end date filter: include projects with dueDate on or before the filter endDate
+  if (params.endDate != null) {
+    projects = projects.where((p) => p.dueDate != null && p.dueDate!.isBefore(params.endDate!.add(const Duration(days: 1)))).toList();
+  }
+
+  // Apply sorting
+  if (params.sortBy != null) {
+    projects = _applySort(projects, params.sortBy!, params.sortAscending);
+  }
+
+  return projects;
 });
+
+List<ProjectModel> _applySort(List<ProjectModel> projects, String sortBy, bool ascending) {
+  projects.sort((a, b) {
+    int compare = 0;
+    switch (sortBy) {
+      case 'name':
+        compare = a.name.toLowerCase().compareTo(b.name.toLowerCase());
+        break;
+      case 'priority':
+        final priorityOrder = {'Low': 1, 'Medium': 2, 'High': 3};
+        final aPriority = priorityOrder[a.priority] ?? 0;
+        final bPriority = priorityOrder[b.priority] ?? 0;
+        compare = aPriority.compareTo(bPriority);
+        break;
+      case 'startDate':
+        if (a.startDate == null && b.startDate == null) {
+          compare = 0;
+        } else if (a.startDate == null) {
+          compare = 1;
+        } else if (b.startDate == null) {
+          compare = -1;
+        } else {
+          compare = a.startDate!.compareTo(b.startDate!);
+        }
+        break;
+      case 'dueDate':
+        if (a.dueDate == null && b.dueDate == null) {
+          compare = 0;
+        } else if (a.dueDate == null) {
+          compare = 1;
+        } else if (b.dueDate == null) {
+          compare = -1;
+        } else {
+          compare = a.dueDate!.compareTo(b.dueDate!);
+        }
+        break;
+      case 'status':
+        compare = a.status.compareTo(b.status);
+        break;
+      default:
+        compare = 0;
+    }
+    return ascending ? compare : -compare;
+  });
+  return projects;
+}
 // Ready for UI integration
 
 /// Combined parameters for filtered pagination
 class FilteredPaginationParams {
-  final ProjectFilterParams filter;
+  final ProjectFilter filter;
   final int page;
   final int limit;
 
@@ -179,14 +248,137 @@ final projectsPaginatedProvider = FutureProvider.autoDispose.family<List<Project
 /// Extensible for future filter parameters
 class ProjectFilter {
   final String? status;
-  final String? userId;
+  final String? ownerId;
   final String? searchQuery;
+  final String? priority;
+  final DateTime? startDate;
+  final DateTime? endDate;
+  final DateTime? dueDateStart;
+  final DateTime? dueDateEnd;
+  final List<String>? tags;
+  final List<repo.ProjectFilterConditions>? extraConditions;
+  final String? sortBy; // values: "name", "priority", "startDate", "dueDate", "createdAt", "status"
+  final bool sortAscending;
+
+  static const List<String> sortOptions = [
+    'name',
+    'priority',
+    'startDate',
+    'dueDate',
+    'status',
+  ];
 
   const ProjectFilter({
     this.status,
-    this.userId,
+    this.ownerId,
     this.searchQuery,
+    this.priority,
+    this.startDate,
+    this.endDate,
+    this.dueDateStart,
+    this.dueDateEnd,
+    this.tags,
+    this.extraConditions,
+    this.sortBy,
+    this.sortAscending = true,
   });
+
+  ProjectFilter copyWith({
+    String? status,
+    String? ownerId,
+    String? searchQuery,
+    String? priority,
+    DateTime? startDate,
+    DateTime? endDate,
+    DateTime? dueDateStart,
+    DateTime? dueDateEnd,
+    List<String>? tags,
+    List<repo.ProjectFilterConditions>? extraConditions,
+    String? sortBy,
+    bool? sortAscending,
+  }) {
+    return ProjectFilter(
+      status: status ?? this.status,
+      ownerId: ownerId ?? this.ownerId,
+      searchQuery: searchQuery ?? this.searchQuery,
+      priority: priority ?? this.priority,
+      startDate: startDate ?? this.startDate,
+      endDate: endDate ?? this.endDate,
+      dueDateStart: dueDateStart ?? this.dueDateStart,
+      dueDateEnd: dueDateEnd ?? this.dueDateEnd,
+      tags: tags ?? this.tags,
+      extraConditions: extraConditions ?? this.extraConditions,
+      sortBy: sortBy ?? this.sortBy,
+      sortAscending: sortAscending ?? this.sortAscending,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'status': status,
+      'ownerId': ownerId,
+      'searchQuery': searchQuery,
+      'priority': priority,
+      'startDate': startDate?.toIso8601String(),
+      'endDate': endDate?.toIso8601String(),
+      'dueDateStart': dueDateStart?.toIso8601String(),
+      'dueDateEnd': dueDateEnd?.toIso8601String(),
+      'sortBy': sortBy,
+      'sortAscending': sortAscending,
+      // extraConditions not persisted as they are complex
+    };
+  }
+
+  factory ProjectFilter.fromJson(Map<String, dynamic> json) {
+    return ProjectFilter(
+      status: json['status'] as String?,
+      ownerId: json['ownerId'] as String?,
+      searchQuery: json['searchQuery'] as String?,
+      priority: json['priority'] as String?,
+      startDate: json['startDate'] != null ? DateTime.parse(json['startDate'] as String) : null,
+      endDate: json['endDate'] != null ? DateTime.parse(json['endDate'] as String) : null,
+      dueDateStart: json['dueDateStart'] != null ? DateTime.parse(json['dueDateStart'] as String) : null,
+      dueDateEnd: json['dueDateEnd'] != null ? DateTime.parse(json['dueDateEnd'] as String) : null,
+      sortBy: json['sortBy'] as String?,
+      sortAscending: json['sortAscending'] as bool? ?? true,
+    );
+  }
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+    return other is ProjectFilter &&
+        other.status == status &&
+        other.ownerId == ownerId &&
+        other.searchQuery == searchQuery &&
+        other.priority == priority &&
+        other.startDate == startDate &&
+        other.endDate == endDate &&
+        other.dueDateStart == dueDateStart &&
+        other.dueDateEnd == dueDateEnd &&
+        other.sortBy == sortBy &&
+        other.sortAscending == sortAscending &&
+        other.tags == tags &&
+        other.extraConditions == extraConditions;
+  }
+
+  @override
+  int get hashCode {
+    return Object.hash(
+      status,
+      ownerId,
+      searchQuery,
+      priority,
+      startDate,
+      endDate,
+      dueDateStart,
+      dueDateEnd,
+      sortBy,
+      sortAscending,
+      tags,
+      extraConditions,
+    );
+  }
 }
 
 class ProjectPaginationParams {
@@ -486,9 +678,9 @@ final projectsCombinedProvider = FutureProvider.autoDispose.family<List<ProjectM
     );
 
     var filtered = await repository.getFilteredProjects(repoFilter);
-    // provider-level userId filter; repo doesn't handle shared-users
-    if (params.filter.userId != null) {
-      filtered = filtered.where((p) => p.sharedUsers.contains(params.filter.userId!)).toList();
+    // provider-level ownerId filter; repo doesn't handle shared-users
+    if (params.filter.ownerId != null) {
+      filtered = filtered.where((p) => p.sharedUsers.contains(params.filter.ownerId!)).toList();
     }
 
     // sort in-memory (dataset is expected to be moderate in size)
@@ -500,3 +692,77 @@ final projectsCombinedProvider = FutureProvider.autoDispose.family<List<ProjectM
     return filtered.skip(startIndex).take(params.limit).toList();
   },
 );
+
+/// Notifier for persistent project filter
+class ProjectFilterNotifier extends StateNotifier<ProjectFilter> {
+  static const String _boxName = 'project_filters';
+  static const String _key = 'current_filter';
+  static const String _defaultKey = 'default_project_filter';
+
+  ProjectFilterNotifier() : super(const ProjectFilter()) {
+    _loadFilter();
+  }
+
+  Future<void> _loadFilter() async {
+    try {
+      final box = await Hive.openBox(_boxName);
+      final json = box.get(_key);
+      if (json != null && json is Map) {
+        state = ProjectFilter.fromJson(Map<String, dynamic>.from(json));
+      } else {
+        // If no current filter, load default
+        await _loadDefaultFilter();
+      }
+    } catch (e) {
+      // Fallback to default if loading fails
+      await _loadDefaultFilter();
+    }
+  }
+
+  Future<void> _loadDefaultFilter() async {
+    try {
+      final box = await Hive.openBox(_boxName);
+      final json = box.get(_defaultKey);
+      if (json != null && json is Map) {
+        state = ProjectFilter.fromJson(Map<String, dynamic>.from(json));
+      } else {
+        state = const ProjectFilter();
+      }
+    } catch (e) {
+      state = const ProjectFilter();
+    }
+  }
+
+  Future<void> _saveFilter(ProjectFilter filter) async {
+    try {
+      final box = await Hive.openBox(_boxName);
+      await box.put(_key, filter.toJson());
+    } catch (e) {
+      // Log error but don't fail
+    }
+  }
+
+  Future<void> saveAsDefault() async {
+    try {
+      final box = await Hive.openBox(_boxName);
+      await box.put(_defaultKey, state.toJson());
+    } catch (e) {
+      // Log error
+    }
+  }
+
+  void clearAll() {
+    state = const ProjectFilter();
+    _saveFilter(state);
+  }
+
+  void updateFilter(ProjectFilter newFilter) {
+    state = newFilter;
+    _saveFilter(newFilter);
+  }
+}
+
+/// Persistent project filter provider
+final persistentProjectFilterProvider = StateNotifierProvider<ProjectFilterNotifier, ProjectFilter>((ref) {
+  return ProjectFilterNotifier();
+});

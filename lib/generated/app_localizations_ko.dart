@@ -244,6 +244,27 @@ class AppLocalizationsKo extends AppLocalizations {
   String get projectSortStatus => '상태';
 
   @override
+  String get projectSortStartDate => '시작 날짜';
+
+  @override
+  String get projectSortDueDate => '마감 날짜';
+
+  @override
+  String get sortDirectionLabel => '방향';
+
+  @override
+  String get sortAscendingLabel => '오름차순';
+
+  @override
+  String get sortDescendingLabel => '내림차순';
+
+  @override
+  String get exportToCsvLabel => 'CSV로 내보내기';
+
+  @override
+  String get csvExportSuccessMessage => 'CSV가 성공적으로 내보내지고 공유되었습니다';
+
+  @override
   String get allLabel => '전체';
 
   @override
@@ -820,4 +841,91 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get backupNoFileMessage => '아직 백업 파일이 없습니다';
+
+  @override
+  String get filterButtonTooltip => 'Filter projects';
+
+  @override
+  String get filterPriorityLabel => 'Priority';
+
+  @override
+  String get priorityLow => 'Low';
+
+  @override
+  String get priorityMedium => 'Medium';
+
+  @override
+  String get priorityHigh => 'High';
+
+  @override
+  String get filterDateRangeLabel => 'Date Range';
+
+  @override
+  String get filterStartDateLabel => 'Start Date';
+
+  @override
+  String get filterEndDateLabel => 'End Date';
+
+  @override
+  String activeFilterPriority(String priority) {
+    return 'Priority: $priority';
+  }
+
+  @override
+  String activeFilterStartDate(String date) {
+    return 'From $date';
+  }
+
+  @override
+  String activeFilterEndDate(String date) {
+    return 'To $date';
+  }
+
+  @override
+  String showingProjectsCount(int count, int total) {
+    return 'Showing $count of $total projects';
+  }
+
+  @override
+  String get clearAllFiltersButtonLabel => 'Clear All Filters';
+
+  @override
+  String get noProjectsMatchFiltersTitle => 'No projects match your filters';
+
+  @override
+  String get noProjectsMatchFiltersSubtitle =>
+      'Try changing or clearing your filters';
+
+  @override
+  String get projectFiltersTitle => 'Project Filters';
+
+  @override
+  String get allProjectsPresetLabel => 'All Projects';
+
+  @override
+  String get highPriorityPresetLabel => 'High Priority';
+
+  @override
+  String get dueThisWeekPresetLabel => 'Due This Week';
+
+  @override
+  String get overduePresetLabel => 'Overdue';
+
+  @override
+  String get myProjectsPresetLabel => 'My Projects';
+
+  @override
+  String get cancelLabel => 'Cancel';
+
+  @override
+  String get clearAllLabel => 'Clear All';
+
+  @override
+  String get saveAsDefaultSuccessMessage => 'Filter saved as default';
+
+  @override
+  String get saveAsDefaultViewLabel => 'Save as Default';
+
+  @override
+  String get applyFiltersLabel => 'Apply Filters';
 }

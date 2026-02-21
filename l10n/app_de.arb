@@ -316,6 +316,34 @@
   "@projectSortStatus": {
     "description": "Auto-generated description for projectSortStatus."
   },
+  "projectSortStartDate": "Startdatum",
+  "@projectSortStartDate": {
+    "description": "Label for sorting projects by start date."
+  },
+  "projectSortDueDate": "Fälligkeitsdatum",
+  "@projectSortDueDate": {
+    "description": "Label for sorting projects by due date."
+  },
+  "sortDirectionLabel": "Richtung",
+  "@sortDirectionLabel": {
+    "description": "Label for sort direction selection."
+  },
+  "sortAscendingLabel": "Aufsteigend",
+  "@sortAscendingLabel": {
+    "description": "Label for ascending sort order."
+  },
+  "sortDescendingLabel": "Absteigend",
+  "@sortDescendingLabel": {
+    "description": "Label for descending sort order."
+  },
+  "exportToCsvLabel": "Als CSV exportieren",
+  "@exportToCsvLabel": {
+    "description": "Label for CSV export button."
+  },
+  "csvExportSuccessMessage": "CSV erfolgreich exportiert und geteilt",
+  "@csvExportSuccessMessage": {
+    "description": "Success message after CSV export."
+  },
   "allLabel": "Alle",
   "@allLabel": {
     "description": "Auto-generated description for allLabel."
@@ -1085,5 +1113,124 @@
   "backupNoFileMessage": "Noch keine Backup-Datei",
   "@backupNoFileMessage": {
     "description": "Shown when no backup file path is available."
+  },
+  "projectSortName": "Name",
+  "@projectSortName": {
+    "description": "Sort option for project name."
+  },
+  "projectSortPriority": "Priority",
+  "@projectSortPriority": {
+    "description": "Sort option for project priority."
+  },
+  "projectSortStartDate": "Start Date",
+  "@projectSortStartDate": {
+    "description": "Sort option for project start date."
+  },
+  "projectSortDueDate": "Due Date",
+  "@projectSortDueDate": {
+    "description": "Sort option for project due date."
+  },
+  "projectSortStatus": "Status",
+  "@projectSortStatus": {
+    "description": "Sort option for project status."
+  },
+  "sortDirectionLabel": "Direction",
+  "@sortDirectionLabel": {
+    "description": "Label for sort direction control."
+  },
+  "sortAscendingLabel": "Ascending",
+  "@sortAscendingLabel": {
+    "description": "Label for ascending sort direction."
+  },
+  "sortDescendingLabel": "Descending",
+  "@sortDescendingLabel": {
+    "description": "Label for descending sort direction."
+  },
+  "exportToCsvLabel": "Export to CSV",
+  "@exportToCsvLabel": {
+    "description": "Label for CSV export button."
+  },
+  "csvExportSuccessMessage": "Projects exported successfully",
+  "@csvExportSuccessMessage": {
+    "description": "Success message after CSV export."
+  },
+  "filterButtonTooltip": "Filter projects",
+  "@filterButtonTooltip": {
+    "description": "Tooltip for the filter button."
+  },
+  "filterPriorityLabel": "Priority",
+  "@filterPriorityLabel": {
+    "description": "Label for priority filter."
+  },
+  "priorityLow": "Low",
+  "@priorityLow": {
+    "description": "Low priority label."
+  },
+  "priorityMedium": "Medium",
+  "@priorityMedium": {
+    "description": "Medium priority label."
+  },
+  "priorityHigh": "High",
+  "@priorityHigh": {
+    "description": "High priority label."
+  },
+  "filterDateRangeLabel": "Date Range",
+  "@filterDateRangeLabel": {
+    "description": "Label for date range filter."
+  },
+  "filterStartDateLabel": "Start Date",
+  "@filterStartDateLabel": {
+    "description": "Label for start date filter."
+  },
+  "filterEndDateLabel": "End Date",
+  "@filterEndDateLabel": {
+    "description": "Label for end date filter."
+  },
+  "activeFilterPriority": "Priority: {priority}",
+  "@activeFilterPriority": {
+    "description": "Active filter chip text for priority.",
+    "placeholders": {
+      "priority": {
+        "type": "String"
+      }
+    }
+  },
+  "activeFilterStartDate": "From {date}",
+  "@activeFilterStartDate": {
+    "description": "Active filter chip text for start date.",
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "activeFilterEndDate": "To {date}",
+  "@activeFilterEndDate": {
+    "description": "Active filter chip text for end date.",
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "showingProjectsCount": "Showing {count} of {total} projects",
+  "@showingProjectsCount": {
+    "description": "Text showing current count of displayed projects.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "clearAllFiltersButtonLabel": "Clear All Filters",
+  "@clearAllFiltersButtonLabel": {
+    "description": "Label for button to clear all filters."
+  },
+  "noProjectsMatchFiltersTitle": "No projects match your filters",
+  "@noProjectsMatchFiltersTitle": {
+    "description": "Title when no projects match the current filters."
   }
 }
