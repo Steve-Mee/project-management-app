@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:my_project_management_app/core/providers/auth_providers.dart';
 import 'package:my_project_management_app/core/providers/project_providers.dart';
 import 'package:my_project_management_app/models/project_model.dart';
-import 'package:my_project_management_app/core/auth/auth_user.dart' as local_auth;
+
 
 /// Model for chat messages
 class ChatMessage {
@@ -355,7 +355,7 @@ class _ProjectChatState extends ConsumerState<ProjectChat> {
         data: (user) => user,
         orElse: () => null,
       );
-      final currentUser = currentUserValue as local_auth.AuthUser?;
+      final currentUser = currentUserValue;
 
       if (currentUser == null) {
         throw Exception('User not found');
