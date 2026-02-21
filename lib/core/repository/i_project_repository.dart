@@ -72,4 +72,13 @@ abstract class IProjectRepository {
   // Future methods to consider:
   // Future<List<ProjectModel>> getProjectsPaginated(int page, int limit);
   // Future<List<ProjectModel>> getProjectsByStatus(String status);
+
+  /// Fetch projects with pagination for large lists
+  /// `page` starts at 1
+  Future<List<ProjectModel>> getProjectsPaginated({
+    required int page,
+    required int limit,
+    String? statusFilter,
+    String? searchQuery,
+  });
 }

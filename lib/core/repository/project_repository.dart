@@ -129,6 +129,41 @@ class ProjectRepository implements IProjectRepository {
     return projects;
   }
 
+  @override
+  Future<List<ProjectModel>> getProjectsPaginated({
+    required int page,
+    required int limit,
+    String? statusFilter,
+    String? searchQuery,
+  }) async {
+    try {
+      final allProjects = await getAllProjects();
+
+      // Apply optional filters
+      var filtered = allProjects;
+      if (statusFilter != null && statusFilter.isNotEmpty) {
+        filtered = filtered.where((p) => p.status == statusFilter).toList();
+      }
+      if (searchQuery != null && searchQuery.isNotEmpty) {
+        final q = searchQuery.toLowerCase();
+        filtered = filtered.where((p) {
+          final nameMatch = p.name.toLowerCase().contains(q);
+          final descMatch = (p.description != null) && p.description!.toLowerCase().contains(q);
+          return nameMatch || descMatch;
+        }).toList();
+      }
+
+      // Pagination (page starts at 1)
+      final startIndex = (page - 1) * limit;
+      if (startIndex >= filtered.length) return <ProjectModel>[];
+
+      return filtered.skip(startIndex).take(limit).toList();
+    } catch (e, s) {
+      AppLogger.instance.e('Error in getProjectsPaginated', error: e, stackTrace: s);
+      rethrow;
+    }
+  }
+
   /// Get a single project by ID
   @override
   Future<ProjectModel?> getProjectById(String id) async {
