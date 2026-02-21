@@ -1,5 +1,6 @@
 /// Abstract interface for authentication repository
 /// Makes auth swappable (Hive → Supabase → Mock for tests)
+library;
 import 'package:my_project_management_app/core/auth/auth_user.dart';
 import 'package:my_project_management_app/core/auth/role_models.dart';
 
