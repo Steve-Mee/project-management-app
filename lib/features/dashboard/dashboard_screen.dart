@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -394,31 +395,85 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   }
 
   Widget _buildListView() {
-    return ListView.builder(
-      controller: _scrollController,
-      padding: EdgeInsets.all(16.w),
-      itemCount: _projects.length + (_hasMore ? 1 : 0),
-      itemBuilder: (context, index) {
-        if (index < _projects.length) {
-          final project = _projects[index];
-          return Padding(
-            padding: EdgeInsets.only(bottom: 12.h),
-            child: AspectRatio(
-              aspectRatio: 1 / 0.75,
-              child: FadeInUp(
+    // center the list on wide layouts and cap the overall width so cards don't stretch
+    return LayoutBuilder(builder: (context, constraints) {
+      final maxWidth = constraints.maxWidth;
+      // determine number of columns for grid view
+      int columns = 1;
+      if (maxWidth > 1200) {
+        columns = 3;
+      } else if (maxWidth > 800) {
+        columns = 2;
+      }
+
+      Widget content;
+      if (columns == 1) {
+        content = ListView.builder(
+          controller: _scrollController,
+          padding: EdgeInsets.all(16.w),
+          itemCount: _projects.length + (_hasMore ? 1 : 0),
+          itemBuilder: (context, index) {
+            if (index < _projects.length) {
+              final project = _projects[index];
+              return Padding(
+                padding: EdgeInsets.only(bottom: 12.h),
+                child: AspectRatio(
+                  aspectRatio: 1 / 0.75,
+                  child: FadeInUp(
+                    duration: Duration(milliseconds: 400 + index * 100),
+                    child: ProjectCardWidget(
+                      key: Key(project.id),
+                      project: project,
+                      onTap: () => _showProjectDetailSheet(context, project),
+                    ),
+                  ),
+                ),
+              );
+            }
+            return const LoadingMoreWidget();
+          },
+        );
+      } else {
+        content = GridView.builder(
+          controller: _scrollController,
+          padding: EdgeInsets.all(16.w),
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: columns,
+            mainAxisSpacing: 12.h,
+            crossAxisSpacing: 12.w,
+            childAspectRatio: 1 / 0.75,
+          ),
+          itemCount: _projects.length + (_hasMore ? 1 : 0),
+          itemBuilder: (context, index) {
+            if (index < _projects.length) {
+              final project = _projects[index];
+              return FadeInUp(
                 duration: Duration(milliseconds: 400 + index * 100),
                 child: ProjectCardWidget(
                   key: Key(project.id),
                   project: project,
                   onTap: () => _showProjectDetailSheet(context, project),
                 ),
+              );
+            }
+            // show loading indicator spanning columns
+            return GridTile(
+              child: Padding(
+                padding: EdgeInsets.only(top: 24.h),
+                child: const LoadingMoreWidget(),
               ),
-            ),
-          );
-        }
-        return const LoadingMoreWidget();
-      },
-    );
+            );
+          },
+        );
+      }
+
+      return Center(
+        child: ConstrainedBox(
+          constraints: BoxConstraints(maxWidth: min(1000.w, maxWidth)),
+          child: content,
+        ),
+      );
+    });
   }
 
   /// Show project detail sheet with burndown chart

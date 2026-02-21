@@ -59,19 +59,20 @@ class ProjectCardWidget extends StatelessWidget {
       child: GestureDetector(
         onTap: onTap,
         child: ConstrainedBox(
+          // on desktops/tablets allow cards to expand, but cap to avoid overly stretched
           constraints: BoxConstraints(
-            maxWidth: 400.w,
+            maxWidth: min(600.w, MediaQuery.of(context).size.width * 0.85),
             minWidth: 200.w,
           ),
           child: Card(
-            elevation: 4,
-            shadowColor: colorScheme.shadow.withValues(alpha: 0.2),
+            elevation: 3,
+            shadowColor: colorScheme.shadow.withValues(alpha: 0.15),
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16.r),
+              borderRadius: BorderRadius.circular(12.r),
             ),
             color: colorScheme.surface,
             child: Padding(
-              padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 12.h),
+              padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 16.h),
               child: LayoutBuilder(
                 builder: (context, constraints) {
                   final isNarrow = constraints.maxWidth < 200;
@@ -345,6 +346,19 @@ class ProjectCardWidget extends StatelessWidget {
                                 ],
                               ),
                       ),
+
+                      // dashboard-style linear progress bar underneath chart
+                      SizedBox(height: 8.h),
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(4.r),
+                        child: LinearProgressIndicator(
+                          value: project.progress,
+                          minHeight: 6.h,
+                          color: colorScheme.primary,
+                          backgroundColor: colorScheme.primary.withValues(alpha: 0.1),
+                        ),
+                      ),
+
                       if (project.description != null) ...[
                         SizedBox(height: 4.h),
                         AutoSizeText(

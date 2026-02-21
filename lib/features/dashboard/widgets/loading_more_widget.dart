@@ -13,7 +13,10 @@ class LoadingMoreWidget extends StatelessWidget {
       child: Center(
         child: Column(
           children: [
-            const CircularProgressIndicator(),
+            CircularProgressIndicator(
+              color: Theme.of(context).colorScheme.secondary,
+              strokeWidth: 3,
+            ),
             SizedBox(height: 8.h),
             Text(
               l10n.loadingMoreProjects,
