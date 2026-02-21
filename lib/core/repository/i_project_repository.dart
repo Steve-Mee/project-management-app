@@ -109,4 +109,10 @@ abstract class IProjectRepository {
 
   /// Advanced filtering with multiple criteria
   Future<List<ProjectModel>> getFilteredProjects(ProjectFilter filter);
+
+  /// Sync methods for future Supabase integration
+  /// TODO: Implement sync methods when Supabase sync is added
+  // Future<void> syncProjectsToSupabase();
+  // Future<void> syncProjectsFromSupabase();
+  // Future<void> resolveSyncConflicts(List<SyncConflict> conflicts);
 }

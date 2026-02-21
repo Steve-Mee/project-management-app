@@ -40,4 +40,10 @@ abstract class IDashboardRepository {
 
   /// Close repository resources (e.g., Hive boxes)
   Future<void> close();
+
+  /// Sync methods for future Supabase integration
+  /// TODO: Implement sync methods when Supabase sync is added
+  // Future<void> syncDashboardConfigToSupabase();
+  // Future<void> syncDashboardConfigFromSupabase();
+  // Future<void> resolveSyncConflicts(List<SyncConflict> conflicts);
 }
