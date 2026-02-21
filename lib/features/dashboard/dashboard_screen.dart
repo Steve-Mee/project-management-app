@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math';
 
 import 'package:flutter/material.dart';
@@ -24,6 +25,9 @@ import 'widgets/loading_more_widget.dart';
 import 'widgets/recent_workflows_header_widget.dart';
 import 'widgets/task_chart_widget.dart';
 import 'widgets/project_card_widget.dart';
+
+/// Filter state for projects list
+final currentProjectFilterProvider = StateProvider<ProjectFilter>((ref) => const ProjectFilter());
 
 /// Dashboard screen - responsive main page with projects overview
 class DashboardScreen extends ConsumerStatefulWidget {
@@ -53,7 +57,7 @@ class _ChartColors {
 
 class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   final ScrollController _scrollController = ScrollController();
-  late final ProviderSubscription<String> _searchSubscription;
+  Timer? _debounce;
   static const int _pageSize = 9;
   int _visibleCount = _pageSize;
   String _selectedStatus = 'All';
@@ -63,17 +67,6 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   void initState() {
     super.initState();
     _scrollController.addListener(_onScroll);
-    _searchSubscription = ref.listenManual<String>(
-      searchQueryProvider,
-      (_, _) {
-      if (!mounted) {
-        return;
-      }
-      setState(() {
-        _visibleCount = _pageSize;
-      });
-      },
-    );
     // _loadDashboardConfig(); // Removed, now using provider
   }
 
@@ -207,6 +200,37 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   }
 
   /// Build shimmer loading skeleton
+  Widget _buildFilterBar(BuildContext context, ProjectFilter filter) {
+    final l10n = AppLocalizations.of(context)!;
+    return Padding(
+      padding: const EdgeInsets.all(8.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          TextField(
+            decoration: InputDecoration(
+              hintText: l10n.searchTasksHint,
+              prefixIcon: const Icon(Icons.search),
+              border: const OutlineInputBorder(),
+            ),
+            onChanged: _updateSearch,
+          ),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 8,
+            children: ['All', 'In Progress', 'Completed', 'On Hold', 'Cancelled']
+                .map((status) => FilterChip(
+                      label: Text(status),
+                      selected: (filter.status ?? 'All') == status,
+                      onSelected: (_) => _updateStatus(status),
+                    ))
+                .toList(),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildShimmerLoading() {
     return AnimatedOpacity(
       opacity: 1.0,
@@ -238,7 +262,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
 
   @override
   void dispose() {
-    _searchSubscription.close();
+    _debounce?.cancel();
     _scrollController.dispose();
     super.dispose();
   }
@@ -254,6 +278,27 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
         _visibleCount += _pageSize;
       });
     }
+  }
+
+  void _updateSearch(String query) {
+    _debounce?.cancel();
+    _debounce = Timer(const Duration(milliseconds: 300), () {
+      final current = ref.read(currentProjectFilterProvider);
+      ref.read(currentProjectFilterProvider.notifier).state =
+          ProjectFilter(
+            status: current.status,
+            searchQuery: query,
+          );
+    });
+  }
+
+  void _updateStatus(String status) {
+    final current = ref.read(currentProjectFilterProvider);
+    ref.read(currentProjectFilterProvider.notifier).state =
+        ProjectFilter(
+          status: status == 'All' ? null : status,
+          searchQuery: current.searchQuery,
+        );
   }
 
   _ChartColors _chartColors(BuildContext context) {
@@ -345,7 +390,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    final projectsState = ref.watch(visibleProjectsProvider);
+    final filter = ref.watch(currentProjectFilterProvider);
+    final projectsState = ref.watch(filteredProjectsProvider(filter));
     final canUseAi = ref.watch(hasPermissionProvider(AppPermissions.useAi));
 
     return Scaffold(
@@ -370,13 +416,20 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                     maxWidth: MediaQuery.of(context).size.width,
                     maxHeight: MediaQuery.of(context).size.height,
                   ),
-                  child: projectsState.when(
-                    loading: _buildShimmerLoading,
-                    error: (error, _) => ErrorStateWidget(
-                      error: error,
-                      onRetry: () => ref.read(projectsProvider.notifier).refresh(),
-                    ),
-                    data: (projects) => _buildDashboardContent(context, projects),
+                  child: Column(
+                    children: [
+                      _buildFilterBar(context, filter),
+                      Expanded(
+                        child: projectsState.when(
+                          loading: _buildShimmerLoading,
+                          error: (error, _) => ErrorStateWidget(
+                            error: error,
+                            onRetry: () => ref.read(projectsProvider.notifier).refresh(),
+                          ),
+                          data: (projects) => _buildDashboardContent(context, projects),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ),
@@ -453,26 +506,15 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
       builder: (context, constraints) {
         final isDesktop = constraints.maxWidth > 600;
 
-        // Filter projects based on search + status
-        final statusFilter = _selectedStatus;
-        final query = ref.watch(searchQueryProvider).toLowerCase();
-        final filteredProjects = projects
-            .where(
-              (p) =>
-                  p.name.toLowerCase().contains(query) ||
-                  p.status.toLowerCase().contains(query),
-            )
-            .where(
-              (p) => statusFilter == 'All' || p.status == statusFilter,
-            )
-            .toList();
+        // provider already supplies filtered projects
+        final filteredProjects = projects;
 
         final metaByProjectId = ref.watch(projectMetaProvider);
         final sortedProjects =
             _sortProjects(filteredProjects, metaByProjectId);
 
         if (filteredProjects.isEmpty) {
-          return EmptyStateWidget(query: query);
+          return EmptyStateWidget(query: ref.watch(currentProjectFilterProvider).searchQuery ?? '');
         }
 
         final visibleProjects =
@@ -499,26 +541,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             }
 
             if (index == 1) {
-              return FadeInLeft(
-                duration: const Duration(milliseconds: 600),
-                child: FiltersSortWidget(
-                  selectedStatus: _selectedStatus,
-                  sortBy: _sortBy,
-                  onStatusChanged: (status) {
-                    setState(() {
-                      _selectedStatus = status;
-                      _visibleCount = _pageSize;
-                    });
-                  },
-                  onSortChanged: (sort) {
-                    setState(() {
-                      _sortBy = sort;
-                      _visibleCount = _pageSize;
-                    });
-                  },
-                  projects: projects,
-                ),
-              );
+              // placeholder or spacing widget
+              return const SizedBox(height: 0);
             }
 
             final projectStart = headerCount;
