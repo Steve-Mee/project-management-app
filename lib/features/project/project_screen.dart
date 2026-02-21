@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -25,6 +26,10 @@ class _ProjectScreenState extends ConsumerState<ProjectScreen> {
   late final ProviderSubscription<String> _searchSubscription;
   static const int _pageSize = 12;
 
+  // search field controller and debounce
+  final TextEditingController _searchController = TextEditingController();
+  Timer? _searchDebounce;
+
   // pagination state
   final List<ProjectModel> _projects = [];
   int _page = 1;
@@ -46,6 +51,7 @@ class _ProjectScreenState extends ConsumerState<ProjectScreen> {
         _resetPagination();
       },
     );
+    _searchController.text = ref.read(searchQueryProvider);
     WidgetsBinding.instance.addPostFrameCallback((_) => _resetPagination());
   }
 
@@ -53,6 +59,8 @@ class _ProjectScreenState extends ConsumerState<ProjectScreen> {
   void dispose() {
     _searchSubscription.close();
     _scrollController.dispose();
+    _searchDebounce?.cancel();
+    _searchController.dispose();
     super.dispose();
   }
 
@@ -133,10 +141,10 @@ class _ProjectScreenState extends ConsumerState<ProjectScreen> {
     final l10n = AppLocalizations.of(context)!;
     final filtered = _filterProjects(projects);
     final sorted = _sortProjects(filtered, metaByProjectId);
-    final visible = sorted; // pagination already applied via repository
+    final visible = sorted; // pagination applied at repo level
     final hasMore = _hasMore;
 
-    const baseCount = 2;
+    const baseCount = 3; // title + search + filters/sort
     final itemCount = baseCount + (sorted.isEmpty ? 1 : visible.length + 1);
 
     return ListView.builder(
@@ -177,6 +185,28 @@ class _ProjectScreenState extends ConsumerState<ProjectScreen> {
         }
 
         if (index == 1) {
+          // search field
+          return Padding(
+            padding: EdgeInsets.only(top: 12.h, bottom: 12.h),
+            child: TextField(
+              controller: _searchController,
+              decoration: InputDecoration(
+                hintText: 'Search projects',
+                prefixIcon: const Icon(Icons.search),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8.r),
+                ),
+              ),
+              onChanged: (value) {
+                _searchDebounce?.cancel();
+                _searchDebounce = Timer(const Duration(milliseconds: 300), () {
+                  ref.read(searchQueryProvider.notifier).setQuery(value);
+                });
+              },
+            ),
+          );
+        }
+        if (index == 2) {
           return Padding(
             padding: EdgeInsets.only(top: 12.h),
             child: Column(
