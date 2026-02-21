@@ -3,7 +3,7 @@
 library;
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:my_project_management_app/core/providers/project_providers.dart' show projectRepositoryProvider, projectMetaRepositoryProvider;
+import 'package:my_project_management_app/core/providers/project_providers.dart' show projectRepositoryProvider;
 import 'package:my_project_management_app/core/providers/notification_providers.dart';
 import '../../core/services/app_logger.dart';
 import '../../models/task_model.dart';
