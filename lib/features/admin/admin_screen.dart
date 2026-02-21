@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:my_project_management_app/core/auth/permissions.dart';
 import 'package:my_project_management_app/core/auth/role_models.dart';
-import 'package:my_project_management_app/core/repository/auth_repository.dart';
 import 'package:my_project_management_app/core/providers/auth_providers.dart';
 import 'package:my_project_management_app/generated/app_localizations.dart';
 
@@ -225,9 +224,10 @@ class _AdminScreenState extends ConsumerState<AdminScreen> {
   ) async {
     final l10n = AppLocalizations.of(context)!;
     final nameController = TextEditingController();
+    final repo = ref.read(authRepositoryProvider);
     String selectedRole = roles.isNotEmpty
         ? roles.first.id
-        : AuthRepository.defaultUserRoleId;
+        : repo.defaultUserRoleId;
 
     final result = await showDialog<bool>(
       context: context,
@@ -291,7 +291,6 @@ class _AdminScreenState extends ConsumerState<AdminScreen> {
     }
 
     final groupId = name.toLowerCase().replaceAll(' ', '_');
-    final repo = ref.read(authRepositoryProvider);
     await repo.upsertGroup(
       GroupDefinition(
         id: groupId,

@@ -35,14 +35,19 @@ class AuthRepository implements IAuthRepository {
   static const String _rolesKey = 'roles';
   static const String _groupsKey = 'groups';
 
-  static const String adminRoleId = 'role_admin';
-  static const String defaultUserRoleId = 'role_member';
-  static const String viewerRoleId = 'role_viewer';
-
   final RemoteAuthService _remote;
 
   AuthRepository({RemoteAuthService? remote})
       : _remote = remote ?? RemoteAuthService();
+
+  @override
+  String get adminRoleId => 'role_admin';
+
+  @override
+  String get defaultUserRoleId => 'role_member';
+
+  @override
+  String get viewerRoleId => 'role_viewer';
 
   @override
   Future<void> initialize() async {

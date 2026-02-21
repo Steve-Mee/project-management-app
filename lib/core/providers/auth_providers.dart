@@ -113,14 +113,14 @@ class AuthNotifier extends Notifier<AuthState> {
 
   AuthState _createAuthenticatedState(dynamic user) {
     final email = user.email ?? user.id;
-    final repo = ref.read(authRepositoryProvider);
+    final IAuthRepository repo = ref.read(authRepositoryProvider);
     final localUser = repo.getUserByUsername(email);
     final role = localUser != null ? repo.getRoleById(localUser.roleId) : null;
 
     return AuthState(
       isAuthenticated: true,
       username: email,
-      roleId: role?.id ?? AuthRepository.defaultUserRoleId,
+      roleId: role?.id ?? repo.defaultUserRoleId,
       roleName: role?.name ?? 'Member',
     );
   }
@@ -164,14 +164,14 @@ class AuthNotifier extends Notifier<AuthState> {
       final user = Supabase.instance.client.auth.currentUser;
       if (user != null) {
         final email = user.email ?? user.id;
-        final repo = ref.read(authRepositoryProvider);
+        final IAuthRepository repo = ref.read(authRepositoryProvider);
         final localUser = repo.getUserByUsername(email);
         final role = localUser != null ? repo.getRoleById(localUser.roleId) : null;
 
         state = AuthState(
           isAuthenticated: true,
           username: email,
-          roleId: role?.id ?? AuthRepository.defaultUserRoleId,
+          roleId: role?.id ?? repo.defaultUserRoleId,
           roleName: role?.name ?? 'Member',
         );
 
@@ -227,7 +227,7 @@ class AuthNotifier extends Notifier<AuthState> {
   Future<bool> addUser(
     String username,
     String password, {
-    String roleId = AuthRepository.defaultUserRoleId,
+    String? roleId,
   }) async {
     if (username.trim().isEmpty || password.isEmpty) {
       state = state.copyWith(error: 'Username and password are required.');
@@ -235,12 +235,13 @@ class AuthNotifier extends Notifier<AuthState> {
     }
 
     try {
-      final repo = ref.read(authRepositoryProvider);
+      final IAuthRepository repo = ref.read(authRepositoryProvider);
+      final effectiveRoleId = roleId ?? repo.defaultUserRoleId;
       await repo.addUser(
         AppUser(
           username: username.trim(),
           password: password,
-          roleId: roleId,
+          roleId: effectiveRoleId,
         ),
       );
       return true;
@@ -291,8 +292,8 @@ class AuthNotifier extends Notifier<AuthState> {
   /// Delete user with permission checking
   Future<void> deleteUser(String username) async {
     try {
-      final repo = ref.read(authRepositoryProvider);
-      final roleId = state.roleId ?? AuthRepository.defaultUserRoleId;
+      final IAuthRepository repo = ref.read(authRepositoryProvider);
+      final roleId = state.roleId ?? repo.defaultUserRoleId;
       final role = repo.getRoleById(roleId);
       final canManageUsers = role?.permissions.contains(AppPermissions.manageUsers) ?? false;
 
@@ -323,7 +324,7 @@ final permissionsProvider = Provider<Set<String>>((ref) {
   if (!auth.isAuthenticated || auth.roleId == null) {
     return <String>{};
   }
-  final repo = ref.read(authRepositoryProvider);
+  final IAuthRepository repo = ref.read(authRepositoryProvider);
   final role = repo.getRoleById(auth.roleId!);
   return role?.permissions.toSet() ?? <String>{};
 });
@@ -454,7 +455,7 @@ final useBiometricsProvider = NotifierProvider<UseBiometricsNotifier, bool>(
 );
 
 final authUsersProvider = FutureProvider<List<AppUser>>((ref) {
-  final repo = ref.watch(authRepositoryProvider);
+  final IAuthRepository repo = ref.watch(authRepositoryProvider);
   return repo.getUsers();
 });
 
@@ -465,7 +466,7 @@ final currentUserProvider = FutureProvider<AppUser?>((ref) async {
     return null;
   }
 
-  final repo = ref.read(authRepositoryProvider);
+  final IAuthRepository repo = ref.read(authRepositoryProvider);
   // repo is guaranteed non-null since provider returns a value
   return repo.getUserByUsername(authState.username!);
 });
