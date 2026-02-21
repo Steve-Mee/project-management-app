@@ -9,6 +9,7 @@ import 'package:my_project_management_app/core/repository/settings_repository.da
 import 'package:my_project_management_app/core/services/cloud_sync_service.dart';
 import 'package:my_project_management_app/core/services/ab_testing_service.dart';
 import 'package:my_project_management_app/core/services/app_logger.dart';
+import 'package:my_project_management_app/core/services/login_rate_limiter.dart';
 import 'package:my_project_management_app/core/auth/permissions.dart';
 import 'package:my_project_management_app/core/config/ai_config.dart' as ai_config;
 
@@ -24,6 +25,9 @@ final settingsRepositoryProvider = FutureProvider<SettingsRepository>((ref) asyn
   await repository.initialize();
   return repository;
 });
+
+/// Provider for LoginRateLimiter
+final loginRateLimiterProvider = Provider<LoginRateLimiter>((ref) => LoginRateLimiter.instance);
 
 /// Auth state for basic login flow with error handling
 class AuthState {
@@ -59,31 +63,6 @@ class AuthState {
 }
 
 /// Notifier for authentication with robust error handling
-/// Simple in-memory rate limiter for login attempts.
-class _RateLimiter {
-  final int maxAttempts;
-  final Duration window;
-  final Map<String, List<DateTime>> _attempts = {};
-
-  _RateLimiter({required this.maxAttempts, required this.window});
-
-  bool canAttempt(String identifier) {
-    final now = DateTime.now();
-    final list = _attempts.putIfAbsent(identifier, () => []);
-    list.retainWhere((t) => now.difference(t) <= window);
-    return list.length < maxAttempts;
-  }
-
-  void recordFailure(String identifier) {
-    final now = DateTime.now();
-    final list = _attempts.putIfAbsent(identifier, () => []);
-    list.add(now);
-  }
-}
-
-// 5 attempts per minute by default
-final _loginRateLimiter = _RateLimiter(maxAttempts: 5, window: const Duration(minutes: 1));
-
 class AuthNotifier extends Notifier<AuthState> {
   final CloudSyncService _cloudSync = CloudSyncService();
   final ABTestingService _abTesting = ABTestingService.instance;
@@ -134,12 +113,14 @@ class AuthNotifier extends Notifier<AuthState> {
     }
   }
 
-  /// Login with error handling and rate limiting considerations
-  /// Login with error handling and rate limiting
+  /// Login with error handling and persistent rate limiting
   Future<bool> login(String username, String password, {bool enableAutoLogin = false}) async {
+    final repo = ref.read(authRepositoryProvider);
+
     // Check rate limiting before attempting login
-    if (!_loginRateLimiter.canAttempt(username.trim().toLowerCase())) {
-      state = state.copyWith(error: 'Too many login attempts. Please try again later.');
+    if (await repo.isLoginBlocked(username)) {
+      state = state.copyWith(error: 'Rate limit exceeded. Please try again later.');
+      AppLogger.event('auth_rate_limit_exceeded', details: {'email': username, 'timestamp': DateTime.now().toIso8601String()});
       return false;
     }
 
@@ -163,20 +144,20 @@ class AuthNotifier extends Notifier<AuthState> {
 
       final user = Supabase.instance.client.auth.currentUser;
       if (user != null) {
-        final email = user.email ?? user.id;
+        final userEmail = user.email ?? user.id;
         final IAuthRepository repo = ref.read(authRepositoryProvider);
-        final localUser = repo.getUserByUsername(email);
+        final localUser = repo.getUserByUsername(userEmail);
         final role = localUser != null ? repo.getRoleById(localUser.roleId) : null;
 
         state = AuthState(
           isAuthenticated: true,
-          username: email,
+          username: userEmail,
           roleId: role?.id ?? repo.defaultUserRoleId,
           roleName: role?.name ?? 'Member',
         );
 
         await _abTesting.initialize();
-        await _abTesting.assignGroupForUser(email);
+        await _abTesting.assignGroupForUser(userEmail);
 
         AppLogger.event('auth_sign_in', details: {'id': user.id});
 
@@ -195,14 +176,14 @@ class AuthNotifier extends Notifier<AuthState> {
           AppLogger.instance.w('Settings update failed', error: e);
         }
 
+        // Reset rate limiter on successful login
+        await repo.resetLoginAttempts(userEmail);
         return true;
       }
     } catch (e) {
       AppLogger.instance.w('Supabase login failed', error: e);
-      try {
-        // record failed attempt for rate limiting
-        _loginRateLimiter.recordFailure(username.trim().toLowerCase());
-      } catch (_) {}
+      // Record failed attempt for rate limiting
+      await repo.recordLoginAttempt(username);
     }
 
     state = state.copyWith(error: 'Invalid username or password.');
@@ -266,13 +247,18 @@ class AuthNotifier extends Notifier<AuthState> {
       if (response.user != null) {
         AppLogger.instance.i('Signup success: user ID = ${response.user!.id}, email = ${response.user!.email}');
 
-        // Auto-login if email confirmation is off
-        final loginRes = await Supabase.instance.client.auth.signInWithPassword(
-          email: trimmedEmail,
-          password: password,
-        );
-        if (loginRes.session != null) {
-          AppLogger.instance.d('Auto-login after signup successful');
+        // Auto-login if email confirmation is off (respect rate limiting)
+        final limiter = ref.watch(loginRateLimiterProvider);
+        if (!await limiter.isBlocked(trimmedEmail)) {
+          final loginRes = await Supabase.instance.client.auth.signInWithPassword(
+            email: trimmedEmail,
+            password: password,
+          );
+          if (loginRes.session != null) {
+            AppLogger.instance.d('Auto-login after signup successful');
+          }
+        } else {
+          AppLogger.event('auth_rate_limit_exceeded', details: {'email': trimmedEmail, 'context': 'auto-login after signup'});
         }
         return true;
       } else {

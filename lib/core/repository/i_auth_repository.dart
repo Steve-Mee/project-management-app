@@ -85,6 +85,15 @@ abstract class IAuthRepository {
   /// Record failed login attempt
   Future<void> recordFailedLoginAttempt(String identifier);
 
+  /// Check if login is blocked for email
+  Future<bool> isLoginBlocked(String email);
+
+  /// Record a login attempt for email
+  Future<void> recordLoginAttempt(String email);
+
+  /// Reset login attempts for email
+  Future<void> resetLoginAttempts(String email);
+
   /// Admin role ID
   String get adminRoleId;
 

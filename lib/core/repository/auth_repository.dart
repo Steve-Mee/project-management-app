@@ -5,6 +5,7 @@ import 'package:hive_flutter/hive_flutter.dart';
 import 'package:my_project_management_app/core/services/app_logger.dart';
 import 'package:my_project_management_app/core/auth/permissions.dart';
 import 'package:my_project_management_app/core/auth/role_models.dart';
+import 'package:my_project_management_app/core/services/login_rate_limiter.dart';
 import 'package:my_project_management_app/core/auth/auth_user.dart';
 import 'package:my_project_management_app/core/repository/i_auth_repository.dart';
 
@@ -327,6 +328,21 @@ class AuthRepository implements IAuthRepository {
       return;
     }
     await _box.put(_currentUserKey, username);
+  }
+
+  @override
+  Future<bool> isLoginBlocked(String email) async {
+    return await LoginRateLimiter.instance.isBlocked(email);
+  }
+
+  @override
+  Future<void> recordLoginAttempt(String email) async {
+    await LoginRateLimiter.instance.recordAttempt(email);
+  }
+
+  @override
+  Future<void> resetLoginAttempts(String email) async {
+    await LoginRateLimiter.instance.resetOnSuccess(email);
   }
 
   @override
