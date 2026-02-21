@@ -325,6 +325,12 @@ class _ProjectScreenState extends ConsumerState<ProjectScreen> {
           return metaB.trackedSeconds.compareTo(metaA.trackedSeconds);
         });
         break;
+      case ProjectSort.createdDate:
+        // no created-at on model; keep order
+        break;
+      case ProjectSort.status:
+        sorted.sort((a, b) => a.status.compareTo(b.status));
+        break;
     }
     return sorted;
   }
@@ -974,6 +980,10 @@ class _ProjectScreenState extends ConsumerState<ProjectScreen> {
         return l10n.projectSortProgress;
       case ProjectSort.priority:
         return l10n.projectSortPriority;
+      case ProjectSort.createdDate:
+        return l10n.projectSortCreatedDate;
+      case ProjectSort.status:
+        return l10n.projectSortStatus;
     }
   }
 

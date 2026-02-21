@@ -1,12 +1,10 @@
 import 'dart:async';
-import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:shimmer/shimmer.dart';
 import 'package:fl_chart/fl_chart.dart';
-import 'package:dashboard_grid/dashboard_grid.dart';
 import 'package:animate_do/animate_do.dart';
 import 'package:my_project_management_app/generated/app_localizations.dart';
 import 'package:go_router/go_router.dart';
@@ -18,11 +16,9 @@ import '../../models/project_model.dart';
 import '../../models/project_sort.dart';
 import '../ai_chat/ai_chat_modal.dart';
 import 'widgets/welcome_header_widget.dart';
-import 'widgets/empty_state_widget.dart';
 import 'widgets/filters_sort_widget.dart';
 import 'widgets/error_state_widget.dart';
 import 'widgets/loading_more_widget.dart';
-import 'widgets/recent_workflows_header_widget.dart';
 import 'widgets/task_chart_widget.dart';
 import 'widgets/project_card_widget.dart';
 
@@ -90,119 +86,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   //   ];
   // }
 
-  Widget _buildWidgetForType(String type, List<ProjectModel> projects) {
-    switch (type) {
-      case 'welcome':
-        return FadeInDown(
-          duration: const Duration(milliseconds: 500),
-          child: const WelcomeHeaderWidget(),
-        );
-      case 'projectList':
-        final visibleProjects = projects.take(6).toList(); // Limit for grid
-        return Card(
-          elevation: 4,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              children: [
-                Text(
-                  'Projects',
-                  style: Theme.of(context).textTheme.titleLarge,
-                ),
-                Expanded(
-                  child: GridView.builder(
-                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 2,
-                      crossAxisSpacing: 16,
-                      mainAxisSpacing: 16,
-                    ),
-                    itemCount: visibleProjects.length,
-                    itemBuilder: (context, index) {
-                      final project = visibleProjects[index];
-                      return FadeInRight(
-                        duration: Duration(milliseconds: 300 + (index * 100)),
-                        child: Hero(
-                          tag: 'project-${project.id}',
-                          child: Card(
-                            elevation: 4,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: InkWell(
-                              onTap: () {
-                                context.go('/projects/${project.id}');
-                              },
-                              borderRadius: BorderRadius.circular(12),
-                              child: ConstrainedBox(
-                                constraints: BoxConstraints(
-                                  minHeight: 120,
-                                  maxHeight: 160,
-                                ),
-                                child: Column(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Icon(
-                                      Icons.folder,
-                                      size: 32,
-                                      color: Theme.of(context).colorScheme.primary,
-                                    ),
-                                    const SizedBox(height: 8),
-                                    Flexible(
-                                      child: Text(
-                                        project.name,
-                                        style: Theme.of(context).textTheme.titleSmall,
-                                        textAlign: TextAlign.center,
-                                        maxLines: 2,
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 8),
-                                    SizedBox(
-                                      height: 4,
-                                      child: LinearProgressIndicator(
-                                        value: project.progress,
-                                        backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-                ),
-              ],
-            ),
-          ),
-        );
-      case 'taskChart':
-        return TaskChartWidget(projects: projects);
-      case 'aiUsage':
-        return const _AiUsageWidget();
-      case 'filters':
-        final filter = ref.watch(currentProjectFilterProvider);
-        final sort = ref.watch(currentProjectSortProvider);
-        return FiltersSortWidget(
-          selectedStatus: filter.status ?? 'All',
-          sortBy: sort,
-          onStatusChanged: (status) {
-            _updateStatus(status);
-          },
-          onSortChanged: (sort) {
-            _updateSort(sort);
-          },
-          projects: projects,
-        );
-      default:
-        return const Text('Unknown widget');
-    }
-  }
+  // custom widget formatter removed; not needed for combined list UI
 
   /// Build shimmer loading skeleton
   Widget _buildFilterBar(BuildContext context, ProjectFilter filter) {
@@ -435,7 +319,6 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final filter = ref.watch(currentProjectFilterProvider);
-    final sort = ref.watch(currentProjectSortProvider);
     final canUseAi = ref.watch(hasPermissionProvider(AppPermissions.useAi));
 
     // watch paginated data for current page
@@ -517,50 +400,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   }
 
   /// Build main dashboard content with responsive layout
-  Widget _buildDashboardContent(
-    BuildContext context,
-    List<ProjectModel> projects,
-  ) {
-    final items = ref.watch(dashboardConfigProvider);
-    if (items.isEmpty) {
-      // Fallback to default layout
-      return _buildDefaultDashboard(context, projects);
-    }
-
-    return _buildCustomDashboard(context, items, projects);
-  }
-
-  /// Build custom dashboard with grid layout
-  Widget _buildCustomDashboard(
-    BuildContext context,
-    List<DashboardItem> items,
-    List<ProjectModel> projects,
-  ) {
-    final dashboardConfig = DashboardGrid(maxColumns: 4);
-    
-    // Add widgets to config
-    for (final item in items) {
-      dashboardConfig.addWidget(DashboardWidget(
-        id: '${item.widgetType}_${item.position['x']}_${item.position['y']}',
-        x: item.position['x'] ?? 0,
-        y: item.position['y'] ?? 0,
-        width: item.position['width'] ?? 2,
-        height: item.position['height'] ?? 1,
-        builder: (context) => Card(
-          elevation: 2,
-          color: Theme.of(context).colorScheme.surface,
-          child: Padding(
-            padding: EdgeInsets.all(16.w),
-            child: _buildWidgetForType(item.widgetType, projects),
-          ),
-        ),
-      ));
-    }
-
-    return Dashboard(
-      config: dashboardConfig,
-    );
-  }
+  // legacy dashboard helpers removed; combined list UI no longer uses them
 
   // Legacy dashboard builders no longer used by combined list.
   // We keep them for reference but they are effectively obsolete.

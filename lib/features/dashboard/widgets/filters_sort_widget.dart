@@ -145,6 +145,10 @@ class _FiltersSortWidgetState extends ConsumerState<FiltersSortWidget> {
         return l10n.projectSortProgress;
       case ProjectSort.priority:
         return l10n.projectSortPriority;
+      case ProjectSort.createdDate:
+        return l10n.projectSortCreatedDate;
+      case ProjectSort.status:
+        return l10n.projectSortStatus;
     }
   }
 }

@@ -10,13 +10,13 @@ extension ProjectSortX on ProjectSort {
   String get label {
     switch (this) {
       case ProjectSort.name:
-        return 'Name';
+        return 'Naam';
       case ProjectSort.progress:
-        return 'Progress';
+        return 'Voortgang';
       case ProjectSort.priority:
-        return 'Priority';
+        return 'Prioriteit';
       case ProjectSort.createdDate:
-        return 'Created';
+        return 'Datum';
       case ProjectSort.status:
         return 'Status';
     }

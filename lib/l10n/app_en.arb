@@ -308,6 +308,14 @@
   "@projectSortPriority": {
     "description": "Auto-generated description for projectSortPriority."
   },
+  "projectSortCreatedDate": "Created date",
+  "@projectSortCreatedDate": {
+    "description": "Label for sorting projects by creation date."
+  },
+  "projectSortStatus": "Status",
+  "@projectSortStatus": {
+    "description": "Label for sorting projects by status."
+  },
   "allLabel": "All",
   "@allLabel": {
     "description": "Auto-generated description for allLabel."
