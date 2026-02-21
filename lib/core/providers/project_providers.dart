@@ -829,6 +829,20 @@ class ProjectFilterNotifier extends StateNotifier<ProjectFilter> {
     }
   }
 
+  Future<void> _loadDefaultFilter() async {
+    try {
+      final box = await Hive.openBox(_boxName);
+      final json = box.get(_defaultKey);
+      if (json != null && json is Map) {
+        state = ProjectFilter.fromJson(Map<String, dynamic>.from(json));
+      } else {
+        state = const ProjectFilter();
+      }
+    } catch (e) {
+      state = const ProjectFilter();
+    }
+  }
+
   Future<void> saveAsDefault() async {
     try {
       final box = await Hive.openBox(_boxName);

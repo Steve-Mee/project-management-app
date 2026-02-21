@@ -55,7 +55,7 @@ class RecentFiltersMenu extends ConsumerWidget {
     }
     if (filter.sortBy != null) {
       final sortDirection = filter.sortAscending ? l10n.ascendingLabel : l10n.descendingLabel;
-      parts.add('${l10n.sortByLabel}: ${filter.sortBy} (${sortDirection})');
+      parts.add('${l10n.sortByLabel}: ${filter.sortBy} ($sortDirection)');
     }
 
     final preview = parts.isEmpty ? l10n.allProjectsLabel : parts.join(' • ');
