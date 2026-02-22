@@ -157,6 +157,12 @@ abstract class IDashboardRepository {
   /// Parses a requirements string into a ProjectRequirements object.
   ProjectRequirements parseRequirementsString(String requirementsString);
 
+  /// Preloads cache for performance optimization (optional implementation).
+  Future<void> preloadCache();
+
+  /// Clears the in-memory cache (optional implementation).
+  Future<void> clearCache();
+
   /// Closes repository resources (e.g., Hive boxes).
   Future<void> close();
 }

@@ -1821,6 +1821,23 @@
   "dashboard_action_failed": "Dashboard action failed",
   "@dashboard_action_failed": {
     "description": "Generic error message for dashboard actions."
+  },
+  "cache_refreshed": "Cache refreshed {seconds} seconds ago",
+  "@cache_refreshed": {
+    "description": "Message showing when cache was last refreshed.",
+    "placeholders": {
+      "seconds": {
+        "type": "int"
+      }
+    }
+  },
+  "cache_invalidated": "Cache invalidated",
+  "@cache_invalidated": {
+    "description": "Message when cache is manually cleared."
+  },
+  "dashboard_cache_hit": "Dashboard loaded from cache",
+  "@dashboard_cache_hit": {
+    "description": "Message indicating dashboard was loaded from cache."
   }
 }
 }

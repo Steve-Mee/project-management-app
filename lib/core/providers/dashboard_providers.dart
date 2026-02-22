@@ -104,7 +104,7 @@ class DashboardConfigNotifier extends Notifier<List<DashboardItem>> {
     _userTemplates = [];
     _history.clear();
     _currentIndex = -1;
-    loadConfig().then((_) => _pushToHistory());
+    _repository.preloadCache().then((_) => _pushToHistory());
     return [];
   }
 
@@ -611,3 +611,7 @@ final projectRequirementsProvider = Provider.family<FutureProvider<ProjectRequir
     );
   });
 });
+
+// Reusable UI example for cache status display:
+// Text(AppLocalizations.of(context)!.cacheRefreshed(DateTime.now().difference(_cacheTimestamp!).inSeconds)),
+// Where _cacheTimestamp is exposed from repository or notifier.

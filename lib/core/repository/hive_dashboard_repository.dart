@@ -8,22 +8,92 @@ import 'package:my_project_management_app/core/models/dashboard_types.dart';
 
 /// Concrete implementation of IDashboardRepository using Hive for local persistence
 /// and Supabase for shared dashboard operations
+///
+/// Implements caching for dashboard config as per .github/issues/027-dashboard-cache-requirements.md
 class HiveDashboardRepository implements IDashboardRepository {
   static const String _configBoxName = 'dashboard_config';
   static const String _templatesBoxName = 'dashboard_templates';
   static const String _sharedBoxName = 'shared_dashboards';
   final RequirementsService _requirementsService;
 
+  /// In-memory cache for dashboard config to improve performance.
+  /// Stores the list of DashboardItem objects with TTL.
+  /// See .github/issues/027-dashboard-cache-requirements.md for details.
+  final Map<String, dynamic> _cache = {};
+
+  /// Timestamp when the cache was last updated.
+  /// Used to check if cache is still valid within TTL.
+  DateTime? _cacheTimestamp;
+
+  /// Time-to-live duration for cache validity (5 minutes).
+  /// Cache expires after this duration to ensure data freshness.
+  static const Duration kCacheTTL = Duration(minutes: 5);
+
   HiveDashboardRepository({RequirementsService? requirementsService})
       : _requirementsService = requirementsService ?? RequirementsService();
 
+  /// Checks if the cache is valid (not expired based on TTL).
+  /// Returns true if cache exists and is within the time-to-live duration.
+  bool _isCacheValid() {
+    return _cacheTimestamp != null &&
+           DateTime.now().difference(_cacheTimestamp!) < kCacheTTL;
+  }
+
+  /// Invalidates the cache by clearing it and resetting the timestamp.
+  /// Called before mutations to ensure fresh data from Hive.
+  void _invalidateCache() {
+    _cache.clear();
+    _cacheTimestamp = null;
+    AppLogger.instance.d('Cache invalidated');
+  }
+
+  /// Updates the cache with new dashboard items and sets the timestamp.
+  /// Called after successful saves to keep cache in sync.
+  void _updateCache(List<DashboardItem> items) {
+    _cache['config'] = items;
+    _cacheTimestamp = DateTime.now();
+    AppLogger.instance.d('Cache updated with ${items.length} items');
+  }
+
+  /// Retrieves dashboard items from cache if valid.
+  /// Logs cache hit or miss for debugging.
+  List<DashboardItem> _getFromCache() {
+    if (_isCacheValid()) {
+      final items = _cache['config'] as List<DashboardItem>? ?? [];
+      AppLogger.instance.d('Cache hit: ${items.length} items');
+      return items;
+    }
+    AppLogger.instance.d('Cache miss');
+    return [];
+  }
+
+  /// Preloads the dashboard config into cache for improved performance.
+  /// Can be called optionally during app initialization.
+  /// See .github/issues/027-dashboard-cache-requirements.md for cache strategy.
+  @override
+  Future<void> preloadCache() async {
+    await loadConfig(); // This will load from Hive and update cache if needed
+  }
+
+  /// Clears the in-memory cache, forcing future loads to come from Hive.
+  /// Exposed for UI/notifier to manually invalidate cache if needed.
+  @override
+  Future<void> clearCache() async {
+    _invalidateCache();
+  }
+
   @override
   Future<List<DashboardItem>> loadConfig() async {
+    if (_isCacheValid()) {
+      return _getFromCache();
+    }
     try {
       final box = await Hive.openBox<List>(_configBoxName);
       final data = box.get('config', defaultValue: []);
       if (data != null) {
-        return data.map((map) => DashboardItem.fromJson(map as Map<String, dynamic>)).toList();
+        final items = data.map((map) => DashboardItem.fromJson(map as Map<String, dynamic>)).toList();
+        _updateCache(items);
+        return items;
       }
       return [];
     } catch (e) {
@@ -38,8 +108,10 @@ class HiveDashboardRepository implements IDashboardRepository {
       final box = await Hive.openBox<List>(_configBoxName);
       final data = items.map((item) => item.toJson()).toList();
       await box.put('config', data);
+      _updateCache(items);
       AppLogger.instance.d('Saved dashboard config');
     } catch (e) {
+      _invalidateCache();
       AppLogger.instance.w('Failed to save dashboard config', error: e);
       rethrow;
     }
@@ -47,6 +119,7 @@ class HiveDashboardRepository implements IDashboardRepository {
 
   @override
   Future<void> addItem(DashboardItem item) async {
+    _invalidateCache();
     final items = await loadConfig();
     items.add(item);
     await saveConfig(items);
@@ -54,6 +127,7 @@ class HiveDashboardRepository implements IDashboardRepository {
 
   @override
   Future<void> removeItem(int index) async {
+    _invalidateCache();
     final items = await loadConfig();
     if (index >= 0 && index < items.length) {
       items.removeAt(index);
@@ -63,6 +137,7 @@ class HiveDashboardRepository implements IDashboardRepository {
 
   @override
   Future<void> updateItemPosition(int index, Map<String, dynamic> position) async {
+    _invalidateCache();
     final items = await loadConfig();
     if (index >= 0 && index < items.length) {
       items[index] = DashboardItem(
