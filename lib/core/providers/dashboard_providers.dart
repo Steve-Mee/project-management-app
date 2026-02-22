@@ -3,11 +3,10 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:uuid/uuid.dart';
 import 'package:my_project_management_app/models/project_requirements.dart';
 import 'package:my_project_management_app/core/repository/i_dashboard_repository.dart';
-import 'package:my_project_management_app/core/repository/dashboard_repository.dart';
+import 'package:my_project_management_app/core/repository/hive_dashboard_repository.dart';
 import 'project_providers.dart';
 import 'package:my_project_management_app/core/services/app_logger.dart';
 import 'package:my_project_management_app/core/models/dashboard_types.dart';
-import 'package:hive_flutter/hive_flutter.dart';
 
 /// DashboardItem
 /// 
@@ -111,9 +110,9 @@ class DashboardConfigNotifier extends Notifier<List<DashboardItem>> {
 
   Future<void> loadConfig() async {
     try {
-      final items = await _repository.loadDashboardConfig();
+      final items = await _repository.loadConfig();
       state = items;
-      _userTemplates = await _loadTemplates();
+      _userTemplates = await _repository.loadTemplates();
       _logEvent('config_loaded');
     } catch (e, st) {
       await _logError('load_config', e, st);
@@ -125,7 +124,7 @@ class DashboardConfigNotifier extends Notifier<List<DashboardItem>> {
 
   Future<void> saveConfig(List<DashboardItem> items) async {
     try {
-      await _repository.saveDashboardConfig(items);
+      await _repository.saveConfig(items);
       state = items;
       _currentIndex = _history.length - 1;
 
@@ -133,7 +132,7 @@ class DashboardConfigNotifier extends Notifier<List<DashboardItem>> {
       if (currentShareId != null) {
         final currentUserId = Supabase.instance.client.auth.currentUser?.id;
         if (currentUserId != null) {
-          final existing = await _fetchSharedDashboard(currentShareId!);
+          final existing = await _repository.fetchSharedDashboard(currentShareId!);
           final dashboard = SharedDashboard(
             id: currentShareId!,
             ownerId: existing?.ownerId ?? currentUserId,
@@ -142,8 +141,8 @@ class DashboardConfigNotifier extends Notifier<List<DashboardItem>> {
             permissions: existing?.permissions ?? {},
             updatedAt: DateTime.now(),
           );
-          await _saveSharedDashboard(dashboard);
-          await _saveLocalSharedDashboard(dashboard);
+          await _repository.saveSharedDashboard(dashboard);
+          await _repository.saveLocalSharedDashboard(dashboard);
         }
       }
       _logEvent('config_saved');
@@ -154,30 +153,9 @@ class DashboardConfigNotifier extends Notifier<List<DashboardItem>> {
     }
   }
 
-  /// Loads user-created dashboard templates from Hive storage
-  Future<List<DashboardTemplate>> _loadTemplates() async {
-    try {
-      final box = await Hive.openBox<List>('dashboard_templates');
-      final data = box.get('templates', defaultValue: []);
-      if (data != null) {
-        return data.map((map) => DashboardTemplate.fromJson(map as Map<String, dynamic>)).toList();
-      }
-      return [];
-    } catch (e) {
-      return [];
-    }
-  }
 
-  /// Saves user-created dashboard templates to Hive storage
-  Future<void> _saveTemplates(List<DashboardTemplate> templates) async {
-    try {
-      final box = await Hive.openBox<List>('dashboard_templates');
-      final data = templates.map((template) => template.toJson()).toList();
-      await box.put('templates', data);
-    } catch (e) {
-      rethrow;
-    }
-  }
+
+
 
   /// Adds a new dashboard item with widget type validation and position constraint enforcement.
   /// The position is validated against the dashboard's bounding box and clamped if necessary
@@ -191,7 +169,7 @@ class DashboardConfigNotifier extends Notifier<List<DashboardItem>> {
         position = _clampPosition(position, containerWidth: kDashboardContainerWidth, containerHeight: kDashboardContainerHeight);
       }
       final clampedItem = DashboardItem(widgetType: item.widgetType, position: position);
-      await _repository.addDashboardItem(clampedItem);
+      await _repository.addItem(clampedItem);
       await loadConfig(); // Refresh state
       _pushToHistory();
       _logEvent('item_added', params: {'widgetType': item.widgetType.name, 'position': position});
@@ -205,7 +183,7 @@ class DashboardConfigNotifier extends Notifier<List<DashboardItem>> {
   /// Remove a dashboard item by index
   Future<void> removeItem(int index) async {
     try {
-      await _repository.removeDashboardItem(index);
+      await _repository.removeItem(index);
       await loadConfig(); // Refresh state
       _pushToHistory();
       _logEvent('item_removed', params: {'index': index});
@@ -223,7 +201,7 @@ class DashboardConfigNotifier extends Notifier<List<DashboardItem>> {
   Future<void> updateItemPosition(int index, Map<String, dynamic> newPosition) async {
     try {
       final clampedPosition = _clampPosition(newPosition, containerWidth: kDashboardContainerWidth, containerHeight: kDashboardContainerHeight);
-      await _repository.updateDashboardItemPosition(index, clampedPosition);
+      await _repository.updateItemPosition(index, clampedPosition);
       await loadConfig(); // Refresh state
       _pushToHistory();
       _logEvent('position_updated', params: {'index': index, 'newPosition': clampedPosition});
@@ -367,9 +345,9 @@ class DashboardConfigNotifier extends Notifier<List<DashboardItem>> {
       isPreset: false,
       createdAt: DateTime.now(),
     );
-    final userTemplates = await _loadTemplates();
+    final userTemplates = await _repository.loadTemplates();
     userTemplates.add(template);
-    await _saveTemplates(userTemplates);
+    await _repository.saveTemplates(userTemplates);
     _userTemplates = userTemplates;
     AppLogger.instance.i('Saved dashboard as template: $name');
   }
@@ -397,34 +375,19 @@ class DashboardConfigNotifier extends Notifier<List<DashboardItem>> {
   Future<void> deleteTemplate(String templateId) async {
     final userTemplates = List<DashboardTemplate>.from(_userTemplates);
     userTemplates.removeWhere((t) => t.id == templateId && !t.isPreset);
-    await _saveTemplates(userTemplates);
+    await _repository.saveTemplates(userTemplates);
     _userTemplates = userTemplates;
     AppLogger.instance.i('Deleted dashboard template: $templateId');
   }
 
-  Future<SharedDashboard?> _fetchSharedDashboard(String shareId) async {
-    try {
-      final response = await Supabase.instance.client.from('shared_dashboards').select().eq('id', shareId).single();
-      AppLogger.instance.i('Fetched shared dashboard: $shareId');
-      return SharedDashboard.fromJson(response);
-    } catch (e) {
-      AppLogger.instance.w('Failed to fetch shared dashboard: $shareId', error: e);
-      return null;
-    }
-  }
 
-  Future<void> _saveSharedDashboard(SharedDashboard dashboard) async {
-    await Supabase.instance.client.from('shared_dashboards').upsert(dashboard.toJson());
-    AppLogger.instance.i('Saved shared dashboard: ${dashboard.id}');
-  }
 
-  Future<void> _updatePermissions(String shareId, Map<String, String> permissions) async {
-    await Supabase.instance.client.from('shared_dashboards').update({'permissions': permissions}).eq('id', shareId);
-    AppLogger.instance.i('Updated permissions for shared dashboard: $shareId');
-  }
+
+
+
 
   Future<bool> hasPermission(String shareId, DashboardPermission required) async {
-    final dashboard = await _fetchSharedDashboard(shareId);
+    final dashboard = await _repository.fetchSharedDashboard(shareId);
     if (dashboard == null) return false;
 
     final currentUserId = Supabase.instance.client.auth.currentUser?.id;
@@ -452,13 +415,13 @@ class DashboardConfigNotifier extends Notifier<List<DashboardItem>> {
       updatedAt: DateTime.now(),
     );
 
-    await _saveSharedDashboard(dashboard);
+    await _repository.saveSharedDashboard(dashboard);
     AppLogger.instance.i('Generated share link for dashboard: $shareId');
     return shareId;
   }
 
   Future<void> inviteUser(String shareId, String userId, DashboardPermission perm) async {
-    final dashboard = await _fetchSharedDashboard(shareId);
+    final dashboard = await _repository.fetchSharedDashboard(shareId);
     if (dashboard == null) throw Exception('Shared dashboard not found');
 
     final currentUserId = Supabase.instance.client.auth.currentUser?.id;
@@ -467,35 +430,17 @@ class DashboardConfigNotifier extends Notifier<List<DashboardItem>> {
     final updatedPermissions = Map<String, String>.from(dashboard.permissions);
     updatedPermissions[userId] = perm.name;
 
-    await _updatePermissions(shareId, updatedPermissions);
+    await _repository.updateSharedPermissions(shareId, updatedPermissions);
     AppLogger.event('dashboard_invite', params: {'shareId': shareId, 'userId': userId, 'permission': perm.name});
   }
 
-  Future<SharedDashboard?> _loadLocalSharedDashboard(String shareId) async {
-    try {
-      final box = await Hive.openBox<Map>('shared_dashboards');
-      final data = box.get('shared_$shareId');
-      if (data != null) {
-        return SharedDashboard.fromJson(data as Map<String, dynamic>);
-      }
-      return null;
-    } catch (e) {
-      return null;
-    }
-  }
 
-  Future<void> _saveLocalSharedDashboard(SharedDashboard dashboard) async {
-    try {
-      final box = await Hive.openBox<Map>('shared_dashboards');
-      await box.put('shared_${dashboard.id}', dashboard.toJson());
-    } catch (e) {
-      // Ignore local save errors
-    }
-  }
+
+
 
   Future<void> loadSharedDashboard(String shareId) async {
-    final remote = await _fetchSharedDashboard(shareId);
-    final local = await _loadLocalSharedDashboard(shareId);
+    final remote = await _repository.fetchSharedDashboard(shareId);
+    final local = await _repository.loadLocalSharedDashboard(shareId);
 
     SharedDashboard? toUse;
     if (remote != null && local != null) {
@@ -514,7 +459,7 @@ class DashboardConfigNotifier extends Notifier<List<DashboardItem>> {
       state = toUse.items;
       currentShareId = shareId;
       // Save the merged version locally
-      await _saveLocalSharedDashboard(toUse);
+      await _repository.saveLocalSharedDashboard(toUse);
       _pushToHistory();
       _subscribeToSharedChanges(shareId);
       AppLogger.instance.i('Loaded shared dashboard: $shareId');
@@ -633,8 +578,10 @@ final dashboardConfigProvider = NotifierProvider<DashboardConfigNotifier, List<D
 );
 
 /// Provider for dashboard repository
+/// Provides HiveDashboardRepository implementation for local and remote storage
+/// See .github/issues/026-dashboard-abstract-interface.md for abstraction details
 final dashboardRepositoryProvider = Provider<IDashboardRepository>((ref) {
-  return DashboardRepository();
+  return HiveDashboardRepository();
 });
 
 /// Provider for dashboard error state

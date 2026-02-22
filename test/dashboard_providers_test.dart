@@ -2,83 +2,39 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:my_project_management_app/core/providers/dashboard_providers.dart';
 import 'package:my_project_management_app/core/repository/i_dashboard_repository.dart';
-import 'package:my_project_management_app/models/project_requirements.dart';
 import 'package:my_project_management_app/core/models/dashboard_types.dart';
 import 'dart:io';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:uuid/uuid.dart';
+import 'package:mockito/mockito.dart';
+import 'package:mockito/annotations.dart';
 
-class FakeDashboardRepository implements IDashboardRepository {
-  final List<DashboardItem> _items = [];
-  bool shouldThrowOnLoad = false;
-  bool shouldThrowOnSave = false;
-  bool shouldThrowOnAdd = false;
-  bool shouldThrowOnRemove = false;
-  bool shouldThrowOnUpdate = false;
-
-  @override
-  Future<List<DashboardItem>> loadDashboardConfig() async {
-    if (shouldThrowOnLoad) throw Exception('Load failed');
-    return _items;
-  }
-
-  @override
-  Future<void> saveDashboardConfig(List<DashboardItem> items) async {
-    if (shouldThrowOnSave) throw Exception('Save failed');
-    _items.clear();
-    _items.addAll(items);
-  }
-
-  @override
-  Future<void> addDashboardItem(DashboardItem item) async {
-    if (shouldThrowOnAdd) throw Exception('Add failed');
-    _items.add(item);
-  }
-
-  @override
-  Future<void> removeDashboardItem(int index) async {
-    if (shouldThrowOnRemove) throw Exception('Remove failed');
-    if (index >= 0 && index < _items.length) {
-      _items.removeAt(index);
-    }
-  }
-
-  @override
-  Future<void> updateDashboardItemPosition(int index, Map<String, dynamic> newPosition) async {
-    if (shouldThrowOnUpdate) throw Exception('Update failed');
-    if (index >= 0 && index < _items.length) {
-      _items[index] = DashboardItem(
-        widgetType: _items[index].widgetType,
-        position: newPosition,
-      );
-    }
-  }
-
-  @override
-  Future<ProjectRequirements> fetchRequirements(String projectCategory) async {
-    return const ProjectRequirements();
-  }
-
-  @override
-  ProjectRequirements parseRequirementsString(String requirementsString) {
-    return const ProjectRequirements();
-  }
-
-  @override
-  Future<void> close() async {}
-}
+// Generate mocks
+@GenerateMocks([IDashboardRepository])
+import 'dashboard_providers_test.mocks.dart';
 
 void main() {
   late ProviderContainer container;
-  late FakeDashboardRepository fakeRepo;
+  late MockIDashboardRepository mockRepo;
+  late List<DashboardItem> mockItems;
 
   setUp(() async {
-    fakeRepo = FakeDashboardRepository();
+    mockRepo = MockIDashboardRepository();
+    mockItems = [];
     final tempDir = Directory.systemTemp.createTempSync('hive_test');
     Hive.init(tempDir.path);
+    // Mock initial calls
+    when(mockRepo.loadConfig()).thenAnswer((_) async => mockItems);
+    when(mockRepo.loadTemplates()).thenAnswer((_) async => []);
+    when(mockRepo.addItem(any)).thenAnswer((invocation) async {
+      final item = invocation.positionalArguments[0] as DashboardItem;
+      mockItems.add(item);
+    });
+    // when(mockRepo.removeItem(any)).thenAnswer(...); moved to test
+    // when(mockRepo.updateItemPosition(any, any)).thenAnswer(...); moved to test
     container = ProviderContainer(
       overrides: [
-        dashboardRepositoryProvider.overrideWithValue(fakeRepo),
+        dashboardRepositoryProvider.overrideWithValue(mockRepo),
       ],
     );
   });
@@ -191,12 +147,65 @@ void main() {
         position: {'x': 0, 'y': 0},
       );
 
+      final items = <DashboardItem>[];
+      when(mockRepo.loadConfig()).thenAnswer((_) async => items);
+      when(mockRepo.addItem(any)).thenAnswer((invocation) async {
+        final item = invocation.positionalArguments[0] as DashboardItem;
+        items.add(item);
+      });
+
       final notifier = container.read(dashboardConfigProvider.notifier);
       await notifier.addItem(item);
 
       final state = container.read(dashboardConfigProvider);
       expect(state.length, 1);
       expect(state[0].widgetType, DashboardWidgetType.metricCard);
+    });
+  });
+
+  group('DashboardConfigNotifier.removeItem', () {
+    test('removes item at index', () async {
+      final item = DashboardItem(
+        widgetType: DashboardWidgetType.metricCard,
+        position: {'x': 0, 'y': 0},
+      );
+
+      final items = [item];
+      when(mockRepo.loadConfig()).thenAnswer((_) async => items);
+      when(mockRepo.removeItem(0)).thenAnswer((_) async {
+        items.removeAt(0);
+      });
+
+      final notifier = container.read(dashboardConfigProvider.notifier);
+      await notifier.removeItem(0);
+
+      final state = container.read(dashboardConfigProvider);
+      expect(state.length, 0);
+    });
+  });
+
+  group('DashboardConfigNotifier.updateItemPosition', () {
+    test('updates position of item at index', () async {
+      final item = DashboardItem(
+        widgetType: DashboardWidgetType.metricCard,
+        position: {'x': 0, 'y': 0},
+      );
+
+      final items = [item];
+      when(mockRepo.loadConfig()).thenAnswer((_) async => items);
+      when(mockRepo.updateItemPosition(0, {'x': 10, 'y': 10})).thenAnswer((_) async {
+        items[0] = DashboardItem(
+          widgetType: item.widgetType,
+          position: {'x': 10, 'y': 10},
+        );
+      });
+
+      final notifier = container.read(dashboardConfigProvider.notifier);
+      await notifier.updateItemPosition(0, {'x': 10, 'y': 10});
+
+      final state = container.read(dashboardConfigProvider);
+      expect(state[0].position['x'], 10);
+      expect(state[0].position['y'], 10);
     });
   });
 
@@ -568,10 +577,12 @@ void main() {
     });
 
     test('loadTemplate with invalid id throws', () async {
-      await expectLater(
-        notifier.loadTemplate('invalid-id'),
-        throwsA(isA<ArgumentError>()),
-      );
+      try {
+        await notifier.loadTemplate('invalid-id');
+        fail('Expected ArgumentError');
+      } catch (e) {
+        expect(e, isA<ArgumentError>());
+      }
     });
   });
 
@@ -640,7 +651,7 @@ void main() {
 
   group('DashboardConfigNotifier error handling', () {
     test('loadConfig failure sets error state and empty list', () async {
-      fakeRepo.shouldThrowOnLoad = true;
+      when(mockRepo.loadConfig()).thenThrow(Exception('Load failed'));
       final notifier = container.read(dashboardConfigProvider.notifier);
       
       await notifier.loadConfig();
@@ -653,34 +664,22 @@ void main() {
     });
 
     test('saveConfig failure logs error and rethrows', () async {
-      fakeRepo.shouldThrowOnSave = true;
+      when(mockRepo.saveConfig(any)).thenThrow(Exception('Save failed'));
       final notifier = container.read(dashboardConfigProvider.notifier);
       
-      await expectLater(
-        notifier.saveConfig([DashboardItem(widgetType: DashboardWidgetType.metricCard, position: {'x': 0, 'y': 0})]),
-        throwsA(isA<Exception>()),
-      );
+      try {
+        await notifier.saveConfig([DashboardItem(widgetType: DashboardWidgetType.metricCard, position: {'x': 0, 'y': 0})]);
+        fail('Expected exception');
+      } catch (e) {
+        expect(e, isA<Exception>());
+      }
       
       final error = container.read(dashboardErrorProvider);
       expect(error, 'dashboard_save_error');
     });
 
-    test('addItem success logs event', () async {
-      final item = DashboardItem(
-        widgetType: DashboardWidgetType.metricCard,
-        position: {'x': 0, 'y': 0},
-      );
-      
-      final notifier = container.read(dashboardConfigProvider.notifier);
-      await notifier.addItem(item);
-      
-      final state = container.read(dashboardConfigProvider);
-      expect(state.length, 1);
-      // Event logging is assumed to work (AppLogger spy would verify in real implementation)
-    });
-
     test('addItem failure logs error and rethrows', () async {
-      fakeRepo.shouldThrowOnAdd = true;
+      when(mockRepo.addItem(any)).thenThrow(Exception('Add failed'));
       final item = DashboardItem(
         widgetType: DashboardWidgetType.metricCard,
         position: {'x': 0, 'y': 0},
@@ -688,40 +687,27 @@ void main() {
       
       final notifier = container.read(dashboardConfigProvider.notifier);
       
-      await expectLater(
-        notifier.addItem(item),
-        throwsA(isA<Exception>()),
-      );
+      try {
+        await notifier.addItem(item);
+        fail('Expected exception');
+      } catch (e) {
+        expect(e, isA<Exception>());
+      }
       
       final error = container.read(dashboardErrorProvider);
       expect(error, 'dashboard_action_failed');
     });
 
-    test('removeItem success logs event', () async {
-      // Add item first
-      final item = DashboardItem(
-        widgetType: DashboardWidgetType.metricCard,
-        position: {'x': 0, 'y': 0},
-      );
-      final notifier = container.read(dashboardConfigProvider.notifier);
-      await notifier.addItem(item);
-      
-      // Now remove
-      await notifier.removeItem(0);
-      
-      final state = container.read(dashboardConfigProvider);
-      expect(state, isEmpty);
-      // Event logging assumed
-    });
-
     test('removeItem failure logs error and rethrows', () async {
-      fakeRepo.shouldThrowOnRemove = true;
+      when(mockRepo.removeItem(any)).thenThrow(Exception('Remove failed'));
       final notifier = container.read(dashboardConfigProvider.notifier);
       
-      await expectLater(
-        notifier.removeItem(0),
-        throwsA(isA<Exception>()),
-      );
+      try {
+        await notifier.removeItem(0);
+        fail('Expected exception');
+      } catch (e) {
+        expect(e, isA<Exception>());
+      }
       
       final error = container.read(dashboardErrorProvider);
       expect(error, 'dashboard_action_failed');
@@ -733,6 +719,17 @@ void main() {
         widgetType: DashboardWidgetType.metricCard,
         position: {'x': 0, 'y': 0},
       );
+      final items = <DashboardItem>[];
+      when(mockRepo.loadConfig()).thenAnswer((_) async => items);
+      when(mockRepo.addItem(item)).thenAnswer((_) async {
+        items.add(item);
+      });
+      when(mockRepo.updateItemPosition(0, {'x': 10, 'y': 10, 'width': 200, 'height': 150})).thenAnswer((_) async {
+        items[0] = DashboardItem(
+          widgetType: item.widgetType,
+          position: {'x': 10, 'y': 10, 'width': 200, 'height': 150},
+        );
+      });
       final notifier = container.read(dashboardConfigProvider.notifier);
       await notifier.addItem(item);
       
@@ -745,101 +742,47 @@ void main() {
     });
 
     test('updateItemPosition failure logs error and rethrows', () async {
-      fakeRepo.shouldThrowOnUpdate = true;
+      when(mockRepo.updateItemPosition(any, any)).thenThrow(Exception('Update failed'));
       final notifier = container.read(dashboardConfigProvider.notifier);
       
-      await expectLater(
-        notifier.updateItemPosition(0, {'x': 10, 'y': 10, 'width': 200, 'height': 150}),
-        throwsA(isA<Exception>()),
-      );
+      try {
+        await notifier.updateItemPosition(0, {'x': 10, 'y': 10, 'width': 200, 'height': 150});
+        fail('Expected exception');
+      } catch (e) {
+        expect(e, isA<Exception>());
+      }
       
       final error = container.read(dashboardErrorProvider);
       expect(error, 'dashboard_action_failed');
     });
   });
 
-  group('Error handling and logging', () {
-    test('loadConfig failure logs error and sets empty state', () async {
-      fakeRepo.shouldThrowOnLoad = true;
-      final notifier = container.read(dashboardConfigProvider.notifier);
-      await notifier.loadConfig();
-      expect(container.read(dashboardConfigProvider), []);
-      expect(container.read(dashboardErrorProvider), 'dashboard_load_error');
-      // AppLogger spy would verify _logError was called
+  group('Dashboard Repository Integration Tests', () {
+    ProviderContainer? container;
+
+    setUp(() async {
+      final tempDir = Directory.systemTemp.createTempSync('hive_integration_test');
+      Hive.init(tempDir.path);
+      container = ProviderContainer(); // Uses real HiveDashboardRepository
     });
 
-    test('saveConfig failure logs error and rethrows', () async {
-      fakeRepo.shouldThrowOnSave = true;
-      final notifier = container.read(dashboardConfigProvider.notifier);
-      await expectLater(
-        notifier.saveConfig([DashboardItem(widgetType: DashboardWidgetType.taskList, position: {'x': 0, 'y': 0, 'width': 100, 'height': 100})]),
-        throwsA(isA<Exception>()),
+    tearDown(() async {
+      container?.dispose();
+      await Hive.close();
+    });
+
+    test('HiveDashboardRepository saves and loads config', () async {
+      final repo = container!.read(dashboardRepositoryProvider);
+      final item = DashboardItem(
+        widgetType: DashboardWidgetType.metricCard,
+        position: {'x': 0, 'y': 0},
       );
-      expect(container.read(dashboardErrorProvider), 'dashboard_save_error');
-      // AppLogger spy would verify _logError was called
-    });
 
-    test('addItem success logs event', () async {
-      final notifier = container.read(dashboardConfigProvider.notifier);
-      await notifier.addItem(DashboardItem(widgetType: DashboardWidgetType.taskList, position: {'x': 0, 'y': 0, 'width': 100, 'height': 100}));
-      expect(container.read(dashboardConfigProvider).length, 1);
-      // AppLogger spy would verify _logEvent was called with 'item_added'
-    });
+      await repo.saveConfig([item]);
+      final loaded = await repo.loadConfig();
 
-    test('addItem failure logs error', () async {
-      fakeRepo.shouldThrowOnAdd = true;
-      final notifier = container.read(dashboardConfigProvider.notifier);
-      await expectLater(
-        notifier.addItem(DashboardItem(widgetType: DashboardWidgetType.taskList, position: {'x': 0, 'y': 0, 'width': 100, 'height': 100})),
-        throwsA(isA<Exception>()),
-      );
-      expect(container.read(dashboardErrorProvider), 'dashboard_action_failed');
-      // AppLogger spy would verify _logError was called
-    });
-
-    test('removeItem success logs event', () async {
-      // First add an item
-      final notifier = container.read(dashboardConfigProvider.notifier);
-      await notifier.addItem(DashboardItem(widgetType: DashboardWidgetType.taskList, position: {'x': 0, 'y': 0, 'width': 100, 'height': 100}));
-      expect(container.read(dashboardConfigProvider).length, 1);
-      // Now remove
-      await notifier.removeItem(0);
-      expect(container.read(dashboardConfigProvider).length, 0);
-      // AppLogger spy would verify _logEvent was called with 'item_removed'
-    });
-
-    test('removeItem failure logs error', () async {
-      fakeRepo.shouldThrowOnRemove = true;
-      final notifier = container.read(dashboardConfigProvider.notifier);
-      await expectLater(
-        notifier.removeItem(0),
-        throwsA(isA<Exception>()),
-      );
-      expect(container.read(dashboardErrorProvider), 'dashboard_action_failed');
-      // AppLogger spy would verify _logError was called
-    });
-
-    test('updateItemPosition success logs event', () async {
-      // First add an item
-      final notifier = container.read(dashboardConfigProvider.notifier);
-      await notifier.addItem(DashboardItem(widgetType: DashboardWidgetType.taskList, position: {'x': 0, 'y': 0, 'width': 100, 'height': 100}));
-      expect(container.read(dashboardConfigProvider).length, 1);
-      // Now update position
-      await notifier.updateItemPosition(0, {'x': 10, 'y': 10, 'width': 200, 'height': 150});
-      final item = container.read(dashboardConfigProvider)[0];
-      expect(item.position['x'], 10);
-      // AppLogger spy would verify _logEvent was called with 'position_updated'
-    });
-
-    test('updateItemPosition failure logs error', () async {
-      fakeRepo.shouldThrowOnUpdate = true;
-      final notifier = container.read(dashboardConfigProvider.notifier);
-      await expectLater(
-        notifier.updateItemPosition(0, {'x': 10, 'y': 10, 'width': 200, 'height': 150}),
-        throwsA(isA<Exception>()),
-      );
-      expect(container.read(dashboardErrorProvider), 'dashboard_action_failed');
-      // AppLogger spy would verify _logError was called
+      expect(loaded.length, 1);
+      expect(loaded[0].widgetType, DashboardWidgetType.metricCard);
     });
   });
 }

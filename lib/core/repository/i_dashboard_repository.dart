@@ -115,23 +115,48 @@ class DashboardTemplate {
 /// Define abstract class `IDashboardRepository`.
 /// Keep method signatures narrow and backend-agnostic to allow swapping.
 abstract class IDashboardRepository {
-  /// Dashboard configuration management
-  Future<List<DashboardItem>> loadDashboardConfig();
-  Future<void> saveDashboardConfig(List<DashboardItem> items);
-  Future<void> addDashboardItem(DashboardItem item);
-  Future<void> removeDashboardItem(int index);
-  Future<void> updateDashboardItemPosition(int index, Map<String, dynamic> newPosition);
+  /// Loads the dashboard configuration from storage.
+  Future<List<DashboardItem>> loadConfig();
 
-  /// Requirements management
+  /// Saves the dashboard configuration to storage.
+  Future<void> saveConfig(List<DashboardItem> items);
+
+  /// Adds a new dashboard item to the configuration.
+  Future<void> addItem(DashboardItem item);
+
+  /// Removes a dashboard item by index from the configuration.
+  Future<void> removeItem(int index);
+
+  /// Updates the position of a dashboard item by index.
+  Future<void> updateItemPosition(int index, Map<String, dynamic> position);
+
+  /// Loads user-created dashboard templates from storage.
+  Future<List<DashboardTemplate>> loadTemplates();
+
+  /// Saves user-created dashboard templates to storage.
+  Future<void> saveTemplates(List<DashboardTemplate> templates);
+
+  /// Fetches a shared dashboard from remote storage by share ID.
+  Future<SharedDashboard?> fetchSharedDashboard(String shareId);
+
+  /// Saves a shared dashboard to remote storage.
+  Future<void> saveSharedDashboard(SharedDashboard dashboard);
+
+  /// Updates permissions for a shared dashboard.
+  Future<void> updateSharedPermissions(String shareId, Map<String, String> permissions);
+
+  /// Loads a shared dashboard from local storage by share ID.
+  Future<SharedDashboard?> loadLocalSharedDashboard(String shareId);
+
+  /// Saves a shared dashboard to local storage.
+  Future<void> saveLocalSharedDashboard(SharedDashboard dashboard);
+
+  /// Fetches project requirements for a given category.
   Future<ProjectRequirements> fetchRequirements(String projectCategory);
+
+  /// Parses a requirements string into a ProjectRequirements object.
   ProjectRequirements parseRequirementsString(String requirementsString);
 
-  /// Close repository resources (e.g., Hive boxes)
+  /// Closes repository resources (e.g., Hive boxes).
   Future<void> close();
-
-  /// Sync methods for future Supabase integration
-  /// TODO: Implement sync methods when Supabase sync is added
-  // Future<void> syncDashboardConfigToSupabase();
-  // Future<void> syncDashboardConfigFromSupabase();
-  // Future<void> resolveSyncConflicts(List<SyncConflict> conflicts);
 }
