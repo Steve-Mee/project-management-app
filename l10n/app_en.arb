@@ -1809,6 +1809,18 @@
   "collab_conflict_detected": "Collaboration conflict detected, latest changes applied",
   "@collab_conflict_detected": {
     "description": "Message shown when a collaboration conflict is resolved."
+  },
+  "dashboard_load_error": "Failed to load dashboard configuration",
+  "@dashboard_load_error": {
+    "description": "Error message when dashboard configuration fails to load."
+  },
+  "dashboard_save_error": "Failed to save dashboard configuration",
+  "@dashboard_save_error": {
+    "description": "Error message when dashboard configuration fails to save."
+  },
+  "dashboard_action_failed": "Dashboard action failed",
+  "@dashboard_action_failed": {
+    "description": "Generic error message for dashboard actions."
   }
 }
 }

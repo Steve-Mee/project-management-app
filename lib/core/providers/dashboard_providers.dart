@@ -114,10 +114,12 @@ class DashboardConfigNotifier extends Notifier<List<DashboardItem>> {
       final items = await _repository.loadDashboardConfig();
       state = items;
       _userTemplates = await _loadTemplates();
-    } catch (e) {
-      // TODO: Add error handling/logging
+      _logEvent('config_loaded');
+    } catch (e, st) {
+      _logError('load_config', e, st);
       state = [];
       _userTemplates = [];
+      ref.read(dashboardErrorProvider.notifier).state = 'dashboard_load_error';
     }
   }
 
@@ -144,8 +146,10 @@ class DashboardConfigNotifier extends Notifier<List<DashboardItem>> {
           await _saveLocalSharedDashboard(dashboard);
         }
       }
-    } catch (e) {
-      // TODO: Add error handling/logging
+      _logEvent('config_saved');
+    } catch (e, st) {
+      _logError('save_config', e, st);
+      ref.read(dashboardErrorProvider.notifier).state = 'dashboard_save_error';
       rethrow;
     }
   }
@@ -180,22 +184,36 @@ class DashboardConfigNotifier extends Notifier<List<DashboardItem>> {
   /// to ensure x >= 0, y >= 0, x+width <= containerWidth, y+height <= containerHeight, and minimum dimensions.
   /// See .github/issues/020-dashboard-validate-widget-type.md and .github/issues/021-dashboard-position-constraints.md
   Future<void> addItem(DashboardItem item) async {
-    validateWidgetType(item.widgetType.name);
-    Map<String, dynamic> position = item.position;
-    if (!_isValidPosition(position, kDashboardContainerWidth, kDashboardContainerHeight)) {
-      position = _clampPosition(position, containerWidth: kDashboardContainerWidth, containerHeight: kDashboardContainerHeight);
+    try {
+      validateWidgetType(item.widgetType.name);
+      Map<String, dynamic> position = item.position;
+      if (!_isValidPosition(position, kDashboardContainerWidth, kDashboardContainerHeight)) {
+        position = _clampPosition(position, containerWidth: kDashboardContainerWidth, containerHeight: kDashboardContainerHeight);
+      }
+      final clampedItem = DashboardItem(widgetType: item.widgetType, position: position);
+      await _repository.addDashboardItem(clampedItem);
+      await loadConfig(); // Refresh state
+      _pushToHistory();
+      _logEvent('item_added', params: {'widgetType': item.widgetType.name, 'position': position});
+    } catch (e, st) {
+      _logError('add_item', e, st);
+      ref.read(dashboardErrorProvider.notifier).state = 'dashboard_action_failed';
+      rethrow;
     }
-    final clampedItem = DashboardItem(widgetType: item.widgetType, position: position);
-    await _repository.addDashboardItem(clampedItem);
-    await loadConfig(); // Refresh state
-    _pushToHistory();
   }
 
   /// Remove a dashboard item by index
   Future<void> removeItem(int index) async {
-    await _repository.removeDashboardItem(index);
-    await loadConfig(); // Refresh state
-    _pushToHistory();
+    try {
+      await _repository.removeDashboardItem(index);
+      await loadConfig(); // Refresh state
+      _pushToHistory();
+      _logEvent('item_removed', params: {'index': index});
+    } catch (e, st) {
+      _logError('remove_item', e, st);
+      ref.read(dashboardErrorProvider.notifier).state = 'dashboard_action_failed';
+      rethrow;
+    }
   }
 
   /// Updates an item's position after enforcing constraints to keep it within dashboard bounds.
@@ -203,10 +221,17 @@ class DashboardConfigNotifier extends Notifier<List<DashboardItem>> {
   /// and enforce minimum dimensions before saving.
   /// See .github/issues/021-dashboard-position-constraints.md for details.
   Future<void> updateItemPosition(int index, Map<String, dynamic> newPosition) async {
-    final clampedPosition = _clampPosition(newPosition, containerWidth: kDashboardContainerWidth, containerHeight: kDashboardContainerHeight);
-    await _repository.updateDashboardItemPosition(index, clampedPosition);
-    await loadConfig(); // Refresh state
-    _pushToHistory();
+    try {
+      final clampedPosition = _clampPosition(newPosition, containerWidth: kDashboardContainerWidth, containerHeight: kDashboardContainerHeight);
+      await _repository.updateDashboardItemPosition(index, clampedPosition);
+      await loadConfig(); // Refresh state
+      _pushToHistory();
+      _logEvent('position_updated', params: {'index': index, 'newPosition': clampedPosition});
+    } catch (e, st) {
+      _logError('update_position', e, st);
+      ref.read(dashboardErrorProvider.notifier).state = 'dashboard_action_failed';
+      rethrow;
+    }
   }
 
   /// Enforces position constraints for UI drag/resize operations by clamping the proposed position
@@ -518,6 +543,19 @@ class DashboardConfigNotifier extends Notifier<List<DashboardItem>> {
       },
     ).subscribe();
   }
+
+  /// Helper methods for error handling and logging.
+  /// See .github/issues/025-dashboard-error-handling.md for details.
+
+  /// Logs dashboard operation errors with consistent formatting
+  void _logError(String operation, Object error, StackTrace? stack) {
+    AppLogger.instance.e('dashboard_${operation}_failed', error: error, stackTrace: stack);
+  }
+
+  /// Logs dashboard events with optional parameters
+  void _logEvent(String eventName, {Map<String, dynamic>? params}) {
+    AppLogger.event('dashboard_$eventName', details: params);
+  }
 }
 
 /// Example usage of undo/redo API in a ConsumerWidget:
@@ -550,6 +588,43 @@ class DashboardConfigNotifier extends Notifier<List<DashboardItem>> {
 /// ```
 /// 
 /// Localization keys required: undo, redo, undoTooltip, redoTooltip
+/// 
+/// Example error handling in UI with SnackBar:
+/// 
+/// ```dart
+/// class DashboardErrorHandler extends ConsumerWidget {
+///   @override
+///   Widget build(BuildContext context, WidgetRef ref) {
+///     final errorKey = ref.watch(dashboardErrorProvider);
+///     final l10n = AppLocalizations.of(context)!;
+///     
+///     if (errorKey != null) {
+///       // Clear error after showing
+///       Future.microtask(() => ref.read(dashboardErrorProvider.notifier).state = null);
+///       
+///       WidgetsBinding.instance.addPostFrameCallback((_) {
+///         ScaffoldMessenger.of(context).showSnackBar(
+///           SnackBar(
+///             content: Text(_getErrorMessage(l10n, errorKey)),
+///             backgroundColor: Colors.red,
+///           ),
+///         );
+///       });
+///     }
+///     
+///     return const SizedBox.shrink();
+///   }
+///   
+///   String _getErrorMessage(AppLocalizations l10n, String errorKey) {
+///     switch (errorKey) {
+///       case 'dashboard_load_error': return l10n.dashboard_load_error;
+///       case 'dashboard_save_error': return l10n.dashboard_save_error;
+///       case 'dashboard_action_failed': return l10n.dashboard_action_failed;
+///       default: return l10n.dashboard_action_failed;
+///     }
+///   }
+/// }
+/// ```
 /// See .github/issues/022-dashboard-undo-redo.md for details
 
 /// Provider for dashboard configuration with widget type validation
@@ -561,6 +636,9 @@ final dashboardConfigProvider = NotifierProvider<DashboardConfigNotifier, List<D
 final dashboardRepositoryProvider = Provider<IDashboardRepository>((ref) {
   return DashboardRepository();
 });
+
+/// Provider for dashboard error state
+final dashboardErrorProvider = StateProvider<String?>((ref) => null);
 
 /// Provider for project requirements by project ID with error handling
 /// TODO: Add caching for requirements

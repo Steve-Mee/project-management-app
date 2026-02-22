@@ -1298,6 +1298,18 @@
   "collab_conflict_detected": "Samenwerkingsconflict gedetecteerd, laatste wijzigingen toegepast",
   "@collab_conflict_detected": {
     "description": "Message shown when a collaboration conflict is resolved."
+  },
+  "dashboard_load_error": "Kan dashboardconfiguratie niet laden",
+  "@dashboard_load_error": {
+    "description": "Error message when dashboard configuration fails to load."
+  },
+  "dashboard_save_error": "Kan dashboardconfiguratie niet opslaan",
+  "@dashboard_save_error": {
+    "description": "Error message when dashboard configuration fails to save."
+  },
+  "dashboard_action_failed": "Dashboardactie mislukt",
+  "@dashboard_action_failed": {
+    "description": "Generic error message for dashboard actions."
   }
 }
 }
