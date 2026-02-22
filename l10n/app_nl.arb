@@ -1274,6 +1274,30 @@
   "template_saved_success": "Sjabloon succesvol opgeslagen",
   "@template_saved_success": {
     "description": "Success message when a dashboard template is saved."
+  },
+  "share_dashboard": "Dashboard Delen",
+  "@share_dashboard": {
+    "description": "Button text for sharing a dashboard."
+  },
+  "invite_user": "Gebruiker Uitnodigen",
+  "@invite_user": {
+    "description": "Button text for inviting a user to a shared dashboard."
+  },
+  "permission_view": "Bekijken",
+  "@permission_view": {
+    "description": "Permission level for viewing a shared dashboard."
+  },
+  "permission_edit": "Bewerken",
+  "@permission_edit": {
+    "description": "Permission level for editing a shared dashboard."
+  },
+  "share_link_copied": "Deel link gekopieerd naar klembord",
+  "@share_link_copied": {
+    "description": "Message shown when a share link is copied."
+  },
+  "collab_conflict_detected": "Samenwerkingsconflict gedetecteerd, laatste wijzigingen toegepast",
+  "@collab_conflict_detected": {
+    "description": "Message shown when a collaboration conflict is resolved."
   }
 }
 }

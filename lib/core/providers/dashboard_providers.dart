@@ -1,4 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:uuid/uuid.dart';
 import 'package:my_project_management_app/models/project_requirements.dart';
 import 'package:my_project_management_app/core/repository/i_dashboard_repository.dart';
 import 'package:my_project_management_app/core/repository/dashboard_repository.dart';
@@ -30,10 +32,11 @@ DashboardWidgetType validateWidgetType(String value) {
 }
 
 /// Notifier for managing dashboard configuration with persistence, widget type validation, and undo/redo functionality
-/// TODO: Add collaborative dashboard sharing
 class DashboardConfigNotifier extends Notifier<List<DashboardItem>> {
   late final IDashboardRepository _repository;
   late List<DashboardTemplate> _userTemplates;
+  String? currentShareId;
+  RealtimeChannel? _channel;
 
   /// Built-in preset dashboard templates
   static final List<DashboardTemplate> _builtInPresets = [
@@ -123,6 +126,24 @@ class DashboardConfigNotifier extends Notifier<List<DashboardItem>> {
       await _repository.saveDashboardConfig(items);
       state = items;
       _currentIndex = _history.length - 1;
+
+      // If shared, also push to Supabase
+      if (currentShareId != null) {
+        final currentUserId = Supabase.instance.client.auth.currentUser?.id;
+        if (currentUserId != null) {
+          final existing = await _fetchSharedDashboard(currentShareId!);
+          final dashboard = SharedDashboard(
+            id: currentShareId!,
+            ownerId: existing?.ownerId ?? currentUserId,
+            title: existing?.title ?? 'Shared Dashboard',
+            items: items,
+            permissions: existing?.permissions ?? {},
+            updatedAt: DateTime.now(),
+          );
+          await _saveSharedDashboard(dashboard);
+          await _saveLocalSharedDashboard(dashboard);
+        }
+      }
     } catch (e) {
       // TODO: Add error handling/logging
       rethrow;
@@ -354,6 +375,148 @@ class DashboardConfigNotifier extends Notifier<List<DashboardItem>> {
     await _saveTemplates(userTemplates);
     _userTemplates = userTemplates;
     AppLogger.instance.i('Deleted dashboard template: $templateId');
+  }
+
+  Future<SharedDashboard?> _fetchSharedDashboard(String shareId) async {
+    try {
+      final response = await Supabase.instance.client.from('shared_dashboards').select().eq('id', shareId).single();
+      AppLogger.instance.i('Fetched shared dashboard: $shareId');
+      return SharedDashboard.fromJson(response);
+    } catch (e) {
+      AppLogger.instance.w('Failed to fetch shared dashboard: $shareId', error: e);
+      return null;
+    }
+  }
+
+  Future<void> _saveSharedDashboard(SharedDashboard dashboard) async {
+    await Supabase.instance.client.from('shared_dashboards').upsert(dashboard.toJson());
+    AppLogger.instance.i('Saved shared dashboard: ${dashboard.id}');
+  }
+
+  Future<void> _updatePermissions(String shareId, Map<String, String> permissions) async {
+    await Supabase.instance.client.from('shared_dashboards').update({'permissions': permissions}).eq('id', shareId);
+    AppLogger.instance.i('Updated permissions for shared dashboard: $shareId');
+  }
+
+  Future<bool> hasPermission(String shareId, DashboardPermission required) async {
+    final dashboard = await _fetchSharedDashboard(shareId);
+    if (dashboard == null) return false;
+
+    final currentUserId = Supabase.instance.client.auth.currentUser?.id;
+    if (currentUserId == null) return false;
+
+    if (dashboard.ownerId == currentUserId) return true;
+
+    final userPerm = dashboard.permissions[currentUserId];
+    if (userPerm == null) return false;
+
+    return userPerm == required.name;
+  }
+
+  Future<String> generateShareLink(String title) async {
+    final currentUserId = Supabase.instance.client.auth.currentUser?.id;
+    if (currentUserId == null) throw Exception('User not authenticated');
+
+    final shareId = const Uuid().v4();
+    final dashboard = SharedDashboard(
+      id: shareId,
+      ownerId: currentUserId,
+      title: title,
+      items: List.from(state),
+      permissions: {},
+      updatedAt: DateTime.now(),
+    );
+
+    await _saveSharedDashboard(dashboard);
+    AppLogger.instance.i('Generated share link for dashboard: $shareId');
+    return shareId;
+  }
+
+  Future<void> inviteUser(String shareId, String userId, DashboardPermission perm) async {
+    final dashboard = await _fetchSharedDashboard(shareId);
+    if (dashboard == null) throw Exception('Shared dashboard not found');
+
+    final currentUserId = Supabase.instance.client.auth.currentUser?.id;
+    if (currentUserId != dashboard.ownerId) throw Exception('Only owner can invite users');
+
+    final updatedPermissions = Map<String, String>.from(dashboard.permissions);
+    updatedPermissions[userId] = perm.name;
+
+    await _updatePermissions(shareId, updatedPermissions);
+    AppLogger.event('dashboard_invite', details: {'shareId': shareId, 'userId': userId, 'permission': perm.name});
+  }
+
+  Future<SharedDashboard?> _loadLocalSharedDashboard(String shareId) async {
+    try {
+      final box = await Hive.openBox<Map>('shared_dashboards');
+      final data = box.get('shared_$shareId');
+      if (data != null) {
+        return SharedDashboard.fromJson(data as Map<String, dynamic>);
+      }
+      return null;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  Future<void> _saveLocalSharedDashboard(SharedDashboard dashboard) async {
+    try {
+      final box = await Hive.openBox<Map>('shared_dashboards');
+      await box.put('shared_${dashboard.id}', dashboard.toJson());
+    } catch (e) {
+      // Ignore local save errors
+    }
+  }
+
+  Future<void> loadSharedDashboard(String shareId) async {
+    final remote = await _fetchSharedDashboard(shareId);
+    final local = await _loadLocalSharedDashboard(shareId);
+
+    SharedDashboard? toUse;
+    if (remote != null && local != null) {
+      // Last-write-wins
+      toUse = remote.updatedAt.isAfter(local.updatedAt) ? remote : local;
+      if (remote.updatedAt.isAfter(local.updatedAt)) {
+        AppLogger.instance.i('Applied remote changes for shared dashboard $shareId (conflict resolved)');
+      } else {
+        AppLogger.instance.i('Kept local changes for shared dashboard $shareId (conflict resolved)');
+      }
+    } else {
+      toUse = remote ?? local;
+    }
+
+    if (toUse != null) {
+      state = toUse.items;
+      currentShareId = shareId;
+      // Save the merged version locally
+      await _saveLocalSharedDashboard(toUse);
+      _pushToHistory();
+      _subscribeToSharedChanges(shareId);
+      AppLogger.instance.i('Loaded shared dashboard: $shareId');
+    } else {
+      throw Exception('Shared dashboard not found');
+    }
+  }
+
+  void _subscribeToSharedChanges(String shareId) {
+    // Unsubscribe previous
+    _channel?.unsubscribe();
+
+    _channel = Supabase.instance.client.channel('shared_dashboard_$shareId');
+    _channel!.onPostgresChanges(
+      event: PostgresChangeEvent.all,
+      schema: 'public',
+      table: 'shared_dashboards',
+      filter: PostgresChangeFilter(type: PostgresChangeFilterType.eq, column: 'id', value: shareId),
+      callback: (payload) {
+        AppLogger.instance.d('Realtime event for shared dashboard $shareId: ${payload.eventType}');
+        if (payload.eventType == PostgresChangeEvent.update) {
+          final updated = SharedDashboard.fromJson(payload.newRecord);
+          state = updated.items;
+          _pushToHistory();
+        }
+      },
+    ).subscribe();
   }
 }
 

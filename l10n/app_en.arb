@@ -1785,6 +1785,30 @@
   "template_saved_success": "Template saved successfully",
   "@template_saved_success": {
     "description": "Success message when a dashboard template is saved."
+  },
+  "share_dashboard": "Share Dashboard",
+  "@share_dashboard": {
+    "description": "Button text for sharing a dashboard."
+  },
+  "invite_user": "Invite User",
+  "@invite_user": {
+    "description": "Button text for inviting a user to a shared dashboard."
+  },
+  "permission_view": "View",
+  "@permission_view": {
+    "description": "Permission level for viewing a shared dashboard."
+  },
+  "permission_edit": "Edit",
+  "@permission_edit": {
+    "description": "Permission level for editing a shared dashboard."
+  },
+  "share_link_copied": "Share link copied to clipboard",
+  "@share_link_copied": {
+    "description": "Message shown when a share link is copied."
+  },
+  "collab_conflict_detected": "Collaboration conflict detected, latest changes applied",
+  "@collab_conflict_detected": {
+    "description": "Message shown when a collaboration conflict is resolved."
   }
 }
 }
