@@ -83,6 +83,8 @@ dependencies:
 
   xml: ^6.6.1
 
+  yaml: ^3.1.2
+
   intl: any
 dev_dependencies:
   flutter_test:

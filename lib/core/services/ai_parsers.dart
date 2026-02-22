@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:xml/xml.dart';
+import 'package:yaml/yaml.dart';
 
 import '../services/app_logger.dart';
 
@@ -140,6 +141,72 @@ class AiParsers {
     return response.trim();
   }
 
+  /// Safely parses YAML from AI response string
+  /// Attempts direct YAML parsing first, then uses RegExp fallback
+  /// to extract YAML from mixed text responses.
+  ///
+  /// Returns parsed Map/List on success, or raw String on complete failure.
+  /// Handles malformed YAML gracefully by falling back to raw response.
+  ///
+  /// IMPORTANT COMPLIANCE NOTE: When parsing AI responses that may contain
+  /// user-generated or sensitive data, ensure compliance with local data privacy
+  /// laws (GDPR, CCPA, etc.). This parser handles data that might contain
+  /// sensitive information - always validate and sanitize parsed content
+  /// according to applicable regulations in the user's jurisdiction.
+  ///
+  /// Example usage:
+  /// ```dart
+  /// final data = AiParsers.safeParseYaml(response);
+  /// if (data is Map<String, dynamic>) {
+  ///   // Use parsed data
+  /// } else if (data is List) {
+  ///   // Handle list
+  /// } else if (data is String) {
+  ///   // Handle raw response
+  /// }
+  /// ```
+  static dynamic safeParseYaml(String response) {
+    if (response.trim().isEmpty) {
+      throw Exception('Empty response cannot be parsed');
+    }
+
+    // First attempt: direct YAML parsing
+    try {
+      final parsed = loadYaml(response.trim());
+      if (parsed is Map) {
+        return _yamlToMap(parsed);
+      } else if (parsed is List) {
+        return _yamlToList(parsed);
+      } else {
+        return parsed; // Scalar
+      }
+    } catch (e) {
+      // Ignore and try fallback
+    }
+
+    // Second attempt: extract YAML using RegExp
+    try {
+      final extractedYaml = _extractYamlWithRegExp(response);
+      if (extractedYaml != null) {
+        final parsed = loadYaml(extractedYaml);
+        AppLogger.instance.w('YAML parsing used RegExp fallback for response extraction');
+        if (parsed is Map) {
+          return _yamlToMap(parsed);
+        } else if (parsed is List) {
+          return _yamlToList(parsed);
+        } else {
+          return parsed; // Scalar
+        }
+      }
+    } catch (e) {
+      // Ignore and continue to final failure
+    }
+
+    // Final failure: return raw response as fallback
+    AppLogger.instance.w('YAML parsing completely failed, returning raw response');
+    return response.trim();
+  }
+
   /// Extracts XML string from mixed text using RegExp
   /// Looks for the outermost XML element in the response
   static String? _extractXmlWithRegExp(String response) {
@@ -149,6 +216,20 @@ class AiParsers {
     final match = xmlPattern.firstMatch(response);
     if (match != null) {
       return match.group(0);
+    }
+
+    return null;
+  }
+
+  /// Extracts YAML string from mixed text using RegExp
+  /// Looks for YAML content between --- markers in the response
+  static String? _extractYamlWithRegExp(String response) {
+    // Pattern to match YAML between --- markers
+    final yamlPattern = RegExp(r'---\s*\n(.*?)\n---', dotAll: true);
+
+    final match = yamlPattern.firstMatch(response);
+    if (match != null) {
+      return match.group(1);
     }
 
     return null;
@@ -200,6 +281,53 @@ class AiParsers {
   /// Example: [<item>a</item>, <item>b</item>] -> [{'#text': 'a'}, {'#text': 'b'}]
   static List<dynamic> _xmlToList(List<XmlElement> elements) {
     return elements.map(_xmlToMap).toList();
+  }
+
+  /// Converts YAML document to Map, handling nested structures.
+  /// Part of AI YAML parser implementation (.github/issues/036-ai-yaml-parser.md)
+  /// Recursively processes nested Maps and Lists to ensure String keys and proper types.
+  /// Example: {'name': 'John', 'config': {'enabled': true}} -> {'name': 'John', 'config': {'enabled': true}}
+  static Map<String, dynamic> _yamlToMap(dynamic yamlDocument) {
+    if (yamlDocument is! Map) {
+      throw ArgumentError('yamlDocument must be a Map');
+    }
+
+    final map = <String, dynamic>{};
+
+    for (var entry in yamlDocument.entries) {
+      final key = entry.key.toString(); // Ensure key is String
+      final value = entry.value;
+
+      if (value is Map) {
+        map[key] = _yamlToMap(value);
+      } else if (value is List) {
+        map[key] = _yamlToList(value);
+      } else {
+        map[key] = value; // Scalars remain as-is
+      }
+    }
+
+    return map;
+  }
+
+  /// Converts YAML list to List, handling nested structures.
+  /// Part of AI YAML parser implementation (.github/issues/036-ai-yaml-parser.md)
+  /// Recursively processes nested Maps and Lists.
+  /// Example: [{'name': 'John'}, {'name': 'Jane'}] -> [{'name': 'John'}, {'name': 'Jane'}]
+  static List<dynamic> _yamlToList(dynamic yamlDocument) {
+    if (yamlDocument is! List) {
+      throw ArgumentError('yamlDocument must be a List');
+    }
+
+    return yamlDocument.map((item) {
+      if (item is Map) {
+        return _yamlToMap(item);
+      } else if (item is List) {
+        return _yamlToList(item);
+      } else {
+        return item; // Scalars remain as-is
+      }
+    }).toList();
   }
 
 }
