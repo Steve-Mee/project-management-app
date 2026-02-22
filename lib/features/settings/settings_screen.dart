@@ -1189,7 +1189,7 @@ class _AiSettingsSection extends ConsumerWidget {
     );
   }
 
-  // TODO: Implement these methods for per-operation rate limits UI
+  // NOTE: converted to issue 046
   /*
   /// Build dynamic list of operation-specific rate limit controls
   List<Widget> _buildPerOperationLimitControls(BuildContext context, WidgetRef ref, AppLocalizations l10n) {

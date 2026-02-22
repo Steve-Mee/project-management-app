@@ -256,14 +256,14 @@ class AiChatNotifier extends AsyncNotifier<AiChatState> {
   }
 
   /// Calculate estimated cost based on token usage
-  /// TODO: Use actual pricing from AI provider
+  /// NOTE: converted to issue 041
   double _calculateEstimatedCost(int inputTokens, int outputTokens) {
     const double costPerToken = 0.0000015; // Example: $1.50 per 1M tokens
     return (inputTokens + outputTokens) * costPerToken;
   }
   Future<(ChatMessage, int)> _executeChatRequest(Map<String, dynamic> payload) async {
     final userMessage = payload['userMessage'] as String;
-    // TODO: Use promptOverride and projectId in future AI call enhancements
+    // NOTE: converted to issue 041
 
     final anonymizedMessage = _anonymizeMessage(userMessage);
     final result = await _callAiWithRetry(anonymizedMessage);
@@ -979,7 +979,7 @@ class AiChatNotifier extends AsyncNotifier<AiChatState> {
         outputTokens: 0,
         estimatedCost: _calculateEstimatedCost(tokens, 0),
         userId: userId,
-        projectId: null, // TODO: Extract from payload if available
+        projectId: null, // NOTE: converted to issue 041
         success: true,
         errorMessage: null,
       );

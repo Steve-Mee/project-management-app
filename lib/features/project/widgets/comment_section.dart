@@ -90,7 +90,7 @@ class _CommentSectionState extends ConsumerState<CommentSection> {
                 contentPadding: EdgeInsets.all(12.w),
               ),
               onChanged: (text) {
-                // TODO: Implement @mention autocomplete
+                // NOTE: converted to issue 045
               },
             ),
           ),

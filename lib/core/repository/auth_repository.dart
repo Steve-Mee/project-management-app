@@ -14,7 +14,7 @@ enum Role {
   user,
 }
 
-/// Placeholder for future backend integration.
+/// NOTE: converted to issue 050
 class RemoteAuthService {
   Future<void> signIn(String username, String password) async {
     AppLogger.instance.w('Remote auth sign-in not configured.');

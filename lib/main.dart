@@ -36,7 +36,7 @@ import 'models/comment_model.dart';
 
 /// Initializes environment variables from .env file
 /// Loads dotenv for development. In production, uses secure storage if available
-/// Future expansions: Add more env vars like OPENAI_API_KEY, etc.
+/// NOTE: converted to issue 048
 Future<Map<String, String>> initEnv() async {
   String url;
   String anonKey;
@@ -66,7 +66,7 @@ Future<Map<String, String>> initEnv() async {
     throw Exception('SUPABASE_ANON_KEY not found');
   }
   
-  // Future expansions: Add more env vars here
+  // NOTE: converted to issue 048
   // String openaiKey = dotenv.env['OPENAI_API_KEY'] ?? '';
   
   return {
@@ -86,7 +86,7 @@ void main() async {
   // Initialize environment variables
   final env = await initEnv();
   
-  // Future expansions: Add more env vars here, e.g., OPENAI_API_KEY
+  // NOTE: converted to issue 048
   // String openaiKey = env['openaiKey']!;
   
   if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {

@@ -137,9 +137,9 @@ final aiUsageUpdateProvider = FutureProvider.family<void, int>((ref, tokensUsed)
   }
 });
 
-// Future extension points for additional AI usage features
+// NOTE: converted to issue 041
 // final aiUsageHistoryProvider = FutureProvider<List<AiUsage>>((ref) async {
-//   // TODO: Implement usage history tracking
+//   // NOTE: converted to issue 041
 //   throw UnimplementedError('Usage history not yet implemented');
 // });
 
@@ -386,14 +386,14 @@ class AiUsageDashboard extends ConsumerWidget {
                     prefixIcon: const Icon(Icons.search),
                   ),
                   onChanged: (value) {
-                    // TODO: Implement filtering
+                    // NOTE: converted to issue 041
                   },
                 ),
               ),
               const SizedBox(width: 16),
               ElevatedButton.icon(
                 onPressed: () {
-                  // TODO: Implement CSV export
+                  // NOTE: converted to issue 041
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(content: Text('CSV export not implemented yet')),
                   );

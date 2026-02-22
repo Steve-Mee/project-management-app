@@ -76,7 +76,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       }
     } on RateLimitExceededException catch (e) {
       _showSnackBar(l10n.rateLimitExceeded(e.backoffDuration.inSeconds));
-      // TODO: show captcha after 3 failed attempts – integrate reCAPTCHA or similar later
+      // NOTE: converted to issue 040
     } catch (e) {
       _showSnackBar(l10n.loginFailedMessage);
     }

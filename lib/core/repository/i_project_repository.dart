@@ -113,7 +113,7 @@ abstract class IProjectRepository {
   Future<List<ProjectModel>> getFilteredProjects(ProjectFilter filter, {List<ProjectFilterConditions> extraConditions = const []});
 
   /// Sync methods for future Supabase integration
-  /// TODO: Implement sync methods when Supabase sync is added
+  /// NOTE: converted to issue 039
   // Future<void> syncProjectsToSupabase();
   // Future<void> syncProjectsFromSupabase();
   // Future<void> resolveSyncConflicts(List<SyncConflict> conflicts);

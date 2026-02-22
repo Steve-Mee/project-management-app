@@ -87,7 +87,7 @@ class AiParsers {
     return null;
   }
 
-  // Future extension points for additional parsing formats
+  // NOTE: converted to issue 047
 
   /// Safely parses XML from AI response string
   /// Attempts direct XML parsing first, then uses RegExp fallback
