@@ -24,12 +24,23 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   bool _showPassword = false;
   bool _enableAutoLogin = false;
   bool _usePasswordLogin = false;
+  bool? _biometricAvailable;
 
   @override
   void dispose() {
     _usernameController.dispose();
     _passwordController.dispose();
     super.dispose();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_biometricAvailable == null) {
+      ref.read(authProvider.notifier).isBiometricAvailable().then((value) {
+        if (mounted) setState(() => _biometricAvailable = value);
+      });
+    }
   }
 
   Future<void> _submitLogin() async {
@@ -338,6 +349,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     final l10n = AppLocalizations.of(context)!;
     final locale = ref.watch(localeProvider);
     final biometricEnabled = ref.watch(biometricLoginProvider);
+    if (_biometricAvailable == null) {
+      ref.read(authProvider.notifier).isBiometricAvailable().then((value) {
+        if (mounted) setState(() => _biometricAvailable = value);
+      });
+    }
     return Scaffold(
       body: CustomScrollView(
         slivers: [
@@ -495,7 +511,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                             },
                           ),
                           const SizedBox(height: 24),
-                          if (biometricEnabled && !_usePasswordLogin) ...[
+                          if (biometricEnabled && (_biometricAvailable ?? false) && !_usePasswordLogin) ...[
                             SizedBox(
                               width: double.infinity,
                               child: ElevatedButton(
