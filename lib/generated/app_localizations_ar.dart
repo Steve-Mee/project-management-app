@@ -629,6 +629,11 @@ class AppLocalizationsAr extends AppLocalizations {
   String get loginFailedMessage => 'فشل تسجيل الدخول. تحقق من بياناتك.';
 
   @override
+  String rateLimitExceeded(Object seconds) {
+    return 'Too many attempts. Try again in $seconds seconds.';
+  }
+
+  @override
   String get registerTitle => 'تسجيل';
 
   @override

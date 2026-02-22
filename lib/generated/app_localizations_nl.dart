@@ -632,6 +632,11 @@ class AppLocalizationsNl extends AppLocalizations {
   String get loginFailedMessage => 'Inloggen mislukt. Controleer je gegevens.';
 
   @override
+  String rateLimitExceeded(Object seconds) {
+    return 'Te veel pogingen. Probeer opnieuw over $seconds seconden.';
+  }
+
+  @override
   String get registerTitle => 'Registreren';
 
   @override

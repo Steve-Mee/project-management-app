@@ -1,38 +1,35 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:hive/hive.dart';
+import 'package:my_project_management_app/core/repository/i_auth_repository.dart';
+import 'package:my_project_management_app/core/auth/auth_user.dart';
+import 'package:my_project_management_app/core/auth/role_models.dart';
 import 'package:my_project_management_app/core/providers/auth_providers.dart';
 import 'package:my_project_management_app/core/repository/settings_repository.dart';
 import 'package:my_project_management_app/core/config/ai_config.dart' as ai_config;
-import 'package:hive_flutter/hive_flutter.dart';
 
 // Fake box for testing
-class FakeBox implements Box<List<DateTime>> {
+class FakeBox {
   final Map<String, List<DateTime>> _map = {};
   final List<List<DateTime>> putCalls = [];
 
-  @override
-  List<DateTime>? get(dynamic key, {List<DateTime>? defaultValue}) => _map[key] ?? defaultValue;
+  List<DateTime>? get(String key, {List<DateTime>? defaultValue}) => _map[key] ?? defaultValue;
 
-  @override
-  Future<void> put(dynamic key, List<DateTime> value) async {
+  Future<void> put(String key, List<DateTime> value) async {
     _map[key] = value;
     putCalls.add(value);
   }
-
-  // Implement minimal required methods
-  @override
-  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 
 class TestAuthNotifier extends AuthNotifier {
   TestAuthNotifier(this.testBox);
 
-  final Box<List<DateTime>> testBox;
+  final FakeBox testBox;
 
   @override
   Future<AuthState> build() async {
-    attemptsBox = testBox;
+    attemptsBox = testBox as Box<List<DateTime>>;
     return const AuthState(isAuthenticated: false);
   }
 
@@ -133,6 +130,116 @@ class FakeSettingsRepository extends Fake implements SettingsRepository {
   Future<void> setUseBiometricsEnabled(bool enabled) async {}
 }
 
+// Fake auth repository for testing user filtering
+class FakeAuthRepository implements IAuthRepository {
+  final List<AppUser> _users;
+  
+  FakeAuthRepository(this._users);
+
+  @override
+  Future<void> initialize() async {}
+
+  @override
+  List<AppUser> getUsers() => _users;
+
+  @override
+  AppUser? getUserByUsername(String username) => 
+    _users.where((u) => u.username == username).isEmpty ? null : _users.where((u) => u.username == username).first;
+
+  @override
+  List<RoleDefinition> getRoles() => [
+    const RoleDefinition(id: 'role_admin', name: 'Admin', permissions: []),
+    const RoleDefinition(id: 'role_member', name: 'Member', permissions: []),
+    const RoleDefinition(id: 'role_viewer', name: 'Viewer', permissions: []),
+  ];
+
+  @override
+  RoleDefinition? getRoleById(String roleId) => 
+    getRoles().where((r) => r.id == roleId).isEmpty ? null : getRoles().where((r) => r.id == roleId).first;
+
+  @override
+  Future<void> upsertRole(RoleDefinition role) async {}
+
+  @override
+  Future<void> deleteRole(String roleId) async {}
+
+  @override
+  List<GroupDefinition> getGroups() => [];
+
+  @override
+  GroupDefinition? getGroupById(String groupId) => null;
+
+  @override
+  List<GroupDefinition> getGroupsForUser(String username) => [];
+
+  @override
+  Future<void> upsertGroup(GroupDefinition group) async {}
+
+  @override
+  Future<void> deleteGroup(String groupId) async {}
+
+  @override
+  Future<void> addUserToGroup(String groupId, String username) async {}
+
+  @override
+  Future<void> removeUserFromGroup(String groupId, String username) async {}
+
+  @override
+  Future<void> updateUserRole(String username, String roleId) async {}
+
+  @override
+  Future<void> addUser(AppUser user) async {}
+
+  @override
+  Future<void> deleteUser(String username) async {}
+
+  @override
+  AppUser? validateUser(String username, String password) =>
+      getUserByUsername(username);
+
+  @override
+  String? getCurrentUser() => null;
+
+  @override
+  Future<void> setCurrentUser(String? username) async {}
+
+  @override
+  Future<void> logout() async {}
+
+  @override
+  Future<bool> login(String email, String password) async => true;
+
+  @override
+  Future<void> register(String email, String password) async {}
+
+  @override
+  Future<bool> isLoggedIn() async => false;
+
+  @override
+  Future<bool> canAttemptLogin(String identifier) async => true;
+
+  @override
+  Future<void> recordFailedLoginAttempt(String identifier) async {}
+
+  @override
+  Future<bool> isLoginBlocked(String email) async => false;
+
+  @override
+  Future<void> recordLoginAttempt(String email) async {}
+
+  @override
+  Future<void> resetLoginAttempts(String email) async {}
+
+  @override
+  String get adminRoleId => 'role_admin';
+
+  @override
+  String get defaultUserRoleId => 'role_member';
+
+  @override
+  String get viewerRoleId => 'role_viewer';
+}
+
 void main() {
   late ProviderContainer container;
   late FakeSettingsRepository fakeSettings;
@@ -155,24 +262,39 @@ void main() {
     test('build returns false when settings return false', () async {
       fakeSettings._enableBiometricLogin = false;
 
-      final container = ProviderContainer(
+      final testContainer = ProviderContainer(
         overrides: [
           settingsRepositoryProvider.overrideWith((ref) => Future.value(fakeSettings)),
         ],
       );
 
-      final asyncValue = container.read(biometricLoginProvider);
-      await Future.delayed(const Duration(milliseconds: 1));
+      // Listen to the provider to wait for it to resolve
+      final subscription = testContainer.listen(biometricLoginProvider, (previous, next) {});
+      
+      // Wait for the provider to resolve
+      await Future.delayed(const Duration(milliseconds: 50));
+      
+      final asyncValue = testContainer.read(biometricLoginProvider);
+      expect(asyncValue.hasValue, true, reason: 'Provider should have resolved');
       expect(asyncValue.value, false);
-      container.dispose();
+      
+      subscription.close();
+      testContainer.dispose();
     });
 
     test('setEnabled updates state and calls settings', () async {
-      final notifier = container.read(biometricLoginProvider.notifier);
+      final testContainer = ProviderContainer(
+        overrides: [
+          settingsRepositoryProvider.overrideWith((ref) => Future.value(fakeSettings)),
+        ],
+      );
+
+      final notifier = testContainer.read(biometricLoginProvider.notifier);
       await notifier.setEnabled(true);
 
       expect(notifier.state.value, true);
       expect(fakeSettings._enableBiometricLogin, true);
+      testContainer.dispose();
     });
   });
 
@@ -180,32 +302,46 @@ void main() {
     test('build returns basis when settings return null', () async {
       fakeSettings._helpLevel = null;
 
-      final container = ProviderContainer(
+      final testContainer = ProviderContainer(
         overrides: [
           settingsRepositoryProvider.overrideWith((ref) => Future.value(fakeSettings)),
         ],
       );
 
-      final asyncValue = container.read(helpLevelProvider);
-      await Future.delayed(const Duration(milliseconds: 1));
+      // Listen to the provider to wait for it to resolve
+      final subscription = testContainer.listen(helpLevelProvider, (previous, next) {});
+      
+      // Wait for the provider to resolve
+      await Future.delayed(const Duration(milliseconds: 50));
+      
+      final asyncValue = testContainer.read(helpLevelProvider);
+      expect(asyncValue.hasValue, true, reason: 'Provider should have resolved');
       expect(asyncValue.value, ai_config.HelpLevel.basis);
-      container.dispose();
+      
+      subscription.close();
+      testContainer.dispose();
     });
 
     test('setHelpLevel updates state and calls settings asynchronously', () async {
-      final container = ProviderContainer(
+      final testContainer = ProviderContainer(
         overrides: [
           settingsRepositoryProvider.overrideWith((ref) => Future.value(fakeSettings)),
         ],
       );
 
-      final notifier = container.read(helpLevelProvider.notifier);
+      // Listen to the provider to ensure it's initialized
+      final subscription = testContainer.listen(helpLevelProvider, (previous, next) {});
+      await Future.delayed(const Duration(milliseconds: 50));
+
+      final notifier = testContainer.read(helpLevelProvider.notifier);
       await notifier.setHelpLevel(ai_config.HelpLevel.stapVoorStap);
 
-      final asyncValue = container.read(helpLevelProvider);
+      final asyncValue = testContainer.read(helpLevelProvider);
       expect(asyncValue.value, ai_config.HelpLevel.stapVoorStap);
       expect(fakeSettings._helpLevel, 'stapVoorStap');
-      container.dispose();
+      
+      subscription.close();
+      testContainer.dispose();
     });
   });
 
@@ -306,6 +442,47 @@ void main() {
       await notifier.login('test@example.com', 'password');
       expect(fakeBox.putCalls, [<DateTime>[]]);
       container.dispose();
+      expect(fakeBox.putCalls, [<DateTime>[]]);
+    });
+  });
+
+  group('User Search and Filter Providers', () {
+    late FakeAuthRepository fakeAuthRepo;
+    late ProviderContainer testContainer;
+
+    setUp(() {
+      // Create test users with different roles
+      final testUsers = [
+        const AppUser(username: 'admin_user', password: 'pass', roleId: 'role_admin'),
+        const AppUser(username: 'member_one', password: 'pass', roleId: 'role_member'),
+        const AppUser(username: 'member_two', password: 'pass', roleId: 'role_member'),
+        const AppUser(username: 'viewer_user', password: 'pass', roleId: 'role_viewer'),
+        const AppUser(username: 'john_doe', password: 'pass', roleId: 'role_member'),
+        const AppUser(username: 'jane_smith', password: 'pass', roleId: 'role_admin'),
+      ];
+      
+      fakeAuthRepo = FakeAuthRepository(testUsers);
+      
+      testContainer = ProviderContainer(
+        overrides: [
+          authRepositoryProvider.overrideWith((ref) => fakeAuthRepo),
+          settingsRepositoryProvider.overrideWith((ref) => Future.value(fakeSettings)),
+        ],
+      );
+    });
+
+    tearDown(() {
+      testContainer.dispose();
+    });
+
+    test('filteredUsersProvider handles null/empty filter values', () {
+      final nullFilter = const UsersFilter(searchQuery: null, role: null, status: null);
+      final users = testContainer.read(filteredUsersProvider(nullFilter));
+      expect(users.length, 6);
+      
+      final emptyStringFilter = const UsersFilter(searchQuery: '', role: '', status: '');
+      final users2 = testContainer.read(filteredUsersProvider(emptyStringFilter));
+      expect(users2.length, 6);
     });
   });
 }

@@ -636,6 +636,11 @@ class AppLocalizationsEs extends AppLocalizations {
       'Error al iniciar sesion. Verifica tus credenciales.';
 
   @override
+  String rateLimitExceeded(Object seconds) {
+    return 'Too many attempts. Try again in $seconds seconds.';
+  }
+
+  @override
   String get registerTitle => 'Registrar';
 
   @override

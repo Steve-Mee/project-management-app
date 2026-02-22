@@ -635,6 +635,11 @@ class AppLocalizationsIt extends AppLocalizations {
   String get loginFailedMessage => 'Accesso fallito. Verifica le credenziali.';
 
   @override
+  String rateLimitExceeded(Object seconds) {
+    return 'Too many attempts. Try again in $seconds seconds.';
+  }
+
+  @override
   String get registerTitle => 'Registrati';
 
   @override

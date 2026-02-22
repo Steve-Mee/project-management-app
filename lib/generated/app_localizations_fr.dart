@@ -640,6 +640,11 @@ class AppLocalizationsFr extends AppLocalizations {
       'Echec de connexion. Verifiez vos identifiants.';
 
   @override
+  String rateLimitExceeded(Object seconds) {
+    return 'Too many attempts. Try again in $seconds seconds.';
+  }
+
+  @override
   String get registerTitle => 'Inscription';
 
   @override

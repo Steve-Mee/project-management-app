@@ -625,6 +625,11 @@ class AppLocalizationsJa extends AppLocalizations {
   String get loginFailedMessage => 'ログインに失敗しました。資格情報を確認してください。';
 
   @override
+  String rateLimitExceeded(Object seconds) {
+    return 'Too many attempts. Try again in $seconds seconds.';
+  }
+
+  @override
   String get registerTitle => '登録';
 
   @override

@@ -632,6 +632,11 @@ class AppLocalizationsPt extends AppLocalizations {
       'Falha ao entrar. Verifique suas credenciais.';
 
   @override
+  String rateLimitExceeded(Object seconds) {
+    return 'Too many attempts. Try again in $seconds seconds.';
+  }
+
+  @override
   String get registerTitle => 'Registrar';
 
   @override

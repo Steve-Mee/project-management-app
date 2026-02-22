@@ -632,6 +632,11 @@ class AppLocalizationsRu extends AppLocalizations {
       'Не удалось войти. Проверьте учетные данные.';
 
   @override
+  String rateLimitExceeded(Object seconds) {
+    return 'Too many attempts. Try again in $seconds seconds.';
+  }
+
+  @override
   String get registerTitle => 'Регистрация';
 
   @override

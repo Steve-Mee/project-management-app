@@ -624,6 +624,11 @@ class AppLocalizationsZh extends AppLocalizations {
   String get loginFailedMessage => '登录失败。请检查凭据。';
 
   @override
+  String rateLimitExceeded(Object seconds) {
+    return 'Too many attempts. Try again in $seconds seconds.';
+  }
+
+  @override
   String get registerTitle => '注册';
 
   @override

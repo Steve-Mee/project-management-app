@@ -631,6 +631,11 @@ class AppLocalizationsHi extends AppLocalizations {
   String get loginFailedMessage => 'लॉगिन विफल। कृपया अपनी जानकारी जांचें।';
 
   @override
+  String rateLimitExceeded(Object seconds) {
+    return 'Too many attempts. Try again in $seconds seconds.';
+  }
+
+  @override
   String get registerTitle => 'रजिस्टर';
 
   @override

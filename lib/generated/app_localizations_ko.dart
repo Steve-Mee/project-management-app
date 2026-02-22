@@ -625,6 +625,11 @@ class AppLocalizationsKo extends AppLocalizations {
   String get loginFailedMessage => '로그인 실패. 자격 증명을 확인하세요.';
 
   @override
+  String rateLimitExceeded(Object seconds) {
+    return 'Too many attempts. Try again in $seconds seconds.';
+  }
+
+  @override
   String get registerTitle => '등록';
 
   @override

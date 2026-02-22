@@ -1720,6 +1720,31 @@
   "acceptFilterButtonLabel": "Accept Filter",
   "@acceptFilterButtonLabel": {
     "description": "Label for the accept filter button."
+  },
+  "searchUsersHint": "Search users by name...",
+  "@searchUsersHint": {
+    "description": "Hint text for user search input field."
+  },
+  "filterByRole": "Filter by role",
+  "@filterByRole": {
+    "description": "Label for role filter dropdown."
+  },
+  "filterByStatus": "Filter by status",
+  "@filterByStatus": {
+    "description": "Label for status filter dropdown."
+  },
+  "noUsersFound": "No users found",
+  "@noUsersFound": {
+    "description": "Message shown when no users match the search/filter criteria."
+  },
+  "usersCount": "{count} user(s)",
+  "@usersCount": {
+    "description": "Display count of users, with plural support.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
   }
 }
 }

@@ -1237,6 +1237,12 @@ abstract class AppLocalizations {
   /// **'Sign in failed. Check your credentials.'**
   String get loginFailedMessage;
 
+  /// Message shown when login rate limit is exceeded, with seconds parameter.
+  ///
+  /// In en, this message translates to:
+  /// **'Too many attempts. Try again in {seconds} seconds.'**
+  String rateLimitExceeded(Object seconds);
+
   /// Auto-generated description for registerTitle.
   ///
   /// In en, this message translates to:

@@ -80,6 +80,33 @@ class AuthState {
   }
 }
 
+/// Filter parameters for user search and filtering
+class UsersFilter {
+  final String? searchQuery;
+  final String? role;
+  final String? status;
+
+  const UsersFilter({
+    this.searchQuery,
+    this.role,
+    this.status,
+  });
+
+  UsersFilter copyWith({
+    String? searchQuery,
+    String? role,
+    String? status,
+  }) {
+    return UsersFilter(
+      searchQuery: searchQuery ?? this.searchQuery,
+      role: role ?? this.role,
+      status: status ?? this.status,
+    );
+  }
+
+  UsersFilter get empty => const UsersFilter();
+}
+
 /// Notifier for authentication with robust error handling
 class AuthNotifier extends AsyncNotifier<AuthState> {
   final CloudSyncService _cloudSync = CloudSyncService();
@@ -592,9 +619,72 @@ final useBiometricsProvider = AsyncNotifierProvider<UseBiometricsNotifier, bool>
   UseBiometricsNotifier.new,
 );
 
+/// Private helper method for searching users by query
+List<AppUser> _searchUsers(List<AppUser> users, String query) {
+  final trimmedQuery = query.trim();
+  if (trimmedQuery.isEmpty) {
+    AppLogger.instance.d('User search: empty query, returning all users (${users.length})');
+    return users;
+  }
+  
+  final lowerQuery = trimmedQuery.toLowerCase();
+  final filtered = users.where((user) => 
+    user.username.toLowerCase().contains(lowerQuery)
+  ).toList();
+  
+  AppLogger.instance.d('User search: query="$trimmedQuery", found ${filtered.length} of ${users.length} users');
+  return filtered;
+}
+
+/// Private helper method for filtering users by criteria
+List<AppUser> _filterUsers(List<AppUser> users, UsersFilter filter) {
+  var filtered = users;
+  
+  // Filter by search query (case-insensitive on username)
+  if (filter.searchQuery != null && filter.searchQuery!.trim().isNotEmpty) {
+    final query = filter.searchQuery!.trim().toLowerCase();
+    filtered = filtered.where((user) => 
+      user.username.toLowerCase().contains(query)
+    ).toList();
+  }
+  
+  // Filter by role (exact match)
+  if (filter.role != null && filter.role!.trim().isNotEmpty) {
+    final role = filter.role!.trim();
+    filtered = filtered.where((user) => user.roleId == role).toList();
+  }
+  
+  // Filter by status (exact match, if implemented)
+  if (filter.status != null && filter.status!.trim().isNotEmpty) {
+    // Status filtering not yet implemented in AppUser model
+    AppLogger.instance.d('User filter: status filtering requested but not implemented');
+  }
+  
+  AppLogger.instance.d('User filter: applied filters, found ${filtered.length} of ${users.length} users');
+  return filtered;
+}
+
 final authUsersProvider = FutureProvider<List<AppUser>>((ref) {
   final IAuthRepository repo = ref.watch(authRepositoryProvider);
   return repo.getUsers();
+});
+
+/// Family provider for searching users by query (case-insensitive on username)
+final searchUsersProvider = Provider.family<List<AppUser>, String>((ref, query) {
+  final usersAsync = ref.watch(authUsersProvider);
+  return usersAsync.maybeWhen(
+    data: (users) => _searchUsers(users, query),
+    orElse: () => <AppUser>[],
+  );
+});
+
+/// Family provider for filtering users by role and status
+final filteredUsersProvider = Provider.family<List<AppUser>, UsersFilter>((ref, filter) {
+  final usersAsync = ref.watch(authUsersProvider);
+  return usersAsync.maybeWhen(
+    data: (users) => _filterUsers(users, filter),
+    orElse: () => <AppUser>[],
+  );
 });
 
 /// Provider for current authenticated user
@@ -608,3 +698,187 @@ final currentUserProvider = FutureProvider<AppUser?>((ref) async {
   // repo is guaranteed non-null since provider returns a value
   return repo.getUserByUsername(authState.username!);
 });
+
+/// ============================================================================
+/// UI EXAMPLE CODE - User Search and Filter Components
+/// ============================================================================
+///
+/// This section provides reusable UI components that demonstrate usage of the
+/// searchUsersProvider and filteredUsersProvider family providers.
+///
+/// Example usage in a settings or user management screen:
+///
+/// ```dart
+/// class UserManagementScreen extends ConsumerStatefulWidget {
+///   const UserManagementScreen({super.key});
+///
+///   @override
+///   ConsumerState<UserManagementScreen> createState() => _UserManagementScreenState();
+/// }
+///
+/// class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
+///   final TextEditingController _searchController = TextEditingController();
+///   Timer? _debounceTimer;
+///   UsersFilter _currentFilter = const UsersFilter();
+///
+///   @override
+///   void dispose() {
+///     _searchController.dispose();
+///     _debounceTimer?.cancel();
+///     super.dispose();
+///   }
+///
+///   void _onSearchChanged(String query) {
+///     _debounceTimer?.cancel();
+///     _debounceTimer = Timer(const Duration(milliseconds: 300), () {
+///       setState(() {
+///         _currentFilter = _currentFilter.copyWith(searchQuery: query);
+///       });
+///     });
+///   }
+///
+///   @override
+///   Widget build(BuildContext context) {
+///     final l10n = AppLocalizations.of(context)!;
+///
+///     return Scaffold(
+///       appBar: AppBar(title: Text('User Management')),
+///       body: Column(
+///         children: [
+///           // Search TextField (debounced)
+///           Padding(
+///             padding: const EdgeInsets.all(16),
+///             child: TextField(
+///               controller: _searchController,
+///               decoration: InputDecoration(
+///                 hintText: l10n.searchUsersHint,
+///                 prefixIcon: const Icon(Icons.search),
+///                 border: const OutlineInputBorder(),
+///               ),
+///               onChanged: _onSearchChanged,
+///             ),
+///           ),
+///
+///           // Filter Row
+///           Padding(
+///             padding: const EdgeInsets.symmetric(horizontal: 16),
+///             child: Row(
+///               children: [
+///                 // Role Filter Dropdown
+///                 Expanded(
+///                   child: DropdownButtonFormField<String?>(
+///                     decoration: InputDecoration(
+///                       labelText: l10n.filterByRole,
+///                       border: const OutlineInputBorder(),
+///                     ),
+///                     value: _currentFilter.role,
+///                     items: [
+///                       const DropdownMenuItem(value: null, child: Text('All Roles')),
+///                       const DropdownMenuItem(value: 'role_admin', child: Text('Admin')),
+///                       const DropdownMenuItem(value: 'role_member', child: Text('Member')),
+///                       const DropdownMenuItem(value: 'role_viewer', child: Text('Viewer')),
+///                     ],
+///                     onChanged: (value) => setState(() {
+///                       _currentFilter = _currentFilter.copyWith(role: value);
+///                     }),
+///                   ),
+///                 ),
+///                 const SizedBox(width: 16),
+///                 // Status Filter Dropdown (placeholder for future implementation)
+///                 Expanded(
+///                   child: DropdownButtonFormField<String?>(
+///                     decoration: InputDecoration(
+///                       labelText: l10n.filterByStatus,
+///                       border: const OutlineInputBorder(),
+///                     ),
+///                     value: _currentFilter.status,
+///                     items: const [
+///                       DropdownMenuItem(value: null, child: Text('All Statuses')),
+///                       DropdownMenuItem(value: 'active', child: Text('Active')),
+///                       DropdownMenuItem(value: 'inactive', child: Text('Inactive')),
+///                     ],
+///                     onChanged: (value) => setState(() {
+///                       _currentFilter = _currentFilter.copyWith(status: value);
+///                     }),
+///                   ),
+///                 ),
+///               ],
+///             ),
+///           ),
+///
+///           // Users List with Consumer
+///           Expanded(
+///             child: Consumer(
+///               builder: (context, ref, child) {
+///                 final filteredUsers = ref.watch(filteredUsersProvider(_currentFilter));
+///
+///                 if (filteredUsers.isEmpty) {
+///                   return Center(
+///                     child: Text(
+///                       l10n.noUsersFound,
+///                       style: Theme.of(context).textTheme.bodyLarge,
+///                     ),
+///                   );
+///                 }
+///
+///                 return Column(
+///                   children: [
+///                     Padding(
+///                       padding: const EdgeInsets.all(16),
+///                       child: Text(
+///                         l10n.usersCount(filteredUsers.length),
+///                         style: Theme.of(context).textTheme.titleMedium,
+///                       ),
+///                     ),
+///                     Expanded(
+///                       child: ListView.builder(
+///                         itemCount: filteredUsers.length,
+///                         itemBuilder: (context, index) {
+///                           final user = filteredUsers[index];
+///                           return ListTile(
+///                             leading: const Icon(Icons.account_circle_outlined),
+///                             title: Text(user.username),
+///                             subtitle: Text('Role: ${user.roleId}'),
+///                           );
+///                         },
+///                       ),
+///                     ),
+///                   ],
+///                 );
+///               },
+///             ),
+///           ),
+///         ],
+///       ),
+///     );
+///   }
+/// }
+/// ```
+///
+/// Alternative simplified ConsumerWidget approach:
+///
+/// ```dart
+/// class FilteredUsersList extends ConsumerWidget {
+///   const FilteredUsersList({super.key});
+///
+///   @override
+///   Widget build(BuildContext context, WidgetRef ref) {
+///     final l10n = AppLocalizations.of(context)!;
+///     final currentFilter = ref.watch(someFilterStateProvider); // Your filter state
+///     final filteredUsers = ref.watch(filteredUsersProvider(currentFilter));
+///
+///     return filteredUsers.isEmpty
+///         ? Center(child: Text(l10n.noUsersFound))
+///         : ListView.builder(
+///             itemCount: filteredUsers.length,
+///             itemBuilder: (context, index) {
+///               final user = filteredUsers[index];
+///               return ListTile(
+///                 title: Text(user.username),
+///                 subtitle: Text(user.roleId),
+///               );
+///             },
+///           );
+///   }
+/// }
+/// ```
