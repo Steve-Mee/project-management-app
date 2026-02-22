@@ -36,7 +36,7 @@ class _AIChatScreenState extends ConsumerState<AIChatScreen> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    final chatState = ref.watch(aiChatProvider);
+    final asyncChatState = ref.watch(aiChatProvider);
     final canUseAi = ref.watch(hasPermissionProvider(AppPermissions.useAi));
 
     if (!canUseAi) {
@@ -48,73 +48,77 @@ class _AIChatScreenState extends ConsumerState<AIChatScreen> {
       );
     }
 
-    return Column(
-      children: [
-        // Chat messages
-        Expanded(
-          child: chatState.messages.isEmpty
-              ? Center(
-                  child: Text(
-                    l10n.noMessagesLabel,
-                    style: Theme.of(context).textTheme.bodyMedium,
+    return asyncChatState.when(
+      data: (chatState) => Column(
+        children: [
+          // Chat messages
+          Expanded(
+            child: chatState.messages.isEmpty
+                ? Center(
+                    child: Text(
+                      l10n.noMessagesLabel,
+                      style: Theme.of(context).textTheme.bodyMedium,
+                    ),
+                  )
+                : ListView.builder(
+                    padding: EdgeInsets.all(16.w),
+                    itemCount: chatState.messages.length,
+                    itemBuilder: (context, index) {
+                      final message = chatState.messages[index];
+                      return _buildChatBubble(context, message);
+                    },
                   ),
-                )
-              : ListView.builder(
-                  padding: EdgeInsets.all(16.w),
-                  itemCount: chatState.messages.length,
-                  itemBuilder: (context, index) {
-                    final message = chatState.messages[index];
-                    return _buildChatBubble(context, message);
-                  },
-                ),
-        ),
-
-        if (chatState.isLoading)
-          Padding(
-            padding: EdgeInsets.only(bottom: 8.h),
-            child: const CircularProgressIndicator(),
           ),
 
-        // Message input area
-        Container(
-          padding: EdgeInsets.all(16.w),
-          decoration: BoxDecoration(
-            border: Border(
-              top: BorderSide(
-                color: Theme.of(context).dividerColor,
+          if (chatState.isLoading)
+            Padding(
+              padding: EdgeInsets.only(bottom: 8.h),
+              child: const CircularProgressIndicator(),
+            ),
+
+          // Message input area
+          Container(
+            padding: EdgeInsets.all(16.w),
+            decoration: BoxDecoration(
+              border: Border(
+                top: BorderSide(
+                  color: Theme.of(context).dividerColor,
+                ),
               ),
             ),
-          ),
-          child: Row(
-            children: [
-              Expanded(
-                child: TextField(
-                  controller: _messageController,
-                  enabled: !chatState.isLoading,
-                  decoration: InputDecoration(
-                    hintText: l10n.typeMessageHint,
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(24.r),
+            child: Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _messageController,
+                    enabled: !chatState.isLoading,
+                    decoration: InputDecoration(
+                      hintText: l10n.typeMessageHint,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(24.r),
+                      ),
+                      contentPadding: EdgeInsets.symmetric(
+                        horizontal: 16.w,
+                        vertical: 12.h,
+                      ),
                     ),
-                    contentPadding: EdgeInsets.symmetric(
-                      horizontal: 16.w,
-                      vertical: 12.h,
-                    ),
+                    onSubmitted: (_) => _sendMessage(),
                   ),
-                  onSubmitted: (_) => _sendMessage(),
                 ),
-              ),
-              SizedBox(width: 8.w),
-              FloatingActionButton(
-                mini: true,
-                onPressed: chatState.isLoading ? null : _sendMessage,
-                tooltip: l10n.sendMessageTooltip,
-                child: const Icon(Icons.send),
-              ),
-            ],
+                SizedBox(width: 8.w),
+                FloatingActionButton(
+                  mini: true,
+                  onPressed: chatState.isLoading ? null : _sendMessage,
+                  tooltip: l10n.sendMessageTooltip,
+                  child: const Icon(Icons.send),
+                ),
+              ],
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (error, stack) => Center(child: Text('Error: $error')),
     );
   }
 

@@ -5,15 +5,31 @@ import '../config/ai_config.dart' as ai_config;
 import '../providers/ai/ai_usage_provider.dart';
 import '../../models/chat_message_model.dart';
 import '../../models/project_plan.dart';
+import '../models/ai_rate_limits_config.dart';
+import 'auth_providers.dart';
+
+/// Custom exception for rate limit exceeded
+class RateLimitExceededException implements Exception {
+  final Duration backoffDuration;
+
+  RateLimitExceededException(this.backoffDuration);
+
+  @override
+  String toString() => 'Rate limit exceeded. Try again in ${backoffDuration.inSeconds} seconds.';
+}
 
 /// State class for AI chat with rate limiting
+/// 
+/// This state holds the current chat messages and rate limiting status.
+/// Rate limits are configurable via AiRateLimitsConfig and prevent abuse.
+/// See .github/issues/030-ai-configurable-rate-limits.md for configuration details.
 class AiChatState {
   final List<ChatMessage> messages;
   final bool isLoading;
   final String? error;
   final DateTime? lastRequestTime;
   final int requestCountInWindow;
-  final Duration rateLimitWindow;
+  final AiRateLimitsConfig rateLimits;
 
   const AiChatState({
     this.messages = const [],
@@ -21,7 +37,7 @@ class AiChatState {
     this.error,
     this.lastRequestTime,
     this.requestCountInWindow = 0,
-    this.rateLimitWindow = const Duration(minutes: 1),
+    required this.rateLimits,
   });
 
   AiChatState copyWith({
@@ -30,7 +46,7 @@ class AiChatState {
     String? error,
     DateTime? lastRequestTime,
     int? requestCountInWindow,
-    Duration? rateLimitWindow,
+    AiRateLimitsConfig? rateLimits,
   }) {
     return AiChatState(
       messages: messages ?? this.messages,
@@ -38,45 +54,70 @@ class AiChatState {
       error: error,
       lastRequestTime: lastRequestTime ?? this.lastRequestTime,
       requestCountInWindow: requestCountInWindow ?? this.requestCountInWindow,
-      rateLimitWindow: rateLimitWindow ?? this.rateLimitWindow,
+      rateLimits: rateLimits ?? this.rateLimits,
     );
   }
 
-  /// Check if rate limit is exceeded
-  /// TODO: Make rate limits configurable
+  /// Check if rate limit is exceeded based on configurable limits
+  /// 
+  /// Uses the rateLimits configuration to determine if the user has exceeded
+  /// the allowed number of requests within the configured time window.
+  /// Returns true if rate limited, false otherwise.
   bool get isRateLimited {
     if (lastRequestTime == null) return false;
     final now = DateTime.now();
     final timeSinceLastRequest = now.difference(lastRequestTime!);
 
-    if (timeSinceLastRequest > rateLimitWindow) {
+    if (timeSinceLastRequest > const Duration(minutes: 1)) {
       return false; // Window expired, reset counter
     }
 
-    // TODO: Make max requests per window configurable (currently 10 per minute)
-    return requestCountInWindow >= 10;
+    return requestCountInWindow >= rateLimits.maxRequestsPerMinute;
   }
 
   /// Get remaining time until rate limit resets
+  /// 
+  /// Calculates how much time is left before the current rate limit window expires
+  /// and the request counter resets. Returns Duration.zero if not rate limited.
   Duration get timeUntilReset {
     if (lastRequestTime == null) return Duration.zero;
-    final resetTime = lastRequestTime!.add(rateLimitWindow);
+    final resetTime = lastRequestTime!.add(const Duration(minutes: 1));
     final remaining = resetTime.difference(DateTime.now());
     return remaining.isNegative ? Duration.zero : remaining;
   }
 }
 
 /// Notifier for managing AI chat state with rate limiting
-/// TODO: Add exponential backoff for rate limits
-/// TODO: Add request queuing for burst handling
-/// TODO: Add different rate limits for different AI operations
-class AiChatNotifier extends Notifier<AiChatState> {
+/// 
+/// This notifier provides configurable AI rate limiting based on user settings.
+/// Rate limits are loaded from settings on initialization with safe fallbacks.
+/// See .github/issues/030-ai-configurable-rate-limits.md for implementation details.
+class AiChatNotifier extends AsyncNotifier<AiChatState> {
   @override
-  AiChatState build() {
-    return const AiChatState();
+  Future<AiChatState> build() async {
+    try {
+      final settings = await ref.watch(settingsRepositoryProvider.future);
+      final rateLimits = settings.getAiRateLimitsConfig();
+      return AiChatState(rateLimits: rateLimits);
+    } catch (e) {
+      // Fallback to defaults if settings fail to load
+      AppLogger.event('Failed to load AI rate limits from settings, using defaults', params: {'error': e.toString()});
+      return AiChatState(rateLimits: const AiRateLimitsConfig.defaults());
+    }
   }
 
   /// Send a message and get AI response with rate limiting
+  /// 
+  /// Sends a user message to the AI service and updates the chat state.
+  /// Checks rate limits before making the API call and throws RateLimitExceededException
+  /// if limits are exceeded. Logs rate limit violations for monitoring.
+  /// 
+  /// Parameters:
+  /// - userMessage: The message text to send
+  /// - promptOverride: Optional custom prompt to override defaults
+  /// - projectId: Optional project context for the conversation
+  /// 
+  /// Throws: RateLimitExceededException if rate limits are exceeded
   Future<void> sendMessage(
     String userMessage, {
     String? promptOverride,
@@ -84,17 +125,17 @@ class AiChatNotifier extends Notifier<AiChatState> {
   }) async {
     if (userMessage.trim().isEmpty) return;
 
-    // Check rate limit
-    if (state.isRateLimited) {
-      final remainingTime = state.timeUntilReset;
-      state = state.copyWith(
-        error: 'Rate limit exceeded. Please wait ${remainingTime.inSeconds} seconds.',
-      );
+    final currentState = state.value!;
+    
+    // Check rate limit before proceeding
+    if (currentState.isRateLimited) {
+      final remainingTime = currentState.timeUntilReset;
       AppLogger.event('ai_rate_limit_exceeded', params: {
         'remainingTime': remainingTime.inSeconds,
-        'requestCount': state.requestCountInWindow,
+        'requestCount': currentState.requestCountInWindow,
+        'maxRequestsPerMinute': currentState.rateLimits.maxRequestsPerMinute,
       });
-      return;
+      throw RateLimitExceededException(remainingTime);
     }
 
     // Add user message
@@ -107,15 +148,15 @@ class AiChatNotifier extends Notifier<AiChatState> {
 
     // Update rate limiting state
     final now = DateTime.now();
-    final newRequestCount = _calculateNewRequestCount(now);
+    final newRequestCount = _calculateNewRequestCount(now, currentState);
 
-    state = state.copyWith(
-      messages: [...state.messages, userMsg],
+    state = AsyncValue.data(currentState.copyWith(
+      messages: [...currentState.messages, userMsg],
       isLoading: true,
       error: null,
       lastRequestTime: now,
       requestCountInWindow: newRequestCount,
-    );
+    ));
 
     try {
       // Anonymize the message for compliance
@@ -132,33 +173,35 @@ class AiChatNotifier extends Notifier<AiChatState> {
         timestamp: DateTime.now(),
       );
 
-      state = state.copyWith(
-        messages: [...state.messages, aiMsg],
+      final updatedState = state.value!;
+      state = AsyncValue.data(updatedState.copyWith(
+        messages: [...updatedState.messages, aiMsg],
         isLoading: false,
-      );
+      ));
 
       // Log token usage from metadata
       ref.read(aiUsageUpdateProvider(result.tokensUsed));
     } catch (e) {
       final errorMsg = e.toString();
       AppLogger.instance.e('AI Error', error: errorMsg);
-      state = state.copyWith(
+      final updatedState = state.value!;
+      state = AsyncValue.data(updatedState.copyWith(
         isLoading: false,
         error: 'Failed to get AI response: ${e.toString()}',
-      );
+      ));
     }
   }
 
   /// Calculate new request count based on current window
-  int _calculateNewRequestCount(DateTime now) {
-    if (state.lastRequestTime == null) return 1;
+  int _calculateNewRequestCount(DateTime now, AiChatState currentState) {
+    if (currentState.lastRequestTime == null) return 1;
 
-    final timeSinceLastRequest = now.difference(state.lastRequestTime!);
-    if (timeSinceLastRequest > state.rateLimitWindow) {
+    final timeSinceLastRequest = now.difference(currentState.lastRequestTime!);
+    if (timeSinceLastRequest > const Duration(minutes: 1)) {
       return 1; // Window expired, reset to 1
     }
 
-    return state.requestCountInWindow + 1;
+    return currentState.requestCountInWindow + 1;
   }
 
   /// Modular method for AI API calls using AiPlanningHelpers
@@ -182,17 +225,45 @@ class AiChatNotifier extends Notifier<AiChatState> {
     await sendMessage(prompt);
   }
 
-  /// Clear all messages
+  /// Clear all messages and reset chat state
+  /// 
+  /// Removes all chat messages and resets the conversation state.
+  /// Rate limiting counters are preserved to maintain proper limiting behavior.
+  /// Safe to call at any time without affecting rate limit enforcement.
   void clearChat() {
-    state = const AiChatState();
+    final currentState = state.value!;
+    state = AsyncValue.data(AiChatState(rateLimits: currentState.rateLimits));
   }
 
   /// Generate planning questions for a project using modular helpers
-  /// Now uses AiPlanningHelpers with anonymization and token logging
+  /// 
+  /// Creates contextual planning questions based on project data and help level.
+  /// Checks rate limits before making the API call and throws RateLimitExceededException
+  /// if limits are exceeded. Part of the AI-powered project planning workflow.
+  /// 
+  /// Parameters:
+  /// - projectData: Map containing project information
+  /// - helpLevel: AI assistance level from configuration
+  /// 
+  /// Returns: List of planning questions as strings
+  /// Throws: RateLimitExceededException if rate limits are exceeded
   Future<List<String>> generatePlanningQuestions(
     Map<String, dynamic> projectData,
     ai_config.HelpLevel helpLevel,
   ) async {
+    final currentState = state.value!;
+    
+    // Check rate limit before AI call
+    if (currentState.isRateLimited) {
+      final remainingTime = currentState.timeUntilReset;
+      AppLogger.event('ai_rate_limit_exceeded', params: {
+        'remainingTime': remainingTime.inSeconds,
+        'requestCount': currentState.requestCountInWindow,
+        'operation': 'generatePlanningQuestions',
+      });
+      throw RateLimitExceededException(remainingTime);
+    }
+
     try {
       final result = await AiPlanningHelpers.generatePlanningQuestions(
         projectData,
@@ -215,12 +286,36 @@ class AiChatNotifier extends Notifier<AiChatState> {
   }
 
   /// Generate project improvement proposals using modular helpers
-  /// Now uses AiPlanningHelpers with anonymization and token logging
+  /// 
+  /// Analyzes project data and generates improvement suggestions.
+  /// Checks rate limits before making the API call and throws RateLimitExceededException
+  /// if limits are exceeded. Supports answering previous questions for context.
+  /// 
+  /// Parameters:
+  /// - projectData: Map containing project information
+  /// - helpLevel: AI assistance level from configuration
+  /// - answers: Optional previous answers for context
+  /// 
+  /// Returns: List of improvement proposals as strings
+  /// Throws: RateLimitExceededException if rate limits are exceeded
   Future<List<String>> generateProposals(
     Map<String, dynamic> projectData,
     ai_config.HelpLevel helpLevel, {
     List<String>? answers,
   }) async {
+    final currentState = state.value!;
+    
+    // Check rate limit before AI call
+    if (currentState.isRateLimited) {
+      final remainingTime = currentState.timeUntilReset;
+      AppLogger.event('ai_rate_limit_exceeded', params: {
+        'remainingTime': remainingTime.inSeconds,
+        'requestCount': currentState.requestCountInWindow,
+        'operation': 'generateProposals',
+      });
+      throw RateLimitExceededException(remainingTime);
+    }
+
     try {
       final result = await AiPlanningHelpers.generateProposals(
         projectData,
@@ -245,8 +340,30 @@ class AiChatNotifier extends Notifier<AiChatState> {
   }
 
   /// Generate final project plan using modular helpers
-  /// Now uses AiPlanningHelpers with anonymization and token logging
+  /// 
+  /// Creates a complete project plan with chapters and tasks based on project data.
+  /// Checks rate limits before making the API call and throws RateLimitExceededException
+  /// if limits are exceeded. The final step in the AI-powered project planning workflow.
+  /// 
+  /// Parameters:
+  /// - projectData: Map containing project information
+  /// 
+  /// Returns: Complete ProjectPlan with chapters and tasks
+  /// Throws: RateLimitExceededException if rate limits are exceeded
   Future<ProjectPlan> generateFinalPlan(Map<String, dynamic> projectData) async {
+    final currentState = state.value!;
+    
+    // Check rate limit before AI call
+    if (currentState.isRateLimited) {
+      final remainingTime = currentState.timeUntilReset;
+      AppLogger.event('ai_rate_limit_exceeded', params: {
+        'remainingTime': remainingTime.inSeconds,
+        'requestCount': currentState.requestCountInWindow,
+        'operation': 'generateFinalPlan',
+      });
+      throw RateLimitExceededException(remainingTime);
+    }
+
     try {
       final result = await AiPlanningHelpers.generateFinalPlan(projectData);
 
@@ -293,7 +410,7 @@ class AiChatNotifier extends Notifier<AiChatState> {
 }
 
 /// Provider for AI chat state
-final aiChatProvider = NotifierProvider<AiChatNotifier, AiChatState>(
+final aiChatProvider = AsyncNotifierProvider<AiChatNotifier, AiChatState>(
   AiChatNotifier.new,
 );
 

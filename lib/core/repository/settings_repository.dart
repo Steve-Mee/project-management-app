@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+import '../models/ai_rate_limits_config.dart';
+import '../services/app_logger.dart';
 
 /// Repository for app settings persisted with Hive.
 class SettingsRepository {
@@ -15,6 +17,7 @@ class SettingsRepository {
   static const String _aiConsentEnabledKey = 'ai_consent_enabled';
   static const String _useBiometricsKey = 'use_biometrics_enabled';
   static const String _enableBiometricLoginKey = 'enable_biometric_login';
+  static const String _aiRateLimitsKey = 'ai_rate_limits';
 
   Future<void> initialize() async {
     await Hive.initFlutter();
@@ -145,5 +148,33 @@ class SettingsRepository {
 
   Future<void> setEnableBiometricLogin(bool enabled) async {
     await _box.put(_enableBiometricLoginKey, enabled);
+  }
+
+  AiRateLimitsConfig getAiRateLimitsConfig() {
+    final value = _box.get(_aiRateLimitsKey);
+    if (value is Map<String, dynamic>) {
+      try {
+        final config = AiRateLimitsConfig.fromJson(value);
+        // Validate and clamp values using the centralized validation helper
+        final validatedConfig = AiRateLimitsConfig.validateAiRateLimits(config);
+        if (validatedConfig != config) {
+          AppLogger.event('AI rate limits config contained invalid values, clamping to valid ranges');
+        }
+        return validatedConfig;
+      } catch (e) {
+        AppLogger.event('Invalid AI rate limits config in settings, using defaults', params: {'error': e.toString()});
+        return const AiRateLimitsConfig.defaults();
+      }
+    }
+    // Migration: return defaults for existing users
+    return const AiRateLimitsConfig.defaults();
+  }
+
+  Future<void> setAiRateLimitsConfig(AiRateLimitsConfig config) async {
+    final validatedConfig = AiRateLimitsConfig.validateAiRateLimits(config);
+    if (validatedConfig != config) {
+      AppLogger.event('AI rate limits config contained invalid values when saving, clamping to valid ranges');
+    }
+    await _box.put(_aiRateLimitsKey, validatedConfig.toJson());
   }
 }

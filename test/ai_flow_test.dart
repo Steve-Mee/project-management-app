@@ -35,7 +35,7 @@ class FakeTaskNotifier extends TaskNotifier {
 
 class FakeAiChatNotifier extends AiChatNotifier {
   @override
-  AiChatState build() => const AiChatState();
+  Future<AiChatState> build() async => const AiChatState();
 
   @override
   Future<void> sendMessage(
@@ -50,11 +50,11 @@ class FakeAiChatNotifier extends AiChatNotifier {
       timestamp: DateTime.now(),
     );
 
-    state = state.copyWith(
-      messages: [...state.messages, userMsg],
+    state = AsyncValue.data(state.value!.copyWith(
+      messages: [...state.value!.messages, userMsg],
       isLoading: true,
       error: null,
-    );
+    ));
 
     const taskTitle = 'New task';
     if (projectId != null && projectId.isNotEmpty) {
@@ -79,10 +79,10 @@ class FakeAiChatNotifier extends AiChatNotifier {
       timestamp: DateTime.now(),
     );
 
-    state = state.copyWith(
-      messages: [...state.messages, aiMsg],
+    state = AsyncValue.data(state.value!.copyWith(
+      messages: [...state.value!.messages, aiMsg],
       isLoading: false,
-    );
+    ));
   }
 }
 
@@ -131,7 +131,7 @@ void main() {
     expect(tasks.any((task) => task.title == 'New task'), true);
     final chatState = container.read(aiChatProvider);
     expect(
-      chatState.messages.any(
+      chatState.value!.messages.any(
         (message) => message.content == 'Taak aangemaakt: New task',
       ),
       true,

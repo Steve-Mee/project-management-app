@@ -1360,6 +1360,31 @@
         "type": "String"
       }
     }
+  },
+  "ai_rate_limits_title": "AI Snelheidslimieten",
+  "@ai_rate_limits_title": {
+    "description": "Title for AI rate limits settings section."
+  },
+  "max_requests_per_minute": "Max verzoeken per minuut",
+  "@max_requests_per_minute": {
+    "description": "Label for maximum AI requests per minute setting."
+  },
+  "cooldown_seconds": "Afkoelperiode (seconden)",
+  "@cooldown_seconds": {
+    "description": "Label for cooldown period after rate limit is exceeded."
+  },
+  "rate_limit_exceeded": "Snelheidslimiet overschreden. Wacht {seconds} seconden.",
+  "@rate_limit_exceeded": {
+    "description": "Error message when rate limit is exceeded, with seconds placeholder.",
+    "placeholders": {
+      "seconds": {
+        "type": "int"
+      }
+    }
+  },
+  "ai_config_saved": "AI configuratie succesvol opgeslagen",
+  "@ai_config_saved": {
+    "description": "Success message when AI rate limits are saved."
   }
 }
 }
