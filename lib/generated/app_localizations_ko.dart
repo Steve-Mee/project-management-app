@@ -1235,6 +1235,21 @@ class AppLocalizationsKo extends AppLocalizations {
   String get acceptFilterButtonLabel => 'Accept Filter';
 
   @override
+  String get ai_per_operation_limits => 'Per-Operation Rate Limits';
+
+  @override
+  String get limit_for_chat => 'Chat limit';
+
+  @override
+  String get limit_for_summarize => 'Summarize limit';
+
+  @override
+  String get limit_for_generate_tasks => 'Generate tasks limit';
+
+  @override
+  String get per_op_limit_saved => 'Per-operation limits saved';
+
+  @override
   String get undoTooltip => 'Undo last dashboard change';
 
   @override

@@ -2,7 +2,7 @@
 //
 // This model defines configurable rate limits for AI operations.
 // See .github/issues/030-ai-configurable-rate-limits.md for requirements.
-//
+// See .github/issues/034-ai-per-operation-rate-limits.md for per-operation limits.
 import '../services/app_logger.dart';
 
 class AiRateLimitsConfig {
@@ -16,6 +16,7 @@ class AiRateLimitsConfig {
   final Duration backoffBaseDelay;
   final Duration backoffMaxDelay;
   final int maxRetryAttempts;
+  final Map<String, int> perOperationLimits;
 
   /// Validates and clamps AI rate limits configuration to safe ranges.
   ///
@@ -45,6 +46,15 @@ class AiRateLimitsConfig {
     if (maxRetryAttempts < 0 || maxRetryAttempts > 10) {
       AppLogger.warning('Invalid maxRetryAttempts', params: {'value': maxRetryAttempts, 'action': 'clamping to 0-10 range'});
     }
+    // Validate per-operation limits
+    final validatedPerOperationLimits = <String, int>{};
+    for (final entry in config.perOperationLimits.entries) {
+      final clampedValue = entry.value.clamp(1, 1000);
+      if (entry.value != clampedValue) {
+        AppLogger.warning('Invalid perOperationLimit for ${entry.key}', params: {'value': entry.value, 'action': 'clamping to $clampedValue'});
+      }
+      validatedPerOperationLimits[entry.key] = clampedValue;
+    }
     return AiRateLimitsConfig(
       maxRequestsPerMinute: config.maxRequestsPerMinute.clamp(1, 1000),
       maxRequestsPerHour: config.maxRequestsPerHour.clamp(1, 10000),
@@ -56,6 +66,7 @@ class AiRateLimitsConfig {
       backoffBaseDelay: backoffBaseDelay < minBaseDelay ? minBaseDelay : backoffBaseDelay > maxBaseDelay ? maxBaseDelay : backoffBaseDelay,
       backoffMaxDelay: backoffMaxDelay < minMaxDelay ? minMaxDelay : backoffMaxDelay > maxMaxDelay ? maxMaxDelay : backoffMaxDelay,
       maxRetryAttempts: maxRetryAttempts.clamp(0, 10),
+      perOperationLimits: validatedPerOperationLimits,
     );
   }
 
@@ -70,6 +81,14 @@ class AiRateLimitsConfig {
     required this.backoffBaseDelay,
     required this.backoffMaxDelay,
     required this.maxRetryAttempts,
+    this.perOperationLimits = const {
+      'chat': 15,
+      'generate_questions': 8,
+      'generate_proposals': 6,
+      'generate_plan': 4,
+      'parse_filter': 10,
+      'summarize': 5,
+    },
   });
 
   const AiRateLimitsConfig.defaults()
@@ -82,7 +101,15 @@ class AiRateLimitsConfig {
         timeWindowDuration = const Duration(minutes: 1),
         backoffBaseDelay = const Duration(milliseconds: 500),
         backoffMaxDelay = const Duration(seconds: 30),
-        maxRetryAttempts = 3;
+        maxRetryAttempts = 3,
+        perOperationLimits = const {
+          'chat': 15,
+          'generate_questions': 8,
+          'generate_proposals': 6,
+          'generate_plan': 4,
+          'parse_filter': 10,
+          'summarize': 5,
+        };
 
   AiRateLimitsConfig copyWith({
     int? maxRequestsPerMinute,
@@ -95,6 +122,7 @@ class AiRateLimitsConfig {
     Duration? backoffBaseDelay,
     Duration? backoffMaxDelay,
     int? maxRetryAttempts,
+    Map<String, int>? perOperationLimits,
   }) {
     return AiRateLimitsConfig(
       maxRequestsPerMinute: maxRequestsPerMinute ?? this.maxRequestsPerMinute,
@@ -107,6 +135,7 @@ class AiRateLimitsConfig {
       backoffBaseDelay: backoffBaseDelay ?? this.backoffBaseDelay,
       backoffMaxDelay: backoffMaxDelay ?? this.backoffMaxDelay,
       maxRetryAttempts: maxRetryAttempts ?? this.maxRetryAttempts,
+      perOperationLimits: perOperationLimits ?? this.perOperationLimits,
     );
   }
 
@@ -122,6 +151,17 @@ class AiRateLimitsConfig {
       backoffBaseDelay: Duration(milliseconds: json['backoffBaseDelayMs'] as int? ?? 500),
       backoffMaxDelay: Duration(seconds: json['backoffMaxDelaySeconds'] as int? ?? 30),
       maxRetryAttempts: json['maxRetryAttempts'] as int? ?? 3,
+      perOperationLimits: (json['perOperationLimits'] as Map<String, dynamic>?)?.map(
+            (key, value) => MapEntry(key, value as int),
+          ) ??
+          const {
+            'chat': 15,
+            'generate_questions': 8,
+            'generate_proposals': 6,
+            'generate_plan': 4,
+            'parse_filter': 10,
+            'summarize': 5,
+          },
     );
   }
 
@@ -137,12 +177,13 @@ class AiRateLimitsConfig {
       'backoffBaseDelayMs': backoffBaseDelay.inMilliseconds,
       'backoffMaxDelaySeconds': backoffMaxDelay.inSeconds,
       'maxRetryAttempts': maxRetryAttempts,
+      'perOperationLimits': perOperationLimits,
     };
   }
 
   @override
   String toString() {
-    return 'AiRateLimitsConfig(maxRequestsPerMinute: $maxRequestsPerMinute, maxRequestsPerHour: $maxRequestsPerHour, maxRequestsPerDay: $maxRequestsPerDay, maxTokensPerRequest: $maxTokensPerRequest, maxTotalTokensPerDay: $maxTotalTokensPerDay, maxRequestsPerWindow: $maxRequestsPerWindow, timeWindowDuration: $timeWindowDuration, backoffBaseDelay: $backoffBaseDelay, backoffMaxDelay: $backoffMaxDelay, maxRetryAttempts: $maxRetryAttempts)';
+    return 'AiRateLimitsConfig(maxRequestsPerMinute: $maxRequestsPerMinute, maxRequestsPerHour: $maxRequestsPerHour, maxRequestsPerDay: $maxRequestsPerDay, maxTokensPerRequest: $maxTokensPerRequest, maxTotalTokensPerDay: $maxTotalTokensPerDay, maxRequestsPerWindow: $maxRequestsPerWindow, timeWindowDuration: $timeWindowDuration, backoffBaseDelay: $backoffBaseDelay, backoffMaxDelay: $backoffMaxDelay, maxRetryAttempts: $maxRetryAttempts, perOperationLimits: $perOperationLimits)';
   }
 
   @override
@@ -158,7 +199,8 @@ class AiRateLimitsConfig {
         other.timeWindowDuration == timeWindowDuration &&
         other.backoffBaseDelay == backoffBaseDelay &&
         other.backoffMaxDelay == backoffMaxDelay &&
-        other.maxRetryAttempts == maxRetryAttempts;
+        other.maxRetryAttempts == maxRetryAttempts &&
+        other.perOperationLimits == perOperationLimits;
   }
 
   @override
@@ -172,7 +214,8 @@ class AiRateLimitsConfig {
         timeWindowDuration.hashCode ^
         backoffBaseDelay.hashCode ^
         backoffMaxDelay.hashCode ^
-        maxRetryAttempts.hashCode;
+        maxRetryAttempts.hashCode ^
+        perOperationLimits.hashCode;
   }
 }
 

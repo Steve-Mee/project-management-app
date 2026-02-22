@@ -1188,4 +1188,94 @@ class _AiSettingsSection extends ConsumerWidget {
       ],
     );
   }
+
+  // TODO: Implement these methods for per-operation rate limits UI
+  /*
+  /// Build dynamic list of operation-specific rate limit controls
+  List<Widget> _buildPerOperationLimitControls(BuildContext context, WidgetRef ref, AppLocalizations l10n) {
+    final rateLimitsAsync = ref.watch(settingsRepositoryProvider);
+    
+    return rateLimitsAsync.maybeWhen(
+      data: (settings) {
+        final config = settings.getAiRateLimitsConfig();
+        final operations = config.perOperationLimits.keys.toList()..sort();
+        
+        return operations.map((operation) {
+          final currentLimit = config.perOperationLimits[operation] ?? config.maxRequestsPerWindow;
+          final displayName = _getOperationDisplayName(operation, l10n);
+          
+          return ListTile(
+            title: Text(displayName),
+            subtitle: Text('Current limit: $currentLimit requests per window'),
+            trailing: SizedBox(
+              width: 120,
+              child: TextFormField(
+                initialValue: currentLimit.toString(),
+                keyboardType: TextInputType.number,
+                textAlign: TextAlign.center,
+                decoration: const InputDecoration(
+                  border: OutlineInputBorder(),
+                  contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                ),
+                onChanged: (value) => _updateOperationLimit(ref, operation, value, context, l10n),
+              ),
+            ),
+          );
+        }).toList();
+      },
+      orElse: () => [const SizedBox.shrink()],
+    );
+  }
+
+  /// Get localized display name for operation
+  String _getOperationDisplayName(String operation, AppLocalizations l10n) {
+    switch (operation) {
+      case 'chat':
+        return l10n.limit_for_chat;
+      case 'summarize':
+        return l10n.limit_for_summarize;
+      case 'generate_questions':
+      case 'generate_proposals':
+      case 'generate_plan':
+        return l10n.limit_for_generate_tasks;
+      default:
+        return operation.replaceAll('_', ' ').toUpperCase();
+    }
+  }
+
+  /// Update per-operation limit
+  void _updateOperationLimit(WidgetRef ref, String operation, String value, BuildContext context, AppLocalizations l10n) {
+    final limit = int.tryParse(value);
+    if (limit == null || limit < 1) return;
+    
+    final settingsAsync = ref.read(settingsRepositoryProvider);
+    settingsAsync.maybeWhen(
+      data: (settings) async {
+        final currentConfig = settings.getAiRateLimitsConfig();
+        final updatedLimits = Map<String, int>.from(currentConfig.perOperationLimits);
+        updatedLimits[operation] = limit;
+        
+        final updatedConfig = currentConfig.copyWith(perOperationLimits: updatedLimits);
+        await ref.read(settingsRepositoryProvider.notifier).updateAiRateLimitsConfig(updatedConfig);
+        
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(l10n.per_op_limit_saved)),
+          );
+        }
+      },
+      orElse: () {},
+    );
+  }
+
+  /// Reset per-operation limits to defaults
+  void _resetPerOperationLimitsToDefaults(WidgetRef ref, BuildContext context, AppLocalizations l10n) {
+    final defaultConfig = const AiRateLimitsConfig.defaults();
+    ref.read(settingsRepositoryProvider.notifier).updateAiRateLimitsConfig(defaultConfig);
+    
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(l10n.per_op_limit_saved)),
+    );
+  }
+  */
 }

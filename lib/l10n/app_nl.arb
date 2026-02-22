@@ -1210,6 +1210,26 @@
   "@acceptFilterButtonLabel": {
     "description": "Label for the accept filter button."
   },
+  "ai_per_operation_limits": "Per-Operatie Snelheidslimieten",
+  "@ai_per_operation_limits": {
+    "description": "Section title for per-operation AI rate limits settings."
+  },
+  "limit_for_chat": "Chat limiet",
+  "@limit_for_chat": {
+    "description": "Label for chat operation rate limit setting."
+  },
+  "limit_for_summarize": "Samenvatten limiet",
+  "@limit_for_summarize": {
+    "description": "Label for summarize operation rate limit setting."
+  },
+  "limit_for_generate_tasks": "Taken genereren limiet",
+  "@limit_for_generate_tasks": {
+    "description": "Label for generate tasks operation rate limit setting."
+  },
+  "per_op_limit_saved": "Per-operatie limieten opgeslagen",
+  "@per_op_limit_saved": {
+    "description": "Confirmation message when per-operation rate limits are saved."
+  },
   "offline_mode": "Offline Modus",
   "@offline_mode": {
     "description": "Indicator text when the app is in offline mode."

@@ -1245,6 +1245,21 @@ class AppLocalizationsNl extends AppLocalizations {
   String get acceptFilterButtonLabel => 'Filter Accepteren';
 
   @override
+  String get ai_per_operation_limits => 'Per-Operatie Snelheidslimieten';
+
+  @override
+  String get limit_for_chat => 'Chat limiet';
+
+  @override
+  String get limit_for_summarize => 'Samenvatten limiet';
+
+  @override
+  String get limit_for_generate_tasks => 'Taken genereren limiet';
+
+  @override
+  String get per_op_limit_saved => 'Per-operatie limieten opgeslagen';
+
+  @override
   String get undoTooltip => 'Undo last dashboard change';
 
   @override

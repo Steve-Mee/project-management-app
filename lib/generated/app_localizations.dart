@@ -2377,6 +2377,36 @@ abstract class AppLocalizations {
   /// **'Accept Filter'**
   String get acceptFilterButtonLabel;
 
+  /// Section title for per-operation AI rate limits settings.
+  ///
+  /// In en, this message translates to:
+  /// **'Per-Operation Rate Limits'**
+  String get ai_per_operation_limits;
+
+  /// Label for chat operation rate limit setting.
+  ///
+  /// In en, this message translates to:
+  /// **'Chat limit'**
+  String get limit_for_chat;
+
+  /// Label for summarize operation rate limit setting.
+  ///
+  /// In en, this message translates to:
+  /// **'Summarize limit'**
+  String get limit_for_summarize;
+
+  /// Label for generate tasks operation rate limit setting.
+  ///
+  /// In en, this message translates to:
+  /// **'Generate tasks limit'**
+  String get limit_for_generate_tasks;
+
+  /// Confirmation message when per-operation rate limits are saved.
+  ///
+  /// In en, this message translates to:
+  /// **'Per-operation limits saved'**
+  String get per_op_limit_saved;
+
   /// Tooltip for the undo button in the dashboard toolbar.
   ///
   /// In en, this message translates to:

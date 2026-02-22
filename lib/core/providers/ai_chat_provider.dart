@@ -28,12 +28,13 @@ class RateLimitExceededException implements Exception {
 /// This state holds the current chat messages and rate limiting status.
 /// Rate limits are configurable via AiRateLimitsConfig and prevent abuse.
 /// See .github/issues/030-ai-configurable-rate-limits.md for configuration details.
+/// See .github/issues/034-ai-per-operation-rate-limits.md for per-operation limits.
 class AiChatState {
   final List<ChatMessage> messages;
   final bool isLoading;
   final String? error;
   final DateTime? lastRequestTime;
-  final int requestCountInWindow;
+  final Map<String, int> requestCountInWindow; // Changed to Map for per-operation tracking
   final AiRateLimitsConfig rateLimits;
 
   const AiChatState({
@@ -41,7 +42,7 @@ class AiChatState {
     this.isLoading = false,
     this.error,
     this.lastRequestTime,
-    this.requestCountInWindow = 0,
+    this.requestCountInWindow = const {}, // Default empty map
     required this.rateLimits,
   });
 
@@ -50,7 +51,7 @@ class AiChatState {
     bool? isLoading,
     String? error,
     DateTime? lastRequestTime,
-    int? requestCountInWindow,
+    Map<String, int>? requestCountInWindow,
     AiRateLimitsConfig? rateLimits,
   }) {
     return AiChatState(
@@ -83,7 +84,25 @@ class AiChatState {
 
     // Safe fallback: use default 10 if maxRequestsPerWindow is invalid
     final maxRequests = rateLimits.maxRequestsPerWindow <= 0 ? 10 : rateLimits.maxRequestsPerWindow;
-    return requestCountInWindow >= maxRequests;
+    return requestCountInWindow.values.fold(0, (sum, count) => sum + count) >= maxRequests;
+  }
+
+  /// Check if specific operation is rate limited
+  ///
+  /// Uses per-operation limits from perOperationLimits map, falling back to global limit.
+  /// See .github/issues/034-ai-per-operation-rate-limits.md for per-operation limits.
+  bool isOperationRateLimited(String operation) {
+    if (lastRequestTime == null) return false;
+    final now = DateTime.now();
+    final timeSinceLastRequest = now.difference(lastRequestTime!);
+
+    if (timeSinceLastRequest > rateLimits.timeWindowDuration) {
+      return false; // Window expired, reset counter
+    }
+
+    final limit = _getLimitForOperation(operation);
+    final operationCount = requestCountInWindow[operation] ?? 0;
+    return operationCount >= limit;
   }
 
   /// Get remaining time until rate limit resets
@@ -96,6 +115,15 @@ class AiChatState {
     final remaining = resetTime.difference(DateTime.now());
     return remaining.isNegative ? Duration.zero : remaining;
   }
+
+  /// Get the rate limit for a specific operation
+  ///
+  /// Returns the per-operation limit if configured, otherwise falls back to global limit.
+  /// This centralizes limit access and ensures consistent fallback behavior.
+  /// See .github/issues/034-ai-per-operation-rate-limits.md for per-operation limits.
+  int _getLimitForOperation(String operation) {
+    return rateLimits.perOperationLimits[operation] ?? rateLimits.maxRequestsPerWindow;
+  }
 }
 
 /// Notifier for managing AI chat state with rate limiting and request queuing
@@ -103,14 +131,15 @@ class AiChatState {
 /// This notifier provides configurable AI rate limiting based on user settings.
 /// Rate limits are loaded from settings on initialization with safe fallbacks.
 /// See .github/issues/030-ai-configurable-rate-limits.md for rate limiting details.
+/// See .github/issues/034-ai-per-operation-rate-limits.md for per-operation limits.
 ///
 /// Implements request queuing to handle AI API bursts without immediate errors.
 /// Background worker processes queued requests when rate limits allow.
 /// See .github/issues/033-ai-request-queue.md for queue implementation details.
 ///
 /// Features:
-/// - Sliding window rate limiting with configurable limits
-/// - Exponential backoff retry for throttling errors
+/// - Sliding window rate limiting with configurable limits per operation
+/// - Exponential backoff retry for throttling errors per operation
 /// - In-memory request queue with optional Hive persistence
 /// - Queue metrics tracking (processed, dropped, queue length)
 /// - Automatic queue size management (max 50 requests)
@@ -144,6 +173,8 @@ class AiChatNotifier extends AsyncNotifier<AiChatState> {
   // Queue metrics for monitoring and analytics
   int _processedToday = 0;
   int _droppedCount = 0;
+  final Map<String, int> _operationProcessedToday = {};
+  final Map<String, int> _operationDroppedCount = {};
   DateTime? _lastMetricsReset;
 
   /// Get current queue metrics for monitoring
@@ -168,6 +199,8 @@ class AiChatNotifier extends AsyncNotifier<AiChatState> {
         now.year != _lastMetricsReset!.year) {
       _processedToday = 0;
       _droppedCount = 0;
+      _operationProcessedToday.clear();
+      _operationDroppedCount.clear();
       _lastMetricsReset = now;
     }
   }
@@ -298,14 +331,17 @@ class AiChatNotifier extends AsyncNotifier<AiChatState> {
     final currentState = state.value!;
 
     // Check rate limit - if exceeded, enqueue anyway (queue will wait)
-    final isCurrentlyLimited = currentState.isRateLimited;
+    final isCurrentlyLimited = currentState.isOperationRateLimited('chat');
     if (isCurrentlyLimited) {
       final remainingTime = currentState.timeUntilReset;
+      final limit = _getLimitForOperation('chat');
+      final chatCount = currentState.requestCountInWindow['chat'] ?? 0;
       AppLogger.event('ai_rate_limit_exceeded_queued', params: {
         'remainingTime': remainingTime.inSeconds,
-        'requestCount': currentState.requestCountInWindow,
-        'maxRequestsPerWindow': currentState.rateLimits.maxRequestsPerWindow,
+        'requestCount': chatCount,
+        'maxRequestsPerWindow': limit,
         'timeWindowDuration': currentState.rateLimits.timeWindowDuration.inSeconds,
+        'operation': 'chat',
       });
     }
 
@@ -319,14 +355,14 @@ class AiChatNotifier extends AsyncNotifier<AiChatState> {
 
     // Update UI state with loading
     final now = DateTime.now();
-    final newRequestCount = _calculateNewRequestCount(now, currentState);
+    final newRequestCounts = _calculateNewRequestCounts(now, currentState, 'chat');
 
     state = AsyncValue.data(currentState.copyWith(
       messages: [...currentState.messages, userMsg],
       isLoading: true,
       error: null,
       lastRequestTime: now,
-      requestCountInWindow: newRequestCount,
+      requestCountInWindow: newRequestCounts,
     ));
 
     // Create and enqueue the request
@@ -476,16 +512,33 @@ class AiChatNotifier extends AsyncNotifier<AiChatState> {
   /// }
   /// ```
 
-  /// Calculate new request count based on current window
-  int _calculateNewRequestCount(DateTime now, AiChatState currentState) {
-    if (currentState.lastRequestTime == null) return 1;
+  /// Calculate new request counts based on current window for specific operation
+  Map<String, int> _calculateNewRequestCounts(DateTime now, AiChatState currentState, String operation) {
+    if (currentState.lastRequestTime == null) {
+      return {operation: 1};
+    }
 
     final timeSinceLastRequest = now.difference(currentState.lastRequestTime!);
     if (timeSinceLastRequest > currentState.rateLimits.timeWindowDuration) {
-      return 1; // Window expired, reset to 1
+      // Window expired, reset all counters
+      return {operation: 1};
     }
 
-    return currentState.requestCountInWindow + 1;
+    // Increment the specific operation's counter
+    final newCounts = Map<String, int>.from(currentState.requestCountInWindow);
+    newCounts[operation] = (newCounts[operation] ?? 0) + 1;
+    return newCounts;
+  }
+
+  /// Get the rate limit for a specific AI operation
+  ///
+  /// Returns the configured limit for the operation from perOperationLimits,
+  /// falling back to the global maxRequestsPerWindow for unknown operations.
+  /// Ensures graceful fallback for operations not explicitly configured.
+  /// See .github/issues/034-ai-per-operation-rate-limits.md
+  int _getLimitForOperation(String operation) {
+    final currentState = state.value!;
+    return currentState.rateLimits.perOperationLimits[operation] ?? currentState.rateLimits.maxRequestsPerWindow;
   }
 
   Future<AiApiResult<String>> _callAiWithAnonymizedPrompt(String prompt) async {
@@ -626,12 +679,15 @@ class AiChatNotifier extends AsyncNotifier<AiChatState> {
     final currentState = state.value!;
 
     // Log if currently rate limited (queue will handle waiting)
-    if (currentState.isRateLimited) {
+    if (currentState.isOperationRateLimited('generate_questions')) {
       final remainingTime = currentState.timeUntilReset;
+      final limit = _getLimitForOperation('generate_questions');
+      final questionCount = currentState.requestCountInWindow['generate_questions'] ?? 0;
       AppLogger.event('ai_rate_limit_exceeded_queued', params: {
         'remainingTime': remainingTime.inSeconds,
-        'requestCount': currentState.requestCountInWindow,
-        'operation': 'generatePlanningQuestions',
+        'requestCount': questionCount,
+        'maxRequestsPerWindow': limit,
+        'operation': 'generate_questions',
       });
     }
 
@@ -689,12 +745,15 @@ class AiChatNotifier extends AsyncNotifier<AiChatState> {
     final currentState = state.value!;
 
     // Log if currently rate limited (queue will handle waiting)
-    if (currentState.isRateLimited) {
+    if (currentState.isOperationRateLimited('generate_proposals')) {
       final remainingTime = currentState.timeUntilReset;
+      final limit = _getLimitForOperation('generate_proposals');
+      final proposalCount = currentState.requestCountInWindow['generate_proposals'] ?? 0;
       AppLogger.event('ai_rate_limit_exceeded_queued', params: {
         'remainingTime': remainingTime.inSeconds,
-        'requestCount': currentState.requestCountInWindow,
-        'operation': 'generateProposals',
+        'requestCount': proposalCount,
+        'maxRequestsPerWindow': limit,
+        'operation': 'generate_proposals',
       });
     }
 
@@ -748,12 +807,15 @@ class AiChatNotifier extends AsyncNotifier<AiChatState> {
     final currentState = state.value!;
 
     // Log if currently rate limited (queue will handle waiting)
-    if (currentState.isRateLimited) {
+    if (currentState.isOperationRateLimited('generate_plan')) {
       final remainingTime = currentState.timeUntilReset;
+      final limit = _getLimitForOperation('generate_plan');
+      final planCount = currentState.requestCountInWindow['generate_plan'] ?? 0;
       AppLogger.event('ai_rate_limit_exceeded_queued', params: {
         'remainingTime': remainingTime.inSeconds,
-        'requestCount': currentState.requestCountInWindow,
-        'operation': 'generateFinalPlan',
+        'requestCount': planCount,
+        'maxRequestsPerWindow': limit,
+        'operation': 'generate_plan',
       });
     }
 
@@ -820,19 +882,46 @@ class AiChatNotifier extends AsyncNotifier<AiChatState> {
   /// Background worker method that processes pending requests from the queue.
   /// Respects rate limiter and uses exponential backoff from issue 032.
   /// See .github/issues/033-ai-request-queue.md for queue integration.
+  /// See .github/issues/034-ai-per-operation-rate-limits.md for per-operation limits.
   Future<void> _processQueue() async {
     if (_requestQueue.isEmpty) return;
 
     final currentState = state.value!;
-    if (currentState.isRateLimited) return; // Wait for rate limit to reset
-
+    
     // Sort by priority (higher first) then timestamp (older first)
     _requestQueue.sort((a, b) {
       if (a.priority != b.priority) return b.priority.compareTo(a.priority);
       return a.timestamp.compareTo(b.timestamp);
     });
 
-    final request = _requestQueue.removeAt(0);
+    final request = _requestQueue.first; // Peek at the next request
+    if (currentState.isOperationRateLimited(request.action)) {
+      // Apply per-operation exponential backoff
+      final limit = _getLimitForOperation(request.action);
+      final operationCount = currentState.requestCountInWindow[request.action] ?? 0;
+      
+      // Calculate backoff delay using exponential backoff formula
+      final baseDelay = currentState.rateLimits.backoffBaseDelay;
+      final maxDelay = currentState.rateLimits.backoffMaxDelay;
+      final excessRequests = operationCount - limit + 1; // How many over the limit
+      final calculatedDelay = baseDelay * pow(2, excessRequests.clamp(0, 10)); // Cap exponent
+      final clampedDelay = calculatedDelay > maxDelay ? maxDelay : calculatedDelay;
+      final delay = Duration(milliseconds: (Random().nextDouble() * clampedDelay.inMilliseconds).round());
+      
+      AppLogger.event('ai_per_op_limit_applied', params: {
+        'operation': request.action,
+        'limit': limit,
+        'currentCount': operationCount,
+        'backoffDelayMs': delay.inMilliseconds,
+      });
+      
+      // Wait for backoff period before checking again
+      await Future.delayed(delay);
+      return; // Re-check on next worker cycle
+    }
+
+    // Remove from queue now that we're processing it
+    _requestQueue.removeAt(0);
     final completer = _pendingRequests[request.id];
 
     if (completer == null) return; // Request was cancelled
@@ -858,31 +947,35 @@ class AiChatNotifier extends AsyncNotifier<AiChatState> {
 
       // Update rate limiting state after successful processing
       final now = DateTime.now();
-      final newRequestCount = _calculateNewRequestCount(now, currentState);
+      final newRequestCounts = _calculateNewRequestCounts(now, currentState, request.action);
       state = AsyncValue.data(currentState.copyWith(
         lastRequestTime: now,
-        requestCountInWindow: newRequestCount,
+        requestCountInWindow: newRequestCounts,
       ));
 
       _resetMetricsIfNeeded();
       _processedToday++;
+      _operationProcessedToday[request.action] = (_operationProcessedToday[request.action] ?? 0) + 1;
       completer.complete(result);
       AppLogger.event('ai_queue_processed', params: {
         'queueLength': _requestQueue.length,
         'success': true,
         'action': request.action,
-        'processedToday': _processedToday
+        'processedToday': _processedToday,
+        'operationProcessedToday': _operationProcessedToday[request.action],
       });
     } catch (e) {
       _resetMetricsIfNeeded();
       _droppedCount++;
+      _operationDroppedCount[request.action] = (_operationDroppedCount[request.action] ?? 0) + 1;
       completer.completeError(e);
       AppLogger.event('ai_queue_processed', params: {
         'queueLength': _requestQueue.length,
         'success': false,
         'action': request.action,
         'error': e.toString(),
-        'droppedCount': _droppedCount
+        'droppedCount': _droppedCount,
+        'operationDroppedCount': _operationDroppedCount[request.action],
       });
     }
   }

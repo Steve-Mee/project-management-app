@@ -155,6 +155,13 @@ class SettingsRepository {
     if (value is Map<String, dynamic>) {
       try {
         final config = AiRateLimitsConfig.fromJson(value);
+        
+        // Additional validation for perOperationLimits map
+        if (value['perOperationLimits'] != null && value['perOperationLimits'] is! Map<String, dynamic>) {
+          AppLogger.warning('Invalid perOperationLimits format in settings, expected Map<String, dynamic>', 
+            params: {'type': value['perOperationLimits'].runtimeType.toString()});
+        }
+        
         // Validate and clamp values using the centralized validation helper
         final validatedConfig = AiRateLimitsConfig.validateAiRateLimits(config);
         if (validatedConfig != config) {
@@ -166,11 +173,19 @@ class SettingsRepository {
         return const AiRateLimitsConfig.defaults();
       }
     }
-    // Migration: return defaults for existing users
+    // Migration: return defaults for existing users (includes perOperationLimits defaults)
     return const AiRateLimitsConfig.defaults();
   }
 
   Future<void> setAiRateLimitsConfig(AiRateLimitsConfig config) async {
+    // Additional validation for perOperationLimits map
+    for (final entry in config.perOperationLimits.entries) {
+      if (entry.value < 1) {
+        AppLogger.warning('Invalid perOperationLimit value for operation ${entry.key}, must be >= 1', 
+          params: {'operation': entry.key, 'value': entry.value.toString()});
+      }
+    }
+    
     final validatedConfig = AiRateLimitsConfig.validateAiRateLimits(config);
     if (validatedConfig != config) {
       AppLogger.event('AI rate limits config contained invalid values when saving, clamping to valid ranges');
