@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:my_project_management_app/core/providers/auth_providers.dart';
 import 'package:my_project_management_app/core/repository/settings_repository.dart';
+import 'package:my_project_management_app/core/config/ai_config.dart' as ai_config;
 import 'package:hive_flutter/hive_flutter.dart';
 
 // Fake box for testing
@@ -55,6 +56,7 @@ class TestAuthNotifier extends AuthNotifier {
 // Fake classes
 class FakeSettingsRepository extends Fake implements SettingsRepository {
   bool _enableBiometricLogin = false;
+  String? _helpLevel;
 
   @override
   bool getEnableBiometricLogin() => _enableBiometricLogin;
@@ -111,10 +113,12 @@ class FakeSettingsRepository extends Fake implements SettingsRepository {
   Future<void> setLastLoginTime(DateTime time) async {}
 
   @override
-  String? getHelpLevel() => null;
+  String? getHelpLevel() => _helpLevel;
 
   @override
-  Future<void> setHelpLevel(String level) async {}
+  Future<void> setHelpLevel(String level) async {
+    _helpLevel = level;
+  }
 
   @override
   bool getAiConsentEnabled() => false;
@@ -148,7 +152,7 @@ void main() {
   });
 
   group('BiometricLoginNotifier', () {
-    test('build returns false when settings return false', () {
+    test('build returns false when settings return false', () async {
       fakeSettings._enableBiometricLogin = false;
 
       final container = ProviderContainer(
@@ -157,8 +161,9 @@ void main() {
         ],
       );
 
+      await container.read(biometricLoginProvider); // ensure built
       final notifier = container.read(biometricLoginProvider.notifier);
-      expect(notifier.state, false);
+      expect(notifier.state.value, false);
       container.dispose();
     });
 
@@ -166,8 +171,40 @@ void main() {
       final notifier = container.read(biometricLoginProvider.notifier);
       await notifier.setEnabled(true);
 
-      expect(notifier.state, true);
+      expect(notifier.state.value, true);
       expect(fakeSettings._enableBiometricLogin, true);
+    });
+  });
+
+  group('HelpLevelNotifier', () {
+    test('build returns basis when settings return null', () async {
+      fakeSettings._helpLevel = null;
+
+      final container = ProviderContainer(
+        overrides: [
+          settingsRepositoryProvider.overrideWith((ref) => Future.value(fakeSettings)),
+        ],
+      );
+
+      await container.read(helpLevelProvider); // ensure built
+      final notifier = container.read(helpLevelProvider.notifier);
+      expect(notifier.state.value, ai_config.HelpLevel.basis);
+      container.dispose();
+    });
+
+    test('setHelpLevel updates state and calls settings asynchronously', () async {
+      final container = ProviderContainer(
+        overrides: [
+          settingsRepositoryProvider.overrideWith((ref) => Future.value(fakeSettings)),
+        ],
+      );
+
+      final notifier = container.read(helpLevelProvider.notifier);
+      await notifier.setHelpLevel(ai_config.HelpLevel.stapVoorStap);
+
+      expect(notifier.state.value, ai_config.HelpLevel.stapVoorStap);
+      expect(fakeSettings._helpLevel, 'stapVoorStap');
+      container.dispose();
     });
   });
 

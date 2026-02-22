@@ -17,6 +17,10 @@ import 'package:my_project_management_app/core/services/login_rate_limiter.dart'
 import 'package:my_project_management_app/core/auth/permissions.dart';
 import 'package:my_project_management_app/core/config/ai_config.dart' as ai_config;
 
+// Recommended async settings access pattern (see 018-auth-settings-repo-access.md):
+// final settings = await ref.read(settingsRepositoryProvider.future);
+// await settings.someMethod();
+
 /// Custom exception for rate limit exceeded
 class RateLimitExceededException implements Exception {
   final Duration backoffDuration;
@@ -536,11 +540,11 @@ class HelpLevelNotifier extends AsyncNotifier<ai_config.HelpLevel> {
     }
   }
 
-  void setHelpLevel(ai_config.HelpLevel level) {
+  Future<void> setHelpLevel(ai_config.HelpLevel level) async {
     state = AsyncValue.data(level);
-    ref
-        .read(settingsRepositoryProvider.future)
-        .then((settings) => settings.setHelpLevel(level.name));
+    // Use centralized async settings access (see 018-auth-settings-repo-access.md)
+    final settings = await ref.read(settingsRepositoryProvider.future);
+    await settings.setHelpLevel(level.name);
   }
 }
 
