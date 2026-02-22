@@ -4,7 +4,6 @@ import '../../services/app_logger.dart';
 import '../../models/ai_usage_record.dart';
 import '../../repository/i_ai_usage_repository.dart';
 import '../../repository/ai_usage_repository.dart';
-import 'ai_chat_provider.dart';
 
 /// Model for AI usage data
 class AiUsage {

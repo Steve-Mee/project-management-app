@@ -1,14 +1,22 @@
 import 'package:uuid/uuid.dart';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'dart:async';
+import 'dart:math';
+import 'package:hive/hive.dart';
 import '../services/app_logger.dart';
 import '../services/ai_planning_helpers.dart';
 import '../config/ai_config.dart' as ai_config;
 import '../providers/ai/ai_usage_provider.dart';
+import '../providers/auth_providers.dart';
 import '../../models/chat_message_model.dart';
 import '../../models/project_plan.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+import '../models/ai_rate_limits_config.dart';
+import '../models/ai_request_queue.dart';
 import '../models/ai_usage_record.dart';
+import '../repository/i_ai_usage_repository.dart';
+import '../repository/ai_usage_repository.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 /// Custom exception for rate limit exceeded
 class RateLimitExceededException implements Exception {
@@ -931,7 +939,8 @@ class AiChatNotifier extends AsyncNotifier<AiChatState> {
     if (completer == null) return; // Request was cancelled
 
     try {
-      (dynamic processedResult, int tokens);
+      dynamic processedResult;
+      int tokens;
       switch (request.action) {
         case 'chat':
           (processedResult, tokens) = await _executeChatRequest(request.payload);
