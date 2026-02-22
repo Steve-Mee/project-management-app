@@ -324,7 +324,6 @@ void main() {
       );
 
       await notifier.addItem(item);
-      final stateAfterAdd = container.read(dashboardConfigProvider);
 
       await notifier.undo();
       final stateAfterUndo = container.read(dashboardConfigProvider);

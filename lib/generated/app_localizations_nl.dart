@@ -1243,4 +1243,10 @@ class AppLocalizationsNl extends AppLocalizations {
 
   @override
   String get acceptFilterButtonLabel => 'Filter Accepteren';
+
+  @override
+  String get undoTooltip => 'Undo last dashboard change';
+
+  @override
+  String get redoTooltip => 'Redo last undone dashboard change';
 }

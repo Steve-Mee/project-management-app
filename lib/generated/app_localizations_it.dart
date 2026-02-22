@@ -1245,4 +1245,10 @@ class AppLocalizationsIt extends AppLocalizations {
 
   @override
   String get acceptFilterButtonLabel => 'Accept Filter';
+
+  @override
+  String get undoTooltip => 'Undo last dashboard change';
+
+  @override
+  String get redoTooltip => 'Redo last undone dashboard change';
 }

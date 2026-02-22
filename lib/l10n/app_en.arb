@@ -1720,5 +1720,13 @@
   "acceptFilterButtonLabel": "Accept Filter",
   "@acceptFilterButtonLabel": {
     "description": "Label for the accept filter button."
+  },
+  "undoTooltip": "Undo last dashboard change",
+  "@undoTooltip": {
+    "description": "Tooltip for the undo button in the dashboard toolbar."
+  },
+  "redoTooltip": "Redo last undone dashboard change",
+  "@redoTooltip": {
+    "description": "Tooltip for the redo button in the dashboard toolbar."
   }
 }

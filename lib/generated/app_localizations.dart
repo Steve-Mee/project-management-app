@@ -2376,6 +2376,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Accept Filter'**
   String get acceptFilterButtonLabel;
+
+  /// Tooltip for the undo button in the dashboard toolbar.
+  ///
+  /// In en, this message translates to:
+  /// **'Undo last dashboard change'**
+  String get undoTooltip;
+
+  /// Tooltip for the redo button in the dashboard toolbar.
+  ///
+  /// In en, this message translates to:
+  /// **'Redo last undone dashboard change'**
+  String get redoTooltip;
 }
 
 class _AppLocalizationsDelegate
