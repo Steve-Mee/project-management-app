@@ -2388,6 +2388,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Redo last undone dashboard change'**
   String get redoTooltip;
+
+  /// Indicator text when the app is in offline mode.
+  ///
+  /// In en, this message translates to:
+  /// **'Offline Mode'**
+  String get offline_mode;
+
+  /// Message indicating changes are queued while offline.
+  ///
+  /// In en, this message translates to:
+  /// **'Changes queued for sync'**
+  String get changes_queued;
+
+  /// Status message when syncing queued requirements.
+  ///
+  /// In en, this message translates to:
+  /// **'Syncing requirements...'**
+  String get syncing_requirements;
+
+  /// Success message after offline sync completes.
+  ///
+  /// In en, this message translates to:
+  /// **'Offline sync completed successfully'**
+  String get offline_sync_success;
 }
 
 class _AppLocalizationsDelegate

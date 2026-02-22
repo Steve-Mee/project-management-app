@@ -1838,6 +1838,22 @@
   "dashboard_cache_hit": "Dashboard loaded from cache",
   "@dashboard_cache_hit": {
     "description": "Message indicating dashboard was loaded from cache."
+  },
+  "offline_mode": "Offline Mode",
+  "@offline_mode": {
+    "description": "Indicator text when the app is in offline mode."
+  },
+  "changes_queued": "Changes queued for sync",
+  "@changes_queued": {
+    "description": "Message indicating changes are queued while offline."
+  },
+  "syncing_requirements": "Syncing requirements...",
+  "@syncing_requirements": {
+    "description": "Status message when syncing queued requirements."
+  },
+  "offline_sync_success": "Offline sync completed successfully",
+  "@offline_sync_success": {
+    "description": "Success message after offline sync completes."
   }
 }
 }

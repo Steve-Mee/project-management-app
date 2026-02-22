@@ -294,11 +294,11 @@
   },
   "sortByLabel": "Sort by",
   "@sortByLabel": {
-    "description": "Auto-generated description for sortByLabel."
+    "description": "Label for sort by field."
   },
   "projectSortName": "Name",
   "@projectSortName": {
-    "description": "Auto-generated description for projectSortName."
+    "description": "Sort option for project name."
   },
   "projectSortProgress": "Progress",
   "@projectSortProgress": {
@@ -306,7 +306,7 @@
   },
   "projectSortPriority": "Priority",
   "@projectSortPriority": {
-    "description": "Auto-generated description for projectSortPriority."
+    "description": "Sort option for project priority."
   },
   "projectSortCreatedDate": "Created date",
   "@projectSortCreatedDate": {
@@ -314,33 +314,33 @@
   },
   "projectSortStatus": "Status",
   "@projectSortStatus": {
-    "description": "Auto-generated description for projectSortStatus."
+    "description": "Sort option for project status."
   },
   "projectSortStartDate": "Start Date",
   "@projectSortStartDate": {
-    "description": "Label for sorting projects by start date."
+    "description": "Sort option for project start date."
   },
   "projectSortDueDate": "Due Date",
   "@projectSortDueDate": {
-    "description": "Label for sorting projects by due date."
+    "description": "Sort option for project due date."
   },
   "sortDirectionLabel": "Direction",
   "@sortDirectionLabel": {
-    "description": "Label for sort direction selection."
+    "description": "Label for sort direction control."
   },
   "sortAscendingLabel": "Ascending",
   "@sortAscendingLabel": {
-    "description": "Label for ascending sort order."
+    "description": "Label for ascending sort direction."
   },
   "sortDescendingLabel": "Descending",
   "@sortDescendingLabel": {
-    "description": "Label for descending sort order."
+    "description": "Label for descending sort direction."
   },
   "exportToCsvLabel": "Export to CSV",
   "@exportToCsvLabel": {
     "description": "Label for CSV export button."
   },
-  "csvExportSuccessMessage": "CSV exported and shared successfully",
+  "csvExportSuccessMessage": "Projects exported successfully",
   "@csvExportSuccessMessage": {
     "description": "Success message after CSV export."
   },
@@ -415,7 +415,7 @@
   },
   "tasksTitle": "Tasks",
   "@tasksTitle": {
-    "description": "Auto-generated description for tasksTitle."
+    "description": "Title for tasks section."
   },
   "tasksTab": "Tasks",
   "@tasksTab": {
@@ -720,7 +720,7 @@
   },
   "progressLabel": "Progress",
   "@progressLabel": {
-    "description": "Auto-generated description for progressLabel."
+    "description": "Label for the progress column in tables."
   },
   "completedPercentLabel": "Completed: {percent}%",
   "@completedPercentLabel": {
@@ -758,7 +758,7 @@
   },
   "statusLabel": "Status",
   "@statusLabel": {
-    "description": "Auto-generated description for statusLabel."
+    "description": "Label for status field."
   },
   "burndownChartSemantics": "Burndown chart for {projectName}. Actual points: {actualPoints}. Ideal points: {idealPoints}.",
   "@burndownChartSemantics": {
@@ -1118,46 +1118,6 @@
   "@backupNoFileMessage": {
     "description": "Shown when no backup file path is available."
   },
-  "projectSortName": "Name",
-  "@projectSortName": {
-    "description": "Sort option for project name."
-  },
-  "projectSortPriority": "Priority",
-  "@projectSortPriority": {
-    "description": "Sort option for project priority."
-  },
-  "projectSortStartDate": "Start Date",
-  "@projectSortStartDate": {
-    "description": "Sort option for project start date."
-  },
-  "projectSortDueDate": "Due Date",
-  "@projectSortDueDate": {
-    "description": "Sort option for project due date."
-  },
-  "projectSortStatus": "Status",
-  "@projectSortStatus": {
-    "description": "Sort option for project status."
-  },
-  "sortDirectionLabel": "Direction",
-  "@sortDirectionLabel": {
-    "description": "Label for sort direction control."
-  },
-  "sortAscendingLabel": "Ascending",
-  "@sortAscendingLabel": {
-    "description": "Label for ascending sort direction."
-  },
-  "sortDescendingLabel": "Descending",
-  "@sortDescendingLabel": {
-    "description": "Label for descending sort direction."
-  },
-  "exportToCsvLabel": "Export to CSV",
-  "@exportToCsvLabel": {
-    "description": "Label for CSV export button."
-  },
-  "csvExportSuccessMessage": "Projects exported successfully",
-  "@csvExportSuccessMessage": {
-    "description": "Success message after CSV export."
-  },
   "filterButtonTooltip": "Filter projects",
   "@filterButtonTooltip": {
     "description": "Tooltip for the filter button."
@@ -1461,13 +1421,9 @@
   "@nameLabel": {
     "description": "Label for the name column in tables."
   },
-  "statusLabel": "Status",
-  "@statusLabel": {
-    "description": "Label for the status column in tables."
-  },
   "priorityLabel": "Priority",
   "@priorityLabel": {
-    "description": "Label for the priority column in tables."
+    "description": "Label for priority field."
   },
   "startDateLabel": "Start Date",
   "@startDateLabel": {
@@ -1477,13 +1433,9 @@
   "@dueDateLabel": {
     "description": "Label for the due date column in tables."
   },
-  "progressLabel": "Progress",
-  "@progressLabel": {
-    "description": "Label for the progress column in tables."
-  },
   "tagsLabel": "Tags",
   "@tagsLabel": {
-    "description": "Label for the tags column in tables."
+    "description": "Label for tags field."
   },
   "exportToPdfLabel": "Export to PDF",
   "@exportToPdfLabel": {
@@ -1541,25 +1493,9 @@
   "@unnamedFilterLabel": {
     "description": "Label for filters without a custom name."
   },
-  "statusLabel": "Status",
-  "@statusLabel": {
-    "description": "Label for status field."
-  },
-  "priorityLabel": "Priority",
-  "@priorityLabel": {
-    "description": "Label for priority field."
-  },
-  "tagsLabel": "Tags",
-  "@tagsLabel": {
-    "description": "Label for tags field."
-  },
   "ownerLabel": "Owner",
   "@ownerLabel": {
     "description": "Label for owner field."
-  },
-  "sortByLabel": "Sort by",
-  "@sortByLabel": {
-    "description": "Label for sort by field."
   },
   "ascendingLabel": "ascending",
   "@ascendingLabel": {
@@ -1600,10 +1536,6 @@
   "openProjectTooltip": "Open project",
   "@openProjectTooltip": {
     "description": "Tooltip for opening a project."
-  },
-  "tasksTitle": "Tasks",
-  "@tasksTitle": {
-    "description": "Title for tasks section."
   },
   "commentsTitle": "Comments",
   "@commentsTitle": {
@@ -1728,5 +1660,21 @@
   "redoTooltip": "Redo last undone dashboard change",
   "@redoTooltip": {
     "description": "Tooltip for the redo button in the dashboard toolbar."
+  },
+  "offline_mode": "Offline Mode",
+  "@offline_mode": {
+    "description": "Indicator text when the app is in offline mode."
+  },
+  "changes_queued": "Changes queued for sync",
+  "@changes_queued": {
+    "description": "Message indicating changes are queued while offline."
+  },
+  "syncing_requirements": "Syncing requirements...",
+  "@syncing_requirements": {
+    "description": "Status message when syncing queued requirements."
+  },
+  "offline_sync_success": "Offline sync completed successfully",
+  "@offline_sync_success": {
+    "description": "Success message after offline sync completes."
   }
 }

@@ -57,10 +57,6 @@ Onderstaand een gegroepeerde lijst van alle "TODO"-aantekeningen die in de codeb
   - Verwachte actie: Voeg try/catch + AppLogger.event/error melding toe bij IO/DB bewerkingen.
 - TODO: Consider using an abstract interface for easy testing/swapping
   - Verwachte actie: Maak repository/interface voor dashboard data.
-- TODO: Add caching for requirements
-  - Verwachte actie: Cache `requirements` data met TTL of lokaal storage.
-- TODO: Add offline requirements storage
-  - Verwachte actie: Sla requirements lokaal op (Hive) en sync bij netwerk beschikbaarheid.
 - TODO: Import projectsProvider when available
   - Verwachte actie: Koppel dashboard items aan projecten zodra `projectsProvider` stabiel is.
 

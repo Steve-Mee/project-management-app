@@ -1209,5 +1209,21 @@
   "acceptFilterButtonLabel": "Filter Accepteren",
   "@acceptFilterButtonLabel": {
     "description": "Label for the accept filter button."
+  },
+  "offline_mode": "Offline Modus",
+  "@offline_mode": {
+    "description": "Indicator text when the app is in offline mode."
+  },
+  "changes_queued": "Wijzigingen in wachtrij voor synchronisatie",
+  "@changes_queued": {
+    "description": "Message indicating changes are queued while offline."
+  },
+  "syncing_requirements": "Vereisten synchroniseren...",
+  "@syncing_requirements": {
+    "description": "Status message when syncing queued requirements."
+  },
+  "offline_sync_success": "Offline synchronisatie succesvol voltooid",
+  "@offline_sync_success": {
+    "description": "Success message after offline sync completes."
   }
 }

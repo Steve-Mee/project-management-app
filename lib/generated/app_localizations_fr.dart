@@ -1259,4 +1259,16 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get redoTooltip => 'Redo last undone dashboard change';
+
+  @override
+  String get offline_mode => 'Offline Mode';
+
+  @override
+  String get changes_queued => 'Changes queued for sync';
+
+  @override
+  String get syncing_requirements => 'Syncing requirements...';
+
+  @override
+  String get offline_sync_success => 'Offline sync completed successfully';
 }

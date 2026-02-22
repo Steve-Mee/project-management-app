@@ -7,6 +7,9 @@ import 'package:my_project_management_app/core/repository/hive_dashboard_reposit
 import 'project_providers.dart';
 import 'package:my_project_management_app/core/services/app_logger.dart';
 import 'package:my_project_management_app/core/models/dashboard_types.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
+import 'connectivity_provider.dart';
+import 'package:my_project_management_app/core/models/requirements.dart';
 
 /// DashboardItem
 /// 
@@ -98,6 +101,9 @@ class DashboardConfigNotifier extends Notifier<List<DashboardItem>> {
   /// See .github/issues/022-dashboard-undo-redo.md for details
   int _currentIndex = -1;
 
+  bool _isOffline = false;
+  bool get isOffline => _isOffline;
+
   @override
   List<DashboardItem> build() {
     _repository = ref.read(dashboardRepositoryProvider);
@@ -105,6 +111,20 @@ class DashboardConfigNotifier extends Notifier<List<DashboardItem>> {
     _history.clear();
     _currentIndex = -1;
     _repository.preloadCache().then((_) => _pushToHistory());
+    ref.listen(connectivityProvider, (previous, next) {
+      final wasOffline = _isOffline;
+      _isOffline = !(next.hasValue && (next.value == ConnectivityResult.wifi || next.value == ConnectivityResult.mobile));
+      if (wasOffline && !_isOffline) {
+        ref.read(offlineSyncStatusProvider.notifier).state = true;
+        _repository.processPendingSync().then((_) {
+          ref.read(offlineSyncStatusProvider.notifier).state = false;
+          ref.read(dashboardErrorProvider.notifier).state = 'offline_sync_success';
+        }).catchError((error) {
+          ref.read(offlineSyncStatusProvider.notifier).state = false;
+          ref.read(dashboardErrorProvider.notifier).state = 'dashboard_action_failed';
+        });
+      }
+    });
     return [];
   }
 
@@ -468,6 +488,31 @@ class DashboardConfigNotifier extends Notifier<List<DashboardItem>> {
     }
   }
 
+  Future<List<Requirement>> loadRequirements() async {
+    try {
+      return await _repository.loadRequirements();
+    } catch (e, st) {
+      await _logError('load_requirements', e, st);
+      ref.read(dashboardErrorProvider.notifier).state = 'dashboard_load_error';
+      return [];
+    }
+  }
+
+  Future<void> saveRequirement(Requirement req) async {
+    try {
+      if (_isOffline) {
+        await _repository.queuePendingChange({'type': 'save_requirement', 'data': req.toJson()});
+        AppLogger.instance.i('Queued requirement save: ${req.id}');
+        ref.read(dashboardErrorProvider.notifier).state = 'Working offline – changes will sync when online';
+      } else {
+        await _repository.saveRequirement(req);
+      }
+    } catch (e, st) {
+      await _logError('save_requirement', e, st);
+      ref.read(dashboardErrorProvider.notifier).state = 'dashboard_action_failed';
+    }
+  }
+
   void _subscribeToSharedChanges(String shareId) {
     // Unsubscribe previous
     _channel?.unsubscribe();
@@ -588,8 +633,6 @@ final dashboardRepositoryProvider = Provider<IDashboardRepository>((ref) {
 final dashboardErrorProvider = StateProvider<String?>((ref) => null);
 
 /// Provider for project requirements by project ID with error handling
-/// TODO: Add caching for requirements
-/// TODO: Add offline requirements storage
 final projectRequirementsProvider = Provider.family<FutureProvider<ProjectRequirements>, String>((ref, projectId) {
   return FutureProvider<ProjectRequirements>((ref) async {
     final projectAsync = ref.watch(projectByIdProvider(projectId));
@@ -611,6 +654,10 @@ final projectRequirementsProvider = Provider.family<FutureProvider<ProjectRequir
     );
   });
 });
+
+/// Provider for tracking offline sync status
+/// Set to true when processing pending changes, false when idle
+final offlineSyncStatusProvider = StateProvider<bool>((ref) => false);
 
 // Reusable UI example for cache status display:
 // Text(AppLocalizations.of(context)!.cacheRefreshed(DateTime.now().difference(_cacheTimestamp!).inSeconds)),

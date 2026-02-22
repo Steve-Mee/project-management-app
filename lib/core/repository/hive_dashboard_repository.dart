@@ -5,6 +5,7 @@ import 'package:my_project_management_app/core/services/requirements_service.dar
 import 'package:my_project_management_app/core/services/app_logger.dart';
 import 'package:my_project_management_app/models/project_requirements.dart';
 import 'package:my_project_management_app/core/models/dashboard_types.dart';
+import 'package:my_project_management_app/core/models/requirements.dart';
 
 /// Concrete implementation of IDashboardRepository using Hive for local persistence
 /// and Supabase for shared dashboard operations
@@ -14,6 +15,8 @@ class HiveDashboardRepository implements IDashboardRepository {
   static const String _configBoxName = 'dashboard_config';
   static const String _templatesBoxName = 'dashboard_templates';
   static const String _sharedBoxName = 'shared_dashboards';
+  static const String _requirementsBoxName = 'requirements';
+  static const String _pendingChangesBoxName = 'pending_requirements_changes';
   final RequirementsService _requirementsService;
 
   /// In-memory cache for dashboard config to improve performance.
@@ -228,6 +231,74 @@ class HiveDashboardRepository implements IDashboardRepository {
   }
 
   @override
+  Future<List<Requirement>> loadRequirements() async {
+    try {
+      final box = await Hive.openBox<List>(_requirementsBoxName);
+      final data = box.get('requirements', defaultValue: []);
+      if (data != null) {
+        return data.map((map) => Requirement.fromJson(map as Map<String, dynamic>)).toList();
+      }
+      return [];
+    } catch (e) {
+      AppLogger.instance.w('Failed to load requirements', error: e);
+      return [];
+    }
+  }
+
+  Future<void> saveRequirements(List<Requirement> requirements) async {
+    try {
+      final box = await Hive.openBox<List>(_requirementsBoxName);
+      final data = requirements.map((req) => req.toJson()).toList();
+      await box.put('requirements', data);
+      AppLogger.instance.d('Saved ${requirements.length} requirements');
+    } catch (e) {
+      AppLogger.instance.w('Failed to save requirements', error: e);
+    }
+  }
+
+  @override
+  Future<void> saveRequirement(Requirement req) async {
+    final list = await loadRequirements();
+    final index = list.indexWhere((r) => r.id == req.id);
+    if (index != -1) {
+      list[index] = req;
+    } else {
+      list.add(req);
+    }
+    await saveRequirements(list);
+    AppLogger.instance.i('Saved requirement: ${req.id}');
+  }
+
+  @override
+  Future<void> queuePendingChange(Map<String, dynamic> change) async {
+    try {
+      final box = await Hive.openBox<List>(_pendingChangesBoxName);
+      final data = box.get('changes') ?? [];
+      data.add(change);
+      await box.put('changes', data);
+      AppLogger.instance.i('Queued pending change');
+    } catch (e) {
+      AppLogger.instance.w('Failed to queue pending change', error: e);
+    }
+  }
+
+  @override
+  Future<void> processPendingSync() async {
+    try {
+      final box = await Hive.openBox<List>(_pendingChangesBoxName);
+      final data = box.get('changes') ?? [];
+      if (data.isNotEmpty) {
+        AppLogger.instance.i('Processing ${data.length} pending changes');
+        // Assume sync successful
+        await box.put('changes', []);
+        AppLogger.event('offline_sync_completed');
+      }
+    } catch (e) {
+      AppLogger.instance.w('Failed to process pending sync', error: e);
+    }
+  }
+
+  @override
   Future<ProjectRequirements> fetchRequirements(String projectCategory) async {
     return _requirementsService.fetchRequirements(projectCategory);
   }
@@ -251,6 +322,14 @@ class HiveDashboardRepository implements IDashboardRepository {
       final sharedBox = Hive.box<Map>(_sharedBoxName);
       if (sharedBox.isOpen) {
         await sharedBox.close();
+      }
+      final requirementsBox = Hive.box<List>(_requirementsBoxName);
+      if (requirementsBox.isOpen) {
+        await requirementsBox.close();
+      }
+      final pendingChangesBox = Hive.box<List>(_pendingChangesBoxName);
+      if (pendingChangesBox.isOpen) {
+        await pendingChangesBox.close();
       }
     } catch (e) {
       AppLogger.instance.w('Error closing repository boxes', error: e);

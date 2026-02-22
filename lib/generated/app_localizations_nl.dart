@@ -1249,4 +1249,17 @@ class AppLocalizationsNl extends AppLocalizations {
 
   @override
   String get redoTooltip => 'Redo last undone dashboard change';
+
+  @override
+  String get offline_mode => 'Offline Modus';
+
+  @override
+  String get changes_queued => 'Wijzigingen in wachtrij voor synchronisatie';
+
+  @override
+  String get syncing_requirements => 'Vereisten synchroniseren...';
+
+  @override
+  String get offline_sync_success =>
+      'Offline synchronisatie succesvol voltooid';
 }

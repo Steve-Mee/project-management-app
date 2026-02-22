@@ -113,7 +113,11 @@
     "editFilterButtonLabel",
     "acceptFilterButtonLabel",
     "undoTooltip",
-    "redoTooltip"
+    "redoTooltip",
+    "offline_mode",
+    "changes_queued",
+    "syncing_requirements",
+    "offline_sync_success"
   ],
 
   "de": [
@@ -230,7 +234,11 @@
     "editFilterButtonLabel",
     "acceptFilterButtonLabel",
     "undoTooltip",
-    "redoTooltip"
+    "redoTooltip",
+    "offline_mode",
+    "changes_queued",
+    "syncing_requirements",
+    "offline_sync_success"
   ],
 
   "es": [
@@ -347,7 +355,11 @@
     "editFilterButtonLabel",
     "acceptFilterButtonLabel",
     "undoTooltip",
-    "redoTooltip"
+    "redoTooltip",
+    "offline_mode",
+    "changes_queued",
+    "syncing_requirements",
+    "offline_sync_success"
   ],
 
   "fr": [
@@ -464,7 +476,11 @@
     "editFilterButtonLabel",
     "acceptFilterButtonLabel",
     "undoTooltip",
-    "redoTooltip"
+    "redoTooltip",
+    "offline_mode",
+    "changes_queued",
+    "syncing_requirements",
+    "offline_sync_success"
   ],
 
   "hi": [
@@ -581,7 +597,11 @@
     "editFilterButtonLabel",
     "acceptFilterButtonLabel",
     "undoTooltip",
-    "redoTooltip"
+    "redoTooltip",
+    "offline_mode",
+    "changes_queued",
+    "syncing_requirements",
+    "offline_sync_success"
   ],
 
   "it": [
@@ -698,7 +718,11 @@
     "editFilterButtonLabel",
     "acceptFilterButtonLabel",
     "undoTooltip",
-    "redoTooltip"
+    "redoTooltip",
+    "offline_mode",
+    "changes_queued",
+    "syncing_requirements",
+    "offline_sync_success"
   ],
 
   "ja": [
@@ -815,7 +839,11 @@
     "editFilterButtonLabel",
     "acceptFilterButtonLabel",
     "undoTooltip",
-    "redoTooltip"
+    "redoTooltip",
+    "offline_mode",
+    "changes_queued",
+    "syncing_requirements",
+    "offline_sync_success"
   ],
 
   "ko": [
@@ -932,7 +960,11 @@
     "editFilterButtonLabel",
     "acceptFilterButtonLabel",
     "undoTooltip",
-    "redoTooltip"
+    "redoTooltip",
+    "offline_mode",
+    "changes_queued",
+    "syncing_requirements",
+    "offline_sync_success"
   ],
 
   "nl": [
@@ -1152,7 +1184,11 @@
     "editFilterButtonLabel",
     "acceptFilterButtonLabel",
     "undoTooltip",
-    "redoTooltip"
+    "redoTooltip",
+    "offline_mode",
+    "changes_queued",
+    "syncing_requirements",
+    "offline_sync_success"
   ],
 
   "ru": [
@@ -1269,7 +1305,11 @@
     "editFilterButtonLabel",
     "acceptFilterButtonLabel",
     "undoTooltip",
-    "redoTooltip"
+    "redoTooltip",
+    "offline_mode",
+    "changes_queued",
+    "syncing_requirements",
+    "offline_sync_success"
   ],
 
   "zh": [
@@ -1386,6 +1426,10 @@
     "editFilterButtonLabel",
     "acceptFilterButtonLabel",
     "undoTooltip",
-    "redoTooltip"
+    "redoTooltip",
+    "offline_mode",
+    "changes_queued",
+    "syncing_requirements",
+    "offline_sync_success"
   ]
 }

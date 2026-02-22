@@ -3,6 +3,7 @@
 library;
 import 'package:my_project_management_app/models/project_requirements.dart';
 import 'package:my_project_management_app/core/models/dashboard_types.dart';
+import 'package:my_project_management_app/core/models/requirements.dart';
 
 /// Dashboard item configuration for project management dashboard widgets.
 /// 
@@ -156,6 +157,18 @@ abstract class IDashboardRepository {
 
   /// Parses a requirements string into a ProjectRequirements object.
   ProjectRequirements parseRequirementsString(String requirementsString);
+
+  /// Loads requirements from storage.
+  Future<List<Requirement>> loadRequirements();
+
+  /// Saves a requirement to storage.
+  Future<void> saveRequirement(Requirement req);
+
+  /// Queues a pending change for sync.
+  Future<void> queuePendingChange(Map<String, dynamic> change);
+
+  /// Processes pending sync when online.
+  Future<void> processPendingSync();
 
   /// Preloads cache for performance optimization (optional implementation).
   Future<void> preloadCache();
