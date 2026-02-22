@@ -1,7 +1,9 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:uuid/uuid.dart';
+import 'package:collection/collection.dart';
 import 'package:my_project_management_app/models/project_requirements.dart';
+import 'package:my_project_management_app/models/project_model.dart';
 import 'package:my_project_management_app/core/repository/i_dashboard_repository.dart';
 import 'package:my_project_management_app/core/repository/hive_dashboard_repository.dart';
 import 'project_providers.dart';
@@ -632,25 +634,47 @@ final dashboardRepositoryProvider = Provider<IDashboardRepository>((ref) {
 /// Provider for dashboard error state
 final dashboardErrorProvider = StateProvider<String?>((ref) => null);
 
-/// Provider for project requirements by project ID with error handling
+/// Resolves project name by ID from projects list, with fallback "Unknown Project"
+/// See .github/issues/029-dashboard-import-projects-provider.md
+String _resolveProjectName(List<ProjectModel> projects, String projectId) {
+  final project = projects.firstWhereOrNull((p) => p.id == projectId);
+  return project?.name ?? "Unknown Project";
+}
+
+/// Provider for project requirements by project ID with error handling.
+/// Couples dashboard items to projectsProvider for displaying project-specific data.
+/// See .github/issues/029-dashboard-import-projects-provider.md for integration details.
+/// Uses AsyncValue.maybeWhen for robust loading/error state handling.
+/// Resolves project name via _resolveProjectName helper for logging and future UI needs.
 final projectRequirementsProvider = Provider.family<FutureProvider<ProjectRequirements>, String>((ref, projectId) {
   return FutureProvider<ProjectRequirements>((ref) async {
-    final projectAsync = ref.watch(projectByIdProvider(projectId));
-    return projectAsync.maybeWhen(
-      data: (project) {
+    final projectsAsync = ref.watch(projectsProvider);
+    return projectsAsync.maybeWhen(
+      data: (projects) async {
+        final projectName = _resolveProjectName(projects, projectId);
+        AppLogger.instance.i('Resolving requirements for project: $projectName');
+        final project = projects.firstWhereOrNull((p) => p.id == projectId);
         if (project == null) return const ProjectRequirements();
 
         final repository = ref.read(dashboardRepositoryProvider);
 
         // If project has a category, try to fetch from API
         if (project.category != null && project.category!.isNotEmpty) {
-          return repository.fetchRequirements(project.category!);
+          return await repository.fetchRequirements(project.category!);
         }
 
         // Otherwise return empty requirements
         return const ProjectRequirements();
       },
-      orElse: () => const ProjectRequirements(),
+      loading: () async => const ProjectRequirements(),
+      error: (e, st) async {
+        AppLogger.instance.w('Failed to load projects for requirements: $e');
+        return const ProjectRequirements();
+      },
+      orElse: () async {
+        AppLogger.instance.w('Unexpected state in projectsAsync for requirements');
+        return const ProjectRequirements();
+      },
     );
   });
 });
@@ -662,3 +686,62 @@ final offlineSyncStatusProvider = StateProvider<bool>((ref) => false);
 // Reusable UI example for cache status display:
 // Text(AppLocalizations.of(context)!.cacheRefreshed(DateTime.now().difference(_cacheTimestamp!).inSeconds)),
 // Where _cacheTimestamp is exposed from repository or notifier.
+
+// Reusable UI example for project requirements display in dashboard items:
+// See .github/issues/029-dashboard-import-projects-provider.md
+// class ProjectRequirementsCard extends ConsumerWidget {
+//   final String projectId;
+//   final DashboardWidgetType widgetType; // Respect widgetType enum (020)
+//   final Map<String, dynamic> position; // Respect position constraints (021)
+//
+//   const ProjectRequirementsCard({
+//     required this.projectId,
+//     required this.widgetType,
+//     required this.position,
+//   });
+//
+//   @override
+//   Widget build(BuildContext context, WidgetRef ref) {
+//     final requirementsAsync = ref.watch(projectRequirementsProvider(projectId));
+//     final projectsAsync = ref.watch(projectsProvider);
+//
+//     return requirementsAsync.when(
+//       data: (requirements) {
+//         final projectName = projectsAsync.maybeWhen(
+//           data: (projects) => _resolveProjectName(projects, projectId),
+//           orElse: () => 'Unknown Project',
+//         );
+//         return Card(
+//           child: Padding(
+//             padding: const EdgeInsets.all(16.0),
+//             child: Column(
+//               crossAxisAlignment: CrossAxisAlignment.start,
+//               children: [
+//                 Text(projectName, style: Theme.of(context).textTheme.titleMedium),
+//                 const SizedBox(height: 8),
+//                 Text('Requirements: ${requirements.items.length}'),
+//               ],
+//             ),
+//           ),
+//         );
+//       },
+//       loading: () => const Card(
+//         child: Padding(
+//           padding: EdgeInsets.all(16.0),
+//           child: Center(child: CircularProgressIndicator()),
+//         ),
+//       ),
+//       error: (e, st) => Card(
+//         child: Padding(
+//           padding: const EdgeInsets.all(16.0),
+//           child: Column(
+//             children: [
+//               const Icon(Icons.error),
+//               Text('Error loading requirements: $e'),
+//             ],
+//           ),
+//         ),
+//       ),
+//     );
+//   }
+// }

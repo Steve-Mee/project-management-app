@@ -1,8 +1,11 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:my_project_management_app/core/providers/dashboard_providers.dart';
+import 'package:my_project_management_app/core/providers/project_providers.dart';
 import 'package:my_project_management_app/core/repository/i_dashboard_repository.dart';
 import 'package:my_project_management_app/core/models/dashboard_types.dart';
+import 'package:my_project_management_app/models/project_model.dart';
+import 'package:my_project_management_app/models/project_requirements.dart';
 import 'dart:io';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:uuid/uuid.dart';
@@ -12,6 +15,17 @@ import 'package:mockito/annotations.dart';
 // Generate mocks
 @GenerateMocks([IDashboardRepository])
 import 'dashboard_providers_test.mocks.dart';
+
+class FakeProjectsNotifier extends ProjectsNotifier {
+  final AsyncValue<List<ProjectModel>> initialState;
+
+  FakeProjectsNotifier(this.initialState);
+
+  @override
+  AsyncValue<List<ProjectModel>> build() {
+    return initialState;
+  }
+}
 
 void main() {
   late ProviderContainer container;
@@ -783,6 +797,99 @@ void main() {
 
       expect(loaded.length, 1);
       expect(loaded[0].widgetType, DashboardWidgetType.metricCard);
+    });
+  });
+
+  group('projectRequirementsProvider', () {
+    late ProjectModel testProject;
+    late ProjectRequirements testRequirements;
+
+    setUp(() {
+      testProject = ProjectModel(id: 'test-project-id', name: 'Test Project', category: 'web', progress: 0.0);
+      testRequirements = const ProjectRequirements(software: ['Test Req']);
+    });
+
+    test('returns requirements when projectsProvider has data and project found', () async {
+      when(mockRepo.fetchRequirements('web')).thenAnswer((_) => Future.value(testRequirements));
+
+      final testContainer = ProviderContainer(
+        overrides: [
+          dashboardRepositoryProvider.overrideWithValue(mockRepo),
+          projectsProvider.overrideWith(() => FakeProjectsNotifier(AsyncValue.data([testProject]))),
+        ],
+      );
+
+      final provider = testContainer.read(projectRequirementsProvider('test-project-id'));
+      final result = await testContainer.read(provider.future);
+
+      expect(result, equals(testRequirements));
+      verify(mockRepo.fetchRequirements('web')).called(1);
+      testContainer.dispose();
+    });
+
+    test('returns empty requirements when projectsProvider is loading', () async {
+      final testContainer = ProviderContainer(
+        overrides: [
+          dashboardRepositoryProvider.overrideWithValue(mockRepo),
+          projectsProvider.overrideWith(() => FakeProjectsNotifier(const AsyncValue.loading())),
+        ],
+      );
+
+      final provider = testContainer.read(projectRequirementsProvider('test-project-id'));
+      final result = await testContainer.read(provider.future);
+
+      expect(result, equals(const ProjectRequirements()));
+      verifyNever(mockRepo.fetchRequirements(any));
+      testContainer.dispose();
+    });
+
+    test('returns empty requirements when projectsProvider has error', () async {
+      final testContainer = ProviderContainer(
+        overrides: [
+          dashboardRepositoryProvider.overrideWithValue(mockRepo),
+          projectsProvider.overrideWith(() => FakeProjectsNotifier(AsyncValue.error('Test error', StackTrace.empty))),
+        ],
+      );
+
+      final provider = testContainer.read(projectRequirementsProvider('test-project-id'));
+      final result = await testContainer.read(provider.future);
+
+      expect(result, equals(const ProjectRequirements()));
+      verifyNever(mockRepo.fetchRequirements(any));
+      testContainer.dispose();
+    });
+
+    test('returns empty requirements when project not found', () async {
+      final testContainer = ProviderContainer(
+        overrides: [
+          dashboardRepositoryProvider.overrideWithValue(mockRepo),
+          projectsProvider.overrideWith(() => FakeProjectsNotifier(AsyncValue.data([testProject]))),
+        ],
+      );
+
+      final provider = testContainer.read(projectRequirementsProvider('non-existent-id'));
+      final result = await testContainer.read(provider.future);
+
+      expect(result, equals(const ProjectRequirements()));
+      verifyNever(mockRepo.fetchRequirements(any));
+      testContainer.dispose();
+    });
+
+    test('returns empty requirements when project has no category', () async {
+      final projectNoCategory = ProjectModel(id: 'test-id', name: 'Test', category: null, progress: 0.0);
+      final testContainer = ProviderContainer(
+        overrides: [
+          dashboardRepositoryProvider.overrideWithValue(mockRepo),
+          projectsProvider.overrideWith(() => FakeProjectsNotifier(AsyncValue.data([projectNoCategory]))),
+        ],
+      );
+
+      final provider = testContainer.read(projectRequirementsProvider('test-id'));
+      final result = await testContainer.read(provider.future);
+
+      expect(result, equals(const ProjectRequirements()));
+      verifyNever(mockRepo.fetchRequirements(any));
+      testContainer.dispose();
     });
   });
 }

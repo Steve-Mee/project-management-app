@@ -1854,6 +1854,23 @@
   "offline_sync_success": "Offline sync completed successfully",
   "@offline_sync_success": {
     "description": "Success message after offline sync completes."
+  },
+  "project_not_found": "Project not found",
+  "@project_not_found": {
+    "description": "Message when a project cannot be found."
+  },
+  "loading_project_data": "Loading project data...",
+  "@loading_project_data": {
+    "description": "Loading message for project data."
+  },
+  "requirements_for_project": "Requirements for {projectName}",
+  "@requirements_for_project": {
+    "description": "Title for requirements display, with project name placeholder.",
+    "placeholders": {
+      "projectName": {
+        "type": "String"
+      }
+    }
   }
 }
 }

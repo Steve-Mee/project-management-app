@@ -1343,6 +1343,23 @@
   "offline_sync_success": "Offline synchronisatie succesvol voltooid",
   "@offline_sync_success": {
     "description": "Success message after offline sync completes."
+  },
+  "project_not_found": "Project niet gevonden",
+  "@project_not_found": {
+    "description": "Message when a project cannot be found."
+  },
+  "loading_project_data": "Projectgegevens laden...",
+  "@loading_project_data": {
+    "description": "Loading message for project data."
+  },
+  "requirements_for_project": "Vereisten voor {projectName}",
+  "@requirements_for_project": {
+    "description": "Title for requirements display, with project name placeholder.",
+    "placeholders": {
+      "projectName": {
+        "type": "String"
+      }
+    }
   }
 }
 }
