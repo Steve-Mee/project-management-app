@@ -18,6 +18,14 @@ enum DashboardWidgetType {
   }
 }
 
+/// Dashboard position constraints constants
+const double kDashboardMinX = 0;
+const double kDashboardMinY = 0;
+const double kDashboardMinWidth = 180;
+const double kDashboardMinHeight = 120;
+const double kDashboardContainerWidth = 1200;
+const double kDashboardContainerHeight = 800;
+
 class InvalidWidgetTypeException implements Exception {
   final String message;
   InvalidWidgetTypeException(this.message);

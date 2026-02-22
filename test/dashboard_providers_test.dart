@@ -138,7 +138,10 @@ void main() {
 
       final item = DashboardItem.fromJson(json);
       expect(item.widgetType, DashboardWidgetType.metricCard);
-      expect(item.position, {'x': 0, 'y': 0});
+      expect(item.position['x'], 0.0);
+      expect(item.position['y'], 0.0);
+      expect(item.position['width'], 180.0);
+      expect(item.position['height'], 120.0);
     });
 
     test('invalid widgetType in json throws InvalidWidgetTypeException', () {
@@ -177,6 +180,115 @@ void main() {
       final state = container.read(dashboardConfigProvider);
       expect(state.length, 1);
       expect(state[0].widgetType, DashboardWidgetType.metricCard);
+    });
+  });
+
+  group('Position constraints', () {
+    late DashboardConfigNotifier notifier;
+
+    setUp(() {
+      notifier = container.read(dashboardConfigProvider.notifier);
+    });
+
+    test('enforcePositionConstraints clamps x < 0 to 0', () async {
+      final result = await notifier.enforcePositionConstraints(
+        {'x': -10, 'y': 0, 'width': 200, 'height': 150},
+        containerWidth: 1200,
+        containerHeight: 800,
+      );
+      expect(result['x'], 0);
+    });
+
+    test('enforcePositionConstraints clamps y < 0 to 0', () async {
+      final result = await notifier.enforcePositionConstraints(
+        {'x': 0, 'y': -10, 'width': 200, 'height': 150},
+        containerWidth: 1200,
+        containerHeight: 800,
+      );
+      expect(result['y'], 0);
+    });
+
+    test('enforcePositionConstraints enforces minimum width', () async {
+      final result = await notifier.enforcePositionConstraints(
+        {'x': 0, 'y': 0, 'width': 100, 'height': 150},
+        containerWidth: 1200,
+        containerHeight: 800,
+      );
+      expect(result['width'], 180);
+    });
+
+    test('enforcePositionConstraints enforces minimum height', () async {
+      final result = await notifier.enforcePositionConstraints(
+        {'x': 0, 'y': 0, 'width': 200, 'height': 100},
+        containerWidth: 1200,
+        containerHeight: 800,
+      );
+      expect(result['height'], 120);
+    });
+
+    test('enforcePositionConstraints corrects widget beyond max bounds', () async {
+      final result = await notifier.enforcePositionConstraints(
+        {'x': 1100, 'y': 700, 'width': 200, 'height': 150},
+        containerWidth: 1200,
+        containerHeight: 800,
+      );
+      expect(result['x'], 1000); // 1200 - 200
+      expect(result['y'], 650);  // 800 - 150
+    });
+
+    test('enforcePositionConstraints leaves normal position unchanged', () async {
+      final original = {'x': 100, 'y': 100, 'width': 200, 'height': 150};
+      final result = await notifier.enforcePositionConstraints(
+        original,
+        containerWidth: 1200,
+        containerHeight: 800,
+      );
+      expect(result, original);
+    });
+
+    test('addItem clamps position', () async {
+      final item = DashboardItem(
+        widgetType: DashboardWidgetType.metricCard,
+        position: {'x': -10, 'y': -10, 'width': 100, 'height': 100},
+      );
+
+      await notifier.addItem(item);
+      final state = container.read(dashboardConfigProvider);
+      expect(state[0].position['x'], 0);
+      expect(state[0].position['y'], 0);
+      expect(state[0].position['width'], 180);
+      expect(state[0].position['height'], 120);
+    });
+
+    test('updateItemPosition clamps position', () async {
+      // First add an item
+      final item = DashboardItem(
+        widgetType: DashboardWidgetType.metricCard,
+        position: {'x': 0, 'y': 0, 'width': 200, 'height': 150},
+      );
+      await notifier.addItem(item);
+
+      // Update with invalid position
+      await notifier.updateItemPosition(0, {'x': 1100, 'y': 700, 'width': 300, 'height': 200});
+
+      final state = container.read(dashboardConfigProvider);
+      expect(state[0].position['x'], 900); // 1200 - 300
+      expect(state[0].position['y'], 600); // 800 - 200
+      expect(state[0].position['width'], 300);
+      expect(state[0].position['height'], 200);
+    });
+
+    test('DashboardItem.fromJson clamps invalid position', () {
+      const json = {
+        'widgetType': 'metricCard',
+        'position': {'x': -10, 'y': -10, 'width': 100, 'height': 100},
+      };
+
+      final item = DashboardItem.fromJson(json);
+      expect(item.position['x'], 0);
+      expect(item.position['y'], 0);
+      expect(item.position['width'], 180);
+      expect(item.position['height'], 120);
     });
   });
 }

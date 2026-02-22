@@ -30,13 +30,29 @@ class DashboardItem {
       final widgetType = DashboardWidgetType.fromString(widgetTypeStr);
       return DashboardItem(
         widgetType: widgetType,
-        position: json['position'],
+        position: _clampPosition(json['position'] as Map<String, dynamic>),
       );
     } catch (e) {
       throw InvalidWidgetTypeException(
         'Invalid widget type \'$widgetTypeStr\'. Valid types are: ${DashboardWidgetType.values.map((e) => e.name).join(', ')}',
       );
     }
+  }
+
+  static Map<String, dynamic> _clampPosition(Map<String, dynamic> position) {
+    double x = (position['x'] as num?)?.toDouble() ?? 0.0;
+    double y = (position['y'] as num?)?.toDouble() ?? 0.0;
+    double width = (position['width'] as num?)?.toDouble() ?? kDashboardMinWidth;
+    double height = (position['height'] as num?)?.toDouble() ?? kDashboardMinHeight;
+
+    if (x < 0) x = 0;
+    if (y < 0) y = 0;
+    if (width < kDashboardMinWidth) width = kDashboardMinWidth;
+    if (height < kDashboardMinHeight) height = kDashboardMinHeight;
+    if (x + width > kDashboardContainerWidth) x = kDashboardContainerWidth - width;
+    if (y + height > kDashboardContainerHeight) y = kDashboardContainerHeight - height;
+
+    return {'x': x, 'y': y, 'width': width, 'height': height};
   }
 }
 

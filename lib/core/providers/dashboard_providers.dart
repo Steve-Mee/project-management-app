@@ -62,10 +62,18 @@ class DashboardConfigNotifier extends Notifier<List<DashboardItem>> {
     }
   }
 
-  /// Add a new dashboard item
+  /// Adds a new dashboard item with widget type validation and position constraint enforcement.
+  /// The position is validated against the dashboard's bounding box and clamped if necessary
+  /// to ensure x >= 0, y >= 0, x+width <= containerWidth, y+height <= containerHeight, and minimum dimensions.
+  /// See .github/issues/020-dashboard-validate-widget-type.md and .github/issues/021-dashboard-position-constraints.md
   Future<void> addItem(DashboardItem item) async {
     validateWidgetType(item.widgetType.name);
-    await _repository.addDashboardItem(item);
+    Map<String, dynamic> position = item.position;
+    if (!_isValidPosition(position, kDashboardContainerWidth, kDashboardContainerHeight)) {
+      position = _clampPosition(position, containerWidth: kDashboardContainerWidth, containerHeight: kDashboardContainerHeight);
+    }
+    final clampedItem = DashboardItem(widgetType: item.widgetType, position: position);
+    await _repository.addDashboardItem(clampedItem);
     await loadConfig(); // Refresh state
   }
 
@@ -75,10 +83,78 @@ class DashboardConfigNotifier extends Notifier<List<DashboardItem>> {
     await loadConfig(); // Refresh state
   }
 
-  /// Update item position
+  /// Updates an item's position after enforcing constraints to keep it within dashboard bounds.
+  /// The new position is clamped to stay within the bounding box (x >= 0, y >= 0, x+width <= containerWidth, y+height <= containerHeight)
+  /// and enforce minimum dimensions before saving.
+  /// See .github/issues/021-dashboard-position-constraints.md for details.
   Future<void> updateItemPosition(int index, Map<String, dynamic> newPosition) async {
-    await _repository.updateDashboardItemPosition(index, newPosition);
+    final clampedPosition = _clampPosition(newPosition, containerWidth: kDashboardContainerWidth, containerHeight: kDashboardContainerHeight);
+    await _repository.updateDashboardItemPosition(index, clampedPosition);
     await loadConfig(); // Refresh state
+  }
+
+  /// Enforces position constraints for UI drag/resize operations by clamping the proposed position
+  /// to stay within the dashboard's bounding box (x >= 0, y >= 0, x+width <= containerWidth, y+height <= containerHeight)
+  /// and enforcing minimum dimensions. Returns the validated and clamped position.
+  /// See .github/issues/021-dashboard-position-constraints.md for details.
+  Future<Map<String, dynamic>> enforcePositionConstraints(Map<String, dynamic> proposedPosition, {required double containerWidth, required double containerHeight}) {
+    return Future.value(_clampPosition(proposedPosition, containerWidth: containerWidth, containerHeight: containerHeight));
+  }
+
+  /// Clamps position to stay within container bounds and enforce minimum dimensions
+  /// See .github/issues/021-dashboard-position-constraints.md for details
+  Map<String, dynamic> _clampPosition(Map<String, dynamic> position, {required double containerWidth, required double containerHeight}) {
+    double x = (position['x'] as num?)?.toDouble() ?? 0.0;
+    double y = (position['y'] as num?)?.toDouble() ?? 0.0;
+    double width = (position['width'] as num?)?.toDouble() ?? kDashboardMinWidth;
+    double height = (position['height'] as num?)?.toDouble() ?? kDashboardMinHeight;
+
+    bool clamped = false;
+
+    if (x < 0) {
+      x = 0;
+      clamped = true;
+    }
+    if (y < 0) {
+      y = 0;
+      clamped = true;
+    }
+    if (width < kDashboardMinWidth) {
+      width = kDashboardMinWidth;
+      clamped = true;
+    }
+    if (height < kDashboardMinHeight) {
+      height = kDashboardMinHeight;
+      clamped = true;
+    }
+    if (x + width > containerWidth) {
+      x = containerWidth - width;
+      clamped = true;
+    }
+    if (y + height > containerHeight) {
+      y = containerHeight - height;
+      clamped = true;
+    }
+
+    if (clamped) {
+      AppLogger.instance.w('Position clamped to fit container: original $position, clamped x:$x y:$y w:$width h:$height');
+    }
+
+    return {'x': x, 'y': y, 'width': width, 'height': height};
+  }
+
+  // ignore: unused_element
+  /// Checks if position has valid basic constraints (min values, non-negative x/y)
+  /// See .github/issues/021-dashboard-position-constraints.md for details
+  bool _isValidPosition(Map<String, dynamic> position, double containerWidth, double containerHeight) {
+    final x = position['x'] as num?;
+    final y = position['y'] as num?;
+    final width = position['width'] as num?;
+    final height = position['height'] as num?;
+    if (x == null || y == null || width == null || height == null) return false;
+    return x >= 0 && y >= 0 &&
+           width >= kDashboardMinWidth && height >= kDashboardMinHeight &&
+           x + width <= containerWidth && y + height <= containerHeight;
   }
 }
 
