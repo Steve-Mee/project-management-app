@@ -161,9 +161,9 @@ void main() {
         ],
       );
 
-      await container.read(biometricLoginProvider); // ensure built
-      final notifier = container.read(biometricLoginProvider.notifier);
-      expect(notifier.state.value, false);
+      final asyncValue = container.read(biometricLoginProvider);
+      await Future.delayed(const Duration(milliseconds: 1));
+      expect(asyncValue.value, false);
       container.dispose();
     });
 
@@ -186,9 +186,9 @@ void main() {
         ],
       );
 
-      await container.read(helpLevelProvider); // ensure built
-      final notifier = container.read(helpLevelProvider.notifier);
-      expect(notifier.state.value, ai_config.HelpLevel.basis);
+      final asyncValue = container.read(helpLevelProvider);
+      await Future.delayed(const Duration(milliseconds: 1));
+      expect(asyncValue.value, ai_config.HelpLevel.basis);
       container.dispose();
     });
 
@@ -202,7 +202,8 @@ void main() {
       final notifier = container.read(helpLevelProvider.notifier);
       await notifier.setHelpLevel(ai_config.HelpLevel.stapVoorStap);
 
-      expect(notifier.state.value, ai_config.HelpLevel.stapVoorStap);
+      final asyncValue = container.read(helpLevelProvider);
+      expect(asyncValue.value, ai_config.HelpLevel.stapVoorStap);
       expect(fakeSettings._helpLevel, 'stapVoorStap');
       container.dispose();
     });

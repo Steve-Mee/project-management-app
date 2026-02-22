@@ -111,6 +111,7 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
     }
 
     // Add async settings check for auto-login
+    // Use centralized async settings access (see 018-auth-settings-repo-access.md)
     final settings = await ref.read(settingsRepositoryProvider.future);
     if (settings.getAutoLoginEnabled() && settings.getEnableBiometricLogin() && await isBiometricAvailable()) {
       await authenticateWithBiometrics();
@@ -231,6 +232,7 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
         );
         // Update auto-login settings using async settings provider
         try {
+          // Use centralized async settings access (see 018-auth-settings-repo-access.md)
           final settingsRepo = await ref.watch(settingsRepositoryProvider.future);
           if (enableAutoLogin || settingsRepo.getLastLoginTime() == null) {
             await settingsRepo.setAutoLoginEnabled(true);
@@ -465,6 +467,7 @@ class PrivacyConsentNotifier extends AsyncNotifier<bool> {
   @override
   Future<bool> build() async {
     // stored in settings repository
+    // Use centralized async settings access (see 018-auth-settings-repo-access.md)
     final settings = await ref.read(settingsRepositoryProvider.future);
     return settings.getAiConsentEnabled();
   }
@@ -474,6 +477,7 @@ class PrivacyConsentNotifier extends AsyncNotifier<bool> {
 
   Future<void> setConsent(bool enabled) async {
     state = AsyncValue.data(enabled);
+    // Use centralized async settings access (see 018-auth-settings-repo-access.md)
     final settings = await ref.read(settingsRepositoryProvider.future);
     await settings.setAiConsentEnabled(enabled);
   }
@@ -488,11 +492,13 @@ final privacyConsentProvider = AsyncNotifierProvider<PrivacyConsentNotifier, boo
 class AiConsentNotifier extends AsyncNotifier<bool> {
   @override
   Future<bool> build() async {
+    // Use centralized async settings access (see 018-auth-settings-repo-access.md)
     final settings = await ref.read(settingsRepositoryProvider.future);
     return settings.getAiConsentEnabled();
   }
 
   Future<void> setEnabled(bool value) async {
+    // Use centralized async settings access (see 018-auth-settings-repo-access.md)
     final settings = await ref.read(settingsRepositoryProvider.future);
     await settings.setAiConsentEnabled(value);
     state = AsyncValue.data(value);
@@ -508,11 +514,13 @@ final aiConsentProvider = AsyncNotifierProvider<AiConsentNotifier, bool>(
 class BiometricLoginNotifier extends AsyncNotifier<bool> {
   @override
   Future<bool> build() async {
+    // Use centralized async settings access (see 018-auth-settings-repo-access.md)
     final settings = await ref.read(settingsRepositoryProvider.future);
     return settings.getEnableBiometricLogin();
   }
 
   Future<void> setEnabled(bool value) async {
+    // Use centralized async settings access (see 018-auth-settings-repo-access.md)
     final settings = await ref.read(settingsRepositoryProvider.future);
     await settings.setEnableBiometricLogin(value);
     state = AsyncValue.data(value);
@@ -528,6 +536,7 @@ final biometricLoginProvider = AsyncNotifierProvider<BiometricLoginNotifier, boo
 class HelpLevelNotifier extends AsyncNotifier<ai_config.HelpLevel> {
   @override
   Future<ai_config.HelpLevel> build() async {
+    // Use centralized async settings access (see 018-auth-settings-repo-access.md)
     final settings = await ref.read(settingsRepositoryProvider.future);
     final level = settings.getHelpLevel();
     switch (level) {
@@ -566,11 +575,13 @@ final biometricSupportedProvider = FutureProvider<bool>((ref) async {
 class UseBiometricsNotifier extends AsyncNotifier<bool> {
   @override
   Future<bool> build() async {
+    // Use centralized async settings access (see 018-auth-settings-repo-access.md)
     final settings = await ref.read(settingsRepositoryProvider.future);
     return settings.getUseBiometricsEnabled();
   }
 
   Future<void> setEnabled(bool enabled) async {
+    // Use centralized async settings access (see 018-auth-settings-repo-access.md)
     final settings = await ref.watch(settingsRepositoryProvider.future);
     await settings.setUseBiometricsEnabled(enabled);
     state = AsyncValue.data(enabled);
