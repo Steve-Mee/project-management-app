@@ -139,49 +139,49 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
     }
   }
 
-  Future<List<DateTime>> loadFailedAttempts(String email) async {
-    final attempts = attemptsBox.get(email) ?? [];
+  Future<List<DateTime>> _loadFailedAttempts() async {
+    final attempts = attemptsBox.get('global') ?? [];
     final now = DateTime.now();
     final cleaned = attempts.where((t) => now.difference(t).inSeconds <= 60).toList();
     if (cleaned.length != attempts.length) {
-      await saveFailedAttempts(email, cleaned);
+      await _saveFailedAttempts(cleaned);
     }
     return cleaned;
   }
 
-  Future<void> saveFailedAttempts(String email, List<DateTime> attempts) async {
-    await attemptsBox.put(email, attempts);
+  Future<void> _saveFailedAttempts(List<DateTime> attempts) async {
+    await attemptsBox.put('global', attempts);
   }
 
-  bool canAttemptLogin(List<DateTime> attempts) {
+  bool _canAttemptLogin(List<DateTime> attempts) {
     return attempts.length < 5;
   }
 
-  Future<void> recordFailedAttempt(String email) async {
-    final attempts = await loadFailedAttempts(email);
+  Future<void> _recordFailedAttempt() async {
+    final attempts = await _loadFailedAttempts();
     attempts.add(DateTime.now());
-    await saveFailedAttempts(email, attempts);
+    await _saveFailedAttempts(attempts);
   }
 
-  Duration? getBackoffTime(List<DateTime> attempts) {
+  Duration? _getBackoffTime(List<DateTime> attempts) {
     if (attempts.length >= 5) {
       return const Duration(seconds: 60);
     }
     return null;
   }
 
-  Future<void> resetAttempts(String email) async {
-    await saveFailedAttempts(email, []);
+  Future<void> _resetAttempts() async {
+    await _saveFailedAttempts([]);
   }
 
   /// Login with error handling and persistent rate limiting
   Future<bool> login(String username, String password, {bool enableAutoLogin = false}) async {
 
     // Check rate limiting before attempting login
-    final attempts = await loadFailedAttempts(username);
-    if (!canAttemptLogin(attempts)) {
+    final attempts = await _loadFailedAttempts();
+    if (!_canAttemptLogin(attempts)) {
       AppLogger.event('auth_rate_limit_exceeded', details: {'email': username, 'timestamp': DateTime.now().toIso8601String()});
-      throw RateLimitExceededException(getBackoffTime(attempts)!);
+      throw RateLimitExceededException(_getBackoffTime(attempts)!);
     }
 
     try {
@@ -242,13 +242,13 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
         }
 
         // Reset rate limiter on successful login
-        await resetAttempts(userEmail);
+        await _resetAttempts();
         return true;
       }
     } catch (e) {
       AppLogger.instance.w('Supabase login failed', error: e);
       // Record failed attempt for rate limiting
-      await recordFailedAttempt(username);
+      await _recordFailedAttempt();
     }
 
     state = AsyncValue.data(state.value!.copyWith(error: 'Invalid username or password.'));

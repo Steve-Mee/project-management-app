@@ -38,12 +38,16 @@ class TestAuthNotifier extends AuthNotifier {
   // Override login to simulate success without Supabase
   @override
   Future<bool> login(String username, String password, {bool enableAutoLogin = false}) async {
-    final attempts = await loadFailedAttempts(username);
-    if (!canAttemptLogin(attempts)) {
-      throw RateLimitExceededException(getBackoffTime(attempts)!);
+    final attempts = testBox.get('global') ?? [];
+    final now = DateTime.now();
+    final cleaned = attempts.where((t) => now.difference(t).inSeconds <= 60).toList();
+    if (cleaned.length != attempts.length) {
+      await testBox.put('global', cleaned);
     }
-    // Simulate success
-    await resetAttempts(username);
+    if (cleaned.length >= 5) {
+      throw RateLimitExceededException(const Duration(seconds: 60));
+    }
+    await testBox.put('global', []);
     return true;
   }
 }
@@ -182,7 +186,7 @@ void main() {
     });
 
     test('allows login with less than 5 attempts in 60s', () async {
-      fakeBox._map['test@example.com'] = [DateTime.now().subtract(const Duration(seconds: 30))];
+      fakeBox._map['global'] = [DateTime.now().subtract(const Duration(seconds: 30))];
 
       final container = ProviderContainer(
         overrides: [
@@ -198,7 +202,7 @@ void main() {
 
     test('blocks login with 5+ attempts and throws RateLimitExceededException', () async {
       final attempts = List.generate(5, (i) => DateTime.now().subtract(Duration(seconds: i * 10)));
-      fakeBox._map['test@example.com'] = attempts;
+      fakeBox._map['global'] = attempts;
 
       final container = ProviderContainer(
         overrides: [
@@ -212,10 +216,30 @@ void main() {
       container.dispose();
     });
 
+    test('RateLimitExceededException has correct backoff duration', () async {
+      final attempts = List.generate(5, (i) => DateTime.now().subtract(Duration(seconds: i * 10)));
+      fakeBox._map['global'] = attempts;
+
+      final container = ProviderContainer(
+        overrides: [
+          authProvider.overrideWith(() => TestAuthNotifier(fakeBox)),
+        ],
+      );
+
+      final notifier = container.read(authProvider.notifier);
+      try {
+        await notifier.login('test@example.com', 'password');
+        fail('Expected RateLimitExceededException');
+      } on RateLimitExceededException catch (e) {
+        expect(e.backoffDuration, const Duration(seconds: 60));
+      }
+      container.dispose();
+    });
+
     test('cleans attempts older than 60s', () async {
       final oldAttempt = DateTime.now().subtract(const Duration(seconds: 70));
       final newAttempt = DateTime.now().subtract(const Duration(seconds: 30));
-      fakeBox._map['test@example.com'] = [oldAttempt, newAttempt];
+      fakeBox._map['global'] = [oldAttempt, newAttempt];
 
       final container = ProviderContainer(
         overrides: [
@@ -232,7 +256,7 @@ void main() {
     });
 
     test('successful login clears attempts', () async {
-      fakeBox._map['test@example.com'] = [DateTime.now()];
+      fakeBox._map['global'] = [DateTime.now()];
 
       final container = ProviderContainer(
         overrides: [
