@@ -1,7 +1,6 @@
 import 'package:uuid/uuid.dart';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:hive_flutter/hive_flutter.dart';
 import '../services/app_logger.dart';
 import '../services/ai_planning_helpers.dart';
 import '../config/ai_config.dart' as ai_config;
