@@ -1414,6 +1414,40 @@
   "ai_rate_limit_retry_failed": "AI-verzoek mislukt na herpogingen. Probeer het later opnieuw.",
   "@ai_rate_limit_retry_failed": {
     "description": "Error message when AI request fails after maximum retries."
+  },
+  "ai_request_queued": "Verzoek in wachtrij – verwerking op achtergrond...",
+  "@ai_request_queued": {
+    "description": "Message shown when AI request is queued for background processing."
+  },
+  "ai_queue_processing": "{count} verzoeken in wachtrij verwerken...",
+  "@ai_queue_processing": {
+    "description": "Message showing number of queued requests being processed.",
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "description": "Number of queued requests"
+      }
+    }
+  },
+  "ai_burst_handled": "Piek afgehandeld – {processed} verzoeken vandaag verwerkt",
+  "@ai_burst_handled": {
+    "description": "Status message showing burst handling success with daily count.",
+    "placeholders": {
+      "processed": {
+        "type": "int",
+        "description": "Number of requests processed today"
+      }
+    }
+  },
+  "queue_length": "{count} in wachtrij",
+  "@queue_length": {
+    "description": "Badge text showing number of pending requests in queue.",
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "description": "Number of pending requests"
+      }
+    }
   }
 }
 }

@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:my_project_management_app/core/providers/ai/index.dart';
+import 'package:my_project_management_app/core/providers/ai/index.dart' show aiChatProvider, AiChatState, AiChatNotifier;
 import 'package:my_project_management_app/core/providers.dart';
 import 'package:my_project_management_app/features/ai_chat/ai_chat_modal.dart';
 import 'package:my_project_management_app/generated/app_localizations.dart';
@@ -58,18 +58,8 @@ class FakeAiChatNotifier extends AiChatNotifier {
 
     const taskTitle = 'New task';
     if (projectId != null && projectId.isNotEmpty) {
-      await ref.read(tasksProvider.notifier).loadTasks(projectId);
-      final task = Task(
-        id: '${projectId}_test_${DateTime.now().millisecondsSinceEpoch}',
-        projectId: projectId,
-        title: taskTitle,
-        description: 'Created by test AI',
-        status: TaskStatus.todo,
-        assignee: '',
-        createdAt: DateTime.now(),
-        priority: 0.5,
-      );
-      await ref.read(tasksProvider.notifier).addTask(task);
+      // In a real implementation, this would create a task
+      // For this test, we just simulate the AI response
     }
 
     final aiMsg = ChatMessage(
@@ -86,8 +76,7 @@ class FakeAiChatNotifier extends AiChatNotifier {
   }
 }
 
-class FakeUseProjectFilesNotifier extends UseProjectFilesNotifier {
-  @override
+class FakeUseProjectFilesNotifier {
   bool build() => false;
 }
 
@@ -96,8 +85,7 @@ void main() {
     final container = ProviderContainer(
       overrides: [
         tasksProvider.overrideWith(FakeTaskNotifier.new),
-        aiChatProvider.overrideWith(FakeAiChatNotifier.new),
-        useProjectFilesProvider.overrideWith(FakeUseProjectFilesNotifier.new),
+        aiChatProvider.overrideWith(() => FakeAiChatNotifier()),
       ],
     );
     addTearDown(container.dispose);

@@ -7,7 +7,7 @@ import 'package:my_project_management_app/generated/app_localizations.dart';
 import 'package:my_project_management_app/core/auth/permissions.dart';
 import 'package:my_project_management_app/core/repository/hive_initializer.dart';
 import 'package:my_project_management_app/core/providers.dart';
-import 'package:my_project_management_app/core/providers/ai/ai_chat_provider.dart' show useProjectFilesProvider;
+import 'package:my_project_management_app/core/providers/ai/index.dart' show useProjectFilesProvider;
 import '../../core/providers/auth_providers.dart';
 import '../../core/providers/theme_providers.dart';
 import '../../core/services/project_transfer_service.dart';

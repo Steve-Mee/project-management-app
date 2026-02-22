@@ -1,4 +1,7 @@
+import 'dart:async';
+import 'dart:math';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 import '../../services/app_logger.dart';
 import '../../services/ai_planning_helpers.dart';
 import '../../config/ai_config.dart' as ai_config;
@@ -6,9 +9,14 @@ import './ai_usage_provider.dart';
 import '../../../models/chat_message_model.dart';
 import '../../../models/project_plan.dart';
 import '../../models/ai_rate_limits_config.dart';
+import '../../models/ai_request_queue.dart';
 import '../auth_providers.dart';
 
 /// State class for AI chat
+/// 
+/// Contains the current state of AI chat including messages, loading status,
+/// rate limiting information, and queue metrics for UI display.
+/// See .github/issues/033-ai-request-queue.md for queue metrics implementation.
 class AiChatState {
   final List<ChatMessage> messages;
   final bool isLoading;
@@ -16,6 +24,10 @@ class AiChatState {
   final bool isRateLimited;
   final DateTime? rateLimitResetTime;
   final AiRateLimitsConfig rateLimitsConfig;
+  // Queue metrics exposed to UI (see .github/issues/033-ai-request-queue.md)
+  final int queueLength;
+  final int processedToday;
+  final int droppedCount;
 
   const AiChatState({
     this.messages = const [],
@@ -24,6 +36,9 @@ class AiChatState {
     this.isRateLimited = false,
     this.rateLimitResetTime,
     this.rateLimitsConfig = const AiRateLimitsConfig.defaults(),
+    this.queueLength = 0,
+    this.processedToday = 0,
+    this.droppedCount = 0,
   });
 
   AiChatState copyWith({
@@ -33,6 +48,9 @@ class AiChatState {
     bool? isRateLimited,
     DateTime? rateLimitResetTime,
     AiRateLimitsConfig? rateLimitsConfig,
+    int? queueLength,
+    int? processedToday,
+    int? droppedCount,
   }) {
     return AiChatState(
       messages: messages ?? this.messages,
@@ -41,11 +59,19 @@ class AiChatState {
       isRateLimited: isRateLimited ?? this.isRateLimited,
       rateLimitResetTime: rateLimitResetTime ?? this.rateLimitResetTime,
       rateLimitsConfig: rateLimitsConfig ?? this.rateLimitsConfig,
+      queueLength: queueLength ?? this.queueLength,
+      processedToday: processedToday ?? this.processedToday,
+      droppedCount: droppedCount ?? this.droppedCount,
     );
   }
 }
 
 /// Notifier for managing AI chat state with configurable rate limiting
+/// 
+/// Manages AI chat conversations with background queue processing to handle
+/// request bursts without immediate rate limit errors. Includes queue metrics
+/// tracking for UI feedback.
+/// See .github/issues/033-ai-request-queue.md for queue implementation details.
 class AiChatNotifier extends AsyncNotifier<AiChatState> {
   AiRateLimitsConfig? _rateLimitsConfig;
   final List<DateTime> _requestTimestamps = [];
@@ -53,6 +79,13 @@ class AiChatNotifier extends AsyncNotifier<AiChatState> {
   final List<DateTime> _dailyRequestTimestamps = [];
   int _totalTokensUsedToday = 0;
   DateTime? _lastTokenResetDate;
+  final AiRequestQueue _requestQueue = AiRequestQueue();
+  Timer? _workerTimer;
+  // Queue metrics tracking (see .github/issues/033-ai-request-queue.md)
+  int _processedToday = 0;
+  int _droppedCount = 0;
+  // Maximum queue size to prevent unbounded growth
+  static const int _maxQueueSize = 100;
 
   @override
   Future<AiChatState> build() async {
@@ -61,12 +94,42 @@ class AiChatNotifier extends AsyncNotifier<AiChatState> {
       _rateLimitsConfig = settings.getAiRateLimitsConfig();
       // Validate the config to ensure safe values
       _rateLimitsConfig = AiRateLimitsConfig.validateAiRateLimits(_rateLimitsConfig!);
-      return AiChatState(rateLimitsConfig: _rateLimitsConfig!);
+      
+      // Restore persisted queue from previous app sessions
+      await restoreQueue();
+      
+      // Start background worker for queue processing
+      _startWorker();
+      
+      // Cleanup worker when notifier is disposed
+      ref.onDispose(() => _stopWorker());
+      
+      return AiChatState(
+        rateLimitsConfig: _rateLimitsConfig!,
+        queueLength: _requestQueue.metrics.queueLength,
+        processedToday: _processedToday,
+        droppedCount: _droppedCount,
+      );
     } catch (e) {
       AppLogger.instance.e('Failed to load AI rate limits config: $e');
       // Fallback to defaults if settings fail
       _rateLimitsConfig = AiRateLimitsConfig.defaults();
-      return AiChatState(rateLimitsConfig: _rateLimitsConfig!);
+      
+      // Restore persisted queue even with defaults
+      await restoreQueue();
+      
+      // Start background worker even with defaults
+      _startWorker();
+      
+      // Cleanup worker when notifier is disposed
+      ref.onDispose(() => _stopWorker());
+      
+      return AiChatState(
+        rateLimitsConfig: _rateLimitsConfig!,
+        queueLength: _requestQueue.metrics.queueLength,
+        processedToday: _processedToday,
+        droppedCount: _droppedCount,
+      );
     }
   }
 
@@ -80,7 +143,39 @@ class AiChatNotifier extends AsyncNotifier<AiChatState> {
       _totalTokensUsedToday = 0;
       _lastTokenResetDate = now;
       _dailyRequestTimestamps.clear();
+      _processedToday = 0; // Reset daily processed count
+      _droppedCount = 0; // Reset dropped count for new day
     }
+  }
+
+  /// Update queue metrics in state for UI exposure
+  /// 
+  /// Keeps the UI synchronized with current queue status including length,
+  /// daily processed count, and dropped request count.
+  /// See .github/issues/033-ai-request-queue.md for metrics requirements.
+  void _updateQueueMetrics() {
+    final currentState = state.value;
+    if (currentState != null) {
+      state = AsyncValue.data(currentState.copyWith(
+        queueLength: _requestQueue.metrics.queueLength,
+        processedToday: _processedToday,
+        droppedCount: _droppedCount,
+      ));
+    }
+  }
+
+  /// Get current queue metrics for testing/UI access
+  /// 
+  /// Returns current queue status including pending requests,
+  /// daily processed count, and dropped request count.
+  /// See .github/issues/033-ai-request-queue.md for metrics tracking.
+  QueueMetrics get queueMetrics {
+    return QueueMetrics(
+      queueLength: _requestQueue.metrics.queueLength,
+      processedCount: _processedToday,
+      failedCount: _droppedCount,
+      averageProcessingTime: _requestQueue.metrics.averageProcessingTime,
+    );
   }
 
   /// Check if rate limit is exceeded for the given window
@@ -91,13 +186,6 @@ class AiChatNotifier extends AsyncNotifier<AiChatState> {
       now.difference(timestamp) > window);
     
     return timestamps.length >= maxRequests;
-  }
-
-  /// Get time until rate limit resets for the given window
-  DateTime? _getRateLimitResetTimeForWindow(List<DateTime> timestamps, Duration window) {
-    if (timestamps.isEmpty) return null;
-    final oldestRequest = timestamps.first;
-    return oldestRequest.add(window);
   }
 
   /// Check if any rate limit is exceeded
@@ -112,55 +200,13 @@ class AiChatNotifier extends AsyncNotifier<AiChatState> {
            _totalTokensUsedToday >= config.maxTotalTokensPerDay;
   }
 
-  /// Get the most restrictive rate limit reset time
-  DateTime? _getRateLimitResetTime(AiRateLimitsConfig? config) {
-    if (config == null) return null;
-
-    final now = DateTime.now();
-    DateTime? resetTime;
-
-    // Check minute limit
-    if (_requestTimestamps.length >= config.maxRequestsPerMinute) {
-      final minuteReset = _getRateLimitResetTimeForWindow(_requestTimestamps, const Duration(minutes: 1));
-      if (minuteReset != null && (resetTime == null || minuteReset.isAfter(resetTime))) { // ignore: unnecessary_null_comparison
-        resetTime = minuteReset;
-      }
-    }
-
-    // Check hour limit
-    if (_hourlyRequestTimestamps.length >= config.maxRequestsPerHour) {
-      final hourReset = _getRateLimitResetTimeForWindow(_hourlyRequestTimestamps, const Duration(hours: 1));
-      if (hourReset != null && (resetTime == null || hourReset.isAfter(resetTime))) {
-        resetTime = hourReset;
-      }
-    }
-
-    // Check day limit
-    if (_dailyRequestTimestamps.length >= config.maxRequestsPerDay) {
-      final dayReset = _getRateLimitResetTimeForWindow(_dailyRequestTimestamps, const Duration(days: 1));
-      if (dayReset != null && (resetTime == null || dayReset.isAfter(resetTime))) {
-        resetTime = dayReset;
-      }
-    }
-
-    // Check token limit (resets at midnight)
-    if (_totalTokensUsedToday >= config.maxTotalTokensPerDay) {
-      final tomorrow = DateTime(now.year, now.month, now.day + 1);
-      if (resetTime == null || tomorrow.isAfter(resetTime)) {
-        resetTime = tomorrow;
-      }
-    }
-
-    return resetTime;
-  }
-
   /// Estimate token count for a message (rough approximation)
   int _estimateTokenCount(String message) {
     // Rough approximation: ~4 characters per token for English text
     return (message.length / 4).ceil();
   }
 
-  /// Send a message and get AI response using modular helpers with rate limiting
+  /// Send a message and get AI response using background queue
   Future<void> sendMessage(
     String userMessage, {
     String? promptOverride,
@@ -171,7 +217,7 @@ class AiChatNotifier extends AsyncNotifier<AiChatState> {
     // Ensure we have the latest state
     final currentState = state.value ?? const AiChatState();
 
-    // Check token limit first (before API call)
+    // Check token limit first (before queuing)
     final estimatedTokens = _estimateTokenCount(userMessage);
     final rateLimitsConfig = currentState.rateLimitsConfig;
     if (_totalTokensUsedToday + estimatedTokens > rateLimitsConfig.maxTotalTokensPerDay) {
@@ -193,23 +239,7 @@ class AiChatNotifier extends AsyncNotifier<AiChatState> {
       return;
     }
 
-    // Check rate limiting
-    if (_isAnyRateLimited(rateLimitsConfig)) {
-      state = AsyncValue.data(currentState.copyWith(
-        error: 'Rate limit exceeded. Please wait before sending another message.',
-        isRateLimited: true,
-        rateLimitResetTime: _getRateLimitResetTime(rateLimitsConfig),
-      ));
-      return;
-    }
-
-    // Record this request in all time windows
-    final now = DateTime.now();
-    _requestTimestamps.add(now);
-    _hourlyRequestTimestamps.add(now);
-    _dailyRequestTimestamps.add(now);
-
-    // Add user message
+    // Add user message to UI immediately for better UX
     final userMsg = ChatMessage(
       id: DateTime.now().millisecondsSinceEpoch.toString(),
       content: userMessage,
@@ -225,41 +255,48 @@ class AiChatNotifier extends AsyncNotifier<AiChatState> {
       rateLimitResetTime: null,
     ));
 
-    try {
-      // Anonymize the message for compliance
-      final anonymizedMessage = _anonymizeMessage(userMessage);
+    // Create and enqueue the request
+    final completer = Completer<void>();
+    final request = AiRequest(
+      id: DateTime.now().millisecondsSinceEpoch.toString(),
+      action: 'chat',
+      payload: {
+        'userMessage': userMessage,
+        'promptOverride': promptOverride,
+        'projectId': projectId,
+        'estimatedTokens': estimatedTokens,
+      },
+      timestamp: DateTime.now(),
+      completer: completer,
+    );
 
-      // Use AiPlanningHelpers for modular API calls
-      final result = await _callAiWithAnonymizedPrompt(anonymizedMessage);
+    await _enqueueRequest(request);
+    return completer.future;
+  }
 
-      // Add AI message
-      final aiMsg = ChatMessage(
-        id: DateTime.now().millisecondsSinceEpoch.toString(),
-        content: result.content,
-        isUser: false,
-        timestamp: DateTime.now(),
-      );
-
-      state = AsyncValue.data(state.value!.copyWith(
-        messages: [...state.value!.messages, aiMsg],
-        isLoading: false,
-        isRateLimited: false, // Clear rate limit on success
-        rateLimitResetTime: null,
-      ));
-
-      // Log token usage from metadata
-      ref.read(aiUsageUpdateProvider(result.tokensUsed));
-
-      // Update total tokens used with actual tokens
-      _totalTokensUsedToday += result.tokensUsed;
-    } catch (e) {
-      final errorMsg = e.toString();
-      AppLogger.instance.e('AI Error', error: errorMsg);
-      state = AsyncValue.data(state.value!.copyWith(
-        isLoading: false,
-        error: 'Failed to get AI response: ${e.toString()}',
-      ));
+  /// Enqueue an AI request for background processing
+  /// 
+  /// Adds requests to the queue for processing when rate limits allow.
+  /// Includes overflow protection to prevent unbounded queue growth.
+  /// See .github/issues/033-ai-request-queue.md for queue metrics tracking.
+  Future<void> _enqueueRequest(AiRequest request) async {
+    // Check for queue overflow
+    if (_requestQueue.metrics.queueLength >= _maxQueueSize) {
+      _droppedCount++; // Track dropped requests
+      _updateQueueMetrics(); // Update UI with dropped count
+      AppLogger.event('ai_queue_overflow', params: {
+        'droppedCount': _droppedCount,
+        'action': request.action,
+      });
+      // Complete the request with an error
+      request.completer.completeError(Exception('Queue overflow: too many pending requests'));
+      return;
     }
+
+    // For chat messages, we already updated UI, so just enqueue
+    // For other requests, enqueue directly
+    await _requestQueue.enqueue(request);
+    _updateQueueMetrics(); // Update UI with new queue length
   }
 
   /// Modular method for AI API calls using AiPlanningHelpers
@@ -292,107 +329,307 @@ class AiChatNotifier extends AsyncNotifier<AiChatState> {
     state = const AsyncValue.data(AiChatState());
   }
 
-  /// Generate planning questions for a project using modular helpers
-  /// Now uses AiPlanningHelpers with anonymization and token logging
+  /// Generate planning questions for a project using background queue
   Future<List<String>> generatePlanningQuestions(
     Map<String, dynamic> projectData,
     ai_config.HelpLevel helpLevel,
   ) async {
-    try {
-      final result = await AiPlanningHelpers.generatePlanningQuestions(
-        projectData,
-        helpLevel,
-      );
+    final completer = Completer<List<String>>();
+    final request = AiRequest(
+      id: DateTime.now().millisecondsSinceEpoch.toString(),
+      action: 'generate_questions',
+      payload: {
+        'projectData': projectData,
+        'helpLevel': helpLevel,
+      },
+      timestamp: DateTime.now(),
+      completer: completer,
+    );
 
-      // Log token usage
-      ref.read(aiUsageUpdateProvider(result.tokensUsed));
-
-      return result.content;
-    } catch (e) {
-      AppLogger.instance.e('Error generating planning questions', error: e);
-      // Return fallback questions
-      return [
-        'What are the main challenges for this project?',
-        'How will you measure success?',
-        'What resources do you need?',
-      ];
-    }
+    await _enqueueRequest(request);
+    return completer.future;
   }
 
-  /// Generate project improvement proposals using modular helpers
-  /// Now uses AiPlanningHelpers with anonymization and token logging
+  /// Generate project improvement proposals using background queue
   Future<List<String>> generateProposals(
     Map<String, dynamic> projectData,
     ai_config.HelpLevel helpLevel, {
     List<String>? answers,
   }) async {
+    final completer = Completer<List<String>>();
+    final request = AiRequest(
+      id: DateTime.now().millisecondsSinceEpoch.toString(),
+      action: 'generate_proposals',
+      payload: {
+        'projectData': projectData,
+        'helpLevel': helpLevel,
+        'answers': answers,
+      },
+      timestamp: DateTime.now(),
+      completer: completer,
+    );
+
+    await _enqueueRequest(request);
+    return completer.future;
+  }
+
+  /// Generate final project plan using background queue
+  Future<ProjectPlan> generateFinalPlan(Map<String, dynamic> projectData) async {
+    final completer = Completer<ProjectPlan>();
+    final request = AiRequest(
+      id: DateTime.now().millisecondsSinceEpoch.toString(),
+      action: 'generate_final_plan',
+      payload: {
+        'projectData': projectData,
+      },
+      timestamp: DateTime.now(),
+      completer: completer,
+    );
+
+    await _enqueueRequest(request);
+    return completer.future;
+  }
+
+  /// Persist queue to Hive for offline recovery (public for app lifecycle)
+  ///
+  /// Saves pending requests to local storage when app goes to background.
+  /// Follows offline pattern from .github/issues/028-offline-mode.md.
+  /// See .github/issues/033-ai-request-queue.md for queue persistence.
+  Future<void> persistQueue() async {
     try {
-      final result = await AiPlanningHelpers.generateProposals(
-        projectData,
-        helpLevel,
-        answers: answers,
-      );
-
-      // Log token usage
-      ref.read(aiUsageUpdateProvider(result.tokensUsed));
-
-      return result.content;
+      final box = await Hive.openBox<List>('ai_request_queue');
+      final serializedRequests = _requestQueue.getPendingRequests().map((r) => r.toJson()).toList();
+      await box.put('pending_requests', serializedRequests);
+      AppLogger.event('ai_queue_persisted', params: {'count': _requestQueue.metrics.queueLength});
     } catch (e) {
-      AppLogger.instance.e('Error generating proposals', error: e);
-      return [
-        'Define clear project objectives',
-        'Set realistic timeline',
-        'Allocate budget properly',
-        'Identify potential risks',
-        'Plan team communication',
-      ];
+      AppLogger.instance.e('Failed to persist AI request queue', error: e);
     }
   }
 
-  /// Generate final project plan using modular helpers
-  /// Now uses AiPlanningHelpers with anonymization and token logging
-  Future<ProjectPlan> generateFinalPlan(Map<String, dynamic> projectData) async {
+  /// Restore queue from Hive for offline recovery (public for app lifecycle)
+  ///
+  /// Loads pending requests from local storage when app starts.
+  /// Follows offline pattern from .github/issues/028-offline-mode.md.
+  /// See .github/issues/033-ai-request-queue.md for queue persistence.
+  Future<void> restoreQueue() async {
     try {
-      final result = await AiPlanningHelpers.generateFinalPlan(projectData);
+      final box = await Hive.openBox<List>('ai_request_queue');
+      final serializedRequests = box.get('pending_requests');
+      if (serializedRequests != null) {
+        final requests = serializedRequests
+            .map((json) => AiRequest.fromJson(json))
+            .toList();
+        // Add restored requests back to queue
+        for (final request in requests) {
+          await _requestQueue.enqueue(request);
+        }
+        _updateQueueMetrics(); // Update UI with restored queue length
+        AppLogger.event('ai_queue_restored', params: {'count': _requestQueue.metrics.queueLength});
+      }
+    } catch (e) {
+      AppLogger.instance.e('Failed to restore AI request queue', error: e);
+    }
+  }
 
-      // Log token usage
+  /// Start background worker to process queued requests
+  void _startWorker() {
+    _stopWorker(); // Ensure no duplicate timers
+    _workerTimer = Timer.periodic(const Duration(seconds: 2), (_) => _processQueue());
+  }
+
+  /// Stop background worker
+  void _stopWorker() {
+    _workerTimer?.cancel();
+    _workerTimer = null;
+  }
+
+  /// Process queued requests respecting rate limits and exponential backoff
+  Future<void> _processQueue() async {
+    if (!_requestQueue.hasPending || _isAnyRateLimited(_rateLimitsConfig!)) {
+      return; // Nothing to process or rate limited
+    }
+
+    final request = _requestQueue.dequeue();
+    if (request == null) return;
+
+    final startTime = DateTime.now();
+
+    try {
+      await _executeQueuedRequest(request);
+      final processingTime = DateTime.now().difference(startTime);
+      _requestQueue.markProcessed(processingTime);
+      _processedToday++; // Track daily processed count
+      _updateQueueMetrics(); // Update UI with new metrics
+      AppLogger.event('ai_queue_processed', params: {
+        'queueLength': _requestQueue.metrics.queueLength,
+        'success': true,
+        'action': request.action,
+        'processingTimeMs': processingTime.inMilliseconds,
+      });
+    } catch (e) {
+      _requestQueue.markFailed();
+      // Implement exponential backoff with jitter for retries
+      final retryCount = request.payload['retryCount'] as int? ?? 0;
+      if (retryCount < 3) {
+        // Re-queue with incremented retry count after backoff delay
+        final retryDelay = _calculateBackoffDelay(retryCount);
+        await Future.delayed(retryDelay);
+        
+        final retryRequest = request.copyWith(
+          payload: {...request.payload, 'retryCount': retryCount + 1}
+        );
+        await _requestQueue.enqueue(retryRequest); // Re-enqueue for retry
+      }
+      AppLogger.event('ai_queue_processed', params: {
+        'queueLength': _requestQueue.metrics.queueLength,
+        'success': false,
+        'action': request.action,
+        'error': e.toString(),
+        'retryCount': retryCount,
+      });
+    }
+  }
+
+  /// Execute a queued request based on its action
+  Future<void> _executeQueuedRequest(AiRequest request) async {
+    try {
+      switch (request.action) {
+        case 'chat':
+          await _executeChatRequest(request);
+          break;
+        case 'generate_questions':
+          final result = await _executeGenerateQuestionsRequest(request);
+          request.completer.complete(result);
+          break;
+        case 'generate_proposals':
+          final result = await _executeGenerateProposalsRequest(request);
+          request.completer.complete(result);
+          break;
+        case 'generate_final_plan':
+          final result = await _executeGenerateFinalPlanRequest(request);
+          request.completer.complete(result);
+          break;
+        default:
+          throw Exception('Unknown action: ${request.action}');
+      }
+      request.completer.complete(); // For void methods like chat
+    } catch (e) {
+      request.completer.completeError(e);
+      rethrow;
+    }
+  }
+
+  /// Execute a chat request with UI updates
+  Future<void> _executeChatRequest(AiRequest request) async {
+    final userMessage = request.payload['userMessage'] as String;
+    
+    // Record this request in rate limiting windows (now that we're actually processing)
+    final now = DateTime.now();
+    _requestTimestamps.add(now);
+    _hourlyRequestTimestamps.add(now);
+    _dailyRequestTimestamps.add(now);
+
+    try {
+      // Anonymize the message for compliance
+      final anonymizedMessage = _anonymizeMessage(userMessage);
+
+      // Use AiPlanningHelpers for modular API calls
+      final result = await _callAiWithAnonymizedPrompt(anonymizedMessage);
+
+      // Add AI message to UI
+      final aiMsg = ChatMessage(
+        id: DateTime.now().millisecondsSinceEpoch.toString(),
+        content: result.content,
+        isUser: false,
+        timestamp: DateTime.now(),
+      );
+
+      // Update UI state
+      final currentState = state.value;
+      if (currentState != null) {
+        state = AsyncValue.data(currentState.copyWith(
+          messages: [...currentState.messages, aiMsg],
+          isLoading: false,
+          isRateLimited: false,
+          rateLimitResetTime: null,
+        ));
+      }
+
+      // Log token usage from metadata
       ref.read(aiUsageUpdateProvider(result.tokensUsed));
 
-      return result.content;
+      // Update total tokens used with actual tokens
+      _totalTokensUsedToday += result.tokensUsed;
+
     } catch (e) {
-      AppLogger.instance.e('Error generating final plan', error: e);
-      // Return a default plan
-      return ProjectPlan(
-        overview: 'Default project plan - please refine with AI',
-        chapters: [
-          PlanChapter(
-            title: 'Planning Phase',
-            overview: 'Initial project setup and planning',
-            tasks: [
-              PlanTask(description: 'Define project scope'),
-              PlanTask(description: 'Create timeline'),
-              PlanTask(description: 'Allocate budget'),
-            ],
-          ),
-          PlanChapter(
-            title: 'Development Phase',
-            overview: 'Core development work',
-            tasks: [
-              PlanTask(description: 'Implement core features'),
-              PlanTask(description: 'Add testing'),
-            ],
-          ),
-          PlanChapter(
-            title: 'Deployment Phase',
-            overview: 'Final deployment and launch',
-            tasks: [
-              PlanTask(description: 'Deploy to production'),
-              PlanTask(description: 'Monitor and maintain'),
-            ],
-          ),
-        ],
-      );
+      final errorMsg = e.toString();
+      AppLogger.instance.e('AI Error', error: errorMsg);
+      
+      // Update UI with error
+      final currentState = state.value;
+      if (currentState != null) {
+        state = AsyncValue.data(currentState.copyWith(
+          isLoading: false,
+          error: 'Failed to get AI response: ${e.toString()}',
+        ));
+      }
+      rethrow; // Re-throw for completer
     }
+  }
+
+  /// Execute a generate questions request
+  Future<List<String>> _executeGenerateQuestionsRequest(AiRequest request) async {
+    final projectData = request.payload['projectData'] as Map<String, dynamic>;
+    final helpLevel = request.payload['helpLevel'] as ai_config.HelpLevel;
+
+    final result = await AiPlanningHelpers.generatePlanningQuestions(
+      projectData,
+      helpLevel,
+    );
+
+    // Log token usage
+    ref.read(aiUsageUpdateProvider(result.tokensUsed));
+
+    return result.content;
+  }
+
+  /// Execute a generate proposals request
+  Future<List<String>> _executeGenerateProposalsRequest(AiRequest request) async {
+    final projectData = request.payload['projectData'] as Map<String, dynamic>;
+    final helpLevel = request.payload['helpLevel'] as ai_config.HelpLevel;
+    final answers = request.payload['answers'] as List<String>?;
+
+    final result = await AiPlanningHelpers.generateProposals(
+      projectData,
+      helpLevel,
+      answers: answers,
+    );
+
+    // Log token usage
+    ref.read(aiUsageUpdateProvider(result.tokensUsed));
+
+    return result.content;
+  }
+
+  /// Execute a generate final plan request
+  Future<ProjectPlan> _executeGenerateFinalPlanRequest(AiRequest request) async {
+    final projectData = request.payload['projectData'] as Map<String, dynamic>;
+
+    final result = await AiPlanningHelpers.generateFinalPlan(projectData);
+
+    // Log token usage
+    ref.read(aiUsageUpdateProvider(result.tokensUsed));
+
+    return result.content;
+  }
+
+  /// Calculate exponential backoff delay with jitter
+  Duration _calculateBackoffDelay(int retryCount) {
+    // Simple exponential backoff: base delay * 2^attempts with jitter
+    final baseDelay = Duration(seconds: 1);
+    final exponentialDelay = baseDelay * pow(2, retryCount).toInt();
+    final jitter = Duration(milliseconds: Random().nextInt(1000)); // 0-1 second jitter
+    return exponentialDelay + jitter;
   }
 
 }

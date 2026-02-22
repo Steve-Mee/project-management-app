@@ -1925,6 +1925,40 @@
   "ai_rate_limit_retry_failed": "AI request failed after retries. Please try again later.",
   "@ai_rate_limit_retry_failed": {
     "description": "Error message when AI request fails after maximum retries."
+  },
+  "ai_request_queued": "Request queued – processing in background...",
+  "@ai_request_queued": {
+    "description": "Message shown when AI request is queued for background processing."
+  },
+  "ai_queue_processing": "Processing {count} queued requests...",
+  "@ai_queue_processing": {
+    "description": "Message showing number of queued requests being processed.",
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "description": "Number of queued requests"
+      }
+    }
+  },
+  "ai_burst_handled": "Burst handled – {processed} requests processed today",
+  "@ai_burst_handled": {
+    "description": "Status message showing burst handling success with daily count.",
+    "placeholders": {
+      "processed": {
+        "type": "int",
+        "description": "Number of requests processed today"
+      }
+    }
+  },
+  "queue_length": "{count} pending",
+  "@queue_length": {
+    "description": "Badge text showing number of pending requests in queue.",
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "description": "Number of pending requests"
+      }
+    }
   }
 }
 }

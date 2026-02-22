@@ -988,15 +988,205 @@ void main() {
 
       await container.read(ai_provider.aiChatProvider.future);
 
-      fakeAsync((async) async {
+      fakeAsync((async) {
         final sendFuture = testNotifier.sendMessage('test message');
         async.elapse(const Duration(seconds: 5));
 
         // Should complete successfully
-        await sendFuture;
+        expect(sendFuture, completes);
 
         // Verify 2 attempts (initial failure + retry success)
         expect(testNotifier.callCount, equals(2));
+      });
+    });
+  });
+
+  group('AI Request Queue Tests', () {
+    late ProviderContainer container;
+    late FakeSettingsRepository fakeSettingsRepo;
+    late MockAppLogger mockLogger;
+
+    setUp(() {
+      fakeSettingsRepo = FakeSettingsRepository();
+      mockLogger = MockAppLogger();
+      container = ProviderContainer(
+        overrides: [
+          settingsRepositoryProvider.overrideWith((ref) => Future.value(fakeSettingsRepo)),
+          appLoggerProvider.overrideWith((ref) => mockLogger),
+        ],
+      );
+    });
+
+    tearDown(() {
+      container.dispose();
+    });
+
+    test('should enqueue requests during rate limit without immediate error', () async {
+      // Set very restrictive rate limits to trigger rate limiting
+      final restrictiveConfig = AiRateLimitsConfig(
+        maxRequestsPerMinute: 1,
+        maxRequestsPerHour: 1,
+        maxRequestsPerDay: 1,
+        maxTokensPerRequest: 4000,
+        maxTotalTokensPerDay: 100000,
+        maxRequestsPerWindow: 1,
+        timeWindowDuration: const Duration(minutes: 1),
+        backoffBaseDelay: const Duration(milliseconds: 500),
+        backoffMaxDelay: const Duration(seconds: 30),
+        maxRetryAttempts: 3,
+      );
+      fakeSettingsRepo.setAiRateLimitsConfig(restrictiveConfig);
+
+      final notifier = container.read(ai_provider.aiChatProvider.notifier);
+
+      // First request should succeed
+      await notifier.sendMessage('First message');
+      expect(notifier.state.value!.messages.length, equals(2)); // User + AI message
+
+      // Second request should be queued (not immediate error)
+      final queueFuture = notifier.sendMessage('Second message');
+      expect(notifier.state.value!.messages.length, equals(3)); // User message added immediately
+
+      // Queue should have pending requests
+      expect(notifier.queueMetrics.queueLength, equals(1));
+
+      // Request should complete when processed
+      await queueFuture;
+      expect(notifier.state.value!.messages.length, equals(4)); // AI response added
+      expect(notifier.queueMetrics.queueLength, equals(0));
+    });
+
+    test('worker should process queue respecting rate limits and backoff', () async {
+      fakeAsync((async) {
+        // Set rate limit that allows 1 request per minute
+        final rateLimitedConfig = AiRateLimitsConfig(
+          maxRequestsPerMinute: 1,
+          maxRequestsPerHour: 10,
+          maxRequestsPerDay: 100,
+          maxTokensPerRequest: 4000,
+          maxTotalTokensPerDay: 100000,
+          maxRequestsPerWindow: 1,
+          timeWindowDuration: const Duration(minutes: 1),
+          backoffBaseDelay: const Duration(milliseconds: 500),
+          backoffMaxDelay: const Duration(seconds: 30),
+          maxRetryAttempts: 3,
+        );
+        fakeSettingsRepo.setAiRateLimitsConfig(rateLimitedConfig);
+
+        final notifier = container.read(ai_provider.aiChatProvider.notifier);
+
+        // Send multiple requests quickly
+        final futures = <Future>[];
+        for (int i = 0; i < 3; i++) {
+          futures.add(notifier.sendMessage('Message $i'));
+        }
+
+        // First request should process immediately
+        async.elapse(const Duration(milliseconds: 100));
+        expect(notifier.queueMetrics.processedCount, equals(1));
+        expect(notifier.queueMetrics.queueLength, equals(2));
+
+        // Second request should be rate limited and retried with backoff
+        async.elapse(const Duration(seconds: 2)); // Worker interval
+        expect(notifier.queueMetrics.processedCount, equals(2));
+        expect(notifier.queueMetrics.queueLength, equals(1));
+
+        // Third request should process after backoff
+        async.elapse(const Duration(seconds: 3)); // Allow backoff time
+        expect(notifier.queueMetrics.processedCount, equals(3));
+        expect(notifier.queueMetrics.queueLength, equals(0));
+
+        // All futures should complete
+        // Note: In fakeAsync, we can't use real await, but we can check completion
+        expect(futures.length, equals(3));
+      });
+    });
+
+    test('should track correct queue metrics (queueLength, processedCount)', () async {
+      fakeAsync((async) {
+        final notifier = container.read(ai_provider.aiChatProvider.notifier);
+
+        // Initially empty
+        expect(notifier.queueMetrics.queueLength, equals(0));
+        expect(notifier.queueMetrics.processedCount, equals(0));
+        expect(notifier.queueMetrics.failedCount, equals(0));
+
+        // Send multiple requests
+        final futures = <Future>[];
+        for (int i = 0; i < 5; i++) {
+          futures.add(notifier.sendMessage('Message $i'));
+        }
+
+        // All should be queued initially
+        expect(notifier.queueMetrics.queueLength, equals(4)); // 4 pending (first processed immediately)
+
+        // Process queue
+        async.elapse(const Duration(seconds: 3));
+        expect(notifier.queueMetrics.processedCount, equals(5));
+        expect(notifier.queueMetrics.queueLength, equals(0));
+
+        // Note: In fakeAsync, futures complete synchronously
+      });
+    });
+
+    test('should handle persistence roundtrip correctly', () async {
+      final notifier = container.read(ai_provider.aiChatProvider.notifier);
+
+      // Send requests and let them queue
+      final futures = <Future>[];
+      for (int i = 0; i < 3; i++) {
+        futures.add(notifier.sendMessage('Persistent message $i'));
+      }
+
+      expect(notifier.queueMetrics.queueLength, equals(2)); // 2 pending
+
+      // Persist queue
+      await notifier.persistQueue();
+
+      // Create new container to simulate app restart
+      final newContainer = ProviderContainer(
+        overrides: [
+          settingsRepositoryProvider.overrideWith((ref) => Future.value(fakeSettingsRepo)),
+          appLoggerProvider.overrideWith((ref) => mockLogger),
+        ],
+      );
+
+      final newNotifier = newContainer.read(ai_provider.aiChatProvider.notifier);
+
+      // Queue should be restored
+      expect(newNotifier.queueMetrics.queueLength, equals(2));
+
+      // Process restored requests
+      await Future.wait(futures);
+
+      newContainer.dispose();
+    });
+
+    test('should handle burst of 20 requests smoothly without immediate errors', () async {
+      fakeAsync((async) {
+        final notifier = container.read(ai_provider.aiChatProvider.notifier);
+
+        // Send burst of 20 requests
+        final futures = <Future>[];
+        for (int i = 0; i < 20; i++) {
+          futures.add(notifier.sendMessage('Burst message $i'));
+        }
+
+        // Should queue all requests without immediate errors
+        expect(notifier.queueMetrics.queueLength, equals(19)); // 19 pending
+        expect(notifier.state.value!.messages.length, equals(20)); // All user messages added
+
+        // Process queue gradually
+        for (int i = 0; i < 19; i++) {
+          async.elapse(const Duration(seconds: 2)); // Worker interval
+          expect(notifier.queueMetrics.processedCount, equals(i + 2)); // +2 because first processed immediately
+        }
+
+        // All requests should complete
+        // Note: In fakeAsync, we check completion by state rather than awaiting
+        expect(notifier.queueMetrics.queueLength, equals(0));
+        expect(notifier.queueMetrics.processedCount, equals(20));
+        expect(notifier.state.value!.messages.length, equals(40)); // 20 user + 20 AI messages
       });
     });
   });

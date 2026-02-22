@@ -18,6 +18,7 @@ import 'package:app_links/app_links.dart';
 import 'package:my_project_management_app/generated/app_localizations.dart';
 import 'core/theme.dart';
 import 'package:my_project_management_app/core/providers.dart';
+import 'package:my_project_management_app/core/providers/ai/index.dart' show aiChatProvider;
 import 'core/providers/auth_providers.dart';
 import 'core/providers/theme_providers.dart';
 import 'core/providers/navigation_providers.dart';
@@ -177,8 +178,11 @@ class _AppLifecycleHandler extends WidgetsBindingObserver {
   Future<void> _backupOnBackground() async {
     try {
       await HiveInitializer.backupHive();
+      // Persist AI request queue for offline recovery
+      final aiChatNotifier = _container.read(aiChatProvider.notifier);
+      await aiChatNotifier.persistQueue();
     } catch (e) {
-      AppLogger.instance.e('Error creating background Hive backup', error: e);
+      AppLogger.instance.e('Error creating background backup', error: e);
     }
   }
 

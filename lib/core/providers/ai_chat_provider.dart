@@ -1,6 +1,8 @@
+import 'dart:async';
 import 'dart:math';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 import '../services/app_logger.dart';
 import '../services/ai_planning_helpers.dart';
 import '../config/ai_config.dart' as ai_config;
@@ -8,6 +10,7 @@ import '../providers/ai/ai_usage_provider.dart';
 import '../../models/chat_message_model.dart';
 import '../../models/project_plan.dart';
 import '../models/ai_rate_limits_config.dart';
+import '../models/ai_request_queue.dart';
 import 'auth_providers.dart';
 
 /// Custom exception for rate limit exceeded
@@ -95,38 +98,196 @@ class AiChatState {
   }
 }
 
-/// Notifier for managing AI chat state with rate limiting
-/// 
+/// Notifier for managing AI chat state with rate limiting and request queuing
+///
 /// This notifier provides configurable AI rate limiting based on user settings.
 /// Rate limits are loaded from settings on initialization with safe fallbacks.
-/// See .github/issues/030-ai-configurable-rate-limits.md for implementation details.
+/// See .github/issues/030-ai-configurable-rate-limits.md for rate limiting details.
+///
+/// Implements request queuing to handle AI API bursts without immediate errors.
+/// Background worker processes queued requests when rate limits allow.
+/// See .github/issues/033-ai-request-queue.md for queue implementation details.
+///
+/// Features:
+/// - Sliding window rate limiting with configurable limits
+/// - Exponential backoff retry for throttling errors
+/// - In-memory request queue with optional Hive persistence
+/// - Queue metrics tracking (processed, dropped, queue length)
+/// - Automatic queue size management (max 50 requests)
+/// - Priority-based processing (higher priority first, then FIFO)
 class AiChatNotifier extends AsyncNotifier<AiChatState> {
   @override
   Future<AiChatState> build() async {
+    AiChatState state;
     try {
       final settings = await ref.watch(settingsRepositoryProvider.future);
       final rateLimits = settings.getAiRateLimitsConfig();
       AppLogger.event('ai_max_requests_config_loaded', params: {'value': rateLimits.maxRequestsPerWindow});
-      return AiChatState(rateLimits: rateLimits);
+      state = AiChatState(rateLimits: rateLimits);
     } catch (e) {
       // Fallback to defaults if settings fail to load
       AppLogger.event('Failed to load AI rate limits from settings, using defaults', params: {'error': e.toString()});
-      return AiChatState(rateLimits: const AiRateLimitsConfig.defaults());
+      state = AiChatState(rateLimits: const AiRateLimitsConfig.defaults());
+    }
+
+    // Load persisted queue from previous app sessions
+    await _loadPersistedQueue();
+
+    return state;
+  }
+
+  // Queue worker for processing queued AI requests
+  Timer? _workerTimer;
+  final Map<String, Completer<dynamic>> _pendingRequests = {};
+  final List<AiRequest> _requestQueue = [];
+
+  // Queue metrics for monitoring and analytics
+  int _processedToday = 0;
+  int _droppedCount = 0;
+  DateTime? _lastMetricsReset;
+
+  /// Get current queue metrics for monitoring
+  ///
+  /// Returns metrics about queue performance and health.
+  /// See .github/issues/033-ai-request-queue.md for queue implementation.
+  QueueMetrics get queueMetrics {
+    _resetMetricsIfNeeded();
+    return QueueMetrics(
+      queueLength: _requestQueue.length,
+      processedCount: _processedToday,
+      failedCount: _droppedCount,
+    );
+  }
+
+  /// Reset daily metrics if it's a new day
+  void _resetMetricsIfNeeded() {
+    final now = DateTime.now();
+    if (_lastMetricsReset == null ||
+        now.day != _lastMetricsReset!.day ||
+        now.month != _lastMetricsReset!.month ||
+        now.year != _lastMetricsReset!.year) {
+      _processedToday = 0;
+      _droppedCount = 0;
+      _lastMetricsReset = now;
     }
   }
 
-  /// Send a message and get AI response with rate limiting
-  /// 
-  /// Sends a user message to the AI service and updates the chat state.
-  /// Checks rate limits before making the API call and throws RateLimitExceededException
-  /// if limits are exceeded. Logs rate limit violations for monitoring.
-  /// 
+  /// Persist queue to Hive for offline recovery (public for app lifecycle)
+  ///
+  /// Saves pending requests to local storage when app goes to background.
+  /// Follows offline pattern from .github/issues/028-offline-mode.md.
+  /// See .github/issues/033-ai-request-queue.md for queue persistence.
+  Future<void> persistQueue() async {
+    try {
+      final box = await Hive.openBox<List>('ai_request_queue');
+      final serializedRequests = _requestQueue.map((r) => r.toJson()).toList();
+      await box.put('pending_requests', serializedRequests);
+      AppLogger.event('ai_queue_persisted', params: {'count': _requestQueue.length});
+    } catch (e) {
+      AppLogger.instance.e('Failed to persist AI request queue', error: e);
+    }
+  }
+
+  /// Load persisted queue from Hive on startup
+  ///
+  /// Restores pending requests from local storage after app restart.
+  /// Only loads requests that are less than 24 hours old to prevent stale data.
+  /// See .github/issues/033-ai-request-queue.md for queue persistence.
+  Future<void> _loadPersistedQueue() async {
+    try {
+      final box = await Hive.openBox<List>('ai_request_queue');
+      final serializedRequests = box.get('pending_requests', defaultValue: []);
+      if (serializedRequests != null) {
+        final cutoffTime = DateTime.now().subtract(const Duration(hours: 24));
+        for (final json in serializedRequests) {
+          try {
+            final request = AiRequest.fromJson(json as Map<String, dynamic>);
+            // Only restore recent requests
+            if (request.timestamp.isAfter(cutoffTime)) {
+              _enqueueRequest(request);
+              // Create completer for the restored request
+              _pendingRequests[request.id] = Completer<dynamic>();
+            }
+          } catch (e) {
+            AppLogger.instance.e('Failed to deserialize AI request', error: e);
+          }
+        }
+        AppLogger.event('ai_queue_restored', params: {'count': _requestQueue.length});
+      }
+    } catch (e) {
+      AppLogger.instance.e('Failed to load persisted AI request queue', error: e);
+    }
+  }
+
+  /// Execute queued chat request
+  Future<ChatMessage> _executeChatRequest(Map<String, dynamic> payload) async {
+    final userMessage = payload['userMessage'] as String;
+    // TODO: Use promptOverride and projectId in future AI call enhancements
+
+    final anonymizedMessage = _anonymizeMessage(userMessage);
+    final result = await _callAiWithRetry(anonymizedMessage);
+
+    ref.read(aiUsageUpdateProvider(result.tokensUsed));
+
+    return ChatMessage(
+      id: DateTime.now().millisecondsSinceEpoch.toString(),
+      content: result.content,
+      isUser: false,
+      timestamp: DateTime.now(),
+    );
+  }
+
+  /// Execute queued generate questions request
+  Future<List<String>> _executeGenerateQuestionsRequest(Map<String, dynamic> payload) async {
+    final projectData = payload['projectData'] as Map<String, dynamic>;
+    final helpLevel = payload['helpLevel'] as ai_config.HelpLevel;
+
+    final result = await _retryAiCall(() => AiPlanningHelpers.generatePlanningQuestions(
+      projectData,
+      helpLevel,
+    ));
+
+    ref.read(aiUsageUpdateProvider(result.tokensUsed));
+    return result.content;
+  }
+
+  /// Execute queued generate proposals request
+  Future<List<String>> _executeGenerateProposalsRequest(Map<String, dynamic> payload) async {
+    final projectData = payload['projectData'] as Map<String, dynamic>;
+    final helpLevel = payload['helpLevel'] as ai_config.HelpLevel;
+    final answers = payload['answers'] as List<String>?;
+
+    final result = await _retryAiCall(() => AiPlanningHelpers.generateProposals(
+      projectData,
+      helpLevel,
+      answers: answers,
+    ));
+
+    ref.read(aiUsageUpdateProvider(result.tokensUsed));
+    return result.content;
+  }
+
+  /// Execute queued generate plan request
+  Future<ProjectPlan> _executeGeneratePlanRequest(Map<String, dynamic> payload) async {
+    final projectData = payload['projectData'] as Map<String, dynamic>;
+
+    final result = await _retryAiCall(() => AiPlanningHelpers.generateFinalPlan(projectData));
+
+    ref.read(aiUsageUpdateProvider(result.tokensUsed));
+    return result.content;
+  }
+
+  /// Send a message and get AI response with queuing
+  ///
+  /// Enqueues the message for processing instead of direct API call.
+  /// Updates UI state immediately, processes asynchronously via queue worker.
+  /// Preserves existing error handling and rate limiting behavior.
+  /// See .github/issues/033-ai-request-queue.md for queue implementation.
+  ///
   /// Parameters:
   /// - userMessage: The message text to send
   /// - promptOverride: Optional custom prompt to override defaults
   /// - projectId: Optional project context for the conversation
-  /// 
-  /// Throws: RateLimitExceededException if rate limits are exceeded
   Future<void> sendMessage(
     String userMessage, {
     String? promptOverride,
@@ -135,20 +296,20 @@ class AiChatNotifier extends AsyncNotifier<AiChatState> {
     if (userMessage.trim().isEmpty) return;
 
     final currentState = state.value!;
-    
-    // Check rate limit before proceeding
-    if (currentState.isRateLimited) {
+
+    // Check rate limit - if exceeded, enqueue anyway (queue will wait)
+    final isCurrentlyLimited = currentState.isRateLimited;
+    if (isCurrentlyLimited) {
       final remainingTime = currentState.timeUntilReset;
-      AppLogger.event('ai_rate_limit_exceeded', params: {
+      AppLogger.event('ai_rate_limit_exceeded_queued', params: {
         'remainingTime': remainingTime.inSeconds,
         'requestCount': currentState.requestCountInWindow,
         'maxRequestsPerWindow': currentState.rateLimits.maxRequestsPerWindow,
         'timeWindowDuration': currentState.rateLimits.timeWindowDuration.inSeconds,
       });
-      throw RateLimitExceededException(remainingTime);
     }
 
-    // Add user message
+    // Add user message immediately
     final userMsg = ChatMessage(
       id: DateTime.now().millisecondsSinceEpoch.toString(),
       content: userMessage,
@@ -156,7 +317,7 @@ class AiChatNotifier extends AsyncNotifier<AiChatState> {
       timestamp: DateTime.now(),
     );
 
-    // Update rate limiting state
+    // Update UI state with loading
     final now = DateTime.now();
     final newRequestCount = _calculateNewRequestCount(now, currentState);
 
@@ -168,48 +329,152 @@ class AiChatNotifier extends AsyncNotifier<AiChatState> {
       requestCountInWindow: newRequestCount,
     ));
 
+    // Create and enqueue the request
+    final requestId = DateTime.now().millisecondsSinceEpoch.toString();
+    final completer = Completer<ChatMessage>();
+    final request = AiRequest(
+      id: requestId,
+      action: 'chat',
+      payload: {
+        'userMessage': userMessage,
+        'promptOverride': promptOverride,
+        'projectId': projectId,
+      },
+      timestamp: DateTime.now(),
+      priority: 1,
+      completer: completer,
+    );
+
+    _pendingRequests[requestId] = completer;
+    _enqueueRequest(request);
+
+    // Start worker if not running
+    _startWorker();
+
     try {
-      // Anonymize the message for compliance
-      final anonymizedMessage = _anonymizeMessage(userMessage);
+      // Wait for queue processing to complete
+      final aiMsg = await completer.future;
 
-      // Use AiPlanningHelpers for modular API calls
-      final result = await _callAiWithRetry(anonymizedMessage);
-
-      // Add AI message
-      final aiMsg = ChatMessage(
-        id: DateTime.now().millisecondsSinceEpoch.toString(),
-        content: result.content,
-        isUser: false,
-        timestamp: DateTime.now(),
-      );
-
+      // Update UI with AI response
       final updatedState = state.value!;
       state = AsyncValue.data(updatedState.copyWith(
         messages: [...updatedState.messages, aiMsg],
         isLoading: false,
       ));
-
-      // Log token usage from metadata
-      ref.read(aiUsageUpdateProvider(result.tokensUsed));
     } catch (e) {
       final errorMsg = e.toString();
-      AppLogger.instance.e('AI Error', error: errorMsg);
-      // UI Example: Show error snackbar for final failure
-      // Requires BuildContext from UI layer
-      // final l10n = AppLocalizations.of(context)!;
-      // ScaffoldMessenger.of(context).showSnackBar(
-      //   SnackBar(
-      //     content: Text(_isThrottlingError(e) ? l10n.ai_rate_limit_retry_failed : 'Failed to get AI response: $errorMsg'),
-      //     backgroundColor: Colors.red,
-      //   ),
-      // );
+      AppLogger.instance.e('AI Queue Error', error: errorMsg);
+
       final updatedState = state.value!;
       state = AsyncValue.data(updatedState.copyWith(
         isLoading: false,
-        error: 'Failed to get AI response: ${e.toString()}',
+        error: 'Failed to get AI response: $errorMsg',
       ));
     }
   }
+
+  /// UI Example: Queue Status Indicators for AI Chat Screen
+  ///
+  /// Add these components to your chat screen to show queue status to users.
+  /// See .github/issues/033-ai-request-queue.md for UI integration examples.
+  ///
+  /// Example usage in chat screen:
+  ///
+  /// ```dart
+  /// class AiChatScreen extends ConsumerWidget {
+  ///   @override
+  ///   Widget build(BuildContext context, WidgetRef ref) {
+  ///     final chatState = ref.watch(aiChatProvider);
+  ///     final chatNotifier = ref.read(aiChatProvider.notifier);
+  ///     final l10n = AppLocalizations.of(context)!;
+  ///
+  ///     return Scaffold(
+  ///       appBar: AppBar(
+  ///         title: Text('AI Chat'),
+  ///         actions: [
+  ///           // Queue status badge
+  ///           if (chatNotifier.queueMetrics.queueLength > 0)
+  ///             Container(
+  ///               padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+  ///               decoration: BoxDecoration(
+  ///                 color: Colors.orange,
+  ///                 borderRadius: BorderRadius.circular(12),
+  ///               ),
+  ///               child: Text(
+  ///                 l10n.queue_length(chatNotifier.queueMetrics.queueLength),
+  ///                 style: TextStyle(color: Colors.white, fontSize: 12),
+  ///               ),
+  ///             ),
+  ///         ],
+  ///       ),
+  ///       body: Column(
+  ///         children: [
+  ///           // Chat messages list
+  ///           Expanded(
+  ///             child: ListView.builder(
+  ///               itemCount: chatState.value?.messages.length ?? 0,
+  ///               itemBuilder: (context, index) {
+  ///                 final message = chatState.value!.messages[index];
+  ///                 return ListTile(
+  ///                   title: Text(message.content),
+  ///                   subtitle: message.isUser ? null : Text(l10n.ai_request_queued),
+  ///                 );
+  ///               },
+  ///             ),
+  ///           ),
+  ///
+  ///           // Queue processing indicator
+  ///           if (chatNotifier.queueMetrics.queueLength > 0)
+  ///             Container(
+  ///               padding: EdgeInsets.all(8),
+  ///               color: Colors.blue.withOpacity(0.1),
+  ///               child: Row(
+  ///                 children: [
+  ///                   CircularProgressIndicator(),
+  ///                   SizedBox(width: 8),
+  ///                   Text(l10n.ai_queue_processing(chatNotifier.queueMetrics.queueLength)),
+  ///                 ],
+  ///               ),
+  ///             ),
+  ///
+  ///           // Burst handling success message
+  ///           if (chatNotifier.queueMetrics.processedCount > 0)
+  ///             Container(
+  ///               padding: EdgeInsets.all(8),
+  ///               color: Colors.green.withOpacity(0.1),
+  ///               child: Text(l10n.ai_burst_handled(chatNotifier.queueMetrics.processedCount)),
+  ///             ),
+  ///
+  ///           // Input field
+  ///           Padding(
+  ///             padding: EdgeInsets.all(8),
+  ///             child: Row(
+  ///               children: [
+  ///                 Expanded(
+  ///                   child: TextField(
+  ///                     controller: _messageController,
+  ///                     decoration: InputDecoration(
+  ///                       hintText: 'Type your message...',
+  ///                       border: OutlineInputBorder(),
+  ///                     ),
+  ///                   ),
+  ///                 ),
+  ///                 IconButton(
+  ///                   icon: Icon(Icons.send),
+  ///                   onPressed: chatState.value?.isLoading == true ? null : () {
+  ///                     chatNotifier.sendMessage(_messageController.text);
+  ///                     _messageController.clear();
+  ///                   },
+  ///                 ),
+  ///               ],
+  ///             ),
+  ///           ),
+  ///         ],
+  ///       ),
+  ///     );
+  ///   }
+  /// }
+  /// ```
 
   /// Calculate new request count based on current window
   int _calculateNewRequestCount(DateTime now, AiChatState currentState) {
@@ -343,45 +608,56 @@ class AiChatNotifier extends AsyncNotifier<AiChatState> {
     state = AsyncValue.data(AiChatState(rateLimits: currentState.rateLimits));
   }
 
-  /// Generate planning questions for a project using modular helpers
-  /// 
-  /// Creates contextual planning questions based on project data and help level.
-  /// Checks rate limits before making the API call and throws RateLimitExceededException
-  /// if limits are exceeded. Part of the AI-powered project planning workflow.
-  /// 
+  /// Generate planning questions using queued AI processing
+  ///
+  /// Enqueues request for processing instead of direct API call.
+  /// Preserves existing error handling and fallback behavior.
+  /// See .github/issues/033-ai-request-queue.md for queue implementation.
+  ///
   /// Parameters:
   /// - projectData: Map containing project information
   /// - helpLevel: AI assistance level from configuration
-  /// 
+  ///
   /// Returns: List of planning questions as strings
-  /// Throws: RateLimitExceededException if rate limits are exceeded
   Future<List<String>> generatePlanningQuestions(
     Map<String, dynamic> projectData,
     ai_config.HelpLevel helpLevel,
   ) async {
     final currentState = state.value!;
-    
-    // Check rate limit before AI call
+
+    // Log if currently rate limited (queue will handle waiting)
     if (currentState.isRateLimited) {
       final remainingTime = currentState.timeUntilReset;
-      AppLogger.event('ai_rate_limit_exceeded', params: {
+      AppLogger.event('ai_rate_limit_exceeded_queued', params: {
         'remainingTime': remainingTime.inSeconds,
         'requestCount': currentState.requestCountInWindow,
         'operation': 'generatePlanningQuestions',
       });
-      throw RateLimitExceededException(remainingTime);
     }
 
+    // Create and enqueue the request
+    final requestId = DateTime.now().millisecondsSinceEpoch.toString();
+    final completer = Completer<List<String>>();
+    final request = AiRequest(
+      id: requestId,
+      action: 'generate_questions',
+      payload: {
+        'projectData': projectData,
+        'helpLevel': helpLevel,
+      },
+      timestamp: DateTime.now(),
+      priority: 1,
+      completer: completer,
+    );
+
+    _pendingRequests[requestId] = completer;
+    _enqueueRequest(request);
+
+    // Start worker if not running
+    _startWorker();
+
     try {
-      final result = await _retryAiCall(() => AiPlanningHelpers.generatePlanningQuestions(
-        projectData,
-        helpLevel,
-      ));
-
-      // Log token usage
-      ref.read(aiUsageUpdateProvider(result.tokensUsed));
-
-      return result.content;
+      return await completer.future;
     } catch (e) {
       AppLogger.instance.e('Error generating planning questions', error: e);
       // Return fallback questions
@@ -393,48 +669,59 @@ class AiChatNotifier extends AsyncNotifier<AiChatState> {
     }
   }
 
-  /// Generate project improvement proposals using modular helpers
-  /// 
-  /// Analyzes project data and generates improvement suggestions.
-  /// Checks rate limits before making the API call and throws RateLimitExceededException
-  /// if limits are exceeded. Supports answering previous questions for context.
-  /// 
+  /// Generate project improvement proposals using queued AI processing
+  ///
+  /// Enqueues request for processing instead of direct API call.
+  /// Preserves existing error handling and fallback behavior.
+  /// See .github/issues/033-ai-request-queue.md for queue implementation.
+  ///
   /// Parameters:
   /// - projectData: Map containing project information
   /// - helpLevel: AI assistance level from configuration
   /// - answers: Optional previous answers for context
-  /// 
+  ///
   /// Returns: List of improvement proposals as strings
-  /// Throws: RateLimitExceededException if rate limits are exceeded
   Future<List<String>> generateProposals(
     Map<String, dynamic> projectData,
     ai_config.HelpLevel helpLevel, {
     List<String>? answers,
   }) async {
     final currentState = state.value!;
-    
-    // Check rate limit before AI call
+
+    // Log if currently rate limited (queue will handle waiting)
     if (currentState.isRateLimited) {
       final remainingTime = currentState.timeUntilReset;
-      AppLogger.event('ai_rate_limit_exceeded', params: {
+      AppLogger.event('ai_rate_limit_exceeded_queued', params: {
         'remainingTime': remainingTime.inSeconds,
         'requestCount': currentState.requestCountInWindow,
         'operation': 'generateProposals',
       });
-      throw RateLimitExceededException(remainingTime);
     }
 
+    // Create and enqueue the request
+    final requestId = DateTime.now().millisecondsSinceEpoch.toString();
+    final completer = Completer<List<String>>();
+    final request = AiRequest(
+      id: requestId,
+      action: 'generate_proposals',
+      payload: {
+        'projectData': projectData,
+        'helpLevel': helpLevel,
+        'answers': answers,
+      },
+      timestamp: DateTime.now(),
+      priority: 1,
+      completer: completer,
+    );
+
+    _pendingRequests[requestId] = completer;
+    _enqueueRequest(request);
+
+    // Start worker if not running
+    _startWorker();
+
     try {
-      final result = await _retryAiCall(() => AiPlanningHelpers.generateProposals(
-        projectData,
-        helpLevel,
-        answers: answers,
-      ));
-
-      // Log token usage
-      ref.read(aiUsageUpdateProvider(result.tokensUsed));
-
-      return result.content;
+      return await completer.future;
     } catch (e) {
       AppLogger.instance.e('Error generating proposals', error: e);
       return [
@@ -447,38 +734,51 @@ class AiChatNotifier extends AsyncNotifier<AiChatState> {
     }
   }
 
-  /// Generate final project plan using modular helpers
-  /// 
-  /// Creates a complete project plan with chapters and tasks based on project data.
-  /// Checks rate limits before making the API call and throws RateLimitExceededException
-  /// if limits are exceeded. The final step in the AI-powered project planning workflow.
-  /// 
+  /// Generate final project plan using queued AI processing
+  ///
+  /// Enqueues request for processing instead of direct API call.
+  /// Preserves existing error handling and fallback behavior.
+  /// See .github/issues/033-ai-request-queue.md for queue implementation.
+  ///
   /// Parameters:
   /// - projectData: Map containing project information
-  /// 
+  ///
   /// Returns: Complete ProjectPlan with chapters and tasks
-  /// Throws: RateLimitExceededException if rate limits are exceeded
   Future<ProjectPlan> generateFinalPlan(Map<String, dynamic> projectData) async {
     final currentState = state.value!;
-    
-    // Check rate limit before AI call
+
+    // Log if currently rate limited (queue will handle waiting)
     if (currentState.isRateLimited) {
       final remainingTime = currentState.timeUntilReset;
-      AppLogger.event('ai_rate_limit_exceeded', params: {
+      AppLogger.event('ai_rate_limit_exceeded_queued', params: {
         'remainingTime': remainingTime.inSeconds,
         'requestCount': currentState.requestCountInWindow,
         'operation': 'generateFinalPlan',
       });
-      throw RateLimitExceededException(remainingTime);
     }
 
+    // Create and enqueue the request
+    final requestId = DateTime.now().millisecondsSinceEpoch.toString();
+    final completer = Completer<ProjectPlan>();
+    final request = AiRequest(
+      id: requestId,
+      action: 'generate_plan',
+      payload: {
+        'projectData': projectData,
+      },
+      timestamp: DateTime.now(),
+      priority: 1,
+      completer: completer,
+    );
+
+    _pendingRequests[requestId] = completer;
+    _enqueueRequest(request);
+
+    // Start worker if not running
+    _startWorker();
+
     try {
-      final result = await _retryAiCall(() => AiPlanningHelpers.generateFinalPlan(projectData));
-
-      // Log token usage
-      ref.read(aiUsageUpdateProvider(result.tokensUsed));
-
-      return result.content;
+      return await completer.future;
     } catch (e) {
       AppLogger.instance.e('Error generating final plan', error: e);
       // Return a default plan
@@ -515,6 +815,137 @@ class AiChatNotifier extends AsyncNotifier<AiChatState> {
     }
   }
 
+  /// Process queued AI requests respecting rate limits and backoff
+  ///
+  /// Background worker method that processes pending requests from the queue.
+  /// Respects rate limiter and uses exponential backoff from issue 032.
+  /// See .github/issues/033-ai-request-queue.md for queue integration.
+  Future<void> _processQueue() async {
+    if (_requestQueue.isEmpty) return;
+
+    final currentState = state.value!;
+    if (currentState.isRateLimited) return; // Wait for rate limit to reset
+
+    // Sort by priority (higher first) then timestamp (older first)
+    _requestQueue.sort((a, b) {
+      if (a.priority != b.priority) return b.priority.compareTo(a.priority);
+      return a.timestamp.compareTo(b.timestamp);
+    });
+
+    final request = _requestQueue.removeAt(0);
+    final completer = _pendingRequests[request.id];
+
+    if (completer == null) return; // Request was cancelled
+
+    try {
+      dynamic result;
+      switch (request.action) {
+        case 'chat':
+          result = await _executeChatRequest(request.payload);
+          break;
+        case 'generate_questions':
+          result = await _executeGenerateQuestionsRequest(request.payload);
+          break;
+        case 'generate_proposals':
+          result = await _executeGenerateProposalsRequest(request.payload);
+          break;
+        case 'generate_plan':
+          result = await _executeGeneratePlanRequest(request.payload);
+          break;
+        default:
+          throw Exception('Unknown action: ${request.action}');
+      }
+
+      // Update rate limiting state after successful processing
+      final now = DateTime.now();
+      final newRequestCount = _calculateNewRequestCount(now, currentState);
+      state = AsyncValue.data(currentState.copyWith(
+        lastRequestTime: now,
+        requestCountInWindow: newRequestCount,
+      ));
+
+      _resetMetricsIfNeeded();
+      _processedToday++;
+      completer.complete(result);
+      AppLogger.event('ai_queue_processed', params: {
+        'queueLength': _requestQueue.length,
+        'success': true,
+        'action': request.action,
+        'processedToday': _processedToday
+      });
+    } catch (e) {
+      _resetMetricsIfNeeded();
+      _droppedCount++;
+      completer.completeError(e);
+      AppLogger.event('ai_queue_processed', params: {
+        'queueLength': _requestQueue.length,
+        'success': false,
+        'action': request.action,
+        'error': e.toString(),
+        'droppedCount': _droppedCount
+      });
+    }
+  }
+
+  /// Enqueue a request, dropping oldest if queue is full
+  ///
+  /// Prevents unlimited queue growth by dropping oldest low-priority requests.
+  /// Maximum queue size is 50 requests to prevent memory issues.
+  void _enqueueRequest(AiRequest request) {
+    const maxQueueSize = 50;
+
+    if (_requestQueue.length >= maxQueueSize) {
+      // Remove oldest low-priority request
+      final oldRequests = _requestQueue.where((r) => r.priority == 0).toList();
+      if (oldRequests.isNotEmpty) {
+        oldRequests.sort((a, b) => a.timestamp.compareTo(b.timestamp));
+        final toRemove = oldRequests.first;
+        _requestQueue.remove(toRemove);
+        _pendingRequests.remove(toRemove.id);
+        _droppedCount++;
+        AppLogger.event('ai_queue_dropped', params: {
+          'reason': 'queue_full',
+          'action': toRemove.action,
+          'droppedCount': _droppedCount
+        });
+      }
+    }
+
+    _requestQueue.add(request);
+  }
+
+  /// Start the background queue worker
+  ///
+  /// Initializes Timer.periodic to process queued requests.
+  /// Worker runs every few seconds to check for processable requests.
+  void _startWorker() {
+    _stopWorker(); // Ensure no duplicate timers
+    _workerTimer = Timer.periodic(const Duration(seconds: 5), (_) => _processQueue());
+  }
+
+  /// Stop the background queue worker
+  ///
+  /// Cancels the worker timer and cleans up resources.
+  void _stopWorker() {
+    _workerTimer?.cancel();
+    _workerTimer = null;
+  }
+
+  /// Clear all pending requests from the queue
+  ///
+  /// Removes all queued requests and cancels their pending futures.
+  /// Useful for cleanup or when user wants to cancel all pending operations.
+  /// See .github/issues/033-ai-request-queue.md for queue management.
+  void clearQueue() {
+    for (final completer in _pendingRequests.values) {
+      if (!completer.isCompleted) {
+        completer.completeError(Exception('Request cancelled - queue cleared'));
+      }
+    }
+    _pendingRequests.clear();
+    _requestQueue.clear();
+    AppLogger.event('ai_queue_cleared', params: {'wasCleared': true});
+  }
 }
 
 /// Provider for AI chat state
