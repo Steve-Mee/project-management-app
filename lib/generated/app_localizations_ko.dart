@@ -244,6 +244,27 @@ class AppLocalizationsKo extends AppLocalizations {
   String get projectSortStatus => 'Status';
 
   @override
+  String get projectSortStartDate => 'Start Date';
+
+  @override
+  String get projectSortDueDate => 'Due Date';
+
+  @override
+  String get sortDirectionLabel => 'Direction';
+
+  @override
+  String get sortAscendingLabel => 'Ascending';
+
+  @override
+  String get sortDescendingLabel => 'Descending';
+
+  @override
+  String get exportToCsvLabel => 'Export to CSV';
+
+  @override
+  String get csvExportSuccessMessage => 'Projects exported successfully';
+
+  @override
   String get allLabel => '전체';
 
   @override
@@ -568,9 +589,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String get aiChatSemanticsLabel => 'AI 채팅';
 
   @override
-  String get aiUsageTitle => 'AI 사용';
-
-  @override
   String get aiAssistantTitle => 'AI 프로젝트 어시스턴트';
 
   @override
@@ -825,13 +843,10 @@ class AppLocalizationsKo extends AppLocalizations {
   String get backupNoFileMessage => '아직 백업 파일이 없습니다';
 
   @override
+  String get filterButtonTooltip => 'Filter projects';
+
+  @override
   String get filterPriorityLabel => 'Priority';
-
-  @override
-  String get filterStartDateLabel => 'Start Date';
-
-  @override
-  String get filterEndDateLabel => 'End Date';
 
   @override
   String get priorityLow => 'Low';
@@ -846,46 +861,43 @@ class AppLocalizationsKo extends AppLocalizations {
   String get filterDateRangeLabel => 'Date Range';
 
   @override
-  String get applyFiltersLabel => 'Apply Filters';
+  String get filterStartDateLabel => 'Start Date';
 
   @override
-  String get resetAllLabel => 'Reset All';
+  String get filterEndDateLabel => 'End Date';
 
   @override
-  String get cancelLabel => 'Cancel';
-
-  @override
-  String get projectFiltersTitle => 'Project Filters';
-
-  @override
-  String get filterButtonTooltip => 'Filter projects';
-
-  @override
-  String activeFilterPriority(String value) {
-    return 'Priority: $value';
+  String activeFilterPriority(String priority) {
+    return 'Priority: $priority';
   }
 
   @override
   String activeFilterStartDate(String date) {
-    return 'Start: $date';
+    return 'From $date';
   }
 
   @override
   String activeFilterEndDate(String date) {
-    return 'End: $date';
+    return 'To $date';
   }
 
   @override
-  String get allProjectsHint => 'All projects';
+  String showingProjectsCount(int count, int total) {
+    return 'Showing $count of $total projects';
+  }
 
   @override
-  String get clearAllLabel => 'Clear All';
+  String get clearAllFiltersButtonLabel => 'Clear All Filters';
 
   @override
-  String get saveAsDefaultViewLabel => 'Save as Default View';
+  String get noProjectsMatchFiltersTitle => 'No projects match your filters';
 
   @override
-  String get saveAsDefaultSuccessMessage => 'Default view saved successfully';
+  String get noProjectsMatchFiltersSubtitle =>
+      'Try changing or clearing your filters';
+
+  @override
+  String get projectFiltersTitle => 'Project Filters';
 
   @override
   String get allProjectsPresetLabel => 'All Projects';
@@ -903,89 +915,19 @@ class AppLocalizationsKo extends AppLocalizations {
   String get myProjectsPresetLabel => 'My Projects';
 
   @override
-  String showingProjectsCount(int count, int total) {
-    return 'Showing $count of $total projects';
-  }
+  String get cancelLabel => 'Cancel';
 
   @override
-  String get noProjectsMatchFiltersTitle => 'No projects match your filters';
+  String get clearAllLabel => 'Clear All';
 
   @override
-  String get noProjectsMatchFiltersSubtitle =>
-      'Try changing or clearing your filters';
+  String get saveAsDefaultSuccessMessage => 'Default view saved successfully';
 
   @override
-  String get clearAllFiltersButtonLabel => 'Clear All Filters';
+  String get saveAsDefaultViewLabel => 'Save as Default View';
 
   @override
-  String get smartFilterButtonLabel => 'Smart Filter';
-
-  @override
-  String get smartFilterButtonTooltip =>
-      'Use AI to create filters from natural language';
-
-  @override
-  String get smartFilterDialogTitle => 'Describe Your Filter';
-
-  @override
-  String get smartFilterHint =>
-      'Show high priority tasks due this week for team X';
-
-  @override
-  String get smartFilterProcessing => 'Analyzing your request...';
-
-  @override
-  String get smartFilterError =>
-      'Could not understand your request. Please try rephrasing.';
-
-  @override
-  String get aiSuggestedFilterLabel => 'AI Suggested Filter';
-
-  @override
-  String get acceptFilterButtonLabel => 'Accept';
-
-  @override
-  String get editFilterButtonLabel => 'Edit';
-
-  @override
-  String get projectSortStartDate => 'Start Date';
-
-  @override
-  String get projectSortDueDate => 'Due Date';
-
-  @override
-  String get csvExportSuccessMessage => 'Projects exported to CSV successfully';
-
-  @override
-  String get viewNameLabel => 'View Name';
-
-  @override
-  String get viewNameHint => 'Enter a name for this view';
-
-  @override
-  String get viewSavedMessage => 'View saved successfully';
-
-  @override
-  String get saveCurrentAsViewLabel => 'Save Current as View';
-
-  @override
-  String get noSavedViewsMessage =>
-      'No saved views yet. Save your current filters to create a view.';
-
-  @override
-  String get sortDirectionLabel => 'Sort Direction';
-
-  @override
-  String get sortAscendingLabel => 'Ascending';
-
-  @override
-  String get sortDescendingLabel => 'Descending';
-
-  @override
-  String get searchProjectsLabel => 'Search Projects';
-
-  @override
-  String get searchProjectsHint => 'Search by name, description, or tags';
+  String get applyFiltersLabel => 'Apply Filters';
 
   @override
   String get savedViewsTabLabel => 'Saved Views';
@@ -994,31 +936,28 @@ class AppLocalizationsKo extends AppLocalizations {
   String get filtersTabLabel => 'Filters';
 
   @override
-  String get exportToCsvLabel => 'Export to CSV';
+  String get viewNameLabel => 'View Name';
 
   @override
-  String get exportToPdfLabel => 'Export to PDF';
+  String get viewNameHint => 'Enter a name for this view';
 
   @override
-  String get requiredTagsLabel => 'Required Tags';
+  String get saveCurrentAsViewLabel => 'Save Current';
 
   @override
-  String get requiredTagsDescription => 'Projects must have all of these tags';
+  String get viewSavedMessage => 'View saved successfully';
 
   @override
-  String get optionalTagsLabel => 'Optional Tags';
+  String get noSavedViewsMessage => 'No saved views yet';
 
   @override
-  String get optionalTagsDescription => 'Projects can have any of these tags';
+  String get savedViewsLabel => 'Saved Views';
 
   @override
-  String get addTagLabel => 'Add Tag';
+  String get allViewsLabel => 'All Views';
 
   @override
-  String get addTagHint => 'Type to add a tag';
-
-  @override
-  String get availableTagsLabel => 'Available Tags';
+  String get filterProjectsTooltip => 'Filter projects';
 
   @override
   String selectProjectsTitle(int count) {
@@ -1032,26 +971,8 @@ class AppLocalizationsKo extends AppLocalizations {
   String get exitSelectionModeTooltip => 'Exit selection mode';
 
   @override
-  String get savedViewsLabel => 'Saved Views';
-
-  @override
-  String get allViewsLabel => 'All Views';
-
-  @override
-  String get filterProjectsTooltip => 'Filter projects';
-
-  @override
-  String get listViewTooltip => 'List view';
-
-  @override
-  String get kanbanViewTooltip => 'Kanban view';
-
-  @override
-  String get tableViewTooltip => 'Table view';
-
-  @override
   String bulkActionsTitle(int count) {
-    return 'Bulk Actions ($count)';
+    return 'Bulk Actions ($count selected)';
   }
 
   @override
@@ -1079,17 +1000,58 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String bulkDeleteSuccessMessage(int count) {
-    return '$count projects deleted successfully';
+    return 'Successfully deleted $count projects.';
   }
 
   @override
-  String get priorityLabel => 'Priority';
+  String bulkActionsAppliedMessage(int actions, int count) {
+    return 'Applied $actions action(s) to $count projects.';
+  }
 
   @override
-  String get tagsLabel => 'Tags';
+  String get searchProjectsLabel => 'Search Projects';
+
+  @override
+  String get searchProjectsHint => 'Search by name, description, or tags...';
+
+  @override
+  String get filterTagsLabel => 'Tags';
+
+  @override
+  String get addTagLabel => 'Add Tag';
+
+  @override
+  String get addTagHint => 'Enter tag name';
+
+  @override
+  String get availableTagsLabel => 'Available tags:';
+
+  @override
+  String get requiredTagsLabel => 'Required Tags (AND)';
+
+  @override
+  String get optionalTagsLabel => 'Optional Tags (OR)';
+
+  @override
+  String get requiredTagsDescription => 'Projects must have ALL of these tags';
+
+  @override
+  String get optionalTagsDescription => 'Projects can have ANY of these tags';
+
+  @override
+  String get listViewTooltip => 'List view';
+
+  @override
+  String get kanbanViewTooltip => 'Kanban view';
+
+  @override
+  String get tableViewTooltip => 'Table view';
 
   @override
   String get nameLabel => 'Name';
+
+  @override
+  String get priorityLabel => 'Priority';
 
   @override
   String get startDateLabel => 'Start Date';
@@ -1098,7 +1060,16 @@ class AppLocalizationsKo extends AppLocalizations {
   String get dueDateLabel => 'Due Date';
 
   @override
-  String get exportingPdfMessage => 'Exporting PDF...';
+  String get tagsLabel => 'Tags';
+
+  @override
+  String get exportToPdfLabel => 'Export to PDF';
+
+  @override
+  String get exportingPdfMessage => 'Generating PDF report...';
+
+  @override
+  String get pdfExportedMessage => 'PDF exported successfully';
 
   @override
   String get pdfExportErrorMessage => 'Failed to export PDF';
@@ -1122,13 +1093,16 @@ class AppLocalizationsKo extends AppLocalizations {
   String get priorityDistributionLabel => 'Priority Distribution';
 
   @override
-  String get pdfExportedMessage => 'PDF exported successfully';
+  String get dueDatesLabel => 'Due Dates';
 
   @override
   String get projectListLabel => 'Project List';
 
   @override
   String get recentFiltersTooltip => 'Recent filters';
+
+  @override
+  String get unnamedFilterLabel => 'Unnamed Filter';
 
   @override
   String get ownerLabel => 'Owner';
@@ -1143,7 +1117,26 @@ class AppLocalizationsKo extends AppLocalizations {
   String get allProjectsLabel => 'All Projects';
 
   @override
-  String get unnamedFilterLabel => 'Unnamed Filter';
+  String get ganttViewTitle => 'Gantt Chart';
+
+  @override
+  String get zoomInTooltip => 'Zoom in';
+
+  @override
+  String get zoomOutTooltip => 'Zoom out';
+
+  @override
+  String get selectDateRangeTooltip => 'Select date range';
+
+  @override
+  String get noProjectsForGantt => 'No projects to display';
+
+  @override
+  String get addProjectsWithDates =>
+      'Add projects with start and due dates to see them in the timeline.';
+
+  @override
+  String get openProjectTooltip => 'Open project';
 
   @override
   String get commentsTitle => 'Comments';
@@ -1164,42 +1157,75 @@ class AppLocalizationsKo extends AppLocalizations {
   String get deleteCommentTooltip => 'Delete comment';
 
   @override
-  String get ganttViewTitle => 'Gantt Chart';
+  String get settingsBiometricLoginTitle => 'Biometric login';
 
   @override
-  String get zoomInTooltip => 'Zoom in';
+  String get settingsBiometricLoginSubtitle =>
+      'Use fingerprint or face ID to sign in';
 
   @override
-  String get zoomOutTooltip => 'Zoom out';
+  String get enableBiometricDialogTitle => 'Enable Biometric Login';
 
   @override
-  String get resetZoomTooltip => 'Reset zoom';
+  String get enableBiometricDialogMessage =>
+      'Would you like to enable biometric authentication for faster login?';
 
   @override
-  String get todayButton => 'Today';
+  String get enableBiometricDialogYes => 'Enable';
 
   @override
-  String get projectTimelineLabel => 'Project Timeline';
+  String get enableBiometricDialogNo => 'Not Now';
 
   @override
-  String get taskTimelineLabel => 'Task Timeline';
+  String get loginWithBiometric => 'Login with Biometric';
 
   @override
-  String get endDateLabel => 'End Date';
+  String get loginWithPassword => 'Login with Password';
 
   @override
-  String get durationLabel => 'Duration';
+  String get biometric_login_title => 'Biometric Login';
 
   @override
-  String get selectDateRangeTooltip => 'Select date range';
+  String get enable_biometric_login => 'Enable Biometric Login';
 
   @override
-  String get noProjectsForGantt => 'No projects with dates to display';
+  String get biometric_not_available =>
+      'Biometric authentication not available';
 
   @override
-  String get addProjectsWithDates =>
-      'Add projects with start and end dates to see the timeline';
+  String get use_password_instead => 'Use password instead';
 
   @override
-  String get openProjectTooltip => 'Open project';
+  String get biometric_enroll_success => 'Biometric login enabled';
+
+  @override
+  String get biometric_auth_failed => 'Biometric authentication failed';
+
+  @override
+  String get smartFilterDialogTitle => 'Smart Filter';
+
+  @override
+  String get smartFilterHint => 'Describe what you want to filter...';
+
+  @override
+  String get smartFilterButtonLabel => 'Apply Smart Filter';
+
+  @override
+  String get smartFilterProcessing => 'Processing your request...';
+
+  @override
+  String get smartFilterError =>
+      'Failed to apply smart filter. Please try again.';
+
+  @override
+  String get aiSuggestedFilterLabel => 'AI Suggested Filter';
+
+  @override
+  String get smartFilterButtonTooltip => 'Use AI to help filter projects';
+
+  @override
+  String get editFilterButtonLabel => 'Edit Filter';
+
+  @override
+  String get acceptFilterButtonLabel => 'Accept Filter';
 }

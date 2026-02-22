@@ -308,6 +308,42 @@
   "@projectSortPriority": {
     "description": "Auto-generated description for projectSortPriority."
   },
+  "projectSortCreatedDate": "Aanmaakdatum",
+  "@projectSortCreatedDate": {
+    "description": "Auto-generated description for projectSortCreatedDate."
+  },
+  "projectSortStatus": "Status",
+  "@projectSortStatus": {
+    "description": "Auto-generated description for projectSortStatus."
+  },
+  "projectSortStartDate": "Startdatum",
+  "@projectSortStartDate": {
+    "description": "Label for sorting projects by start date."
+  },
+  "projectSortDueDate": "Vervaldatum",
+  "@projectSortDueDate": {
+    "description": "Label for sorting projects by due date."
+  },
+  "sortDirectionLabel": "Richting",
+  "@sortDirectionLabel": {
+    "description": "Label for sort direction selection."
+  },
+  "sortAscendingLabel": "Oplopend",
+  "@sortAscendingLabel": {
+    "description": "Label for ascending sort order."
+  },
+  "sortDescendingLabel": "Aflopend",
+  "@sortDescendingLabel": {
+    "description": "Label for descending sort order."
+  },
+  "exportToCsvLabel": "Exporteren naar CSV",
+  "@exportToCsvLabel": {
+    "description": "Label for CSV export button."
+  },
+  "csvExportSuccessMessage": "CSV succesvol geëxporteerd en gedeeld",
+  "@csvExportSuccessMessage": {
+    "description": "Success message after CSV export."
+  },
   "allLabel": "Alles",
   "@allLabel": {
     "description": "Auto-generated description for allLabel."
@@ -737,10 +773,6 @@
   "@aiChatSemanticsLabel": {
     "description": "Auto-generated description for aiChatSemanticsLabel."
   },
-  "aiUsageTitle": "AI Gebruik",
-  "@aiUsageTitle": {
-    "description": "Title for the AI usage overview screen."
-  },
   "aiAssistantTitle": "AI Project Assistent",
   "@aiAssistantTitle": {
     "description": "Auto-generated description for aiAssistantTitle."
@@ -1082,96 +1114,96 @@
   "@backupNoFileMessage": {
     "description": "Shown when no backup file path is available."
   },
-  "filterPriorityLabel": "Priority",
-  "@filterPriorityLabel": {
-    "description": "Label for priority filter"
+  "settingsBiometricLoginTitle": "Biometrische login",
+  "@settingsBiometricLoginTitle": {
+    "description": "Title for biometric login toggle in settings."
   },
-  "filterStartDateLabel": "Start Date",
-  "@filterStartDateLabel": {
-    "description": "Label for start date filter"
+  "settingsBiometricLoginSubtitle": "Gebruik vingerafdruk of gezichts-ID om in te loggen",
+  "@settingsBiometricLoginSubtitle": {
+    "description": "Subtitle for biometric login toggle in settings."
   },
-  "filterEndDateLabel": "End Date",
-  "@filterEndDateLabel": {
-    "description": "Label for end date filter"
+  "enableBiometricDialogTitle": "Biometrische login inschakelen",
+  "@enableBiometricDialogTitle": {
+    "description": "Title for the biometric enable dialog."
   },
-  "priorityLow": "Low",
-  "@priorityLow": {
-    "description": "Low priority option"
+  "enableBiometricDialogMessage": "Wilt u biometrische authenticatie inschakelen voor snellere login?",
+  "@enableBiometricDialogMessage": {
+    "description": "Message for the biometric enable dialog."
   },
-  "priorityMedium": "Medium",
-  "@priorityMedium": {
-    "description": "Medium priority option"
+  "enableBiometricDialogYes": "Inschakelen",
+  "@enableBiometricDialogYes": {
+    "description": "Yes button for the biometric enable dialog."
   },
-  "priorityHigh": "High",
-  "@priorityHigh": {
-    "description": "High priority option"
+  "enableBiometricDialogNo": "Niet nu",
+  "@enableBiometricDialogNo": {
+    "description": "No button for the biometric enable dialog."
   },
-  "filterDateRangeLabel": "Date Range",
-  "@filterDateRangeLabel": {
-    "description": "Label for date range filter section"
+  "loginWithBiometric": "Inloggen met biometrie",
+  "@loginWithBiometric": {
+    "description": "Button to login with biometric authentication."
   },
-  "allProjectsHint": "All projects",
-  "@allProjectsHint": {
-    "description": "Hint shown when no filters are active"
+  "loginWithPassword": "Inloggen met wachtwoord",
+  "@loginWithPassword": {
+    "description": "Button to switch to password login."
   },
-  "clearAllLabel": "Clear All",
-  "@clearAllLabel": {
-    "description": "Label for clearing all filters"
+  "biometric_login_title": "Biometrische Login",
+  "@biometric_login_title": {
+    "description": "Title for biometric login."
   },
-  "saveAsDefaultViewLabel": "Save as Default View",
-  "@saveAsDefaultViewLabel": {
-    "description": "Label for saving current filter as default view"
+  "enable_biometric_login": "Biometrische Login Inschakelen",
+  "@enable_biometric_login": {
+    "description": "Button or option to enable biometric login."
   },
-  "saveAsDefaultSuccessMessage": "Default view saved successfully",
-  "@saveAsDefaultSuccessMessage": {
-    "description": "Success message when default view is saved"
+  "biometric_not_available": "Biometrische authenticatie niet beschikbaar",
+  "@biometric_not_available": {
+    "description": "Message when biometric is not available."
   },
-  "allProjectsPresetLabel": "All Projects",
-  "@allProjectsPresetLabel": {
-    "description": "Label for all projects preset filter"
+  "use_password_instead": "Gebruik wachtwoord in plaats daarvan",
+  "@use_password_instead": {
+    "description": "Option to use password login instead of biometric."
   },
-  "highPriorityPresetLabel": "High Priority",
-  "@highPriorityPresetLabel": {
-    "description": "Label for high priority preset filter"
+  "biometric_enroll_success": "Biometrische login ingeschakeld",
+  "@biometric_enroll_success": {
+    "description": "Success message when biometric is enrolled."
   },
-  "dueThisWeekPresetLabel": "Due This Week",
-  "@dueThisWeekPresetLabel": {
-    "description": "Label for due this week preset filter"
+  "biometric_auth_failed": "Biometrische authenticatie mislukt",
+  "@biometric_auth_failed": {
+    "description": "Error message when biometric auth fails."
   },
-  "overduePresetLabel": "Overdue",
-  "@overduePresetLabel": {
-    "description": "Label for overdue preset filter"
+  "smartFilterDialogTitle": "Slim Filter",
+  "@smartFilterDialogTitle": {
+    "description": "Title for the smart filter dialog."
   },
-  "myProjectsPresetLabel": "My Projects",
-  "@myProjectsPresetLabel": {
-    "description": "Label for my projects preset filter"
+  "smartFilterHint": "Beschrijf wat je wilt filteren...",
+  "@smartFilterHint": {
+    "description": "Hint text for the smart filter input field."
   },
-  "showingProjectsCount": "Showing {count} of {total} projects",
-  "@showingProjectsCount": {
-    "description": "Summary showing filtered project count",
-    "placeholders": {
-      "count": {
-        "type": "int"
-      },
-      "total": {
-        "type": "int"
-      }
-    }
+  "smartFilterButtonLabel": "Slim Filter Toepassen",
+  "@smartFilterButtonLabel": {
+    "description": "Label for the smart filter button."
   },
-  "noProjectsMatchFiltersTitle": "No projects match your filters",
-  "@noProjectsMatchFiltersTitle": {
-    "description": "Title for empty state when filters have no results"
+  "smartFilterProcessing": "Je verzoek wordt verwerkt...",
+  "@smartFilterProcessing": {
+    "description": "Message shown while processing smart filter."
   },
-  "noProjectsMatchFiltersSubtitle": "Try changing or clearing your filters",
-  "@noProjectsMatchFiltersSubtitle": {
-    "description": "Subtitle for empty state when filters have no results"
+  "smartFilterError": "Slim filter toepassen mislukt. Probeer het opnieuw.",
+  "@smartFilterError": {
+    "description": "Error message when smart filter fails."
   },
-  "clearAllFiltersButtonLabel": "Clear All Filters",
-  "@clearAllFiltersButtonLabel": {
-    "description": "Button label to clear all active filters"
+  "aiSuggestedFilterLabel": "AI Voorgesteld Filter",
+  "@aiSuggestedFilterLabel": {
+    "description": "Label for AI suggested filter option."
+  },
+  "smartFilterButtonTooltip": "Gebruik AI om projecten te filteren",
+  "@smartFilterButtonTooltip": {
+    "description": "Tooltip for the smart filter button."
+  },
+  "editFilterButtonLabel": "Filter Bewerken",
+  "@editFilterButtonLabel": {
+    "description": "Label for the edit filter button."
+  },
+  "acceptFilterButtonLabel": "Filter Accepteren",
+  "@acceptFilterButtonLabel": {
+    "description": "Label for the accept filter button."
   }
 }
-
-
-
-

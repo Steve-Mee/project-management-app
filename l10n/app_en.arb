@@ -1624,5 +1624,98 @@
   "deleteCommentTooltip": "Delete comment",
   "@deleteCommentTooltip": {
     "description": "Tooltip for delete comment button."
+  },
+  "settingsBiometricLoginTitle": "Biometric login",
+  "@settingsBiometricLoginTitle": {
+    "description": "Title for biometric login toggle in settings."
+  },
+  "settingsBiometricLoginSubtitle": "Use fingerprint or face ID to sign in",
+  "@settingsBiometricLoginSubtitle": {
+    "description": "Subtitle for biometric login toggle in settings."
+  },
+  "enableBiometricDialogTitle": "Enable Biometric Login",
+  "@enableBiometricDialogTitle": {
+    "description": "Title for the biometric enable dialog."
+  },
+  "enableBiometricDialogMessage": "Would you like to enable biometric authentication for faster login?",
+  "@enableBiometricDialogMessage": {
+    "description": "Message for the biometric enable dialog."
+  },
+  "enableBiometricDialogYes": "Enable",
+  "@enableBiometricDialogYes": {
+    "description": "Yes button for the biometric enable dialog."
+  },
+  "enableBiometricDialogNo": "Not Now",
+  "@enableBiometricDialogNo": {
+    "description": "No button for the biometric enable dialog."
+  },
+  "loginWithBiometric": "Login with Biometric",
+  "@loginWithBiometric": {
+    "description": "Button to login with biometric authentication."
+  },
+  "loginWithPassword": "Login with Password",
+  "@loginWithPassword": {
+    "description": "Button to switch to password login."
+  },
+  "biometric_login_title": "Biometric Login",
+  "@biometric_login_title": {
+    "description": "Title for biometric login."
+  },
+  "enable_biometric_login": "Enable Biometric Login",
+  "@enable_biometric_login": {
+    "description": "Button or option to enable biometric login."
+  },
+  "biometric_not_available": "Biometric authentication not available",
+  "@biometric_not_available": {
+    "description": "Message when biometric is not available."
+  },
+  "use_password_instead": "Use password instead",
+  "@use_password_instead": {
+    "description": "Option to use password login instead of biometric."
+  },
+  "biometric_enroll_success": "Biometric login enabled",
+  "@biometric_enroll_success": {
+    "description": "Success message when biometric is enrolled."
+  },
+  "biometric_auth_failed": "Biometric authentication failed",
+  "@biometric_auth_failed": {
+    "description": "Error message when biometric auth fails."
+  },
+  "smartFilterDialogTitle": "Smart Filter",
+  "@smartFilterDialogTitle": {
+    "description": "Title for the smart filter dialog."
+  },
+  "smartFilterHint": "Describe what you want to filter...",
+  "@smartFilterHint": {
+    "description": "Hint text for the smart filter input field."
+  },
+  "smartFilterButtonLabel": "Apply Smart Filter",
+  "@smartFilterButtonLabel": {
+    "description": "Label for the smart filter button."
+  },
+  "smartFilterProcessing": "Processing your request...",
+  "@smartFilterProcessing": {
+    "description": "Message shown while processing smart filter."
+  },
+  "smartFilterError": "Failed to apply smart filter. Please try again.",
+  "@smartFilterError": {
+    "description": "Error message when smart filter fails."
+  },
+  "aiSuggestedFilterLabel": "AI Suggested Filter",
+  "@aiSuggestedFilterLabel": {
+    "description": "Label for AI suggested filter option."
+  },
+  "smartFilterButtonTooltip": "Use AI to help filter projects",
+  "@smartFilterButtonTooltip": {
+    "description": "Tooltip for the smart filter button."
+  },
+  "editFilterButtonLabel": "Edit Filter",
+  "@editFilterButtonLabel": {
+    "description": "Label for the edit filter button."
+  },
+  "acceptFilterButtonLabel": "Accept Filter",
+  "@acceptFilterButtonLabel": {
+    "description": "Label for the accept filter button."
   }
+}
 }

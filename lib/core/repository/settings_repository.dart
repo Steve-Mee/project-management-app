@@ -14,6 +14,7 @@ class SettingsRepository {
   static const String _helpLevelKey = 'help_level';
   static const String _aiConsentEnabledKey = 'ai_consent_enabled';
   static const String _useBiometricsKey = 'use_biometrics_enabled';
+  static const String _enableBiometricLoginKey = 'enable_biometric_login';
 
   Future<void> initialize() async {
     await Hive.initFlutter();
@@ -136,5 +137,13 @@ class SettingsRepository {
 
   Future<void> setUseBiometricsEnabled(bool enabled) async {
     await _box.put(_useBiometricsKey, enabled);
+  }
+
+  bool getEnableBiometricLogin() {
+    return _box.get(_enableBiometricLoginKey, defaultValue: false);
+  }
+
+  Future<void> setEnableBiometricLogin(bool enabled) async {
+    await _box.put(_enableBiometricLoginKey, enabled);
   }
 }

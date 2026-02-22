@@ -71,7 +71,7 @@ dependencies:
   dashboard_grid: ^0.0.6
   google_fonts: ^8.0.1
   animate_do: ^4.2.0
-  local_auth: ^2.3.0
+  local_auth: ^3.0.0
   csv: ^6.0.0
   share_plus: ^10.0.0
   pdf: ^3.11.1

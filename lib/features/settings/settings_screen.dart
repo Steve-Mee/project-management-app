@@ -307,6 +307,18 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               color: Theme.of(context).colorScheme.secondary,
             ),
           ),
+          SwitchListTile(
+            value: ref.watch(biometricLoginProvider),
+            onChanged: (value) async {
+              await ref.read(biometricLoginProvider.notifier).setEnabled(value);
+            },
+            title: Text(l10n.settingsBiometricLoginTitle),
+            subtitle: Text(l10n.settingsBiometricLoginSubtitle),
+            secondary: Icon(
+              Icons.fingerprint,
+              color: Theme.of(context).colorScheme.secondary,
+            ),
+          ),
           const Divider(),
 
           // Projects Section

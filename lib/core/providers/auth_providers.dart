@@ -1,7 +1,10 @@
 import 'dart:convert';
+import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' hide AuthUser;
 import 'package:local_auth/local_auth.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:my_project_management_app/core/repository/auth_repository.dart';
 import 'package:my_project_management_app/core/repository/i_auth_repository.dart';
 import 'package:my_project_management_app/core/auth/auth_user.dart';
@@ -66,6 +69,8 @@ class AuthState {
 class AuthNotifier extends Notifier<AuthState> {
   final CloudSyncService _cloudSync = CloudSyncService();
   final ABTestingService _abTesting = ABTestingService.instance;
+  final LocalAuthentication _localAuth = LocalAuthentication();
+  final FlutterSecureStorage _secureStorage = const FlutterSecureStorage();
   bool _listening = false;
 
   @override
@@ -172,8 +177,13 @@ class AuthNotifier extends Notifier<AuthState> {
             await settingsRepo.setAutoLoginEnabled(true);
           }
           await settingsRepo.setLastLoginTime(DateTime.now());
+
+          // Enroll biometrics if enabled
+          if (settingsRepo.getEnableBiometricLogin()) {
+            await enrollBiometrics(username, password);
+          }
         } catch (e) {
-          AppLogger.instance.w('Settings update failed', error: e);
+          AppLogger.instance.w('Settings update or biometric enrollment failed', error: e);
         }
 
         // Reset rate limiter on successful login
@@ -297,6 +307,71 @@ class AuthNotifier extends Notifier<AuthState> {
       state = state.copyWith(error: 'Failed to delete user: $e');
     }
   }
+
+  /// Check if biometric authentication is available (mobile platforms only)
+  Future<bool> isBiometricAvailable() async {
+    if (kIsWeb || !(Platform.isAndroid || Platform.isIOS)) {
+      return false;
+    }
+    try {
+      return await _localAuth.isDeviceSupported();
+    } catch (e) {
+      AppLogger.instance.w('Biometric availability check failed', error: e);
+      return false;
+    }
+  }
+
+  /// Authenticate using biometrics and perform login with stored credentials
+  Future<bool> authenticateWithBiometrics() async {
+    if (!await isBiometricAvailable()) {
+      state = state.copyWith(error: 'Biometric authentication not available.');
+      return false;
+    }
+
+    try {
+      final authenticated = await _localAuth.authenticate(
+        localizedReason: 'Authenticate to access your account',
+        biometricOnly: true,
+      );
+
+      if (!authenticated) {
+        state = state.copyWith(error: 'Biometric authentication failed.');
+        return false;
+      }
+
+      // Retrieve stored credentials
+      final storedPassword = await _secureStorage.read(key: 'biometric_password');
+      final storedUsername = await _secureStorage.read(key: 'biometric_username');
+
+      if (storedPassword == null || storedUsername == null) {
+        state = state.copyWith(error: 'No stored credentials for biometric login.');
+        return false;
+      }
+
+      // Perform login with stored credentials
+      return await login(storedUsername, storedPassword, enableAutoLogin: false);
+    } catch (e) {
+      AppLogger.instance.w('Biometric authentication failed', error: e);
+      state = state.copyWith(error: 'Biometric authentication error: $e');
+      return false;
+    }
+  }
+
+  /// Enroll biometrics by storing credentials after successful password login
+  Future<bool> enrollBiometrics(String username, String password) async {
+    if (!await isBiometricAvailable()) {
+      return false;
+    }
+
+    try {
+      await _secureStorage.write(key: 'biometric_username', value: username);
+      await _secureStorage.write(key: 'biometric_password', value: password);
+      return true;
+    } catch (e) {
+      AppLogger.instance.w('Biometric enrollment failed', error: e);
+      return false;
+    }
+  }
 }
 
 /// Provider for authentication state
@@ -373,6 +448,29 @@ class AiConsentNotifier extends Notifier<bool> {
 /// Whether the user has consented to AI usage with compliance.
 final aiConsentProvider = NotifierProvider<AiConsentNotifier, bool>(
   AiConsentNotifier.new,
+);
+
+/// Notifier for biometric login setting.
+class BiometricLoginNotifier extends Notifier<bool> {
+  @override
+  bool build() {
+    final settingsAsync = ref.watch(settingsRepositoryProvider);
+    return settingsAsync.maybeWhen(
+      data: (settings) => settings.getEnableBiometricLogin(),
+      orElse: () => false,
+    );
+  }
+
+  Future<void> setEnabled(bool value) async {
+    final settings = await ref.read(settingsRepositoryProvider.future);
+    await settings.setEnableBiometricLogin(value);
+    state = value;
+  }
+}
+
+/// Provider for biometric login toggle
+final biometricLoginProvider = NotifierProvider<BiometricLoginNotifier, bool>(
+  BiometricLoginNotifier.new,
 );
 
 /// Notifier for help level setting.

@@ -1113,5 +1113,98 @@
   "backupNoFileMessage": "Nog geen back-upbestand",
   "@backupNoFileMessage": {
     "description": "Shown when no backup file path is available."
+  },
+  "settingsBiometricLoginTitle": "Biometrische login",
+  "@settingsBiometricLoginTitle": {
+    "description": "Title for biometric login toggle in settings."
+  },
+  "settingsBiometricLoginSubtitle": "Gebruik vingerafdruk of gezichts-ID om in te loggen",
+  "@settingsBiometricLoginSubtitle": {
+    "description": "Subtitle for biometric login toggle in settings."
+  },
+  "enableBiometricDialogTitle": "Biometrische login inschakelen",
+  "@enableBiometricDialogTitle": {
+    "description": "Title for the biometric enable dialog."
+  },
+  "enableBiometricDialogMessage": "Wilt u biometrische authenticatie inschakelen voor snellere login?",
+  "@enableBiometricDialogMessage": {
+    "description": "Message for the biometric enable dialog."
+  },
+  "enableBiometricDialogYes": "Inschakelen",
+  "@enableBiometricDialogYes": {
+    "description": "Yes button for the biometric enable dialog."
+  },
+  "enableBiometricDialogNo": "Niet nu",
+  "@enableBiometricDialogNo": {
+    "description": "No button for the biometric enable dialog."
+  },
+  "loginWithBiometric": "Inloggen met biometrie",
+  "@loginWithBiometric": {
+    "description": "Button to login with biometric authentication."
+  },
+  "loginWithPassword": "Inloggen met wachtwoord",
+  "@loginWithPassword": {
+    "description": "Button to switch to password login."
+  },
+  "biometric_login_title": "Biometrische Login",
+  "@biometric_login_title": {
+    "description": "Title for biometric login."
+  },
+  "enable_biometric_login": "Biometrische Login Inschakelen",
+  "@enable_biometric_login": {
+    "description": "Button or option to enable biometric login."
+  },
+  "biometric_not_available": "Biometrische authenticatie niet beschikbaar",
+  "@biometric_not_available": {
+    "description": "Message when biometric is not available."
+  },
+  "use_password_instead": "Gebruik wachtwoord in plaats daarvan",
+  "@use_password_instead": {
+    "description": "Option to use password login instead of biometric."
+  },
+  "biometric_enroll_success": "Biometrische login ingeschakeld",
+  "@biometric_enroll_success": {
+    "description": "Success message when biometric is enrolled."
+  },
+  "biometric_auth_failed": "Biometrische authenticatie mislukt",
+  "@biometric_auth_failed": {
+    "description": "Error message when biometric auth fails."
+  },
+  "smartFilterDialogTitle": "Slim Filter",
+  "@smartFilterDialogTitle": {
+    "description": "Title for the smart filter dialog."
+  },
+  "smartFilterHint": "Beschrijf wat je wilt filteren...",
+  "@smartFilterHint": {
+    "description": "Hint text for the smart filter input field."
+  },
+  "smartFilterButtonLabel": "Slim Filter Toepassen",
+  "@smartFilterButtonLabel": {
+    "description": "Label for the smart filter button."
+  },
+  "smartFilterProcessing": "Je verzoek wordt verwerkt...",
+  "@smartFilterProcessing": {
+    "description": "Message shown while processing smart filter."
+  },
+  "smartFilterError": "Slim filter toepassen mislukt. Probeer het opnieuw.",
+  "@smartFilterError": {
+    "description": "Error message when smart filter fails."
+  },
+  "aiSuggestedFilterLabel": "AI Voorgesteld Filter",
+  "@aiSuggestedFilterLabel": {
+    "description": "Label for AI suggested filter option."
+  },
+  "smartFilterButtonTooltip": "Gebruik AI om projecten te filteren",
+  "@smartFilterButtonTooltip": {
+    "description": "Tooltip for the smart filter button."
+  },
+  "editFilterButtonLabel": "Filter Bewerken",
+  "@editFilterButtonLabel": {
+    "description": "Label for the edit filter button."
+  },
+  "acceptFilterButtonLabel": "Filter Accepteren",
+  "@acceptFilterButtonLabel": {
+    "description": "Label for the accept filter button."
   }
+}
 }
