@@ -3,6 +3,23 @@ import 'package:my_project_management_app/models/project_requirements.dart';
 import 'package:my_project_management_app/core/repository/i_dashboard_repository.dart';
 import 'package:my_project_management_app/core/repository/dashboard_repository.dart';
 import 'project_providers.dart';
+import 'package:my_project_management_app/core/services/app_logger.dart';
+
+/// Validates a widget type string against supported dashboard widget types.
+/// 
+/// Throws InvalidWidgetTypeException if invalid, with logging.
+/// Supported types: welcome, projectList, taskChart, aiUsage, progressChart, kanbanBoard, calendar, notificationFeed.
+/// See .github/issues/020-dashboard-validate-widget-type.md for details.
+DashboardWidgetType validateWidgetType(String value) {
+  try {
+    return DashboardWidgetType.fromString(value);
+  } catch (e) {
+    AppLogger.instance.w('Invalid widget type attempted: $value');
+    throw InvalidWidgetTypeException(
+      'Invalid widget type \'$value\'. Valid types are: ${DashboardWidgetType.values.map((e) => e.name).join(', ')}',
+    );
+  }
+}
 
 /// Notifier for managing dashboard configuration with persistence
 /// TODO: Add undo/redo functionality
@@ -40,6 +57,7 @@ class DashboardConfigNotifier extends Notifier<List<DashboardItem>> {
 
   /// Add a new dashboard item
   Future<void> addItem(DashboardItem item) async {
+    validateWidgetType(item.widgetType);
     await _repository.addDashboardItem(item);
     await loadConfig(); // Refresh state
   }
