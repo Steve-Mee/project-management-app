@@ -116,7 +116,7 @@ class DashboardConfigNotifier extends Notifier<List<DashboardItem>> {
       _userTemplates = await _loadTemplates();
       _logEvent('config_loaded');
     } catch (e, st) {
-      _logError('load_config', e, st);
+      await _logError('load_config', e, st);
       state = [];
       _userTemplates = [];
       ref.read(dashboardErrorProvider.notifier).state = 'dashboard_load_error';
@@ -148,7 +148,7 @@ class DashboardConfigNotifier extends Notifier<List<DashboardItem>> {
       }
       _logEvent('config_saved');
     } catch (e, st) {
-      _logError('save_config', e, st);
+      await _logError('save_config', e, st);
       ref.read(dashboardErrorProvider.notifier).state = 'dashboard_save_error';
       rethrow;
     }
@@ -196,7 +196,7 @@ class DashboardConfigNotifier extends Notifier<List<DashboardItem>> {
       _pushToHistory();
       _logEvent('item_added', params: {'widgetType': item.widgetType.name, 'position': position});
     } catch (e, st) {
-      _logError('add_item', e, st);
+      await _logError('add_item', e, st);
       ref.read(dashboardErrorProvider.notifier).state = 'dashboard_action_failed';
       rethrow;
     }
@@ -210,7 +210,7 @@ class DashboardConfigNotifier extends Notifier<List<DashboardItem>> {
       _pushToHistory();
       _logEvent('item_removed', params: {'index': index});
     } catch (e, st) {
-      _logError('remove_item', e, st);
+      await _logError('remove_item', e, st);
       ref.read(dashboardErrorProvider.notifier).state = 'dashboard_action_failed';
       rethrow;
     }
@@ -228,7 +228,7 @@ class DashboardConfigNotifier extends Notifier<List<DashboardItem>> {
       _pushToHistory();
       _logEvent('position_updated', params: {'index': index, 'newPosition': clampedPosition});
     } catch (e, st) {
-      _logError('update_position', e, st);
+      await _logError('update_position', e, st);
       ref.read(dashboardErrorProvider.notifier).state = 'dashboard_action_failed';
       rethrow;
     }
@@ -468,7 +468,7 @@ class DashboardConfigNotifier extends Notifier<List<DashboardItem>> {
     updatedPermissions[userId] = perm.name;
 
     await _updatePermissions(shareId, updatedPermissions);
-    AppLogger.event('dashboard_invite', details: {'shareId': shareId, 'userId': userId, 'permission': perm.name});
+    AppLogger.event('dashboard_invite', params: {'shareId': shareId, 'userId': userId, 'permission': perm.name});
   }
 
   Future<SharedDashboard?> _loadLocalSharedDashboard(String shareId) async {
@@ -548,13 +548,13 @@ class DashboardConfigNotifier extends Notifier<List<DashboardItem>> {
   /// See .github/issues/025-dashboard-error-handling.md for details.
 
   /// Logs dashboard operation errors with consistent formatting
-  void _logError(String operation, Object error, StackTrace? stack) {
-    AppLogger.instance.e('dashboard_${operation}_failed', error: error, stackTrace: stack);
+  Future<void> _logError(String operation, Object error, StackTrace? stack) async {
+    await AppLogger.error('dashboard_${operation}_failed', error: error, stackTrace: stack);
   }
 
   /// Logs dashboard events with optional parameters
   void _logEvent(String eventName, {Map<String, dynamic>? params}) {
-    AppLogger.event('dashboard_$eventName', details: params);
+    AppLogger.event('dashboard_$eventName', params: params);
   }
 }
 

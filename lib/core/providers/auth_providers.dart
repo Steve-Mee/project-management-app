@@ -226,7 +226,7 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
     // Check rate limiting before attempting login
     final attempts = await _loadFailedAttempts();
     if (!_canAttemptLogin(attempts)) {
-      AppLogger.event('auth_rate_limit_exceeded', details: {'email': username, 'timestamp': DateTime.now().toIso8601String()});
+      AppLogger.event('auth_rate_limit_exceeded', params: {'email': username, 'timestamp': DateTime.now().toIso8601String()});
       throw RateLimitExceededException(_getBackoffTime(attempts)!);
     }
 
@@ -265,7 +265,7 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
         await _abTesting.initialize();
         await _abTesting.assignGroupForUser(userEmail);
 
-        AppLogger.event('auth_sign_in', details: {'id': user.id});
+        AppLogger.event('auth_sign_in', params: {'id': user.id});
 
         await _cloudSync.authSignInPlaceholder(
           user.id,
@@ -370,7 +370,7 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
             AppLogger.instance.d('Auto-login after signup successful');
           }
         } else {
-          AppLogger.event('auth_rate_limit_exceeded', details: {'email': trimmedEmail, 'context': 'auto-login after signup'});
+          AppLogger.event('auth_rate_limit_exceeded', params: {'email': trimmedEmail, 'context': 'auto-login after signup'});
         }
         return true;
       } else {

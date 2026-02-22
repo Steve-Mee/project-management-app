@@ -65,7 +65,7 @@ class CloudSyncService {
 
       await supabase.from('analytics').insert(payload);
 
-      AppLogger.event(event, details: payload);
+      AppLogger.event(event, params: payload);
     } catch (e, stack) {
       AppLogger.instance.w('Analytics insert failed for $event', error: e, stackTrace: stack);
     }

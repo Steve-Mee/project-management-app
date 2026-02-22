@@ -95,7 +95,7 @@ class TaskNotifier extends AsyncNotifier<List<Task>> {
     final updatedTask = updated.firstWhere((task) => task.id == taskId);
     AppLogger.event(
       'task_status_updated',
-      details: {
+      params: {
         'id': updatedTask.id,
         'projectId': updatedTask.projectId,
         'status': newStatus.name,
@@ -121,7 +121,7 @@ class TaskNotifier extends AsyncNotifier<List<Task>> {
     await _persistTasks(updated);
     AppLogger.event(
       'task_updated',
-      details: {
+      params: {
         'id': updatedTask.id,
         'projectId': updatedTask.projectId,
         'attachments': updatedTask.attachments.length,
@@ -139,7 +139,7 @@ class TaskNotifier extends AsyncNotifier<List<Task>> {
     await _persistTasks(updated);
     AppLogger.event(
       'task_created',
-      details: {
+      params: {
         'id': task.id,
         'projectId': task.projectId,
         'title': task.title,
@@ -157,7 +157,7 @@ class TaskNotifier extends AsyncNotifier<List<Task>> {
     await _persistTasks(updated);
     AppLogger.event(
       'task_deleted',
-      details: {
+      params: {
         'id': taskId,
         'projectId': _activeProjectId,
       },

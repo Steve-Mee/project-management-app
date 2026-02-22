@@ -90,7 +90,7 @@ class AiChatNotifier extends Notifier<AiChatState> {
       state = state.copyWith(
         error: 'Rate limit exceeded. Please wait ${remainingTime.inSeconds} seconds.',
       );
-      AppLogger.event('ai_rate_limit_exceeded', details: {
+      AppLogger.event('ai_rate_limit_exceeded', params: {
         'remainingTime': remainingTime.inSeconds,
         'requestCount': state.requestCountInWindow,
       });

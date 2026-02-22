@@ -14,8 +14,8 @@ class AppLogger {
     ),
   );
 
-  static void event(String name, {Map<String, Object?>? details}) {
-    final payload = details ?? const {};
+  static void event(String name, {Map<String, Object?>? params}) {
+    final payload = params ?? const {};
     if (payload.isEmpty) {
       instance.i('Event: $name');
       return;
@@ -26,5 +26,9 @@ class AppLogger {
       buffer.write(', $key: $value');
     });
     instance.i(buffer.toString());
+  }
+
+  static Future<void> error(String message, {Object? error, StackTrace? stackTrace}) async {
+    instance.e(message, error: error, stackTrace: stackTrace);
   }
 }

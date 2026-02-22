@@ -93,7 +93,7 @@ class LoginRateLimiter {
       if (attempts.length >= maxAttempts) {
         consecutiveFailures++;
         lastBlockTime = DateTime.now();
-        AppLogger.event('auth_rate_limit_exceeded', details: {
+        AppLogger.event('auth_rate_limit_exceeded', params: {
           'email': email,
           'attempts': attempts.length,
           'consecutive_failures': consecutiveFailures,

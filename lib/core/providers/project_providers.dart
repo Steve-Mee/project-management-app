@@ -516,7 +516,7 @@ class ProjectsNotifier extends Notifier<AsyncValue<List<ProjectModel>>> {
       );
       AppLogger.event(
         'project_created',
-        details: {
+        params: {
           'id': project.id,
           'name': project.name,
           'status': project.status,
@@ -542,7 +542,7 @@ class ProjectsNotifier extends Notifier<AsyncValue<List<ProjectModel>>> {
       );
       AppLogger.event(
         'project_progress_updated',
-        details: {'id': projectId, 'progress': newProgress},
+        params: {'id': projectId, 'progress': newProgress},
       );
       return _loadProjects();
     });
@@ -562,7 +562,7 @@ class ProjectsNotifier extends Notifier<AsyncValue<List<ProjectModel>>> {
         userId: userId,
         metadata: {'action': 'update_directory_path'},
       );
-      AppLogger.event('project_directory_updated', details: {'id': projectId});
+      AppLogger.event('project_directory_updated', params: {'id': projectId});
       return _loadProjects();
     });
   }
@@ -591,7 +591,7 @@ class ProjectsNotifier extends Notifier<AsyncValue<List<ProjectModel>>> {
       );
       AppLogger.event(
         'project_updated_with_history',
-        details: {
+        params: {
           'id': projectId,
           'change_description': changeDescription,
         },
@@ -628,7 +628,7 @@ class ProjectsNotifier extends Notifier<AsyncValue<List<ProjectModel>>> {
         orElse: () => 'system',
       ) ?? 'system';
       await _repository.deleteProject(projectId, userId: userId);
-      AppLogger.event('project_deleted', details: {'id': projectId});
+      AppLogger.event('project_deleted', params: {'id': projectId});
       return _loadProjects();
     });
   }
@@ -647,7 +647,7 @@ class ProjectsNotifier extends Notifier<AsyncValue<List<ProjectModel>>> {
         userId: userId,
         metadata: {'action': 'update_tasks'},
       );
-      AppLogger.event('project_tasks_updated', details: {'id': projectId});
+      AppLogger.event('project_tasks_updated', params: {'id': projectId});
       return _loadProjects();
     });
   }
@@ -666,7 +666,7 @@ class ProjectsNotifier extends Notifier<AsyncValue<List<ProjectModel>>> {
         userId: userId,
         metadata: {'action': 'update_plan_json'},
       );
-      AppLogger.event('project_plan_updated', details: {'id': projectId});
+      AppLogger.event('project_plan_updated', params: {'id': projectId});
       return _loadProjects();
     });
   }

@@ -757,4 +757,89 @@ void main() {
       expect(error, 'dashboard_action_failed');
     });
   });
+
+  group('Error handling and logging', () {
+    test('loadConfig failure logs error and sets empty state', () async {
+      fakeRepo.shouldThrowOnLoad = true;
+      final notifier = container.read(dashboardConfigProvider.notifier);
+      await notifier.loadConfig();
+      expect(container.read(dashboardConfigProvider), []);
+      expect(container.read(dashboardErrorProvider), 'dashboard_load_error');
+      // AppLogger spy would verify _logError was called
+    });
+
+    test('saveConfig failure logs error and rethrows', () async {
+      fakeRepo.shouldThrowOnSave = true;
+      final notifier = container.read(dashboardConfigProvider.notifier);
+      await expectLater(
+        notifier.saveConfig([DashboardItem(widgetType: DashboardWidgetType.taskList, position: {'x': 0, 'y': 0, 'width': 100, 'height': 100})]),
+        throwsA(isA<Exception>()),
+      );
+      expect(container.read(dashboardErrorProvider), 'dashboard_save_error');
+      // AppLogger spy would verify _logError was called
+    });
+
+    test('addItem success logs event', () async {
+      final notifier = container.read(dashboardConfigProvider.notifier);
+      await notifier.addItem(DashboardItem(widgetType: DashboardWidgetType.taskList, position: {'x': 0, 'y': 0, 'width': 100, 'height': 100}));
+      expect(container.read(dashboardConfigProvider).length, 1);
+      // AppLogger spy would verify _logEvent was called with 'item_added'
+    });
+
+    test('addItem failure logs error', () async {
+      fakeRepo.shouldThrowOnAdd = true;
+      final notifier = container.read(dashboardConfigProvider.notifier);
+      await expectLater(
+        notifier.addItem(DashboardItem(widgetType: DashboardWidgetType.taskList, position: {'x': 0, 'y': 0, 'width': 100, 'height': 100})),
+        throwsA(isA<Exception>()),
+      );
+      expect(container.read(dashboardErrorProvider), 'dashboard_action_failed');
+      // AppLogger spy would verify _logError was called
+    });
+
+    test('removeItem success logs event', () async {
+      // First add an item
+      final notifier = container.read(dashboardConfigProvider.notifier);
+      await notifier.addItem(DashboardItem(widgetType: DashboardWidgetType.taskList, position: {'x': 0, 'y': 0, 'width': 100, 'height': 100}));
+      expect(container.read(dashboardConfigProvider).length, 1);
+      // Now remove
+      await notifier.removeItem(0);
+      expect(container.read(dashboardConfigProvider).length, 0);
+      // AppLogger spy would verify _logEvent was called with 'item_removed'
+    });
+
+    test('removeItem failure logs error', () async {
+      fakeRepo.shouldThrowOnRemove = true;
+      final notifier = container.read(dashboardConfigProvider.notifier);
+      await expectLater(
+        notifier.removeItem(0),
+        throwsA(isA<Exception>()),
+      );
+      expect(container.read(dashboardErrorProvider), 'dashboard_action_failed');
+      // AppLogger spy would verify _logError was called
+    });
+
+    test('updateItemPosition success logs event', () async {
+      // First add an item
+      final notifier = container.read(dashboardConfigProvider.notifier);
+      await notifier.addItem(DashboardItem(widgetType: DashboardWidgetType.taskList, position: {'x': 0, 'y': 0, 'width': 100, 'height': 100}));
+      expect(container.read(dashboardConfigProvider).length, 1);
+      // Now update position
+      await notifier.updateItemPosition(0, {'x': 10, 'y': 10, 'width': 200, 'height': 150});
+      final item = container.read(dashboardConfigProvider)[0];
+      expect(item.position['x'], 10);
+      // AppLogger spy would verify _logEvent was called with 'position_updated'
+    });
+
+    test('updateItemPosition failure logs error', () async {
+      fakeRepo.shouldThrowOnUpdate = true;
+      final notifier = container.read(dashboardConfigProvider.notifier);
+      await expectLater(
+        notifier.updateItemPosition(0, {'x': 10, 'y': 10, 'width': 200, 'height': 150}),
+        throwsA(isA<Exception>()),
+      );
+      expect(container.read(dashboardErrorProvider), 'dashboard_action_failed');
+      // AppLogger spy would verify _logError was called
+    });
+  });
 }
