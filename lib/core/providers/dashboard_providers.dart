@@ -331,7 +331,7 @@ class DashboardConfigNotifier extends Notifier<List<DashboardItem>> {
   /// Loads a dashboard template by ID and applies it to replace the current configuration.
   /// See .github/issues/023-dashboard-templates.md for details.
   Future<void> loadTemplate(String templateId) async {
-    final allTemplates = await getAllTemplates();
+    final allTemplates = getAllTemplates();
     final template = allTemplates.firstWhere(
       (t) => t.id == templateId,
       orElse: () => throw ArgumentError('Template not found: $templateId'),
@@ -342,7 +342,7 @@ class DashboardConfigNotifier extends Notifier<List<DashboardItem>> {
 
   /// Returns all available dashboard templates (built-in presets + user-created).
   /// See .github/issues/023-dashboard-templates.md for details.
-  Future<List<DashboardTemplate>> getAllTemplates() async {
+  List<DashboardTemplate> getAllTemplates() {
     return [..._builtInPresets, ..._userTemplates];
   }
 

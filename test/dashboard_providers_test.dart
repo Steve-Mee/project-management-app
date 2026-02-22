@@ -448,7 +448,7 @@ void main() {
     });
 
     test('built-in presets are always available', () async {
-      final templates = await notifier.getAllTemplates();
+      final templates = notifier.getAllTemplates();
       expect(templates.length, greaterThanOrEqualTo(4)); // At least the 4 presets
       expect(templates.where((t) => t.isPreset).length, 4);
       expect(templates.any((t) => t.id == 'project-overview'), true);
@@ -469,7 +469,7 @@ void main() {
       await notifier.saveAsTemplate('Test Template');
 
       // Verify template was saved
-      final templates = await notifier.getAllTemplates();
+      final templates = notifier.getAllTemplates();
       final userTemplates = templates.where((t) => !t.isPreset).toList();
       expect(userTemplates.length, 1);
       expect(userTemplates[0].name, 'Test Template');
@@ -495,7 +495,7 @@ void main() {
       await notifier.addItem(item2);
 
       // Load the template
-      final templates = await notifier.getAllTemplates();
+      final templates = notifier.getAllTemplates();
       final userTemplate = templates.firstWhere((t) => t.name == 'Load Test');
       await notifier.loadTemplate(userTemplate.id);
 
@@ -510,7 +510,7 @@ void main() {
       await notifier.saveAsTemplate('Delete Test');
 
       // Verify it exists
-      var templates = await notifier.getAllTemplates();
+      var templates = notifier.getAllTemplates();
       var userTemplates = templates.where((t) => !t.isPreset).toList();
       expect(userTemplates.length, 1);
 
@@ -518,14 +518,14 @@ void main() {
       await notifier.deleteTemplate(userTemplates[0].id);
 
       // Verify it's gone
-      templates = await notifier.getAllTemplates();
+      templates = notifier.getAllTemplates();
       userTemplates = templates.where((t) => !t.isPreset).toList();
       expect(userTemplates.length, 0);
     });
 
     test('getAllTemplates returns presets + user templates', () async {
       // Initially only presets
-      var templates = await notifier.getAllTemplates();
+      var templates = notifier.getAllTemplates();
       expect(templates.where((t) => t.isPreset).length, 4);
       expect(templates.where((t) => !t.isPreset).length, 0);
 
@@ -533,7 +533,7 @@ void main() {
       await notifier.saveAsTemplate('User Template');
 
       // Now presets + 1 user
-      templates = await notifier.getAllTemplates();
+      templates = notifier.getAllTemplates();
       expect(templates.where((t) => t.isPreset).length, 4);
       expect(templates.where((t) => !t.isPreset).length, 1);
     });
@@ -541,7 +541,7 @@ void main() {
     test('saveAsTemplate with empty name still saves', () async {
       await notifier.saveAsTemplate('');
 
-      final templates = await notifier.getAllTemplates();
+      final templates = notifier.getAllTemplates();
       final userTemplates = templates.where((t) => !t.isPreset).toList();
       expect(userTemplates.length, 1);
       expect(userTemplates[0].name, '');
@@ -551,7 +551,7 @@ void main() {
       await notifier.saveAsTemplate('Duplicate');
       await notifier.saveAsTemplate('Duplicate');
 
-      final templates = await notifier.getAllTemplates();
+      final templates = notifier.getAllTemplates();
       final userTemplates = templates.where((t) => !t.isPreset && t.name == 'Duplicate').toList();
       expect(userTemplates.length, 2);
     });
