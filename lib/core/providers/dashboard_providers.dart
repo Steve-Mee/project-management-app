@@ -29,16 +29,27 @@ DashboardWidgetType validateWidgetType(String value) {
 }
 
 /// Notifier for managing dashboard configuration with persistence and widget type validation
-/// TODO: Add undo/redo functionality
 /// TODO: Add dashboard templates
 /// TODO: Add collaborative dashboard sharing
 class DashboardConfigNotifier extends Notifier<List<DashboardItem>> {
   late final IDashboardRepository _repository;
 
+  /// Maximum number of history entries to maintain (prevents memory bloat)
+  static const int _maxHistoryEntries = 50;
+
+  /// History stack storing snapshots of dashboard state for undo/redo
+  /// See .github/issues/022-dashboard-undo-redo.md for details
+  final List<List<DashboardItem>> _history = [];
+
+  /// Current position in history stack (-1 means no history)
+  /// See .github/issues/022-dashboard-undo-redo.md for details
+  int _currentIndex = -1;
+
   @override
   List<DashboardItem> build() {
     _repository = ref.read(dashboardRepositoryProvider);
     loadConfig();
+    _pushToHistory(); // Push initial state
     return [];
   }
 
@@ -75,12 +86,14 @@ class DashboardConfigNotifier extends Notifier<List<DashboardItem>> {
     final clampedItem = DashboardItem(widgetType: item.widgetType, position: position);
     await _repository.addDashboardItem(clampedItem);
     await loadConfig(); // Refresh state
+    _pushToHistory();
   }
 
   /// Remove a dashboard item by index
   Future<void> removeItem(int index) async {
     await _repository.removeDashboardItem(index);
     await loadConfig(); // Refresh state
+    _pushToHistory();
   }
 
   /// Updates an item's position after enforcing constraints to keep it within dashboard bounds.
@@ -91,6 +104,7 @@ class DashboardConfigNotifier extends Notifier<List<DashboardItem>> {
     final clampedPosition = _clampPosition(newPosition, containerWidth: kDashboardContainerWidth, containerHeight: kDashboardContainerHeight);
     await _repository.updateDashboardItemPosition(index, clampedPosition);
     await loadConfig(); // Refresh state
+    _pushToHistory();
   }
 
   /// Enforces position constraints for UI drag/resize operations by clamping the proposed position
@@ -156,6 +170,61 @@ class DashboardConfigNotifier extends Notifier<List<DashboardItem>> {
            width >= kDashboardMinWidth && height >= kDashboardMinHeight &&
            x + width <= containerWidth && y + height <= containerHeight;
   }
+
+  /// Creates a deep copy of the dashboard state for history snapshots
+  List<DashboardItem> _deepCopyState(List<DashboardItem> state) {
+    return state.map((item) => DashboardItem(
+      widgetType: item.widgetType,
+      position: Map<String, dynamic>.from(item.position),
+    )).toList();
+  }
+
+  /// Pushes current state to history stack and trims if necessary
+  void _pushToHistory() {
+    _history.add(_deepCopyState(state));
+    _currentIndex = _history.length - 1;
+    _trimHistory();
+  }
+
+  /// Trims history stack to maximum entries, adjusting current index
+  void _trimHistory() {
+    if (_history.length > _maxHistoryEntries) {
+      _history.removeAt(0);
+      _currentIndex--;
+    }
+  }
+
+  /// Undoes the last dashboard change by restoring the previous state from history
+  /// and persisting the change. Only available if canUndo is true.
+  /// See .github/issues/022-dashboard-undo-redo.md for details.
+  Future<void> undo() async {
+    if (canUndo) {
+      _currentIndex--;
+      state = _deepCopyState(_history[_currentIndex]);
+      await saveConfig(state);
+      AppLogger.instance.d('Undid dashboard change');
+    }
+  }
+
+  /// Redoes the last undone dashboard change by restoring the next state from history
+  /// and persisting the change. Only available if canRedo is true.
+  /// See .github/issues/022-dashboard-undo-redo.md for details.
+  Future<void> redo() async {
+    if (canRedo) {
+      _currentIndex++;
+      state = _deepCopyState(_history[_currentIndex]);
+      await saveConfig(state);
+      AppLogger.instance.d('Redid dashboard change');
+    }
+  }
+
+  /// Whether an undo operation is currently available (more than one history entry exists)
+  /// See .github/issues/022-dashboard-undo-redo.md for details.
+  bool get canUndo => _currentIndex > 0;
+
+  /// Whether a redo operation is currently available (not at the end of history)
+  /// See .github/issues/022-dashboard-undo-redo.md for details.
+  bool get canRedo => _currentIndex < _history.length - 1;
 }
 
 /// Provider for dashboard configuration with widget type validation

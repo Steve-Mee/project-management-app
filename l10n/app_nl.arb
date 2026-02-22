@@ -1234,6 +1234,22 @@
         "type": "int"
       }
     }
+  },
+  "undo": "Ongedaan maken",
+  "@undo": {
+    "description": "Label for undo button in dashboard toolbar."
+  },
+  "redo": "Opnieuw",
+  "@redo": {
+    "description": "Label for redo button in dashboard toolbar."
+  },
+  "undoTooltip": "Laatste dashboard wijziging ongedaan maken",
+  "@undoTooltip": {
+    "description": "Tooltip for undo button."
+  },
+  "redoTooltip": "Laatste ongedaan gemaakte dashboard wijziging opnieuw uitvoeren",
+  "@redoTooltip": {
+    "description": "Tooltip for redo button."
   }
 }
 }

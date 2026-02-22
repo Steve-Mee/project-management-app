@@ -291,4 +291,147 @@ void main() {
       expect(item.position['height'], 120);
     });
   });
+
+  group('Undo/Redo functionality', () {
+    late DashboardConfigNotifier notifier;
+
+    setUp(() {
+      notifier = container.read(dashboardConfigProvider.notifier);
+    });
+
+    test('canUndo is false initially (no history)', () {
+      expect(notifier.canUndo, false);
+    });
+
+    test('canRedo is false initially (no history)', () {
+      expect(notifier.canRedo, false);
+    });
+
+    test('after addItem, canUndo is true', () async {
+      final item = DashboardItem(
+        widgetType: DashboardWidgetType.metricCard,
+        position: {'x': 0, 'y': 0},
+      );
+
+      await notifier.addItem(item);
+      expect(notifier.canUndo, true);
+    });
+
+    test('undo restores previous state', () async {
+      final item = DashboardItem(
+        widgetType: DashboardWidgetType.metricCard,
+        position: {'x': 0, 'y': 0},
+      );
+
+      await notifier.addItem(item);
+      final stateAfterAdd = container.read(dashboardConfigProvider);
+
+      await notifier.undo();
+      final stateAfterUndo = container.read(dashboardConfigProvider);
+
+      expect(stateAfterUndo.length, 0); // Back to empty
+      expect(notifier.canRedo, true);
+    });
+
+    test('redo restores next state', () async {
+      final item = DashboardItem(
+        widgetType: DashboardWidgetType.metricCard,
+        position: {'x': 0, 'y': 0},
+      );
+
+      await notifier.addItem(item);
+      final stateAfterAdd = container.read(dashboardConfigProvider);
+
+      await notifier.undo();
+      await notifier.redo();
+      final stateAfterRedo = container.read(dashboardConfigProvider);
+
+      expect(stateAfterRedo, stateAfterAdd); // Back to added state
+      expect(notifier.canUndo, true);
+      expect(notifier.canRedo, false);
+    });
+
+    test('multiple changes + undo/redo sequence', () async {
+      final item1 = DashboardItem(
+        widgetType: DashboardWidgetType.metricCard,
+        position: {'x': 0, 'y': 0},
+      );
+      final item2 = DashboardItem(
+        widgetType: DashboardWidgetType.taskList,
+        position: {'x': 200, 'y': 0},
+      );
+
+      // Add first item
+      await notifier.addItem(item1);
+      expect(container.read(dashboardConfigProvider).length, 1);
+
+      // Add second item
+      await notifier.addItem(item2);
+      expect(container.read(dashboardConfigProvider).length, 2);
+
+      // Undo second add
+      await notifier.undo();
+      expect(container.read(dashboardConfigProvider).length, 1);
+      expect(container.read(dashboardConfigProvider)[0].widgetType, DashboardWidgetType.metricCard);
+
+      // Undo first add
+      await notifier.undo();
+      expect(container.read(dashboardConfigProvider).length, 0);
+
+      // Redo first add
+      await notifier.redo();
+      expect(container.read(dashboardConfigProvider).length, 1);
+      expect(container.read(dashboardConfigProvider)[0].widgetType, DashboardWidgetType.metricCard);
+
+      // Redo second add
+      await notifier.redo();
+      expect(container.read(dashboardConfigProvider).length, 2);
+      expect(container.read(dashboardConfigProvider)[1].widgetType, DashboardWidgetType.taskList);
+    });
+
+    test('history limit trims old entries', () async {
+      // Add 51 items to exceed limit
+      for (int i = 0; i < 51; i++) {
+        final item = DashboardItem(
+          widgetType: DashboardWidgetType.metricCard,
+          position: {'x': i * 10, 'y': 0},
+        );
+        await notifier.addItem(item);
+      }
+
+      // History should be trimmed to 50 entries
+      // Current index should be adjusted
+      expect(notifier.canUndo, true);
+
+      // Undo should work
+      await notifier.undo();
+      expect(container.read(dashboardConfigProvider).length, 50);
+    });
+
+    test('canUndo/canRedo edge cases', () async {
+      final item = DashboardItem(
+        widgetType: DashboardWidgetType.metricCard,
+        position: {'x': 0, 'y': 0},
+      );
+
+      // Initially false
+      expect(notifier.canUndo, false);
+      expect(notifier.canRedo, false);
+
+      // After add
+      await notifier.addItem(item);
+      expect(notifier.canUndo, true);
+      expect(notifier.canRedo, false);
+
+      // After undo (at start)
+      await notifier.undo();
+      expect(notifier.canUndo, false);
+      expect(notifier.canRedo, true);
+
+      // After redo (at end)
+      await notifier.redo();
+      expect(notifier.canUndo, true);
+      expect(notifier.canRedo, false);
+    });
+  });
 }

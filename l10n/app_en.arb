@@ -1745,6 +1745,22 @@
         "type": "int"
       }
     }
+  },
+  "undo": "Undo",
+  "@undo": {
+    "description": "Label for undo button in dashboard toolbar."
+  },
+  "redo": "Redo",
+  "@redo": {
+    "description": "Label for redo button in dashboard toolbar."
+  },
+  "undoTooltip": "Undo last dashboard change",
+  "@undoTooltip": {
+    "description": "Tooltip for undo button."
+  },
+  "redoTooltip": "Redo last undone dashboard change",
+  "@redoTooltip": {
+    "description": "Tooltip for redo button."
   }
 }
 }
