@@ -1,5 +1,4 @@
-import 'dart:async';
-import 'dart:math';
+import 'package:uuid/uuid.dart';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive_flutter/hive_flutter.dart';
@@ -9,9 +8,8 @@ import '../config/ai_config.dart' as ai_config;
 import '../providers/ai/ai_usage_provider.dart';
 import '../../models/chat_message_model.dart';
 import '../../models/project_plan.dart';
-import '../models/ai_rate_limits_config.dart';
-import '../models/ai_request_queue.dart';
-import 'auth_providers.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import '../models/ai_usage_record.dart';
 
 /// Custom exception for rate limit exceeded
 class RateLimitExceededException implements Exception {
@@ -252,8 +250,13 @@ class AiChatNotifier extends AsyncNotifier<AiChatState> {
     }
   }
 
-  /// Execute queued chat request
-  Future<ChatMessage> _executeChatRequest(Map<String, dynamic> payload) async {
+  /// Calculate estimated cost based on token usage
+  /// TODO: Use actual pricing from AI provider
+  double _calculateEstimatedCost(int inputTokens, int outputTokens) {
+    const double costPerToken = 0.0000015; // Example: $1.50 per 1M tokens
+    return (inputTokens + outputTokens) * costPerToken;
+  }
+  Future<(ChatMessage, int)> _executeChatRequest(Map<String, dynamic> payload) async {
     final userMessage = payload['userMessage'] as String;
     // TODO: Use promptOverride and projectId in future AI call enhancements
 
@@ -262,16 +265,18 @@ class AiChatNotifier extends AsyncNotifier<AiChatState> {
 
     ref.read(aiUsageUpdateProvider(result.tokensUsed));
 
-    return ChatMessage(
+    final chatMessage = ChatMessage(
       id: DateTime.now().millisecondsSinceEpoch.toString(),
       content: result.content,
       isUser: false,
       timestamp: DateTime.now(),
     );
+
+    return (chatMessage, result.tokensUsed);
   }
 
   /// Execute queued generate questions request
-  Future<List<String>> _executeGenerateQuestionsRequest(Map<String, dynamic> payload) async {
+  Future<(List<String>, int)> _executeGenerateQuestionsRequest(Map<String, dynamic> payload) async {
     final projectData = payload['projectData'] as Map<String, dynamic>;
     final helpLevel = payload['helpLevel'] as ai_config.HelpLevel;
 
@@ -281,11 +286,11 @@ class AiChatNotifier extends AsyncNotifier<AiChatState> {
     ));
 
     ref.read(aiUsageUpdateProvider(result.tokensUsed));
-    return result.content;
+    return (result.content, result.tokensUsed);
   }
 
   /// Execute queued generate proposals request
-  Future<List<String>> _executeGenerateProposalsRequest(Map<String, dynamic> payload) async {
+  Future<(List<String>, int)> _executeGenerateProposalsRequest(Map<String, dynamic> payload) async {
     final projectData = payload['projectData'] as Map<String, dynamic>;
     final helpLevel = payload['helpLevel'] as ai_config.HelpLevel;
     final answers = payload['answers'] as List<String>?;
@@ -297,17 +302,17 @@ class AiChatNotifier extends AsyncNotifier<AiChatState> {
     ));
 
     ref.read(aiUsageUpdateProvider(result.tokensUsed));
-    return result.content;
+    return (result.content, result.tokensUsed);
   }
 
   /// Execute queued generate plan request
-  Future<ProjectPlan> _executeGeneratePlanRequest(Map<String, dynamic> payload) async {
+  Future<(ProjectPlan, int)> _executeGeneratePlanRequest(Map<String, dynamic> payload) async {
     final projectData = payload['projectData'] as Map<String, dynamic>;
 
     final result = await _retryAiCall(() => AiPlanningHelpers.generateFinalPlan(projectData));
 
     ref.read(aiUsageUpdateProvider(result.tokensUsed));
-    return result.content;
+    return (result.content, result.tokensUsed);
   }
 
   /// Send a message and get AI response with queuing
@@ -927,19 +932,19 @@ class AiChatNotifier extends AsyncNotifier<AiChatState> {
     if (completer == null) return; // Request was cancelled
 
     try {
-      dynamic result;
+      (dynamic processedResult, int tokens);
       switch (request.action) {
         case 'chat':
-          result = await _executeChatRequest(request.payload);
+          (processedResult, tokens) = await _executeChatRequest(request.payload);
           break;
         case 'generate_questions':
-          result = await _executeGenerateQuestionsRequest(request.payload);
+          (processedResult, tokens) = await _executeGenerateQuestionsRequest(request.payload);
           break;
         case 'generate_proposals':
-          result = await _executeGenerateProposalsRequest(request.payload);
+          (processedResult, tokens) = await _executeGenerateProposalsRequest(request.payload);
           break;
         case 'generate_plan':
-          result = await _executeGeneratePlanRequest(request.payload);
+          (processedResult, tokens) = await _executeGeneratePlanRequest(request.payload);
           break;
         default:
           throw Exception('Unknown action: ${request.action}');
@@ -956,7 +961,24 @@ class AiChatNotifier extends AsyncNotifier<AiChatState> {
       _resetMetricsIfNeeded();
       _processedToday++;
       _operationProcessedToday[request.action] = (_operationProcessedToday[request.action] ?? 0) + 1;
-      completer.complete(result);
+      completer.complete(processedResult);
+
+      // Log usage record
+      final userId = Supabase.instance.client.auth.currentUser?.id;
+      final record = AiUsageRecord(
+        id: const Uuid().v4(),
+        timestamp: now,
+        operation: request.action,
+        inputTokens: tokens,
+        outputTokens: 0,
+        estimatedCost: _calculateEstimatedCost(tokens, 0),
+        userId: userId,
+        projectId: null, // TODO: Extract from payload if available
+        success: true,
+        errorMessage: null,
+      );
+      await ref.read(aiUsageHistoryProvider.notifier).logUsage(record);
+
       AppLogger.event('ai_queue_processed', params: {
         'queueLength': _requestQueue.length,
         'success': true,
@@ -969,6 +991,23 @@ class AiChatNotifier extends AsyncNotifier<AiChatState> {
       _droppedCount++;
       _operationDroppedCount[request.action] = (_operationDroppedCount[request.action] ?? 0) + 1;
       completer.completeError(e);
+
+      // Log usage record for failed request
+      final userId = Supabase.instance.client.auth.currentUser?.id;
+      final record = AiUsageRecord(
+        id: const Uuid().v4(),
+        timestamp: DateTime.now(),
+        operation: request.action,
+        inputTokens: 0,
+        outputTokens: 0,
+        estimatedCost: 0.0,
+        userId: userId,
+        projectId: null,
+        success: false,
+        errorMessage: e.toString(),
+      );
+      await ref.read(aiUsageHistoryProvider.notifier).logUsage(record);
+
       AppLogger.event('ai_queue_processed', params: {
         'queueLength': _requestQueue.length,
         'success': false,
@@ -1061,3 +1100,8 @@ final useProjectFilesProvider =
     NotifierProvider<UseProjectFilesNotifier, bool>(
   UseProjectFilesNotifier.new,
 );
+
+/// Provider for AI usage repository
+final aiUsageRepositoryProvider = Provider<IAiUsageRepository>((ref) {
+  return AiUsageRepository();
+});

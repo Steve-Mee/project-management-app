@@ -1959,6 +1959,26 @@
         "description": "Number of pending requests"
       }
     }
+  },
+  "ai_usage_history": "AI Usage History",
+  "@ai_usage_history": {
+    "description": "Title for AI usage history dashboard section."
+  },
+  "total_tokens": "Total Tokens",
+  "@total_tokens": {
+    "description": "Label for total token count display."
+  },
+  "estimated_cost": "Estimated Cost",
+  "@estimated_cost": {
+    "description": "Label for estimated cost display."
+  },
+  "usage_per_project": "Usage per Project",
+  "@usage_per_project": {
+    "description": "Label for usage statistics per project."
+  },
+  "ai_usage_export": "Export Usage Data",
+  "@ai_usage_export": {
+    "description": "Button text for exporting AI usage data."
   }
 }
 }
