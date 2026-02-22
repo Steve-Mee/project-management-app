@@ -4,6 +4,8 @@ import 'package:my_project_management_app/core/providers/dashboard_providers.dar
 import 'package:my_project_management_app/core/repository/i_dashboard_repository.dart';
 import 'package:my_project_management_app/models/project_requirements.dart';
 import 'package:my_project_management_app/core/models/dashboard_types.dart';
+import 'dart:io';
+import 'package:hive_flutter/hive_flutter.dart';
 
 class FakeDashboardRepository implements IDashboardRepository {
   final List<DashboardItem> _items = [];
@@ -59,8 +61,10 @@ void main() {
   late ProviderContainer container;
   late FakeDashboardRepository fakeRepo;
 
-  setUp(() {
+  setUp(() async {
     fakeRepo = FakeDashboardRepository();
+    final tempDir = Directory.systemTemp.createTempSync('hive_test');
+    Hive.init(tempDir.path);
     container = ProviderContainer(
       overrides: [
         dashboardRepositoryProvider.overrideWithValue(fakeRepo),
@@ -68,8 +72,10 @@ void main() {
     );
   });
 
-  tearDown(() {
+  tearDown(() async {
     container.dispose();
+    // Clean up Hive boxes
+    await Hive.close();
   });
 
   group('validateWidgetType', () {
@@ -431,6 +437,130 @@ void main() {
       await notifier.redo();
       expect(notifier.canUndo, true);
       expect(notifier.canRedo, false);
+    });
+  });
+
+  group('Dashboard Templates', () {
+    late DashboardConfigNotifier notifier;
+
+    setUp(() {
+      notifier = container.read(dashboardConfigProvider.notifier);
+    });
+
+    test('built-in presets are always available', () async {
+      final templates = await notifier.getAllTemplates();
+      expect(templates.length, greaterThanOrEqualTo(4)); // At least the 4 presets
+      expect(templates.where((t) => t.isPreset).length, 4);
+      expect(templates.any((t) => t.id == 'project-overview'), true);
+      expect(templates.any((t) => t.id == 'task-management'), true);
+      expect(templates.any((t) => t.id == 'analytics'), true);
+      expect(templates.any((t) => t.id == 'notifications'), true);
+    });
+
+    test('saveAsTemplate creates new template', () async {
+      // Set up some dashboard items
+      final item = DashboardItem(
+        widgetType: DashboardWidgetType.metricCard,
+        position: {'x': 0, 'y': 0, 'width': 200, 'height': 150},
+      );
+      await notifier.addItem(item);
+
+      // Save as template
+      await notifier.saveAsTemplate('Test Template');
+
+      // Verify template was saved
+      final templates = await notifier.getAllTemplates();
+      final userTemplates = templates.where((t) => !t.isPreset).toList();
+      expect(userTemplates.length, 1);
+      expect(userTemplates[0].name, 'Test Template');
+      expect(userTemplates[0].items.length, 1);
+      expect(userTemplates[0].items[0].widgetType, DashboardWidgetType.metricCard);
+      expect(userTemplates[0].isPreset, false);
+    });
+
+    test('loadTemplate replaces current dashboard state', () async {
+      // First save a template
+      final item1 = DashboardItem(
+        widgetType: DashboardWidgetType.metricCard,
+        position: {'x': 0, 'y': 0, 'width': 200, 'height': 150},
+      );
+      await notifier.addItem(item1);
+      await notifier.saveAsTemplate('Load Test');
+
+      // Add another item to current state
+      final item2 = DashboardItem(
+        widgetType: DashboardWidgetType.taskList,
+        position: {'x': 200, 'y': 0, 'width': 200, 'height': 150},
+      );
+      await notifier.addItem(item2);
+
+      // Load the template
+      final templates = await notifier.getAllTemplates();
+      final userTemplate = templates.firstWhere((t) => t.name == 'Load Test');
+      await notifier.loadTemplate(userTemplate.id);
+
+      // Verify state was replaced
+      final state = container.read(dashboardConfigProvider);
+      expect(state.length, 1);
+      expect(state[0].widgetType, DashboardWidgetType.metricCard);
+    });
+
+    test('deleteTemplate removes correctly', () async {
+      // Save a template
+      await notifier.saveAsTemplate('Delete Test');
+
+      // Verify it exists
+      var templates = await notifier.getAllTemplates();
+      var userTemplates = templates.where((t) => !t.isPreset).toList();
+      expect(userTemplates.length, 1);
+
+      // Delete it
+      await notifier.deleteTemplate(userTemplates[0].id);
+
+      // Verify it's gone
+      templates = await notifier.getAllTemplates();
+      userTemplates = templates.where((t) => !t.isPreset).toList();
+      expect(userTemplates.length, 0);
+    });
+
+    test('getAllTemplates returns presets + user templates', () async {
+      // Initially only presets
+      var templates = await notifier.getAllTemplates();
+      expect(templates.where((t) => t.isPreset).length, 4);
+      expect(templates.where((t) => !t.isPreset).length, 0);
+
+      // Add user template
+      await notifier.saveAsTemplate('User Template');
+
+      // Now presets + 1 user
+      templates = await notifier.getAllTemplates();
+      expect(templates.where((t) => t.isPreset).length, 4);
+      expect(templates.where((t) => !t.isPreset).length, 1);
+    });
+
+    test('saveAsTemplate with empty name still saves', () async {
+      await notifier.saveAsTemplate('');
+
+      final templates = await notifier.getAllTemplates();
+      final userTemplates = templates.where((t) => !t.isPreset).toList();
+      expect(userTemplates.length, 1);
+      expect(userTemplates[0].name, '');
+    });
+
+    test('saveAsTemplate allows duplicate names', () async {
+      await notifier.saveAsTemplate('Duplicate');
+      await notifier.saveAsTemplate('Duplicate');
+
+      final templates = await notifier.getAllTemplates();
+      final userTemplates = templates.where((t) => !t.isPreset && t.name == 'Duplicate').toList();
+      expect(userTemplates.length, 2);
+    });
+
+    test('loadTemplate with invalid id throws', () async {
+      await expectLater(
+        notifier.loadTemplate('invalid-id'),
+        throwsA(isA<ArgumentError>()),
+      );
     });
   });
 }

@@ -5,6 +5,7 @@ import 'package:my_project_management_app/core/repository/dashboard_repository.d
 import 'project_providers.dart';
 import 'package:my_project_management_app/core/services/app_logger.dart';
 import 'package:my_project_management_app/core/models/dashboard_types.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 
 /// DashboardItem
 /// 
@@ -29,10 +30,59 @@ DashboardWidgetType validateWidgetType(String value) {
 }
 
 /// Notifier for managing dashboard configuration with persistence, widget type validation, and undo/redo functionality
-/// TODO: Add dashboard templates
 /// TODO: Add collaborative dashboard sharing
 class DashboardConfigNotifier extends Notifier<List<DashboardItem>> {
   late final IDashboardRepository _repository;
+  late List<DashboardTemplate> _userTemplates;
+
+  /// Built-in preset dashboard templates
+  static final List<DashboardTemplate> _builtInPresets = [
+    DashboardTemplate(
+      id: 'project-overview',
+      name: 'Project Overview',
+      items: [
+        DashboardItem(widgetType: DashboardWidgetType.projectOverview, position: {'x': 0, 'y': 0, 'width': 600, 'height': 400}),
+        DashboardItem(widgetType: DashboardWidgetType.taskList, position: {'x': 600, 'y': 0, 'width': 600, 'height': 400}),
+        DashboardItem(widgetType: DashboardWidgetType.progressChart, position: {'x': 0, 'y': 400, 'width': 600, 'height': 400}),
+      ],
+      isPreset: true,
+      createdAt: DateTime(2023, 1, 1),
+    ),
+    DashboardTemplate(
+      id: 'task-management',
+      name: 'Task Management',
+      items: [
+        DashboardItem(widgetType: DashboardWidgetType.taskList, position: {'x': 0, 'y': 0, 'width': 600, 'height': 400}),
+        DashboardItem(widgetType: DashboardWidgetType.kanbanBoard, position: {'x': 600, 'y': 0, 'width': 600, 'height': 400}),
+        DashboardItem(widgetType: DashboardWidgetType.calendar, position: {'x': 0, 'y': 400, 'width': 1200, 'height': 400}),
+      ],
+      isPreset: true,
+      createdAt: DateTime(2023, 1, 1),
+    ),
+    DashboardTemplate(
+      id: 'analytics',
+      name: 'Analytics',
+      items: [
+        DashboardItem(widgetType: DashboardWidgetType.metricCard, position: {'x': 0, 'y': 0, 'width': 400, 'height': 200}),
+        DashboardItem(widgetType: DashboardWidgetType.progressChart, position: {'x': 400, 'y': 0, 'width': 400, 'height': 400}),
+        DashboardItem(widgetType: DashboardWidgetType.timeline, position: {'x': 800, 'y': 0, 'width': 400, 'height': 400}),
+        DashboardItem(widgetType: DashboardWidgetType.projectOverview, position: {'x': 0, 'y': 400, 'width': 600, 'height': 400}),
+      ],
+      isPreset: true,
+      createdAt: DateTime(2023, 1, 1),
+    ),
+    DashboardTemplate(
+      id: 'notifications',
+      name: 'Notifications',
+      items: [
+        DashboardItem(widgetType: DashboardWidgetType.notificationFeed, position: {'x': 0, 'y': 0, 'width': 600, 'height': 400}),
+        DashboardItem(widgetType: DashboardWidgetType.calendar, position: {'x': 600, 'y': 0, 'width': 600, 'height': 400}),
+        DashboardItem(widgetType: DashboardWidgetType.projectOverview, position: {'x': 0, 'y': 400, 'width': 1200, 'height': 400}),
+      ],
+      isPreset: true,
+      createdAt: DateTime(2023, 1, 1),
+    ),
+  ];
 
   /// Maximum number of history entries to maintain (prevents memory bloat)
   /// See .github/issues/022-dashboard-undo-redo.md for details
@@ -49,6 +99,7 @@ class DashboardConfigNotifier extends Notifier<List<DashboardItem>> {
   @override
   List<DashboardItem> build() {
     _repository = ref.read(dashboardRepositoryProvider);
+    _userTemplates = [];
     _history.clear();
     _currentIndex = -1;
     loadConfig().then((_) => _pushToHistory());
@@ -59,9 +110,11 @@ class DashboardConfigNotifier extends Notifier<List<DashboardItem>> {
     try {
       final items = await _repository.loadDashboardConfig();
       state = items;
+      _userTemplates = await _loadTemplates();
     } catch (e) {
       // TODO: Add error handling/logging
       state = [];
+      _userTemplates = [];
     }
   }
 
@@ -72,6 +125,31 @@ class DashboardConfigNotifier extends Notifier<List<DashboardItem>> {
       _currentIndex = _history.length - 1;
     } catch (e) {
       // TODO: Add error handling/logging
+      rethrow;
+    }
+  }
+
+  /// Loads user-created dashboard templates from Hive storage
+  Future<List<DashboardTemplate>> _loadTemplates() async {
+    try {
+      final box = await Hive.openBox<List>('dashboard_templates');
+      final data = box.get('templates', defaultValue: []);
+      if (data != null) {
+        return data.map((map) => DashboardTemplate.fromJson(map as Map<String, dynamic>)).toList();
+      }
+      return [];
+    } catch (e) {
+      return [];
+    }
+  }
+
+  /// Saves user-created dashboard templates to Hive storage
+  Future<void> _saveTemplates(List<DashboardTemplate> templates) async {
+    try {
+      final box = await Hive.openBox<List>('dashboard_templates');
+      final data = templates.map((template) => template.toJson()).toList();
+      await box.put('templates', data);
+    } catch (e) {
       rethrow;
     }
   }
@@ -232,6 +310,51 @@ class DashboardConfigNotifier extends Notifier<List<DashboardItem>> {
   /// Whether a redo operation is currently available (not at the end of history)
   /// See .github/issues/022-dashboard-undo-redo.md for details.
   bool get canRedo => _currentIndex < _history.length - 1;
+
+  /// Saves the current dashboard configuration as a new user template.
+  /// See .github/issues/023-dashboard-templates.md for details.
+  Future<void> saveAsTemplate(String name) async {
+    final template = DashboardTemplate(
+      id: DateTime.now().millisecondsSinceEpoch.toString(),
+      name: name,
+      items: List.from(state),
+      isPreset: false,
+      createdAt: DateTime.now(),
+    );
+    final userTemplates = await _loadTemplates();
+    userTemplates.add(template);
+    await _saveTemplates(userTemplates);
+    _userTemplates = userTemplates;
+    AppLogger.instance.i('Saved dashboard as template: $name');
+  }
+
+  /// Loads a dashboard template by ID and applies it to replace the current configuration.
+  /// See .github/issues/023-dashboard-templates.md for details.
+  Future<void> loadTemplate(String templateId) async {
+    final allTemplates = await getAllTemplates();
+    final template = allTemplates.firstWhere(
+      (t) => t.id == templateId,
+      orElse: () => throw ArgumentError('Template not found: $templateId'),
+    );
+    await saveConfig(List.from(template.items));
+    AppLogger.instance.i('Loaded dashboard template: ${template.name}');
+  }
+
+  /// Returns all available dashboard templates (built-in presets + user-created).
+  /// See .github/issues/023-dashboard-templates.md for details.
+  Future<List<DashboardTemplate>> getAllTemplates() async {
+    return [..._builtInPresets, ..._userTemplates];
+  }
+
+  /// Deletes a user-created dashboard template by ID.
+  /// See .github/issues/023-dashboard-templates.md for details.
+  Future<void> deleteTemplate(String templateId) async {
+    final userTemplates = List<DashboardTemplate>.from(_userTemplates);
+    userTemplates.removeWhere((t) => t.id == templateId && !t.isPreset);
+    await _saveTemplates(userTemplates);
+    _userTemplates = userTemplates;
+    AppLogger.instance.i('Deleted dashboard template: $templateId');
+  }
 }
 
 /// Example usage of undo/redo API in a ConsumerWidget:
@@ -297,4 +420,191 @@ final projectRequirementsProvider = FutureProvider.family<ProjectRequirements, S
     },
     orElse: () => const ProjectRequirements(),
   );
-});
+}
+
+/*
+UI Examples for Dashboard Templates (.github/issues/023-dashboard-templates.md)
+
+Example "Save as Template" button in dashboard toolbar:
+
+class DashboardToolbar extends ConsumerWidget {
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final notifier = ref.read(dashboardConfigProvider.notifier);
+    final l10n = AppLocalizations.of(context)!;
+
+    return Row(
+      children: [
+        IconButton(
+          onPressed: () async {
+            final nameController = TextEditingController();
+            final result = await showDialog<String>(
+              context: context,
+              builder: (context) => AlertDialog(
+                title: Text(l10n.save_as_template),
+                content: TextField(
+                  controller: nameController,
+                  decoration: InputDecoration(hintText: 'Template name'),
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: Text('Cancel'),
+                  ),
+                  TextButton(
+                    onPressed: () => Navigator.pop(context, nameController.text),
+                    child: Text('Save'),
+                  ),
+                ],
+              ),
+            );
+            if (result != null && result.isNotEmpty) {
+              await notifier.saveAsTemplate(result);
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text(l10n.template_saved_success)),
+              );
+            }
+          },
+          icon: const Icon(Icons.save),
+          tooltip: l10n.save_as_template,
+        ),
+        // ... other toolbar buttons
+      ],
+    );
+  }
+}
+
+Example template selector dialog:
+
+class TemplateSelectorDialog extends ConsumerWidget {
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final notifier = ref.read(dashboardConfigProvider.notifier);
+    final l10n = AppLocalizations.of(context)!;
+
+    return FutureBuilder<List<DashboardTemplate>>(
+      future: notifier.getAllTemplates(),
+      builder: (context, snapshot) {
+        if (!snapshot.hasData) return CircularProgressIndicator();
+
+        final templates = snapshot.data!;
+        final presets = templates.where((t) => t.isPreset).toList();
+        final userTemplates = templates.where((t) => !t.isPreset).toList();
+
+        return AlertDialog(
+          title: Text(l10n.load_template),
+          content: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (presets.isNotEmpty) ...[
+                  Text(l10n.preset_layouts, style: Theme.of(context).textTheme.titleSmall),
+                  ...presets.map((template) => ListTile(
+                    title: Text(template.name),
+                    onTap: () async {
+                      await notifier.loadTemplate(template.id);
+                      Navigator.pop(context);
+                    },
+                  )),
+                ],
+                if (userTemplates.isNotEmpty) ...[
+                  SizedBox(height: 16),
+                  Text(l10n.my_templates, style: Theme.of(context).textTheme.titleSmall),
+                  ...userTemplates.map((template) => ListTile(
+                    title: Text(template.name),
+                    onTap: () async {
+                      await notifier.loadTemplate(template.id);
+                      Navigator.pop(context);
+                    },
+                  )),
+                ],
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text('Close'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+Example template management screen:
+
+class TemplateManagementScreen extends ConsumerStatefulWidget {
+  @override
+  _TemplateManagementScreenState createState() => _TemplateManagementScreenState();
+}
+
+class _TemplateManagementScreenState extends ConsumerState<TemplateManagementScreen> {
+  late Future<List<DashboardTemplate>> _templatesFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadTemplates();
+  }
+
+  void _loadTemplates() {
+    _templatesFuture = ref.read(dashboardConfigProvider.notifier).getAllTemplates();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+
+    return Scaffold(
+      appBar: AppBar(title: Text('Manage Templates')),
+      body: FutureBuilder<List<DashboardTemplate>>(
+        future: _templatesFuture,
+        builder: (context, snapshot) {
+          if (!snapshot.hasData) return Center(child: CircularProgressIndicator());
+
+          final templates = snapshot.data!.where((t) => !t.isPreset).toList();
+
+          return ListView.builder(
+            itemCount: templates.length,
+            itemBuilder: (context, index) {
+              final template = templates[index];
+              return ListTile(
+                title: Text(template.name),
+                subtitle: Text('Created: ${template.createdAt.toString().split(' ')[0]}'),
+                trailing: IconButton(
+                  icon: Icon(Icons.delete),
+                  onPressed: () async {
+                    final confirm = await showDialog<bool>(
+                      context: context,
+                      builder: (context) => AlertDialog(
+                        title: Text('Delete Template'),
+                        content: Text(l10n.delete_template_confirm),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.pop(context, false),
+                            child: Text('Cancel'),
+                          ),
+                          TextButton(
+                            onPressed: () => Navigator.pop(context, true),
+                            child: Text('Delete'),
+                          ),
+                        ],
+                      ),
+                    );
+                    if (confirm == true) {
+                      await ref.read(dashboardConfigProvider.notifier).deleteTemplate(template.id);
+                      setState(() => _loadTemplates());
+                    }
+                  },
+                ),
+              );
+            },
+          );
+        },
+      ),
+    );
+  }
+}
+*/);

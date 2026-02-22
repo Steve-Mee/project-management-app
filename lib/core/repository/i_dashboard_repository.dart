@@ -56,6 +56,62 @@ class DashboardItem {
   }
 }
 
+/// Immutable model for dashboard templates with preset layouts.
+/// 
+/// Supports both built-in presets and user-created templates.
+/// Templates contain a list of DashboardItems with their positions and types.
+class DashboardTemplate {
+  final String id;
+  final String name;
+  final List<DashboardItem> items;
+  final bool isPreset;
+  final DateTime createdAt;
+
+  const DashboardTemplate({
+    required this.id,
+    required this.name,
+    required this.items,
+    required this.isPreset,
+    required this.createdAt,
+  });
+
+  DashboardTemplate copyWith({
+    String? id,
+    String? name,
+    List<DashboardItem>? items,
+    bool? isPreset,
+    DateTime? createdAt,
+  }) {
+    return DashboardTemplate(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      items: items ?? this.items,
+      isPreset: isPreset ?? this.isPreset,
+      createdAt: createdAt ?? this.createdAt,
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'name': name,
+        'items': items.map((item) => item.toJson()).toList(),
+        'isPreset': isPreset,
+        'createdAt': createdAt.toIso8601String(),
+      };
+
+  factory DashboardTemplate.fromJson(Map<String, dynamic> json) {
+    return DashboardTemplate(
+      id: json['id'] as String,
+      name: json['name'] as String,
+      items: (json['items'] as List<dynamic>)
+          .map((item) => DashboardItem.fromJson(item as Map<String, dynamic>))
+          .toList(),
+      isPreset: json['isPreset'] as bool,
+      createdAt: DateTime.parse(json['createdAt'] as String),
+    );
+  }
+}
+
 /// Define abstract class `IDashboardRepository`.
 /// Keep method signatures narrow and backend-agnostic to allow swapping.
 abstract class IDashboardRepository {

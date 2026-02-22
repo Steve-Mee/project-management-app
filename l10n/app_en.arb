@@ -1761,6 +1761,30 @@
   "redoTooltip": "Redo last undone dashboard change",
   "@redoTooltip": {
     "description": "Tooltip for redo button."
+  },
+  "save_as_template": "Save as Template",
+  "@save_as_template": {
+    "description": "Button text for saving current dashboard as template."
+  },
+  "load_template": "Load Template",
+  "@load_template": {
+    "description": "Button text for loading a dashboard template."
+  },
+  "preset_layouts": "Preset Layouts",
+  "@preset_layouts": {
+    "description": "Section header for built-in preset dashboard layouts."
+  },
+  "my_templates": "My Templates",
+  "@my_templates": {
+    "description": "Section header for user-created dashboard templates."
+  },
+  "delete_template_confirm": "Delete this template? This action cannot be undone.",
+  "@delete_template_confirm": {
+    "description": "Confirmation message when deleting a dashboard template."
+  },
+  "template_saved_success": "Template saved successfully",
+  "@template_saved_success": {
+    "description": "Success message when a dashboard template is saved."
   }
 }
 }

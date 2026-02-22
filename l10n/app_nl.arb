@@ -1250,6 +1250,30 @@
   "redoTooltip": "Laatste ongedaan gemaakte dashboard wijziging opnieuw uitvoeren",
   "@redoTooltip": {
     "description": "Tooltip for redo button."
+  },
+  "save_as_template": "Opslaan als Sjabloon",
+  "@save_as_template": {
+    "description": "Button text for saving current dashboard as template."
+  },
+  "load_template": "Sjabloon Laden",
+  "@load_template": {
+    "description": "Button text for loading a dashboard template."
+  },
+  "preset_layouts": "Vooraf Gedefinieerde Indelingen",
+  "@preset_layouts": {
+    "description": "Section header for built-in preset dashboard layouts."
+  },
+  "my_templates": "Mijn Sjablonen",
+  "@my_templates": {
+    "description": "Section header for user-created dashboard templates."
+  },
+  "delete_template_confirm": "Dit sjabloon verwijderen? Deze actie kan niet ongedaan worden gemaakt.",
+  "@delete_template_confirm": {
+    "description": "Confirmation message when deleting a dashboard template."
+  },
+  "template_saved_success": "Sjabloon succesvol opgeslagen",
+  "@template_saved_success": {
+    "description": "Success message when a dashboard template is saved."
   }
 }
 }
