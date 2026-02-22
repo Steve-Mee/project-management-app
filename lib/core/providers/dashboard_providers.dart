@@ -565,209 +565,24 @@ final dashboardRepositoryProvider = Provider<IDashboardRepository>((ref) {
 /// Provider for project requirements by project ID with error handling
 /// TODO: Add caching for requirements
 /// TODO: Add offline requirements storage
-final projectRequirementsProvider = FutureProvider.family<ProjectRequirements, String>((ref, projectId) async {
-  final projectAsync = ref.watch(projectByIdProvider(projectId));
-  return projectAsync.maybeWhen(
-    data: (project) {
-      if (project == null) return const ProjectRequirements();
+final projectRequirementsProvider = Provider.family<FutureProvider<ProjectRequirements>, String>((ref, projectId) {
+  return FutureProvider<ProjectRequirements>((ref) async {
+    final projectAsync = ref.watch(projectByIdProvider(projectId));
+    return projectAsync.maybeWhen(
+      data: (project) {
+        if (project == null) return const ProjectRequirements();
 
-      final repository = ref.read(dashboardRepositoryProvider);
+        final repository = ref.read(dashboardRepositoryProvider);
 
-      // If project has a category, try to fetch from API
-      if (project.category != null && project.category!.isNotEmpty) {
-        return repository.fetchRequirements(project.category!);
-      }
+        // If project has a category, try to fetch from API
+        if (project.category != null && project.category!.isNotEmpty) {
+          return repository.fetchRequirements(project.category!);
+        }
 
-      // Otherwise return empty requirements
-      return const ProjectRequirements();
-    },
-    orElse: () => const ProjectRequirements(),
-  );
-}
-
-/*
-UI Examples for Dashboard Templates (.github/issues/023-dashboard-templates.md)
-
-Example "Save as Template" button in dashboard toolbar:
-
-class DashboardToolbar extends ConsumerWidget {
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final notifier = ref.read(dashboardConfigProvider.notifier);
-    final l10n = AppLocalizations.of(context)!;
-
-    return Row(
-      children: [
-        IconButton(
-          onPressed: () async {
-            final nameController = TextEditingController();
-            final result = await showDialog<String>(
-              context: context,
-              builder: (context) => AlertDialog(
-                title: Text(l10n.save_as_template),
-                content: TextField(
-                  controller: nameController,
-                  decoration: InputDecoration(hintText: 'Template name'),
-                ),
-                actions: [
-                  TextButton(
-                    onPressed: () => Navigator.pop(context),
-                    child: Text('Cancel'),
-                  ),
-                  TextButton(
-                    onPressed: () => Navigator.pop(context, nameController.text),
-                    child: Text('Save'),
-                  ),
-                ],
-              ),
-            );
-            if (result != null && result.isNotEmpty) {
-              await notifier.saveAsTemplate(result);
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text(l10n.template_saved_success)),
-              );
-            }
-          },
-          icon: const Icon(Icons.save),
-          tooltip: l10n.save_as_template,
-        ),
-        // ... other toolbar buttons
-      ],
-    );
-  }
-}
-
-Example template selector dialog:
-
-class TemplateSelectorDialog extends ConsumerWidget {
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final notifier = ref.read(dashboardConfigProvider.notifier);
-    final l10n = AppLocalizations.of(context)!;
-
-    return FutureBuilder<List<DashboardTemplate>>(
-      future: notifier.getAllTemplates(),
-      builder: (context, snapshot) {
-        if (!snapshot.hasData) return CircularProgressIndicator();
-
-        final templates = snapshot.data!;
-        final presets = templates.where((t) => t.isPreset).toList();
-        final userTemplates = templates.where((t) => !t.isPreset).toList();
-
-        return AlertDialog(
-          title: Text(l10n.load_template),
-          content: SingleChildScrollView(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                if (presets.isNotEmpty) ...[
-                  Text(l10n.preset_layouts, style: Theme.of(context).textTheme.titleSmall),
-                  ...presets.map((template) => ListTile(
-                    title: Text(template.name),
-                    onTap: () async {
-                      await notifier.loadTemplate(template.id);
-                      Navigator.pop(context);
-                    },
-                  )),
-                ],
-                if (userTemplates.isNotEmpty) ...[
-                  SizedBox(height: 16),
-                  Text(l10n.my_templates, style: Theme.of(context).textTheme.titleSmall),
-                  ...userTemplates.map((template) => ListTile(
-                    title: Text(template.name),
-                    onTap: () async {
-                      await notifier.loadTemplate(template.id);
-                      Navigator.pop(context);
-                    },
-                  )),
-                ],
-              ],
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: Text('Close'),
-            ),
-          ],
-        );
+        // Otherwise return empty requirements
+        return const ProjectRequirements();
       },
+      orElse: () => const ProjectRequirements(),
     );
-  }
-}
-
-Example template management screen:
-
-class TemplateManagementScreen extends ConsumerStatefulWidget {
-  @override
-  _TemplateManagementScreenState createState() => _TemplateManagementScreenState();
-}
-
-class _TemplateManagementScreenState extends ConsumerState<TemplateManagementScreen> {
-  late Future<List<DashboardTemplate>> _templatesFuture;
-
-  @override
-  void initState() {
-    super.initState();
-    _loadTemplates();
-  }
-
-  void _loadTemplates() {
-    _templatesFuture = ref.read(dashboardConfigProvider.notifier).getAllTemplates();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
-
-    return Scaffold(
-      appBar: AppBar(title: Text('Manage Templates')),
-      body: FutureBuilder<List<DashboardTemplate>>(
-        future: _templatesFuture,
-        builder: (context, snapshot) {
-          if (!snapshot.hasData) return Center(child: CircularProgressIndicator());
-
-          final templates = snapshot.data!.where((t) => !t.isPreset).toList();
-
-          return ListView.builder(
-            itemCount: templates.length,
-            itemBuilder: (context, index) {
-              final template = templates[index];
-              return ListTile(
-                title: Text(template.name),
-                subtitle: Text('Created: ${template.createdAt.toString().split(' ')[0]}'),
-                trailing: IconButton(
-                  icon: Icon(Icons.delete),
-                  onPressed: () async {
-                    final confirm = await showDialog<bool>(
-                      context: context,
-                      builder: (context) => AlertDialog(
-                        title: Text('Delete Template'),
-                        content: Text(l10n.delete_template_confirm),
-                        actions: [
-                          TextButton(
-                            onPressed: () => Navigator.pop(context, false),
-                            child: Text('Cancel'),
-                          ),
-                          TextButton(
-                            onPressed: () => Navigator.pop(context, true),
-                            child: Text('Delete'),
-                          ),
-                        ],
-                      ),
-                    );
-                    if (confirm == true) {
-                      await ref.read(dashboardConfigProvider.notifier).deleteTemplate(template.id);
-                      setState(() => _loadTemplates());
-                    }
-                  },
-                ),
-              );
-            },
-          );
-        },
-      ),
-    );
-  }
-}
-*/);
+  });
+});

@@ -1715,7 +1715,8 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen>
 
   /// Build requirements section
   Widget _buildRequirementsSection(BuildContext context) {
-    final requirementsAsync = ref.watch(projectRequirementsProvider(widget.projectId));
+    final innerProvider = ref.watch(projectRequirementsProvider(widget.projectId));
+    final requirementsAsync = ref.watch(innerProvider);
 
     return requirementsAsync.when(
       data: (requirements) {

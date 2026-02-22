@@ -53,8 +53,6 @@ Onderstaand een gegroepeerde lijst van alle "TODO"-aantekeningen die in de codeb
   - Verwachte actie: Implementeer eenvoudige historie stack voor dashboard wijzigingen.
 - TODO: Add dashboard templates
   - Verwachte actie: Voorzie preset layouts en template opslaan/laden.
-- TODO: Add collaborative dashboard sharing
-  - Verwachte actie: Plan API + opslag voor gedeelde dashboards en permissies.
 - TODO: Add error handling/logging
   - Verwachte actie: Voeg try/catch + AppLogger.event/error melding toe bij IO/DB bewerkingen.
 - TODO: Consider using an abstract interface for easy testing/swapping
