@@ -2,43 +2,16 @@
 /// Allows easy swapping of implementations (Hive, Supabase, mock for tests, etc.)
 library;
 import 'package:my_project_management_app/models/project_requirements.dart';
-
-enum DashboardWidgetType {
-  welcome,
-  projectList,
-  taskChart,
-  aiUsage,
-  progressChart,
-  kanbanBoard,
-  calendar,
-  notificationFeed;
-
-  String get name => toString().split('.').last;
-
-  static DashboardWidgetType fromString(String value) {
-    return DashboardWidgetType.values.firstWhere(
-      (e) => e.name == value,
-      orElse: () => throw ArgumentError('Invalid widget type: $value'),
-    );
-  }
-}
-
-class InvalidWidgetTypeException implements Exception {
-  final String message;
-  InvalidWidgetTypeException(this.message);
-
-  @override
-  String toString() => 'InvalidWidgetTypeException: $message';
-}
+import 'package:my_project_management_app/core/models/dashboard_types.dart';
 
 /// Dashboard item configuration for project management dashboard widgets.
 /// 
-/// Supported widget types: welcome, projectList, taskChart, aiUsage, progressChart, kanbanBoard, calendar, notificationFeed.
+/// Supported widget types: metricCard, taskList, progressChart, kanbanBoard, calendar, notificationFeed, projectOverview, timeline.
 /// 
 /// Validation is performed in fromJson() to ensure only supported types are loaded.
 /// See .github/issues/020-dashboard-validate-widget-type.md for validation details.
 class DashboardItem {
-  final String widgetType;
+  final DashboardWidgetType widgetType;
   final Map<String, dynamic> position;
 
   const DashboardItem({
@@ -47,23 +20,23 @@ class DashboardItem {
   });
 
   Map<String, dynamic> toJson() => {
-        'widgetType': widgetType,
+        'widgetType': widgetType.name,
         'position': position,
       };
 
   factory DashboardItem.fromJson(Map<String, dynamic> json) {
     final widgetTypeStr = json['widgetType'] as String;
     try {
-      DashboardWidgetType.fromString(widgetTypeStr);
+      final widgetType = DashboardWidgetType.fromString(widgetTypeStr);
+      return DashboardItem(
+        widgetType: widgetType,
+        position: json['position'],
+      );
     } catch (e) {
       throw InvalidWidgetTypeException(
         'Invalid widget type \'$widgetTypeStr\'. Valid types are: ${DashboardWidgetType.values.map((e) => e.name).join(', ')}',
       );
     }
-    return DashboardItem(
-      widgetType: widgetTypeStr,
-      position: json['position'],
-    );
   }
 }
 

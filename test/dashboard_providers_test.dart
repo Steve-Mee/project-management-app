@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:my_project_management_app/core/providers/dashboard_providers.dart';
 import 'package:my_project_management_app/core/repository/i_dashboard_repository.dart';
 import 'package:my_project_management_app/models/project_requirements.dart';
+import 'package:my_project_management_app/core/models/dashboard_types.dart';
 
 class FakeDashboardRepository implements IDashboardRepository {
   final List<DashboardItem> _items = [];
@@ -74,14 +75,14 @@ void main() {
   group('validateWidgetType', () {
     test('valid widget types do not throw', () {
       const validTypes = [
-        'welcome',
-        'projectList',
-        'taskChart',
-        'aiUsage',
+        'metricCard',
+        'taskList',
         'progressChart',
         'kanbanBoard',
         'calendar',
         'notificationFeed',
+        'projectOverview',
+        'timeline',
       ];
 
       for (final type in validTypes) {
@@ -112,14 +113,14 @@ void main() {
         );
         // Check that all valid types are listed
         const validTypes = [
-          'welcome',
-          'projectList',
-          'taskChart',
-          'aiUsage',
+          'metricCard',
+          'taskList',
           'progressChart',
           'kanbanBoard',
           'calendar',
           'notificationFeed',
+          'projectOverview',
+          'timeline',
         ];
         for (final type in validTypes) {
           expect(e.toString(), contains(type));
@@ -131,12 +132,12 @@ void main() {
   group('DashboardItem.fromJson', () {
     test('valid widgetType in json succeeds', () {
       const json = {
-        'widgetType': 'welcome',
+        'widgetType': 'metricCard',
         'position': {'x': 0, 'y': 0},
       };
 
       final item = DashboardItem.fromJson(json);
-      expect(item.widgetType, 'welcome');
+      expect(item.widgetType, DashboardWidgetType.metricCard);
       expect(item.position, {'x': 0, 'y': 0});
     });
 
@@ -166,7 +167,7 @@ void main() {
   group('DashboardConfigNotifier.addItem', () {
     test('valid widgetType succeeds', () async {
       final item = DashboardItem(
-        widgetType: 'welcome',
+        widgetType: DashboardWidgetType.metricCard,
         position: {'x': 0, 'y': 0},
       );
 
@@ -175,21 +176,7 @@ void main() {
 
       final state = container.read(dashboardConfigProvider);
       expect(state.length, 1);
-      expect(state[0].widgetType, 'welcome');
-    });
-
-    test('invalid widgetType throws InvalidWidgetTypeException', () async {
-      final item = DashboardItem(
-        widgetType: 'invalidType',
-        position: {'x': 0, 'y': 0},
-      );
-
-      final notifier = container.read(dashboardConfigProvider.notifier);
-
-      expect(
-        () => notifier.addItem(item),
-        throwsA(isA<InvalidWidgetTypeException>()),
-      );
+      expect(state[0].widgetType, DashboardWidgetType.metricCard);
     });
   });
 }

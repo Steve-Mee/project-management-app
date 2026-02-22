@@ -4,11 +4,18 @@ import 'package:my_project_management_app/core/repository/i_dashboard_repository
 import 'package:my_project_management_app/core/repository/dashboard_repository.dart';
 import 'project_providers.dart';
 import 'package:my_project_management_app/core/services/app_logger.dart';
+import 'package:my_project_management_app/core/models/dashboard_types.dart';
 
+/// DashboardItem
+/// 
+/// Model for dashboard items with validated widget types.
+/// Supported types: metricCard, taskList, progressChart, kanbanBoard, calendar, notificationFeed, projectOverview, timeline.
+/// See .github/issues/020-dashboard-validate-widget-type.md for details.
+/// 
 /// Validates a widget type string against supported dashboard widget types.
 /// 
 /// Throws InvalidWidgetTypeException if invalid, with logging.
-/// Supported types: welcome, projectList, taskChart, aiUsage, progressChart, kanbanBoard, calendar, notificationFeed.
+/// Supported types: metricCard, taskList, progressChart, kanbanBoard, calendar, notificationFeed, projectOverview, timeline.
 /// See .github/issues/020-dashboard-validate-widget-type.md for details.
 DashboardWidgetType validateWidgetType(String value) {
   try {
@@ -21,7 +28,7 @@ DashboardWidgetType validateWidgetType(String value) {
   }
 }
 
-/// Notifier for managing dashboard configuration with persistence
+/// Notifier for managing dashboard configuration with persistence and widget type validation
 /// TODO: Add undo/redo functionality
 /// TODO: Add dashboard templates
 /// TODO: Add collaborative dashboard sharing
@@ -57,7 +64,7 @@ class DashboardConfigNotifier extends Notifier<List<DashboardItem>> {
 
   /// Add a new dashboard item
   Future<void> addItem(DashboardItem item) async {
-    validateWidgetType(item.widgetType);
+    validateWidgetType(item.widgetType.name);
     await _repository.addDashboardItem(item);
     await loadConfig(); // Refresh state
   }
@@ -75,7 +82,7 @@ class DashboardConfigNotifier extends Notifier<List<DashboardItem>> {
   }
 }
 
-/// Provider for dashboard configuration
+/// Provider for dashboard configuration with widget type validation
 final dashboardConfigProvider = NotifierProvider<DashboardConfigNotifier, List<DashboardItem>>(
   DashboardConfigNotifier.new,
 );

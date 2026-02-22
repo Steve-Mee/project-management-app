@@ -8,6 +8,7 @@ import 'package:my_project_management_app/features/dashboard/widgets/project_car
 import 'package:my_project_management_app/features/dashboard/widgets/filters_sort_widget.dart';
 import 'package:my_project_management_app/features/dashboard/widgets/recent_workflows_header_widget.dart';
 import 'package:my_project_management_app/models/project_model.dart';
+import 'package:my_project_management_app/core/models/dashboard_types.dart';
 import 'package:my_project_management_app/models/project_sort.dart';
 import 'package:my_project_management_app/core/providers/dashboard_providers.dart';
 import 'package:my_project_management_app/core/providers/project_providers.dart';
@@ -52,7 +53,7 @@ class _CustomizeDashboardScreenState extends ConsumerState<CustomizeDashboardScr
   void _onDashboardChanged(Iterable<DashboardGridChangeSnapshot> changes) {
     setState(() {
       _dashboardItems = _dashboardConfig.widgets.map((widget) => DashboardItem(
-        widgetType: widget.id.split('_')[0], // Extract type from id
+        widgetType: DashboardWidgetType.fromString(widget.id.split('_')[0]), // Extract type from id
         position: {
           'x': widget.x,
           'y': widget.y,
@@ -84,19 +85,19 @@ class _CustomizeDashboardScreenState extends ConsumerState<CustomizeDashboardScr
         // Add some default widgets for testing
         _dashboardItems = [
           DashboardItem(
-            widgetType: 'welcome',
+            widgetType: DashboardWidgetType.metricCard,
             position: {'x': 0, 'y': 0, 'width': 4, 'height': 1},
           ),
           DashboardItem(
-            widgetType: 'taskChart',
+            widgetType: DashboardWidgetType.taskList,
             position: {'x': 0, 'y': 1, 'width': 2, 'height': 2},
           ),
           DashboardItem(
-            widgetType: 'projectList',
+            widgetType: DashboardWidgetType.progressChart,
             position: {'x': 2, 'y': 1, 'width': 2, 'height': 2},
           ),
           DashboardItem(
-            widgetType: 'aiUsage',
+            widgetType: DashboardWidgetType.kanbanBoard,
             position: {'x': 0, 'y': 3, 'width': 4, 'height': 2},
           ),
         ];
@@ -122,7 +123,7 @@ class _CustomizeDashboardScreenState extends ConsumerState<CustomizeDashboardScr
               children: [
                 Padding(
                   padding: EdgeInsets.all(16.w),
-                  child: _buildWidgetForType(item.widgetType),
+                  child: _buildWidgetForType(item.widgetType.name),
                 ),
                 Positioned(
                   top: 8.h,
@@ -153,7 +154,7 @@ class _CustomizeDashboardScreenState extends ConsumerState<CustomizeDashboardScr
 
   void _addWidget(String type, int x, int y) {
     final item = DashboardItem(
-      widgetType: type,
+      widgetType: DashboardWidgetType.fromString(type),
       position: {'x': x, 'y': y, 'width': 2, 'height': 1},
     );
     setState(() {
