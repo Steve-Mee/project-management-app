@@ -821,6 +821,10 @@
   "@loginFailedMessage": {
     "description": "Auto-generated description for loginFailedMessage."
   },
+  "rateLimitExceeded": "Te veel pogingen. Probeer opnieuw over {seconds} seconden.",
+  "@rateLimitExceeded": {
+    "description": "Message shown when login rate limit is exceeded, with seconds parameter."
+  },
   "registerTitle": "Registreren",
   "@registerTitle": {
     "description": "Auto-generated description for registerTitle."

@@ -3,6 +3,50 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:my_project_management_app/core/providers/auth_providers.dart';
 import 'package:my_project_management_app/core/repository/settings_repository.dart';
+import 'package:hive_flutter/hive_flutter.dart';
+
+// Fake box for testing
+class FakeBox implements Box<List<DateTime>> {
+  final Map<String, List<DateTime>> _map = {};
+  final List<List<DateTime>> putCalls = [];
+
+  @override
+  List<DateTime>? get(dynamic key, {List<DateTime>? defaultValue}) => _map[key] ?? defaultValue;
+
+  @override
+  Future<void> put(dynamic key, List<DateTime> value) async {
+    _map[key] = value;
+    putCalls.add(value);
+  }
+
+  // Implement minimal required methods
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
+class TestAuthNotifier extends AuthNotifier {
+  TestAuthNotifier(this.testBox);
+
+  final Box<List<DateTime>> testBox;
+
+  @override
+  Future<AuthState> build() async {
+    attemptsBox = testBox;
+    return const AuthState(isAuthenticated: false);
+  }
+
+  // Override login to simulate success without Supabase
+  @override
+  Future<bool> login(String username, String password, {bool enableAutoLogin = false}) async {
+    final attempts = await loadFailedAttempts(username);
+    if (!canAttemptLogin(attempts)) {
+      throw RateLimitExceededException(getBackoffTime(attempts)!);
+    }
+    // Simulate success
+    await resetAttempts(username);
+    return true;
+  }
+}
 
 // Fake classes
 class FakeSettingsRepository extends Fake implements SettingsRepository {
@@ -128,5 +172,78 @@ void main() {
     // requires mocking LocalAuthentication, FlutterSecureStorage, and platform checks.
     // For minimal changes, we cover the feature flag logic above.
     // The methods are tested implicitly through integration in the app.
+  });
+
+  group('Rate Limiting', () {
+    late FakeBox fakeBox;
+
+    setUp(() {
+      fakeBox = FakeBox();
+    });
+
+    test('allows login with less than 5 attempts in 60s', () async {
+      fakeBox._map['test@example.com'] = [DateTime.now().subtract(const Duration(seconds: 30))];
+
+      final container = ProviderContainer(
+        overrides: [
+          authProvider.overrideWith(() => TestAuthNotifier(fakeBox)),
+        ],
+      );
+
+      final notifier = container.read(authProvider.notifier);
+      expect(await notifier.login('test@example.com', 'password'), true);
+      expect(fakeBox.putCalls, [<DateTime>[]]);
+      container.dispose();
+    });
+
+    test('blocks login with 5+ attempts and throws RateLimitExceededException', () async {
+      final attempts = List.generate(5, (i) => DateTime.now().subtract(Duration(seconds: i * 10)));
+      fakeBox._map['test@example.com'] = attempts;
+
+      final container = ProviderContainer(
+        overrides: [
+          authProvider.overrideWith(() => TestAuthNotifier(fakeBox)),
+        ],
+      );
+
+      final notifier = container.read(authProvider.notifier);
+      expect(() async => await notifier.login('test@example.com', 'password'), throwsA(isA<RateLimitExceededException>()));
+      expect(fakeBox.putCalls, isEmpty);
+      container.dispose();
+    });
+
+    test('cleans attempts older than 60s', () async {
+      final oldAttempt = DateTime.now().subtract(const Duration(seconds: 70));
+      final newAttempt = DateTime.now().subtract(const Duration(seconds: 30));
+      fakeBox._map['test@example.com'] = [oldAttempt, newAttempt];
+
+      final container = ProviderContainer(
+        overrides: [
+          authProvider.overrideWith(() => TestAuthNotifier(fakeBox)),
+        ],
+      );
+
+      final notifier = container.read(authProvider.notifier);
+      await notifier.login('test@example.com', 'password');
+      expect(fakeBox.putCalls.length, 2);
+      expect(fakeBox.putCalls[0], [newAttempt]);
+      expect(fakeBox.putCalls[1], <DateTime>[]);
+      container.dispose();
+    });
+
+    test('successful login clears attempts', () async {
+      fakeBox._map['test@example.com'] = [DateTime.now()];
+
+      final container = ProviderContainer(
+        overrides: [
+          authProvider.overrideWith(() => TestAuthNotifier(fakeBox)),
+        ],
+      );
+
+      final notifier = container.read(authProvider.notifier);
+      await notifier.login('test@example.com', 'password');
+      expect(fakeBox.putCalls, [<DateTime>[]]);
+      container.dispose();
+    });
   });
 }

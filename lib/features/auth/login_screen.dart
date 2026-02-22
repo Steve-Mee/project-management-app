@@ -57,21 +57,28 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       _submitting = true;
     });
 
-    final success = await ref
-        .read(authProvider.notifier)
-        .login(username, password, enableAutoLogin: _enableAutoLogin);
-    if (!success) {
-      _showSnackBar(l10n.loginFailedMessage);
-    } else {
-      // Check if biometric can be enabled
-      final biometricAvailable = await ref.read(authProvider.notifier).isBiometricAvailable();
-      final biometricEnabled = ref.read(biometricLoginProvider).maybeWhen(
-        data: (enabled) => enabled,
-        orElse: () => false,
-      );
-      if (biometricAvailable && !biometricEnabled) {
-        await _showBiometricDialog();
+    try {
+      final success = await ref
+          .read(authProvider.notifier)
+          .login(username, password, enableAutoLogin: _enableAutoLogin);
+      if (!success) {
+        _showSnackBar(l10n.loginFailedMessage);
+      } else {
+        // Check if biometric can be enabled
+        final biometricAvailable = await ref.read(authProvider.notifier).isBiometricAvailable();
+        final biometricEnabled = ref.read(biometricLoginProvider).maybeWhen(
+          data: (enabled) => enabled,
+          orElse: () => false,
+        );
+        if (biometricAvailable && !biometricEnabled) {
+          await _showBiometricDialog();
+        }
       }
+    } on RateLimitExceededException catch (e) {
+      _showSnackBar(l10n.rateLimitExceeded(e.backoffDuration.inSeconds));
+      // TODO: show captcha after 3 failed attempts – integrate reCAPTCHA or similar later
+    } catch (e) {
+      _showSnackBar(l10n.loginFailedMessage);
     }
 
     if (mounted) {

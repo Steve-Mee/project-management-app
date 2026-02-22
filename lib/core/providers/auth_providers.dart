@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' hide AuthUser;
 import 'package:local_auth/local_auth.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 import 'package:my_project_management_app/core/repository/auth_repository.dart';
 import 'package:my_project_management_app/core/repository/i_auth_repository.dart';
 import 'package:my_project_management_app/core/auth/auth_user.dart';
@@ -15,6 +16,16 @@ import 'package:my_project_management_app/core/services/app_logger.dart';
 import 'package:my_project_management_app/core/services/login_rate_limiter.dart';
 import 'package:my_project_management_app/core/auth/permissions.dart';
 import 'package:my_project_management_app/core/config/ai_config.dart' as ai_config;
+
+/// Custom exception for rate limit exceeded
+class RateLimitExceededException implements Exception {
+  final Duration backoffDuration;
+
+  RateLimitExceededException(this.backoffDuration);
+
+  @override
+  String toString() => 'Rate limit exceeded. Try again in ${backoffDuration.inSeconds} seconds.';
+}
 
 /// Provider for auth repository (exposed via interface to allow swapping)
 final authRepositoryProvider = Provider<IAuthRepository>((ref) {
@@ -71,6 +82,7 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
   final ABTestingService _abTesting = ABTestingService.instance;
   final LocalAuthentication _localAuth = LocalAuthentication();
   final FlutterSecureStorage _secureStorage = const FlutterSecureStorage();
+  late Box<List<DateTime>> attemptsBox;
   bool _listening = false;
 
   @override
@@ -81,6 +93,8 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
         await _handleAuthStateChange(event);
       });
     }
+
+    attemptsBox = await Hive.openBox<List<DateTime>>('failed_login_attempts');
 
     // Check initial auth state with error handling
     return await _checkInitialAuthState();
@@ -125,15 +139,49 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
     }
   }
 
+  Future<List<DateTime>> loadFailedAttempts(String email) async {
+    final attempts = attemptsBox.get(email) ?? [];
+    final now = DateTime.now();
+    final cleaned = attempts.where((t) => now.difference(t).inSeconds <= 60).toList();
+    if (cleaned.length != attempts.length) {
+      await saveFailedAttempts(email, cleaned);
+    }
+    return cleaned;
+  }
+
+  Future<void> saveFailedAttempts(String email, List<DateTime> attempts) async {
+    await attemptsBox.put(email, attempts);
+  }
+
+  bool canAttemptLogin(List<DateTime> attempts) {
+    return attempts.length < 5;
+  }
+
+  Future<void> recordFailedAttempt(String email) async {
+    final attempts = await loadFailedAttempts(email);
+    attempts.add(DateTime.now());
+    await saveFailedAttempts(email, attempts);
+  }
+
+  Duration? getBackoffTime(List<DateTime> attempts) {
+    if (attempts.length >= 5) {
+      return const Duration(seconds: 60);
+    }
+    return null;
+  }
+
+  Future<void> resetAttempts(String email) async {
+    await saveFailedAttempts(email, []);
+  }
+
   /// Login with error handling and persistent rate limiting
   Future<bool> login(String username, String password, {bool enableAutoLogin = false}) async {
-    final repo = ref.read(authRepositoryProvider);
 
     // Check rate limiting before attempting login
-    if (await repo.isLoginBlocked(username)) {
-      state = AsyncValue.data(state.value!.copyWith(error: 'Rate limit exceeded. Please try again later.'));
+    final attempts = await loadFailedAttempts(username);
+    if (!canAttemptLogin(attempts)) {
       AppLogger.event('auth_rate_limit_exceeded', details: {'email': username, 'timestamp': DateTime.now().toIso8601String()});
-      return false;
+      throw RateLimitExceededException(getBackoffTime(attempts)!);
     }
 
     try {
@@ -194,13 +242,13 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
         }
 
         // Reset rate limiter on successful login
-        await repo.resetLoginAttempts(userEmail);
+        await resetAttempts(userEmail);
         return true;
       }
     } catch (e) {
       AppLogger.instance.w('Supabase login failed', error: e);
       // Record failed attempt for rate limiting
-      await repo.recordLoginAttempt(username);
+      await recordFailedAttempt(username);
     }
 
     state = AsyncValue.data(state.value!.copyWith(error: 'Invalid username or password.'));
