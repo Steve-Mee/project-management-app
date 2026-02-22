@@ -1,4 +1,5 @@
 import 'package:hive/hive.dart';
+import 'comment_model.dart';
 
 part 'task_model.g.dart';
 
@@ -43,6 +44,9 @@ class Task {
   @HiveField(11)
   final String? userId; // Creator/owner of the task
 
+  @HiveField(12)
+  final List<CommentModel> comments;
+
   const Task({
     required this.id,
     required this.projectId,
@@ -56,6 +60,7 @@ class Task {
     this.attachments = const [],
     this.subTaskIds = const [],
     this.userId,
+    this.comments = const [],
   });
 
   /// Create a copy with modified fields
@@ -72,6 +77,7 @@ class Task {
     List<String>? attachments,
     List<String>? subTaskIds,
     String? userId,
+    List<CommentModel>? comments,
   }) {
     return Task(
       id: id ?? this.id,
@@ -86,6 +92,7 @@ class Task {
       attachments: attachments ?? this.attachments,
       subTaskIds: subTaskIds ?? this.subTaskIds,
       userId: userId ?? this.userId,
+      comments: comments ?? this.comments,
     );
   }
 
@@ -116,6 +123,7 @@ class Task {
       'priority': priority,
       'attachments': attachments,
       'subTaskIds': subTaskIds,
+      'comments': comments.map((c) => c.toJson()).toList(),
     };
   }
 
@@ -140,6 +148,7 @@ class Task {
       priority: (json['priority'] as num?)?.toDouble() ?? 0.5,
       attachments: attachments,
       subTaskIds: (json['subTaskIds'] as List<dynamic>?)?.cast<String>() ?? const [],
+      comments: (json['comments'] as List<dynamic>?)?.map((c) => CommentModel.fromJson(c as Map<String, dynamic>)).toList() ?? const [],
     );
   }
 

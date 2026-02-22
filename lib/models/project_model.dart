@@ -1,6 +1,7 @@
 import 'package:hive/hive.dart';
 import 'package:uuid/uuid.dart';
 import '../core/config/ai_config.dart';
+import 'comment_model.dart';
 
 part 'project_model.g.dart';
 
@@ -59,6 +60,24 @@ class ProjectModel {
   @HiveField(8)
   final List<String> sharedGroups;
 
+  @HiveField(15)
+  final String? priority;
+
+  @HiveField(16)
+  final DateTime? startDate;
+
+  @HiveField(17)
+  final DateTime? dueDate;
+
+  @HiveField(18)
+  final List<String> tags;
+
+  @HiveField(19)
+  final Map<String, dynamic>? customFields;
+
+  @HiveField(20)
+  final List<CommentModel> comments;
+
   const ProjectModel({
     required this.id,
     required this.name,
@@ -75,6 +94,12 @@ class ProjectModel {
     this.history = const [],
     this.sharedUsers = const [],
     this.sharedGroups = const [],
+    this.priority,
+    this.startDate,
+    this.dueDate,
+    this.tags = const [],
+    this.customFields,
+    this.comments = const [],
   });
 
   /// Factory for creating a project with a guaranteed UUID.
@@ -94,6 +119,12 @@ class ProjectModel {
     List<Map<String, dynamic>> history = const [],
     List<String> sharedUsers = const [],
     List<String> sharedGroups = const [],
+    String? priority,
+    DateTime? startDate,
+    DateTime? dueDate,
+    List<String> tags = const [],
+    Map<String, dynamic>? customFields,
+    List<CommentModel> comments = const [],
   }) {
     final resolvedId = (id == null || id.isEmpty) ? _uuid.v4() : id;
     return ProjectModel(
@@ -112,6 +143,12 @@ class ProjectModel {
       history: history,
       sharedUsers: sharedUsers,
       sharedGroups: sharedGroups,
+      priority: priority,
+      startDate: startDate,
+      dueDate: dueDate,
+      tags: tags,
+      customFields: customFields,
+      comments: comments,
     );
   }
 
@@ -139,6 +176,12 @@ class ProjectModel {
           (json['sharedUsers'] as List<dynamic>?)?.cast<String>() ?? const [],
       sharedGroups:
           (json['sharedGroups'] as List<dynamic>?)?.cast<String>() ?? const [],
+      priority: json['priority'] as String?,
+      startDate: json['startDate'] != null ? DateTime.parse(json['startDate'] as String) : null,
+      dueDate: json['dueDate'] != null ? DateTime.parse(json['dueDate'] as String) : null,
+      tags: (json['tags'] as List<dynamic>?)?.cast<String>() ?? const [],
+      customFields: (json['customFields'] as Map<String, dynamic>?)?.cast<String, dynamic>(),
+      comments: (json['comments'] as List<dynamic>?)?.map((c) => CommentModel.fromJson(c as Map<String, dynamic>)).toList() ?? const [],
     );
   }
 
@@ -160,6 +203,12 @@ class ProjectModel {
       'history': history,
       'sharedUsers': sharedUsers,
       'sharedGroups': sharedGroups,
+      'priority': priority,
+      'startDate': startDate?.toIso8601String(),
+      'dueDate': dueDate?.toIso8601String(),
+      'tags': tags,
+      'customFields': customFields,
+      'comments': comments.map((c) => c.toJson()).toList(),
     };
   }
 

@@ -3,7 +3,7 @@ import '../services/app_logger.dart';
 
 /// Service for handling payment operations
 /// Currently supports manual subscription management
-/// Future: Integrate with Stripe for automated payment processing
+/// NOTE: converted to issue 044
 class PaymentService {
   static final PaymentService _instance = PaymentService._internal();
   factory PaymentService() => _instance;
@@ -11,7 +11,7 @@ class PaymentService {
 
   /// Initialize payment service
   Future<void> initialize() async {
-    // Future: Initialize Stripe when dependency is added
+    // NOTE: converted to issue 044
     // final publishableKey = dotenv.env['STRIPE_PUBLISHABLE_KEY'];
     // if (publishableKey != null && publishableKey.isNotEmpty) {
     //   Stripe.publishableKey = publishableKey;

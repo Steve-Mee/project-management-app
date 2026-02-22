@@ -129,29 +129,80 @@ class ProjectRepository implements IProjectRepository {
     return projects;
   }
 
+  @override
+  Future<List<ProjectModel>> getProjectsPaginated({
+    required int page,
+    required int limit,
+    String? statusFilter,
+    String? searchQuery,
+  }) async {
+    try {
+      final allProjects = await getAllProjects();
+
+      // Apply optional filters
+      var filtered = allProjects;
+      if (statusFilter != null && statusFilter.isNotEmpty) {
+        filtered = filtered.where((p) => p.status == statusFilter).toList();
+      }
+      if (searchQuery != null && searchQuery.isNotEmpty) {
+        final q = searchQuery.toLowerCase();
+        filtered = filtered.where((p) {
+          final nameMatch = p.name.toLowerCase().contains(q);
+          final descMatch = (p.description != null) && p.description!.toLowerCase().contains(q);
+          return nameMatch || descMatch;
+        }).toList();
+      }
+
+      // Pagination (page starts at 1)
+      final startIndex = (page - 1) * limit;
+      if (startIndex >= filtered.length) return <ProjectModel>[];
+
+      return filtered.skip(startIndex).take(limit).toList();
+    } catch (e, s) {
+      AppLogger.instance.e('Error in getProjectsPaginated', error: e, stackTrace: s);
+      rethrow;
+    }
+  }
+
+  /// Return projects matching a given status (simple filter)
+  @override
+  Future<List<ProjectModel>> getProjectsByStatus(String status) async {
+    final allProjects = await getAllProjects();
+    return allProjects.where((p) => p.status == status).toList();
+  }
+
+  /// Apply complex filtering criteria defined by [ProjectFilter].
+  /// Currently supports status, search query, and date ranges; other fields
+  /// (priority, ownerId, tags) are reserved for future use.
+  @override
+  Future<List<ProjectModel>> getFilteredProjects(ProjectFilter filter, {List<ProjectFilterConditions> extraConditions = const []}) async {
+    var projects = await getAllProjects();
+
+    if (filter.status != null) {
+      projects = projects.where((p) => p.status == filter.status).toList();
+    }
+    if (filter.searchQuery != null && filter.searchQuery!.isNotEmpty) {
+      final q = filter.searchQuery!.toLowerCase();
+      projects = projects.where((p) =>
+        p.name.toLowerCase().contains(q) ||
+        (p.description?.toLowerCase().contains(q) ?? false)
+      ).toList();
+    }
+    // Date-based and priority filtering are now handled client-side in the provider for better performance
+    // ownerId, tags filtering can be added here later if needed
+
+    for (final cond in extraConditions) {
+      projects = projects.where((p) => cond.condition(p)).toList();
+    }
+
+    return projects;
+  }
+
   /// Get a single project by ID
   @override
   Future<ProjectModel?> getProjectById(String id) async {
-    try {
-      final data = _projectsBox.get(id);
-      if (data != null) {
-        final projectData = Map<String, dynamic>.from(data);
-        final project = ProjectModel.fromJson(projectData);
-        if (!_isValidUuid(project.id) || project.id.startsWith('project_')) {
-          final migrated = _withNewId(project, _uuid.v4());
-          _projectsBox.delete(id);
-          _projectsBox.put(migrated.id, migrated.toJson());
-          AppLogger.instance.i(
-            'Migrated project id from $id to ${migrated.id}',
-          );
-          return migrated;
-        }
-        return project;
-      }
-    } catch (e) {
-      AppLogger.instance.e('Error reading project $id from Hive', error: e);
-    }
-    return null;
+    final box = await Hive.openBox<ProjectModel>('projects');
+    return box.get(id);
   }
 
   /// Update project progress

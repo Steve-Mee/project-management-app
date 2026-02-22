@@ -528,13 +528,13 @@ abstract class AppLocalizations {
   /// **'Loading more projects...'**
   String get loadingMoreProjects;
 
-  /// Auto-generated description for sortByLabel.
+  /// Label for sort by field.
   ///
   /// In en, this message translates to:
   /// **'Sort by'**
   String get sortByLabel;
 
-  /// Auto-generated description for projectSortName.
+  /// Sort option for project name.
   ///
   /// In en, this message translates to:
   /// **'Name'**
@@ -546,11 +546,65 @@ abstract class AppLocalizations {
   /// **'Progress'**
   String get projectSortProgress;
 
-  /// Auto-generated description for projectSortPriority.
+  /// Sort option for project priority.
   ///
   /// In en, this message translates to:
   /// **'Priority'**
   String get projectSortPriority;
+
+  /// Auto-generated description for projectSortCreatedDate.
+  ///
+  /// In en, this message translates to:
+  /// **'Created date'**
+  String get projectSortCreatedDate;
+
+  /// Sort option for project status.
+  ///
+  /// In en, this message translates to:
+  /// **'Status'**
+  String get projectSortStatus;
+
+  /// Sort option for project start date.
+  ///
+  /// In en, this message translates to:
+  /// **'Start Date'**
+  String get projectSortStartDate;
+
+  /// Sort option for project due date.
+  ///
+  /// In en, this message translates to:
+  /// **'Due Date'**
+  String get projectSortDueDate;
+
+  /// Label for sort direction control.
+  ///
+  /// In en, this message translates to:
+  /// **'Direction'**
+  String get sortDirectionLabel;
+
+  /// Label for ascending sort direction.
+  ///
+  /// In en, this message translates to:
+  /// **'Ascending'**
+  String get sortAscendingLabel;
+
+  /// Label for descending sort direction.
+  ///
+  /// In en, this message translates to:
+  /// **'Descending'**
+  String get sortDescendingLabel;
+
+  /// Label for CSV export button.
+  ///
+  /// In en, this message translates to:
+  /// **'Export to CSV'**
+  String get exportToCsvLabel;
+
+  /// Success message after CSV export.
+  ///
+  /// In en, this message translates to:
+  /// **'Projects exported successfully'**
+  String get csvExportSuccessMessage;
 
   /// Auto-generated description for allLabel.
   ///
@@ -642,7 +696,7 @@ abstract class AppLocalizations {
   /// **'More options'**
   String get moreOptionsLabel;
 
-  /// Auto-generated description for tasksTitle.
+  /// Title for tasks section.
   ///
   /// In en, this message translates to:
   /// **'Tasks'**
@@ -1041,7 +1095,7 @@ abstract class AppLocalizations {
     Object pendingPercent,
   );
 
-  /// Auto-generated description for progressLabel.
+  /// Label for the progress column in tables.
   ///
   /// In en, this message translates to:
   /// **'Progress'**
@@ -1089,7 +1143,7 @@ abstract class AppLocalizations {
   /// **'Ideal trend'**
   String get idealTrendLabel;
 
-  /// Auto-generated description for statusLabel.
+  /// Label for status field.
   ///
   /// In en, this message translates to:
   /// **'Status'**
@@ -1182,6 +1236,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Sign in failed. Check your credentials.'**
   String get loginFailedMessage;
+
+  /// Message shown when login rate limit is exceeded, with seconds parameter.
+  ///
+  /// In en, this message translates to:
+  /// **'Too many attempts. Try again in {seconds} seconds.'**
+  String rateLimitExceeded(Object seconds);
 
   /// Auto-generated description for registerTitle.
   ///
@@ -1590,6 +1650,798 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'No backup file yet'**
   String get backupNoFileMessage;
+
+  /// Tooltip for the filter button.
+  ///
+  /// In en, this message translates to:
+  /// **'Filter projects'**
+  String get filterButtonTooltip;
+
+  /// Label for priority filter.
+  ///
+  /// In en, this message translates to:
+  /// **'Priority'**
+  String get filterPriorityLabel;
+
+  /// Low priority label.
+  ///
+  /// In en, this message translates to:
+  /// **'Low'**
+  String get priorityLow;
+
+  /// Medium priority label.
+  ///
+  /// In en, this message translates to:
+  /// **'Medium'**
+  String get priorityMedium;
+
+  /// High priority label.
+  ///
+  /// In en, this message translates to:
+  /// **'High'**
+  String get priorityHigh;
+
+  /// Label for date range filter.
+  ///
+  /// In en, this message translates to:
+  /// **'Date Range'**
+  String get filterDateRangeLabel;
+
+  /// Label for start date filter.
+  ///
+  /// In en, this message translates to:
+  /// **'Start Date'**
+  String get filterStartDateLabel;
+
+  /// Label for end date filter.
+  ///
+  /// In en, this message translates to:
+  /// **'End Date'**
+  String get filterEndDateLabel;
+
+  /// Active filter chip text for priority.
+  ///
+  /// In en, this message translates to:
+  /// **'Priority: {priority}'**
+  String activeFilterPriority(String priority);
+
+  /// Active filter chip text for start date.
+  ///
+  /// In en, this message translates to:
+  /// **'From {date}'**
+  String activeFilterStartDate(String date);
+
+  /// Active filter chip text for end date.
+  ///
+  /// In en, this message translates to:
+  /// **'To {date}'**
+  String activeFilterEndDate(String date);
+
+  /// Text showing current count of displayed projects.
+  ///
+  /// In en, this message translates to:
+  /// **'Showing {count} of {total} projects'**
+  String showingProjectsCount(int count, int total);
+
+  /// Label for button to clear all filters.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear All Filters'**
+  String get clearAllFiltersButtonLabel;
+
+  /// Title when no projects match the current filters.
+  ///
+  /// In en, this message translates to:
+  /// **'No projects match your filters'**
+  String get noProjectsMatchFiltersTitle;
+
+  /// Subtitle when no projects match the current filters.
+  ///
+  /// In en, this message translates to:
+  /// **'Try changing or clearing your filters'**
+  String get noProjectsMatchFiltersSubtitle;
+
+  /// Title for the project filters dialog.
+  ///
+  /// In en, this message translates to:
+  /// **'Project Filters'**
+  String get projectFiltersTitle;
+
+  /// Label for all projects preset filter.
+  ///
+  /// In en, this message translates to:
+  /// **'All Projects'**
+  String get allProjectsPresetLabel;
+
+  /// Label for high priority preset filter.
+  ///
+  /// In en, this message translates to:
+  /// **'High Priority'**
+  String get highPriorityPresetLabel;
+
+  /// Label for due this week preset filter.
+  ///
+  /// In en, this message translates to:
+  /// **'Due This Week'**
+  String get dueThisWeekPresetLabel;
+
+  /// Label for overdue preset filter.
+  ///
+  /// In en, this message translates to:
+  /// **'Overdue'**
+  String get overduePresetLabel;
+
+  /// Label for my projects preset filter.
+  ///
+  /// In en, this message translates to:
+  /// **'My Projects'**
+  String get myProjectsPresetLabel;
+
+  /// Label for cancel button.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel'**
+  String get cancelLabel;
+
+  /// Label for clear all button.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear All'**
+  String get clearAllLabel;
+
+  /// Success message when saving filter as default.
+  ///
+  /// In en, this message translates to:
+  /// **'Filter saved as default'**
+  String get saveAsDefaultSuccessMessage;
+
+  /// Label for save as default button.
+  ///
+  /// In en, this message translates to:
+  /// **'Save as Default'**
+  String get saveAsDefaultViewLabel;
+
+  /// Label for apply filters button.
+  ///
+  /// In en, this message translates to:
+  /// **'Apply Filters'**
+  String get applyFiltersLabel;
+
+  /// Label for the saved views tab in filter dialog.
+  ///
+  /// In en, this message translates to:
+  /// **'Saved Views'**
+  String get savedViewsTabLabel;
+
+  /// Label for the filters tab in filter dialog.
+  ///
+  /// In en, this message translates to:
+  /// **'Filters'**
+  String get filtersTabLabel;
+
+  /// Label for the view name text field.
+  ///
+  /// In en, this message translates to:
+  /// **'View Name'**
+  String get viewNameLabel;
+
+  /// Hint text for the view name text field.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a name for this view'**
+  String get viewNameHint;
+
+  /// Label for the save current filter as view button.
+  ///
+  /// In en, this message translates to:
+  /// **'Save Current'**
+  String get saveCurrentAsViewLabel;
+
+  /// Message shown when a view is saved.
+  ///
+  /// In en, this message translates to:
+  /// **'View saved successfully'**
+  String get viewSavedMessage;
+
+  /// Message shown when there are no saved views.
+  ///
+  /// In en, this message translates to:
+  /// **'No saved views yet'**
+  String get noSavedViewsMessage;
+
+  /// Label for the saved views dropdown.
+  ///
+  /// In en, this message translates to:
+  /// **'Saved Views'**
+  String get savedViewsLabel;
+
+  /// Label for showing all views in dropdown.
+  ///
+  /// In en, this message translates to:
+  /// **'All Views'**
+  String get allViewsLabel;
+
+  /// Tooltip for the filter projects button.
+  ///
+  /// In en, this message translates to:
+  /// **'Filter projects'**
+  String get filterProjectsTooltip;
+
+  /// Title shown when in selection mode with count of selected items.
+  ///
+  /// In en, this message translates to:
+  /// **'Select Projects ({count})'**
+  String selectProjectsTitle(int count);
+
+  /// Tooltip for the bulk actions button.
+  ///
+  /// In en, this message translates to:
+  /// **'Bulk actions'**
+  String get bulkActionsTooltip;
+
+  /// Tooltip for exiting selection mode.
+  ///
+  /// In en, this message translates to:
+  /// **'Exit selection mode'**
+  String get exitSelectionModeTooltip;
+
+  /// Title for the bulk actions bottom sheet.
+  ///
+  /// In en, this message translates to:
+  /// **'Bulk Actions ({count} selected)'**
+  String bulkActionsTitle(int count);
+
+  /// Label for the delete selected projects button.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete Selected Projects'**
+  String get deleteSelectedProjectsLabel;
+
+  /// Label for the priority change dropdown.
+  ///
+  /// In en, this message translates to:
+  /// **'Change Priority'**
+  String get changePriorityLabel;
+
+  /// Label for the status change dropdown.
+  ///
+  /// In en, this message translates to:
+  /// **'Change Status'**
+  String get changeStatusLabel;
+
+  /// Label for the user assignment dropdown.
+  ///
+  /// In en, this message translates to:
+  /// **'Assign to User'**
+  String get assignToUserLabel;
+
+  /// Label for the export selected projects to CSV button.
+  ///
+  /// In en, this message translates to:
+  /// **'Export Selected to CSV'**
+  String get exportSelectedToCsvLabel;
+
+  /// Label for the apply actions button.
+  ///
+  /// In en, this message translates to:
+  /// **'Apply Actions'**
+  String get applyActionsLabel;
+
+  /// Confirmation message for deleting selected projects.
+  ///
+  /// In en, this message translates to:
+  /// **'Are you sure you want to delete {count} selected projects? This action cannot be undone.'**
+  String confirmDeleteSelectedProjectsMessage(int count);
+
+  /// Success message after bulk deleting projects.
+  ///
+  /// In en, this message translates to:
+  /// **'Successfully deleted {count} projects.'**
+  String bulkDeleteSuccessMessage(int count);
+
+  /// Success message after applying bulk actions.
+  ///
+  /// In en, this message translates to:
+  /// **'Applied {actions} action(s) to {count} projects.'**
+  String bulkActionsAppliedMessage(int actions, int count);
+
+  /// Label for the search projects text field.
+  ///
+  /// In en, this message translates to:
+  /// **'Search Projects'**
+  String get searchProjectsLabel;
+
+  /// Hint text for the search projects text field.
+  ///
+  /// In en, this message translates to:
+  /// **'Search by name, description, or tags...'**
+  String get searchProjectsHint;
+
+  /// Label for the tags filter section.
+  ///
+  /// In en, this message translates to:
+  /// **'Tags'**
+  String get filterTagsLabel;
+
+  /// Label for adding a new tag.
+  ///
+  /// In en, this message translates to:
+  /// **'Add Tag'**
+  String get addTagLabel;
+
+  /// Hint for the add tag text field.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter tag name'**
+  String get addTagHint;
+
+  /// Label showing available tags to select from.
+  ///
+  /// In en, this message translates to:
+  /// **'Available tags:'**
+  String get availableTagsLabel;
+
+  /// Label for the required tags filter section that uses AND logic.
+  ///
+  /// In en, this message translates to:
+  /// **'Required Tags (AND)'**
+  String get requiredTagsLabel;
+
+  /// Label for the optional tags filter section that uses OR logic.
+  ///
+  /// In en, this message translates to:
+  /// **'Optional Tags (OR)'**
+  String get optionalTagsLabel;
+
+  /// Description explaining that required tags use AND logic.
+  ///
+  /// In en, this message translates to:
+  /// **'Projects must have ALL of these tags'**
+  String get requiredTagsDescription;
+
+  /// Description explaining that optional tags use OR logic.
+  ///
+  /// In en, this message translates to:
+  /// **'Projects can have ANY of these tags'**
+  String get optionalTagsDescription;
+
+  /// Tooltip for the list view mode button.
+  ///
+  /// In en, this message translates to:
+  /// **'List view'**
+  String get listViewTooltip;
+
+  /// Tooltip for the kanban view mode button.
+  ///
+  /// In en, this message translates to:
+  /// **'Kanban view'**
+  String get kanbanViewTooltip;
+
+  /// Tooltip for the table view mode button.
+  ///
+  /// In en, this message translates to:
+  /// **'Table view'**
+  String get tableViewTooltip;
+
+  /// Label for the name column in tables.
+  ///
+  /// In en, this message translates to:
+  /// **'Name'**
+  String get nameLabel;
+
+  /// Label for priority field.
+  ///
+  /// In en, this message translates to:
+  /// **'Priority'**
+  String get priorityLabel;
+
+  /// Label for the start date column in tables.
+  ///
+  /// In en, this message translates to:
+  /// **'Start Date'**
+  String get startDateLabel;
+
+  /// Label for the due date column in tables.
+  ///
+  /// In en, this message translates to:
+  /// **'Due Date'**
+  String get dueDateLabel;
+
+  /// Label for tags field.
+  ///
+  /// In en, this message translates to:
+  /// **'Tags'**
+  String get tagsLabel;
+
+  /// Label for the export to PDF button.
+  ///
+  /// In en, this message translates to:
+  /// **'Export to PDF'**
+  String get exportToPdfLabel;
+
+  /// Message shown while generating PDF.
+  ///
+  /// In en, this message translates to:
+  /// **'Generating PDF report...'**
+  String get exportingPdfMessage;
+
+  /// Success message when PDF is exported.
+  ///
+  /// In en, this message translates to:
+  /// **'PDF exported successfully'**
+  String get pdfExportedMessage;
+
+  /// Error message when PDF export fails.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to export PDF'**
+  String get pdfExportErrorMessage;
+
+  /// Title for the PDF projects report.
+  ///
+  /// In en, this message translates to:
+  /// **'Projects Report'**
+  String get projectsReportTitle;
+
+  /// Label for the generation date in PDF.
+  ///
+  /// In en, this message translates to:
+  /// **'Generated on'**
+  String get generatedOnLabel;
+
+  /// Label for active filters section in PDF.
+  ///
+  /// In en, this message translates to:
+  /// **'Active Filters'**
+  String get activeFiltersLabel;
+
+  /// Label for the summary section in PDF.
+  ///
+  /// In en, this message translates to:
+  /// **'Summary'**
+  String get summaryLabel;
+
+  /// Label for total projects count.
+  ///
+  /// In en, this message translates to:
+  /// **'Total Projects'**
+  String get totalProjectsLabel;
+
+  /// Label for priority distribution chart.
+  ///
+  /// In en, this message translates to:
+  /// **'Priority Distribution'**
+  String get priorityDistributionLabel;
+
+  /// Label for due dates chart.
+  ///
+  /// In en, this message translates to:
+  /// **'Due Dates'**
+  String get dueDatesLabel;
+
+  /// Label for the project list section.
+  ///
+  /// In en, this message translates to:
+  /// **'Project List'**
+  String get projectListLabel;
+
+  /// Tooltip for the recent filters menu button.
+  ///
+  /// In en, this message translates to:
+  /// **'Recent filters'**
+  String get recentFiltersTooltip;
+
+  /// Label for filters without a custom name.
+  ///
+  /// In en, this message translates to:
+  /// **'Unnamed Filter'**
+  String get unnamedFilterLabel;
+
+  /// Label for owner field.
+  ///
+  /// In en, this message translates to:
+  /// **'Owner'**
+  String get ownerLabel;
+
+  /// Label for ascending sort direction.
+  ///
+  /// In en, this message translates to:
+  /// **'ascending'**
+  String get ascendingLabel;
+
+  /// Label for descending sort direction.
+  ///
+  /// In en, this message translates to:
+  /// **'descending'**
+  String get descendingLabel;
+
+  /// Label for showing all projects (no filters).
+  ///
+  /// In en, this message translates to:
+  /// **'All Projects'**
+  String get allProjectsLabel;
+
+  /// Title for the Gantt chart view.
+  ///
+  /// In en, this message translates to:
+  /// **'Gantt Chart'**
+  String get ganttViewTitle;
+
+  /// Tooltip for zoom in button.
+  ///
+  /// In en, this message translates to:
+  /// **'Zoom in'**
+  String get zoomInTooltip;
+
+  /// Tooltip for zoom out button.
+  ///
+  /// In en, this message translates to:
+  /// **'Zoom out'**
+  String get zoomOutTooltip;
+
+  /// Tooltip for date range picker button.
+  ///
+  /// In en, this message translates to:
+  /// **'Select date range'**
+  String get selectDateRangeTooltip;
+
+  /// Message when no projects have dates for Gantt view.
+  ///
+  /// In en, this message translates to:
+  /// **'No projects to display'**
+  String get noProjectsForGantt;
+
+  /// Help text for adding projects with dates.
+  ///
+  /// In en, this message translates to:
+  /// **'Add projects with start and due dates to see them in the timeline.'**
+  String get addProjectsWithDates;
+
+  /// Tooltip for opening a project.
+  ///
+  /// In en, this message translates to:
+  /// **'Open project'**
+  String get openProjectTooltip;
+
+  /// Title for comments section.
+  ///
+  /// In en, this message translates to:
+  /// **'Comments'**
+  String get commentsTitle;
+
+  /// Hint text for comment input field.
+  ///
+  /// In en, this message translates to:
+  /// **'Add a comment...'**
+  String get addCommentHint;
+
+  /// Message when there are no comments.
+  ///
+  /// In en, this message translates to:
+  /// **'No comments yet'**
+  String get noCommentsYet;
+
+  /// Label indicating a comment was edited.
+  ///
+  /// In en, this message translates to:
+  /// **'edited'**
+  String get editedLabel;
+
+  /// Label for mentioned users.
+  ///
+  /// In en, this message translates to:
+  /// **'Mentioned'**
+  String get mentionedLabel;
+
+  /// Tooltip for delete comment button.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete comment'**
+  String get deleteCommentTooltip;
+
+  /// Title for biometric login toggle in settings.
+  ///
+  /// In en, this message translates to:
+  /// **'Biometric login'**
+  String get settingsBiometricLoginTitle;
+
+  /// Subtitle for biometric login toggle in settings.
+  ///
+  /// In en, this message translates to:
+  /// **'Use fingerprint or face ID to sign in'**
+  String get settingsBiometricLoginSubtitle;
+
+  /// Title for the biometric enable dialog.
+  ///
+  /// In en, this message translates to:
+  /// **'Enable Biometric Login'**
+  String get enableBiometricDialogTitle;
+
+  /// Message for the biometric enable dialog.
+  ///
+  /// In en, this message translates to:
+  /// **'Would you like to enable biometric authentication for faster login?'**
+  String get enableBiometricDialogMessage;
+
+  /// Yes button for the biometric enable dialog.
+  ///
+  /// In en, this message translates to:
+  /// **'Enable'**
+  String get enableBiometricDialogYes;
+
+  /// No button for the biometric enable dialog.
+  ///
+  /// In en, this message translates to:
+  /// **'Not Now'**
+  String get enableBiometricDialogNo;
+
+  /// Button to login with biometric authentication.
+  ///
+  /// In en, this message translates to:
+  /// **'Login with Biometric'**
+  String get loginWithBiometric;
+
+  /// Button to switch to password login.
+  ///
+  /// In en, this message translates to:
+  /// **'Login with Password'**
+  String get loginWithPassword;
+
+  /// Title for biometric login.
+  ///
+  /// In en, this message translates to:
+  /// **'Biometric Login'**
+  String get biometric_login_title;
+
+  /// Button or option to enable biometric login.
+  ///
+  /// In en, this message translates to:
+  /// **'Enable Biometric Login'**
+  String get enable_biometric_login;
+
+  /// Message when biometric is not available.
+  ///
+  /// In en, this message translates to:
+  /// **'Biometric authentication not available'**
+  String get biometric_not_available;
+
+  /// Option to use password login instead of biometric.
+  ///
+  /// In en, this message translates to:
+  /// **'Use password instead'**
+  String get use_password_instead;
+
+  /// Success message when biometric is enrolled.
+  ///
+  /// In en, this message translates to:
+  /// **'Biometric login enabled'**
+  String get biometric_enroll_success;
+
+  /// Error message when biometric auth fails.
+  ///
+  /// In en, this message translates to:
+  /// **'Biometric authentication failed'**
+  String get biometric_auth_failed;
+
+  /// Title for the smart filter dialog.
+  ///
+  /// In en, this message translates to:
+  /// **'Smart Filter'**
+  String get smartFilterDialogTitle;
+
+  /// Hint text for the smart filter input field.
+  ///
+  /// In en, this message translates to:
+  /// **'Describe what you want to filter...'**
+  String get smartFilterHint;
+
+  /// Label for the smart filter button.
+  ///
+  /// In en, this message translates to:
+  /// **'Apply Smart Filter'**
+  String get smartFilterButtonLabel;
+
+  /// Message shown while processing smart filter.
+  ///
+  /// In en, this message translates to:
+  /// **'Processing your request...'**
+  String get smartFilterProcessing;
+
+  /// Error message when smart filter fails.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to apply smart filter. Please try again.'**
+  String get smartFilterError;
+
+  /// Label for AI suggested filter option.
+  ///
+  /// In en, this message translates to:
+  /// **'AI Suggested Filter'**
+  String get aiSuggestedFilterLabel;
+
+  /// Tooltip for the smart filter button.
+  ///
+  /// In en, this message translates to:
+  /// **'Use AI to help filter projects'**
+  String get smartFilterButtonTooltip;
+
+  /// Label for the edit filter button.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit Filter'**
+  String get editFilterButtonLabel;
+
+  /// Label for the accept filter button.
+  ///
+  /// In en, this message translates to:
+  /// **'Accept Filter'**
+  String get acceptFilterButtonLabel;
+
+  /// Section title for per-operation AI rate limits settings.
+  ///
+  /// In en, this message translates to:
+  /// **'Per-Operation Rate Limits'**
+  String get ai_per_operation_limits;
+
+  /// Label for chat operation rate limit setting.
+  ///
+  /// In en, this message translates to:
+  /// **'Chat limit'**
+  String get limit_for_chat;
+
+  /// Label for summarize operation rate limit setting.
+  ///
+  /// In en, this message translates to:
+  /// **'Summarize limit'**
+  String get limit_for_summarize;
+
+  /// Label for generate tasks operation rate limit setting.
+  ///
+  /// In en, this message translates to:
+  /// **'Generate tasks limit'**
+  String get limit_for_generate_tasks;
+
+  /// Confirmation message when per-operation rate limits are saved.
+  ///
+  /// In en, this message translates to:
+  /// **'Per-operation limits saved'**
+  String get per_op_limit_saved;
+
+  /// Tooltip for the undo button in the dashboard toolbar.
+  ///
+  /// In en, this message translates to:
+  /// **'Undo last dashboard change'**
+  String get undoTooltip;
+
+  /// Tooltip for the redo button in the dashboard toolbar.
+  ///
+  /// In en, this message translates to:
+  /// **'Redo last undone dashboard change'**
+  String get redoTooltip;
+
+  /// Indicator text when the app is in offline mode.
+  ///
+  /// In en, this message translates to:
+  /// **'Offline Mode'**
+  String get offline_mode;
+
+  /// Message indicating changes are queued while offline.
+  ///
+  /// In en, this message translates to:
+  /// **'Changes queued for sync'**
+  String get changes_queued;
+
+  /// Status message when syncing queued requirements.
+  ///
+  /// In en, this message translates to:
+  /// **'Syncing requirements...'**
+  String get syncing_requirements;
+
+  /// Success message after offline sync completes.
+  ///
+  /// In en, this message translates to:
+  /// **'Offline sync completed successfully'**
+  String get offline_sync_success;
 }
 
 class _AppLocalizationsDelegate

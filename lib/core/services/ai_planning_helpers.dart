@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../config/ai_config.dart';
 import '../services/ai_parsers.dart';
 import '../../models/project_plan.dart';
+import '../../core/providers/project_providers.dart';
 
 /// Result class for AI API calls with token usage information
 class AiApiResult<T> {
@@ -361,6 +362,85 @@ Focus on practical, actionable tasks that can be tracked and completed.
 
     return AiApiResult(
       content: result.content,
+      tokensUsed: result.tokensUsed,
+      metadata: result.metadata,
+    );
+  }
+
+  /// Parses natural language filter requests into ProjectFilter objects
+  /// Uses AI to understand user intent and create appropriate filter criteria
+  static Future<AiApiResult<ProjectFilter?>> parseFilterRequest(String userRequest) async {
+    final apiKey = AiConfig.apiKey;
+    if (apiKey == null || apiKey.isEmpty) {
+      throw Exception('GROK_API_KEY not configured');
+    }
+
+    // Anonymize the request for compliance
+    final anonymizedRequest = _anonymizeMessage(userRequest);
+
+    final prompt = '''
+You are an expert at understanding project management filter requests. Parse the user's natural language request and create a JSON filter object.
+
+Available filter fields:
+- status: "Planning", "In Progress", "Review", "Completed", "On Hold", "Cancelled"
+- priority: "Low", "Medium", "High"
+- searchQuery: text to search in project names and descriptions
+- startDate: ISO date string for projects starting on/after this date
+- endDate: ISO date string for projects ending on/before this date
+- dueDateStart: ISO date string for projects due on/after this date
+- dueDateEnd: ISO date string for projects due on/before this date
+- tags: array of tag strings (optional tags)
+- requiredTags: array of tag strings (required tags - project must have ALL)
+- sortBy: "name", "priority", "startDate", "dueDate", "status"
+- sortAscending: boolean for sort direction
+
+Common patterns to recognize:
+- "high priority" → priority: "High"
+- "due this week" → dueDateStart: today, dueDateEnd: today+7days
+- "overdue" → dueDateEnd: today
+- "completed" → status: "Completed"
+- "in progress" → status: "In Progress"
+- "my projects" → (this would be owner-based, but we don't have user context)
+- "team X" → (this would be team-based, but we don't have team context)
+
+Return ONLY a valid JSON object with the filter fields, or null if you cannot understand the request.
+
+User request: "$anonymizedRequest"
+''';
+
+    final result = await _callGrokApi(prompt);
+
+    try {
+      final parsed = AiParsers.safeParseJson(result.content);
+      if (parsed is Map<String, dynamic>) {
+        // Validate and create ProjectFilter
+        final filter = ProjectFilter(
+          status: parsed['status'] as String?,
+          priority: parsed['priority'] as String?,
+          searchQuery: parsed['searchQuery'] as String?,
+          startDate: parsed['startDate'] != null ? DateTime.parse(parsed['startDate']) : null,
+          endDate: parsed['endDate'] != null ? DateTime.parse(parsed['endDate']) : null,
+          dueDateStart: parsed['dueDateStart'] != null ? DateTime.parse(parsed['dueDateStart']) : null,
+          dueDateEnd: parsed['dueDateEnd'] != null ? DateTime.parse(parsed['dueDateEnd']) : null,
+          tags: parsed['tags'] != null ? List<String>.from(parsed['tags']) : null,
+          requiredTags: parsed['requiredTags'] != null ? List<String>.from(parsed['requiredTags']) : null,
+          sortBy: parsed['sortBy'] as String?,
+          sortAscending: parsed['sortAscending'] as bool? ?? true,
+        );
+
+        return AiApiResult(
+          content: filter,
+          tokensUsed: result.tokensUsed,
+          metadata: result.metadata,
+        );
+      }
+    } catch (e) {
+      // If parsing fails, return null
+    }
+
+    // Return null if we couldn't parse a valid filter
+    return AiApiResult(
+      content: null,
       tokensUsed: result.tokensUsed,
       metadata: result.metadata,
     );

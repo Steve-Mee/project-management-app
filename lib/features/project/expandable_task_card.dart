@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:my_project_management_app/core/providers.dart';
-import 'package:my_project_management_app/core/providers/sub_task_provider.dart';
+import 'package:my_project_management_app/core/providers/task_providers.dart';
+import 'package:my_project_management_app/core/providers/project_providers.dart';
+import 'package:my_project_management_app/core/providers/auth_providers.dart';
 import 'package:my_project_management_app/core/services/sub_task_generation_service.dart';
 import 'package:my_project_management_app/models/task_model.dart';
 import 'package:my_project_management_app/models/sub_task_model.dart';

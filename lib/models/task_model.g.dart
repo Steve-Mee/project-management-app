@@ -29,13 +29,14 @@ class TaskAdapter extends TypeAdapter<Task> {
       attachments: (fields[9] as List).cast<String>(),
       subTaskIds: (fields[10] as List).cast<String>(),
       userId: fields[11] as String?,
+      comments: (fields[12] as List).cast<CommentModel>(),
     );
   }
 
   @override
   void write(BinaryWriter writer, Task obj) {
     writer
-      ..writeByte(12)
+      ..writeByte(13)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -59,7 +60,9 @@ class TaskAdapter extends TypeAdapter<Task> {
       ..writeByte(10)
       ..write(obj.subTaskIds)
       ..writeByte(11)
-      ..write(obj.userId);
+      ..write(obj.userId)
+      ..writeByte(12)
+      ..write(obj.comments);
   }
 
   @override

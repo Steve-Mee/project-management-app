@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+import '../models/ai_rate_limits_config.dart';
+import '../services/app_logger.dart';
 
 /// Repository for app settings persisted with Hive.
 class SettingsRepository {
@@ -13,6 +15,9 @@ class SettingsRepository {
   static const String _lastLoginTimeKey = 'last_login_time_iso';
   static const String _helpLevelKey = 'help_level';
   static const String _aiConsentEnabledKey = 'ai_consent_enabled';
+  static const String _useBiometricsKey = 'use_biometrics_enabled';
+  static const String _enableBiometricLoginKey = 'enable_biometric_login';
+  static const String _aiRateLimitsKey = 'ai_rate_limits';
 
   Future<void> initialize() async {
     await Hive.initFlutter();
@@ -127,5 +132,64 @@ class SettingsRepository {
 
   Future<void> setAiConsentEnabled(bool enabled) async {
     await _box.put(_aiConsentEnabledKey, enabled);
+  }
+
+  bool getUseBiometricsEnabled() {
+    return _box.get(_useBiometricsKey, defaultValue: false);
+  }
+
+  Future<void> setUseBiometricsEnabled(bool enabled) async {
+    await _box.put(_useBiometricsKey, enabled);
+  }
+
+  bool getEnableBiometricLogin() {
+    return _box.get(_enableBiometricLoginKey, defaultValue: false);
+  }
+
+  Future<void> setEnableBiometricLogin(bool enabled) async {
+    await _box.put(_enableBiometricLoginKey, enabled);
+  }
+
+  AiRateLimitsConfig getAiRateLimitsConfig() {
+    final value = _box.get(_aiRateLimitsKey);
+    if (value is Map<String, dynamic>) {
+      try {
+        final config = AiRateLimitsConfig.fromJson(value);
+        
+        // Additional validation for perOperationLimits map
+        if (value['perOperationLimits'] != null && value['perOperationLimits'] is! Map<String, dynamic>) {
+          AppLogger.warning('Invalid perOperationLimits format in settings, expected Map<String, dynamic>', 
+            params: {'type': value['perOperationLimits'].runtimeType.toString()});
+        }
+        
+        // Validate and clamp values using the centralized validation helper
+        final validatedConfig = AiRateLimitsConfig.validateAiRateLimits(config);
+        if (validatedConfig != config) {
+          AppLogger.event('AI rate limits config contained invalid values, clamping to valid ranges');
+        }
+        return validatedConfig;
+      } catch (e) {
+        AppLogger.event('Invalid AI rate limits config in settings, using defaults', params: {'error': e.toString()});
+        return const AiRateLimitsConfig.defaults();
+      }
+    }
+    // Migration: return defaults for existing users (includes perOperationLimits defaults)
+    return const AiRateLimitsConfig.defaults();
+  }
+
+  Future<void> setAiRateLimitsConfig(AiRateLimitsConfig config) async {
+    // Additional validation for perOperationLimits map
+    for (final entry in config.perOperationLimits.entries) {
+      if (entry.value < 1) {
+        AppLogger.warning('Invalid perOperationLimit value for operation ${entry.key}, must be >= 1', 
+          params: {'operation': entry.key, 'value': entry.value.toString()});
+      }
+    }
+    
+    final validatedConfig = AiRateLimitsConfig.validateAiRateLimits(config);
+    if (validatedConfig != config) {
+      AppLogger.event('AI rate limits config contained invalid values when saving, clamping to valid ranges');
+    }
+    await _box.put(_aiRateLimitsKey, validatedConfig.toJson());
   }
 }

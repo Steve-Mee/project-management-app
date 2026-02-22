@@ -17,20 +17,26 @@ import 'package:window_manager/window_manager.dart';
 import 'package:app_links/app_links.dart';
 import 'package:my_project_management_app/generated/app_localizations.dart';
 import 'core/theme.dart';
-import 'core/providers.dart';
+import 'package:my_project_management_app/core/providers.dart';
+import 'package:my_project_management_app/core/providers/ai/index.dart' show aiChatProvider;
+import 'core/providers/auth_providers.dart';
+import 'core/providers/theme_providers.dart';
+import 'core/providers/navigation_providers.dart';
 import 'core/routes.dart';
 import 'core/repository/hive_initializer.dart';
 import 'core/services/app_logger.dart';
 import 'core/services/ab_testing_service.dart';
 import 'core/services/cloud_sync_service.dart';
+import 'core/services/login_rate_limiter.dart';
 import 'core/services/project_invitation_service.dart';
 import 'features/auth/login_screen.dart';
 import 'models/project_model.dart';
 import 'models/task_model.dart';
+import 'models/comment_model.dart';
 
 /// Initializes environment variables from .env file
 /// Loads dotenv for development. In production, uses secure storage if available
-/// Future expansions: Add more env vars like OPENAI_API_KEY, etc.
+/// NOTE: converted to issue 048
 Future<Map<String, String>> initEnv() async {
   String url;
   String anonKey;
@@ -60,7 +66,7 @@ Future<Map<String, String>> initEnv() async {
     throw Exception('SUPABASE_ANON_KEY not found');
   }
   
-  // Future expansions: Add more env vars here
+  // NOTE: converted to issue 048
   // String openaiKey = dotenv.env['OPENAI_API_KEY'] ?? '';
   
   return {
@@ -80,7 +86,7 @@ void main() async {
   // Initialize environment variables
   final env = await initEnv();
   
-  // Future expansions: Add more env vars here, e.g., OPENAI_API_KEY
+  // NOTE: converted to issue 048
   // String openaiKey = env['openaiKey']!;
   
   if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
@@ -93,7 +99,14 @@ void main() async {
   Hive.registerAdapter(ProjectModelAdapter());
   Hive.registerAdapter(TaskStatusAdapter());
   Hive.registerAdapter(TaskAdapter());
+  Hive.registerAdapter(CommentModelAdapter());
+  await Hive.initFlutter();
+  await Hive.openBox('settings');
+  await Hive.openBox('auth');
+  await Hive.openBox('groups');
+  await Hive.openBox('roles');
   await HiveInitializer.initialize();
+  await LoginRateLimiter.instance.initialize();
   final abTesting = ABTestingService.instance;
   await abTesting.initialize();
   await abTesting.fetchRemoteConfigs();
@@ -165,8 +178,11 @@ class _AppLifecycleHandler extends WidgetsBindingObserver {
   Future<void> _backupOnBackground() async {
     try {
       await HiveInitializer.backupHive();
+      // Persist AI request queue for offline recovery
+      final aiChatNotifier = _container.read(aiChatProvider.notifier);
+      await aiChatNotifier.persistQueue();
     } catch (e) {
-      AppLogger.instance.e('Error creating background Hive backup', error: e);
+      AppLogger.instance.e('Error creating background backup', error: e);
     }
   }
 
@@ -265,7 +281,7 @@ class _MyAppState extends ConsumerState<MyApp> {
   }
 
   Future<void> _handleInvitationToken(String token) async {
-    final authState = ref.read(authProvider);
+    final authState = ref.read(authProvider).value!;
     if (!authState.isAuthenticated) {
       // Store token for after login
       setState(() {
@@ -310,9 +326,17 @@ class _MyAppState extends ConsumerState<MyApp> {
   @override
   Widget build(BuildContext context) {
     // Watch the theme mode provider to rebuild when it changes
-    final themeMode = ref.watch(themeModeProvider);
-    final authState = ref.watch(authProvider);
-    final locale = ref.watch(localeProvider);
+    final themeModeAsync = ref.watch(themeModeProvider);
+    final currentThemeMode = themeModeAsync.maybeWhen(
+      data: (t) => t,
+      orElse: () => ThemeMode.system,
+    );
+    final authState = ref.watch(authProvider).value!;
+    final localeAsync = ref.watch(localeProvider);
+    final locale = localeAsync.maybeWhen(
+      data: (l) => l,
+      orElse: () => null,
+    );
     final effectiveLocale =
         locale ?? WidgetsBinding.instance.platformDispatcher.locale;
     final isRtl = _isRtlLocale(effectiveLocale);
@@ -342,7 +366,7 @@ class _MyAppState extends ConsumerState<MyApp> {
                   'Project Management App',
               debugShowCheckedModeBanner: false,
               locale: locale,
-              themeMode: themeMode,
+              themeMode: currentThemeMode,
               theme: AppTheme.lightTheme(),
               darkTheme: AppTheme.darkTheme(),
               localizationsDelegates: AppLocalizations.localizationsDelegates,
@@ -361,7 +385,7 @@ class _MyAppState extends ConsumerState<MyApp> {
             debugShowCheckedModeBanner: false,
 
             // Theme mode - supports system/dark/light
-            themeMode: themeMode,
+            themeMode: currentThemeMode,
 
             locale: locale,
 
@@ -654,19 +678,23 @@ class ResponsiveNavigationLayout extends ConsumerWidget {
   Widget _buildThemeToggle(WidgetRef ref) {
     return Consumer(
       builder: (context, ref, _) {
-        final themeMode = ref.watch(themeModeProvider);
+        final themeModeAsync = ref.watch(themeModeProvider);
+        final currentThemeMode = themeModeAsync.maybeWhen(
+          data: (t) => t,
+          orElse: () => ThemeMode.system,
+        );
         final l10n = AppLocalizations.of(context)!;
 
         return IconButton(
           icon: Icon(
-            _getThemeIcon(themeMode),
+            _getThemeIcon(currentThemeMode),
             size: 24.sp,
           ),
           onPressed: () {
             ThemeMode nextMode;
-            if (themeMode == ThemeMode.system) {
+            if (currentThemeMode == ThemeMode.system) {
               nextMode = ThemeMode.dark;
-            } else if (themeMode == ThemeMode.dark) {
+            } else if (currentThemeMode == ThemeMode.dark) {
               nextMode = ThemeMode.light;
             } else {
               nextMode = ThemeMode.system;

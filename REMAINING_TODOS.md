@@ -11,12 +11,8 @@ Onderstaand een gegroepeerde lijst van alle "TODO"-aantekeningen die in de codeb
   - Verwachte actie: Voeg paginatie-API toe aan `IProjectRepository` en implementatie in `ProjectRepository`.
 - TODO: Add filtering methods: getProjectsByStatus(String status)
   - Verwachte actie: Voeg filter-functies toe aan repository en expose via providers/families.
-- TODO: Add pagination for large project lists
-  - Verwachte actie: Pas `projectsProvider` aan of voeg nieuw paginated provider toe.
 - TODO: Add filtering/sorting parameters via family provider
   - Verwachte actie: Maak `projectsProvider` of `filteredProjectsProvider` uitbreidbaar met parameters (status, zoekquery, sortering).
-- TODO: Add caching for individual projects
-  - Verwachte actie: Implementeer cache voor `projectByIdProvider` of verplaats caching-logica naar repository.
 - TODO: Implement efficient single project fetch if repository supports it
   - Verwachte actie: Voeg `getProjectById` efficient implementatie toe aan `IProjectRepository` en concrete repositoryen.
 - TODO: Add more filter parameters as needed
@@ -25,8 +21,6 @@ Onderstaand een gegroepeerde lijst van alle "TODO"-aantekeningen die in de codeb
   - Verwachte actie: Breid filterimplementatie in `filteredProjectsProvider` uit.
 - TODO: Add more filter fields (date range, priority, etc.)
   - Verwachte actie: Zie boven.
-- TODO: Remove when tests are updated to not require this
-  - Verwachte actie: Herzie en vereenvoudig `ProjectsNotifier.initialize()` zodra tests aangepast zijn.
 - TODO: Deprecate in favor of projectByIdProvider for better performance
   - Verwachte actie: Migreer interne callers naar `projectByIdProvider` en markeer `getProjectById` als deprecated.
 
@@ -59,18 +53,10 @@ Onderstaand een gegroepeerde lijst van alle "TODO"-aantekeningen die in de codeb
   - Verwachte actie: Implementeer eenvoudige historie stack voor dashboard wijzigingen.
 - TODO: Add dashboard templates
   - Verwachte actie: Voorzie preset layouts en template opslaan/laden.
-- TODO: Add collaborative dashboard sharing
-  - Verwachte actie: Plan API + opslag voor gedeelde dashboards en permissies.
 - TODO: Add error handling/logging
   - Verwachte actie: Voeg try/catch + AppLogger.event/error melding toe bij IO/DB bewerkingen.
 - TODO: Consider using an abstract interface for easy testing/swapping
   - Verwachte actie: Maak repository/interface voor dashboard data.
-- TODO: Add caching for requirements
-  - Verwachte actie: Cache `requirements` data met TTL of lokaal storage.
-- TODO: Add offline requirements storage
-  - Verwachte actie: Sla requirements lokaal op (Hive) en sync bij netwerk beschikbaarheid.
-- TODO: Import projectsProvider when available
-  - Verwachte actie: Koppel dashboard items aan projecten zodra `projectsProvider` stabiel is.
 
 ---
 

@@ -308,6 +308,42 @@
   "@projectSortPriority": {
     "description": "Auto-generated description for projectSortPriority."
   },
+  "projectSortCreatedDate": "Aanmaakdatum",
+  "@projectSortCreatedDate": {
+    "description": "Auto-generated description for projectSortCreatedDate."
+  },
+  "projectSortStatus": "Status",
+  "@projectSortStatus": {
+    "description": "Auto-generated description for projectSortStatus."
+  },
+  "projectSortStartDate": "Startdatum",
+  "@projectSortStartDate": {
+    "description": "Label for sorting projects by start date."
+  },
+  "projectSortDueDate": "Vervaldatum",
+  "@projectSortDueDate": {
+    "description": "Label for sorting projects by due date."
+  },
+  "sortDirectionLabel": "Richting",
+  "@sortDirectionLabel": {
+    "description": "Label for sort direction selection."
+  },
+  "sortAscendingLabel": "Oplopend",
+  "@sortAscendingLabel": {
+    "description": "Label for ascending sort order."
+  },
+  "sortDescendingLabel": "Aflopend",
+  "@sortDescendingLabel": {
+    "description": "Label for descending sort order."
+  },
+  "exportToCsvLabel": "Exporteren naar CSV",
+  "@exportToCsvLabel": {
+    "description": "Label for CSV export button."
+  },
+  "csvExportSuccessMessage": "CSV succesvol geëxporteerd en gedeeld",
+  "@csvExportSuccessMessage": {
+    "description": "Success message after CSV export."
+  },
   "allLabel": "Alles",
   "@allLabel": {
     "description": "Auto-generated description for allLabel."
@@ -785,6 +821,10 @@
   "@loginFailedMessage": {
     "description": "Auto-generated description for loginFailedMessage."
   },
+  "rateLimitExceeded": "Te veel pogingen. Probeer opnieuw over {seconds} seconden.",
+  "@rateLimitExceeded": {
+    "description": "Message shown when login rate limit is exceeded, with seconds parameter."
+  },
   "registerTitle": "Registreren",
   "@registerTitle": {
     "description": "Auto-generated description for registerTitle."
@@ -1077,5 +1117,357 @@
   "backupNoFileMessage": "Nog geen back-upbestand",
   "@backupNoFileMessage": {
     "description": "Shown when no backup file path is available."
+  },
+  "settingsBiometricLoginTitle": "Biometrische login",
+  "@settingsBiometricLoginTitle": {
+    "description": "Title for biometric login toggle in settings."
+  },
+  "settingsBiometricLoginSubtitle": "Gebruik vingerafdruk of gezichts-ID om in te loggen",
+  "@settingsBiometricLoginSubtitle": {
+    "description": "Subtitle for biometric login toggle in settings."
+  },
+  "enableBiometricDialogTitle": "Biometrische login inschakelen",
+  "@enableBiometricDialogTitle": {
+    "description": "Title for the biometric enable dialog."
+  },
+  "enableBiometricDialogMessage": "Wilt u biometrische authenticatie inschakelen voor snellere login?",
+  "@enableBiometricDialogMessage": {
+    "description": "Message for the biometric enable dialog."
+  },
+  "enableBiometricDialogYes": "Inschakelen",
+  "@enableBiometricDialogYes": {
+    "description": "Yes button for the biometric enable dialog."
+  },
+  "enableBiometricDialogNo": "Niet nu",
+  "@enableBiometricDialogNo": {
+    "description": "No button for the biometric enable dialog."
+  },
+  "loginWithBiometric": "Inloggen met biometrie",
+  "@loginWithBiometric": {
+    "description": "Button to login with biometric authentication."
+  },
+  "loginWithPassword": "Inloggen met wachtwoord",
+  "@loginWithPassword": {
+    "description": "Button to switch to password login."
+  },
+  "biometric_login_title": "Biometrische Login",
+  "@biometric_login_title": {
+    "description": "Title for biometric login."
+  },
+  "enable_biometric_login": "Biometrische Login Inschakelen",
+  "@enable_biometric_login": {
+    "description": "Button or option to enable biometric login."
+  },
+  "biometric_not_available": "Biometrische authenticatie niet beschikbaar",
+  "@biometric_not_available": {
+    "description": "Message when biometric is not available."
+  },
+  "use_password_instead": "Gebruik wachtwoord in plaats daarvan",
+  "@use_password_instead": {
+    "description": "Option to use password login instead of biometric."
+  },
+  "biometric_enroll_success": "Biometrische login ingeschakeld",
+  "@biometric_enroll_success": {
+    "description": "Success message when biometric is enrolled."
+  },
+  "biometric_auth_failed": "Biometrische authenticatie mislukt",
+  "@biometric_auth_failed": {
+    "description": "Error message when biometric auth fails."
+  },
+  "smartFilterDialogTitle": "Slim Filter",
+  "@smartFilterDialogTitle": {
+    "description": "Title for the smart filter dialog."
+  },
+  "smartFilterHint": "Beschrijf wat je wilt filteren...",
+  "@smartFilterHint": {
+    "description": "Hint text for the smart filter input field."
+  },
+  "smartFilterButtonLabel": "Slim Filter Toepassen",
+  "@smartFilterButtonLabel": {
+    "description": "Label for the smart filter button."
+  },
+  "smartFilterProcessing": "Je verzoek wordt verwerkt...",
+  "@smartFilterProcessing": {
+    "description": "Message shown while processing smart filter."
+  },
+  "smartFilterError": "Slim filter toepassen mislukt. Probeer het opnieuw.",
+  "@smartFilterError": {
+    "description": "Error message when smart filter fails."
+  },
+  "aiSuggestedFilterLabel": "AI Voorgesteld Filter",
+  "@aiSuggestedFilterLabel": {
+    "description": "Label for AI suggested filter option."
+  },
+  "smartFilterButtonTooltip": "Gebruik AI om projecten te filteren",
+  "@smartFilterButtonTooltip": {
+    "description": "Tooltip for the smart filter button."
+  },
+  "editFilterButtonLabel": "Filter Bewerken",
+  "@editFilterButtonLabel": {
+    "description": "Label for the edit filter button."
+  },
+  "acceptFilterButtonLabel": "Filter Accepteren",
+  "@acceptFilterButtonLabel": {
+    "description": "Label for the accept filter button."
+  },
+  "searchUsersHint": "Zoek gebruikers op naam...",
+  "@searchUsersHint": {
+    "description": "Hint text for user search input field."
+  },
+  "filterByRole": "Filter op rol",
+  "@filterByRole": {
+    "description": "Label for role filter dropdown."
+  },
+  "filterByStatus": "Filter op status",
+  "@filterByStatus": {
+    "description": "Label for status filter dropdown."
+  },
+  "noUsersFound": "Geen gebruikers gevonden",
+  "@noUsersFound": {
+    "description": "Message shown when no users match the search/filter criteria."
+  },
+  "usersCount": "{count} gebruiker(s)",
+  "@usersCount": {
+    "description": "Display count of users, with plural support.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "undo": "Ongedaan maken",
+  "@undo": {
+    "description": "Label for undo button in dashboard toolbar."
+  },
+  "redo": "Opnieuw",
+  "@redo": {
+    "description": "Label for redo button in dashboard toolbar."
+  },
+  "undoTooltip": "Laatste dashboard wijziging ongedaan maken",
+  "@undoTooltip": {
+    "description": "Tooltip for undo button."
+  },
+  "redoTooltip": "Laatste ongedaan gemaakte dashboard wijziging opnieuw uitvoeren",
+  "@redoTooltip": {
+    "description": "Tooltip for redo button."
+  },
+  "save_as_template": "Opslaan als Sjabloon",
+  "@save_as_template": {
+    "description": "Button text for saving current dashboard as template."
+  },
+  "load_template": "Sjabloon Laden",
+  "@load_template": {
+    "description": "Button text for loading a dashboard template."
+  },
+  "preset_layouts": "Vooraf Gedefinieerde Indelingen",
+  "@preset_layouts": {
+    "description": "Section header for built-in preset dashboard layouts."
+  },
+  "my_templates": "Mijn Sjablonen",
+  "@my_templates": {
+    "description": "Section header for user-created dashboard templates."
+  },
+  "delete_template_confirm": "Dit sjabloon verwijderen? Deze actie kan niet ongedaan worden gemaakt.",
+  "@delete_template_confirm": {
+    "description": "Confirmation message when deleting a dashboard template."
+  },
+  "template_saved_success": "Sjabloon succesvol opgeslagen",
+  "@template_saved_success": {
+    "description": "Success message when a dashboard template is saved."
+  },
+  "share_dashboard": "Dashboard Delen",
+  "@share_dashboard": {
+    "description": "Button text for sharing a dashboard."
+  },
+  "invite_user": "Gebruiker Uitnodigen",
+  "@invite_user": {
+    "description": "Button text for inviting a user to a shared dashboard."
+  },
+  "permission_view": "Bekijken",
+  "@permission_view": {
+    "description": "Permission level for viewing a shared dashboard."
+  },
+  "permission_edit": "Bewerken",
+  "@permission_edit": {
+    "description": "Permission level for editing a shared dashboard."
+  },
+  "share_link_copied": "Deel link gekopieerd naar klembord",
+  "@share_link_copied": {
+    "description": "Message shown when a share link is copied."
+  },
+  "collab_conflict_detected": "Samenwerkingsconflict gedetecteerd, laatste wijzigingen toegepast",
+  "@collab_conflict_detected": {
+    "description": "Message shown when a collaboration conflict is resolved."
+  },
+  "dashboard_load_error": "Kan dashboardconfiguratie niet laden",
+  "@dashboard_load_error": {
+    "description": "Error message when dashboard configuration fails to load."
+  },
+  "dashboard_save_error": "Kan dashboardconfiguratie niet opslaan",
+  "@dashboard_save_error": {
+    "description": "Error message when dashboard configuration fails to save."
+  },
+  "dashboard_action_failed": "Dashboardactie mislukt",
+  "@dashboard_action_failed": {
+    "description": "Generic error message for dashboard actions."
+  },
+  "cache_refreshed": "Cache vernieuwd {seconds} seconden geleden",
+  "@cache_refreshed": {
+    "description": "Message showing when cache was last refreshed.",
+    "placeholders": {
+      "seconds": {
+        "type": "int"
+      }
+    }
+  },
+  "cache_invalidated": "Cache ongeldig gemaakt",
+  "@cache_invalidated": {
+    "description": "Message when cache is manually cleared."
+  },
+  "dashboard_cache_hit": "Dashboard geladen uit cache",
+  "@dashboard_cache_hit": {
+    "description": "Message indicating dashboard was loaded from cache."
+  },
+  "offline_mode": "Offline Modus",
+  "@offline_mode": {
+    "description": "Indicator text when the app is in offline mode."
+  },
+  "changes_queued": "Wijzigingen in wachtrij voor synchronisatie",
+  "@changes_queued": {
+    "description": "Message indicating changes are queued while offline."
+  },
+  "syncing_requirements": "Vereisten synchroniseren...",
+  "@syncing_requirements": {
+    "description": "Status message when syncing queued requirements."
+  },
+  "offline_sync_success": "Offline synchronisatie succesvol voltooid",
+  "@offline_sync_success": {
+    "description": "Success message after offline sync completes."
+  },
+  "project_not_found": "Project niet gevonden",
+  "@project_not_found": {
+    "description": "Message when a project cannot be found."
+  },
+  "loading_project_data": "Projectgegevens laden...",
+  "@loading_project_data": {
+    "description": "Loading message for project data."
+  },
+  "requirements_for_project": "Vereisten voor {projectName}",
+  "@requirements_for_project": {
+    "description": "Title for requirements display, with project name placeholder.",
+    "placeholders": {
+      "projectName": {
+        "type": "String"
+      }
+    }
+  },
+  "ai_rate_limits_title": "AI Snelheidslimieten",
+  "@ai_rate_limits_title": {
+    "description": "Title for AI rate limits settings section."
+  },
+  "max_requests_per_minute": "Max verzoeken per minuut",
+  "@max_requests_per_minute": {
+    "description": "Label for maximum AI requests per minute setting."
+  },
+  "cooldown_seconds": "Afkoelperiode (seconden)",
+  "@cooldown_seconds": {
+    "description": "Label for cooldown period after rate limit is exceeded."
+  },
+  "rate_limit_exceeded": "Snelheidslimiet overschreden. Wacht {seconds} seconden.",
+  "@rate_limit_exceeded": {
+    "description": "Error message when rate limit is exceeded, with seconds placeholder.",
+    "placeholders": {
+      "seconds": {
+        "type": "int"
+      }
+    }
+  },
+  "ai_config_saved": "AI configuratie succesvol opgeslagen",
+  "@ai_config_saved": {
+    "description": "Success message when AI rate limits are saved."
+  },
+  "max_requests_per_window": "Max verzoeken per venster",
+  "@max_requests_per_window": {
+    "description": "Label for maximum requests per time window setting."
+  },
+  "ai_max_requests_label": "AI Max Verzoeken",
+  "@ai_max_requests_label": {
+    "description": "Label for AI maximum requests configuration section."
+  },
+  "ai_requests_per_minute": "verzoeken per minuut",
+  "@ai_requests_per_minute": {
+    "description": "Unit label showing requests per minute for rate limiting."
+  },
+  "ai_retry_attempt": "AI-verzoek opnieuw proberen over {seconds} seconden...",
+  "@ai_retry_attempt": {
+    "description": "Message shown during AI retry backoff period.",
+    "placeholders": {
+      "seconds": {
+        "type": "int"
+      }
+    }
+  },
+  "ai_backoff_waiting": "Wachten op AI-herpoging...",
+  "@ai_backoff_waiting": {
+    "description": "Message shown while waiting for AI retry."
+  },
+  "ai_rate_limit_retry_failed": "AI-verzoek mislukt na herpogingen. Probeer het later opnieuw.",
+  "@ai_rate_limit_retry_failed": {
+    "description": "Error message when AI request fails after maximum retries."
+  },
+  "ai_request_queued": "Verzoek in wachtrij – verwerking op achtergrond...",
+  "@ai_request_queued": {
+    "description": "Message shown when AI request is queued for background processing."
+  },
+  "ai_queue_processing": "{count} verzoeken in wachtrij verwerken...",
+  "@ai_queue_processing": {
+    "description": "Message showing number of queued requests being processed.",
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "description": "Number of queued requests"
+      }
+    }
+  },
+  "ai_burst_handled": "Piek afgehandeld – {processed} verzoeken vandaag verwerkt",
+  "@ai_burst_handled": {
+    "description": "Status message showing burst handling success with daily count.",
+    "placeholders": {
+      "processed": {
+        "type": "int",
+        "description": "Number of requests processed today"
+      }
+    }
+  },
+  "queue_length": "{count} in wachtrij",
+  "@queue_length": {
+    "description": "Badge text showing number of pending requests in queue.",
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "description": "Number of pending requests"
+      }
+    }
+  },
+  "ai_usage_history": "AI Gebruiks Historie",
+  "@ai_usage_history": {
+    "description": "Title for AI usage history dashboard section."
+  },
+  "total_tokens": "Totaal Tokens",
+  "@total_tokens": {
+    "description": "Label for total token count display."
+  },
+  "estimated_cost": "Geschatte Kosten",
+  "@estimated_cost": {
+    "description": "Label for estimated cost display."
+  },
+  "usage_per_project": "Gebruik per Project",
+  "@usage_per_project": {
+    "description": "Label for usage statistics per project."
+  },
+  "ai_usage_export": "Gebruiksgegevens Exporteren",
+  "@ai_usage_export": {
+    "description": "Button text for exporting AI usage data."
   }
+}
 }

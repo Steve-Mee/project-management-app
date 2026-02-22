@@ -5,7 +5,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:my_project_management_app/core/providers.dart';
+import 'package:my_project_management_app/core/providers/notification_providers.dart';
+import 'package:my_project_management_app/core/providers/task_providers.dart';
 import 'package:my_project_management_app/core/services/app_logger.dart';
 import 'package:my_project_management_app/models/task_model.dart';
 import 'package:my_project_management_app/core/repository/settings_repository.dart';
@@ -76,6 +77,8 @@ class HiveInitializer {
         'project_meta': await _exportProjectMetaBox(),
         'settings': await _exportGenericBox('settings'),
         'auth': await _exportGenericBox('auth'),
+        'project_filters': await _exportGenericBox('project_filters'),
+        'saved_views': await _exportGenericBox('saved_views'),
       },
     };
 
@@ -110,6 +113,8 @@ class HiveInitializer {
     await _restoreProjectMetaBox(boxes['project_meta']);
     await _restoreGenericBox('settings', boxes['settings']);
     await _restoreGenericBox('auth', boxes['auth']);
+    await _restoreGenericBox('project_filters', boxes['project_filters']);
+    await _restoreGenericBox('saved_views', boxes['saved_views']);
   }
 
   static Future<Map<String, dynamic>> _exportProjectsBox() async {
@@ -280,13 +285,12 @@ class _ProjectsInitializerState extends ConsumerState<ProjectsInitializer> {
 
   Future<void> _initializeProjects() async {
     try {
-      // Get the repository instance
-      final repository = ref.read(projectRepositoryProvider);
-      
-      // Initialize the projects notifier with the repository
-      await ref.read(projectsProvider.notifier).initialize(repository);
+      // Projects notifier automatically initializes with repository in build()
 
-      final notificationsEnabled = ref.read(notificationsProvider);
+      final notificationsEnabled = ref.watch(notificationsProvider).maybeWhen(
+        data: (enabled) => enabled,
+        orElse: () => false,
+      );
       if (notificationsEnabled) {
         final taskRepository = await ref.read(taskRepositoryProvider.future);
         final notificationService = ref.read(notificationServiceProvider);

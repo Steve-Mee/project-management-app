@@ -31,7 +31,7 @@ class ABTestingService {
     }
     final group = _stableGroup(userId);
     await _box.put(_groupKey(userId), group);
-    AppLogger.event('ab_group_assigned', details: {'id': userId, 'group': group});
+    AppLogger.event('ab_group_assigned', params: {'id': userId, 'group': group});
     return group;
   }
 
@@ -56,7 +56,7 @@ class ABTestingService {
       }
       await _box.put(_configKey, configs);
       await _box.put(_lastFetchKey, DateTime.now().toIso8601String());
-      AppLogger.event('ab_configs_fetched', details: {'count': configs.length});
+      AppLogger.event('ab_configs_fetched', params: {'count': configs.length});
     } catch (e) {
       AppLogger.instance.w('Failed to fetch A/B configs', error: e);
     }

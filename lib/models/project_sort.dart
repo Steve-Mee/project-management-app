@@ -2,6 +2,8 @@ enum ProjectSort {
   name,
   progress,
   priority,
+  createdDate,
+  status,
 }
 
 extension ProjectSortX on ProjectSort {
@@ -13,6 +15,10 @@ extension ProjectSortX on ProjectSort {
         return 'Voortgang';
       case ProjectSort.priority:
         return 'Prioriteit';
+      case ProjectSort.createdDate:
+        return 'Datum';
+      case ProjectSort.status:
+        return 'Status';
     }
   }
 }

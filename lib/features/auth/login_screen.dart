@@ -6,7 +6,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:window_manager/window_manager.dart';
 import 'package:animate_do/animate_do.dart';
 import 'package:my_project_management_app/generated/app_localizations.dart';
-import '../../core/providers.dart';
+import '../../core/providers/auth_providers.dart';
+import '../../core/providers/theme_providers.dart';
 
 /// Login screen for basic authentication.
 class LoginScreen extends ConsumerStatefulWidget {
@@ -22,12 +23,24 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   bool _submitting = false;
   bool _showPassword = false;
   bool _enableAutoLogin = false;
+  bool _usePasswordLogin = false;
+  bool? _biometricAvailable;
 
   @override
   void dispose() {
     _usernameController.dispose();
     _passwordController.dispose();
     super.dispose();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_biometricAvailable == null) {
+      ref.read(authProvider.notifier).isBiometricAvailable().then((value) {
+        if (mounted) setState(() => _biometricAvailable = value);
+      });
+    }
   }
 
   Future<void> _submitLogin() async {
@@ -44,10 +57,27 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       _submitting = true;
     });
 
-    final success = await ref
-        .read(authProvider.notifier)
-        .login(username, password, enableAutoLogin: _enableAutoLogin);
-    if (!success) {
+    try {
+      final success = await ref
+          .read(authProvider.notifier)
+          .login(username, password, enableAutoLogin: _enableAutoLogin);
+      if (!success) {
+        _showSnackBar(l10n.loginFailedMessage);
+      } else {
+        // Check if biometric can be enabled
+        final biometricAvailable = await ref.read(authProvider.notifier).isBiometricAvailable();
+        final biometricEnabled = ref.read(biometricLoginProvider).maybeWhen(
+          data: (enabled) => enabled,
+          orElse: () => false,
+        );
+        if (biometricAvailable && !biometricEnabled) {
+          await _showBiometricDialog();
+        }
+      }
+    } on RateLimitExceededException catch (e) {
+      _showSnackBar(l10n.rateLimitExceeded(e.backoffDuration.inSeconds));
+      // NOTE: converted to issue 040
+    } catch (e) {
       _showSnackBar(l10n.loginFailedMessage);
     }
 
@@ -250,6 +280,53 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     repeatController.dispose();
   }
 
+  Future<void> _showBiometricDialog() async {
+    final l10n = AppLocalizations.of(context)!;
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(l10n.enableBiometricDialogTitle),
+        content: Text(l10n.enableBiometricDialogMessage),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: Text(l10n.enableBiometricDialogNo),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: Text(l10n.enableBiometricDialogYes),
+          ),
+        ],
+      ),
+    );
+
+    if (result == true && mounted) {
+      final username = _usernameController.text.trim();
+      final password = _passwordController.text;
+      final enrolled = await ref
+          .read(authProvider.notifier)
+          .enrollBiometrics(username, password);
+      if (enrolled) {
+        await ref.read(biometricLoginProvider.notifier).setEnabled(true);
+        _showSnackBar(l10n.biometric_enroll_success);
+      } else {
+        _showSnackBar(l10n.biometric_auth_failed);
+      }
+    }
+  }
+
+  Future<void> _authenticateBiometric() async {
+    final l10n = AppLocalizations.of(context)!;
+    setState(() => _submitting = true);
+    final success = await ref.read(authProvider.notifier).authenticateWithBiometrics();
+    if (!success) {
+      _showSnackBar(l10n.biometric_auth_failed);
+    }
+    if (mounted) {
+      setState(() => _submitting = false);
+    }
+  }
+
   Widget _buildRuleRow(BuildContext context, String label, bool satisfied) {
     final color = satisfied
         ? Theme.of(context).colorScheme.primary
@@ -281,6 +358,15 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final locale = ref.watch(localeProvider);
+    final biometricEnabled = ref.watch(biometricLoginProvider).maybeWhen(
+      data: (enabled) => enabled,
+      orElse: () => false,
+    );
+    if (_biometricAvailable == null) {
+      ref.read(authProvider.notifier).isBiometricAvailable().then((value) {
+        if (mounted) setState(() => _biometricAvailable = value);
+      });
+    }
     return Scaffold(
       body: CustomScrollView(
         slivers: [
@@ -366,7 +452,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           ),
                           const SizedBox(height: 12),
                           DropdownButtonFormField<String?>(
-                            initialValue: locale?.languageCode,
+                            initialValue: locale.maybeWhen(
+                              data: (loc) => loc?.languageCode,
+                              orElse: () => null,
+                            ),
                             decoration: InputDecoration(
                               labelText: l10n.languageLabel,
                               border: OutlineInputBorder(
@@ -438,76 +527,109 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                             },
                           ),
                           const SizedBox(height: 24),
-                          TextField(
-                            key: const ValueKey('login_username'),
-                            controller: _usernameController,
-                            textInputAction: TextInputAction.next,
-                            decoration: InputDecoration(
-                              labelText: l10n.usernameLabel,
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              prefixIcon: const Icon(Icons.person),
-                            ),
-                          ),
-                          const SizedBox(height: 16),
-                          TextField(
-                            key: const ValueKey('login_password'),
-                            controller: _passwordController,
-                            obscureText: !_showPassword,
-                            textInputAction: TextInputAction.done,
-                            onSubmitted: (_) => _submitLogin(),
-                            decoration: InputDecoration(
-                              labelText: l10n.passwordLabel,
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              prefixIcon: const Icon(Icons.lock),
-                              suffixIcon: IconButton(
-                                icon: Icon(
-                                  _showPassword
-                                      ? Icons.visibility_off
-                                      : Icons.visibility,
-                                ),
-                                onPressed: () {
-                                  setState(() {
-                                    _showPassword = !_showPassword;
-                                  });
-                                },
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 20),
-                          CheckboxListTile(
-                            value: _enableAutoLogin,
-                            onChanged: (value) {
-                              setState(() {
-                                _enableAutoLogin = value ?? false;
-                              });
-                            },
-                            title: const Text('Auto-login inschakelen'),
-                            subtitle: const Text(
-                              'Automatisch inloggen bij volgende app start',
-                            ),
-                            controlAffinity: ListTileControlAffinity.leading,
-                          ),
-                          const SizedBox(height: 20),
-                          SizedBox(
-                            width: double.infinity,
-                            child: ElevatedButton(
-                              key: const ValueKey('login_button'),
-                              onPressed: _submitting ? null : _submitLogin,
-                              child: _submitting
-                                  ? const SizedBox(
-                                      height: 20,
-                                      width: 20,
-                                      child: CircularProgressIndicator(
-                                        strokeWidth: 2,
+                          if (biometricEnabled && (_biometricAvailable ?? false) && !_usePasswordLogin) ...[
+                            SizedBox(
+                              width: double.infinity,
+                              child: ElevatedButton(
+                                onPressed: _submitting ? null : _authenticateBiometric,
+                                child: _submitting
+                                    ? const SizedBox(
+                                        height: 20,
+                                        width: 20,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                        ),
+                                      )
+                                    : Row(
+                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        children: [
+                                          Icon(Icons.fingerprint),
+                                          const SizedBox(width: 8),
+                                          Text(l10n.loginWithBiometric),
+                                        ],
                                       ),
-                                    )
-                                  : Text(l10n.loginButton),
+                              ),
                             ),
-                          ),
+                            const SizedBox(height: 12),
+                            SizedBox(
+                              width: double.infinity,
+                              child: TextButton(
+                                onPressed: () => setState(() => _usePasswordLogin = true),
+                                child: Text(l10n.use_password_instead),
+                              ),
+                            ),
+                          ] else ...[
+                            TextField(
+                              key: const ValueKey('login_username'),
+                              controller: _usernameController,
+                              textInputAction: TextInputAction.next,
+                              decoration: InputDecoration(
+                                labelText: l10n.usernameLabel,
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                prefixIcon: const Icon(Icons.person),
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                            TextField(
+                              key: const ValueKey('login_password'),
+                              controller: _passwordController,
+                              obscureText: !_showPassword,
+                              textInputAction: TextInputAction.done,
+                              onSubmitted: (_) => _submitLogin(),
+                              decoration: InputDecoration(
+                                labelText: l10n.passwordLabel,
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                prefixIcon: const Icon(Icons.lock),
+                                suffixIcon: IconButton(
+                                  icon: Icon(
+                                    _showPassword
+                                        ? Icons.visibility_off
+                                        : Icons.visibility,
+                                  ),
+                                  onPressed: () {
+                                    setState(() {
+                                      _showPassword = !_showPassword;
+                                    });
+                                  },
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 20),
+                            CheckboxListTile(
+                              value: _enableAutoLogin,
+                              onChanged: (value) {
+                                setState(() {
+                                  _enableAutoLogin = value ?? false;
+                                });
+                              },
+                              title: const Text('Auto-login inschakelen'),
+                              subtitle: const Text(
+                                'Automatisch inloggen bij volgende app start',
+                              ),
+                              controlAffinity: ListTileControlAffinity.leading,
+                            ),
+                            const SizedBox(height: 20),
+                            SizedBox(
+                              width: double.infinity,
+                              child: ElevatedButton(
+                                key: const ValueKey('login_button'),
+                                onPressed: _submitting ? null : _submitLogin,
+                                child: _submitting
+                                    ? const SizedBox(
+                                        height: 20,
+                                        width: 20,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                        ),
+                                      )
+                                    : Text(l10n.loginButton),
+                              ),
+                            ),
+                          ],
                           const SizedBox(height: 12),
                           TextButton(
                             onPressed: _submitting ? null : _showRegisterDialog,

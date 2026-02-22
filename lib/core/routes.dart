@@ -14,7 +14,8 @@ import '../features/ai_chat/ai_chat_screen.dart';
 import '../features/settings/settings_screen.dart';
 import '../features/admin/admin_screen.dart';
 import '../features/ai_usage/ai_usage_screen.dart';
-import 'providers.dart';
+import 'providers/auth_providers.dart';
+import 'providers/theme_providers.dart';
 import 'auth/permissions.dart';
 
 /// Navigation route definitions for the application

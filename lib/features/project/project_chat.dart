@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:my_project_management_app/core/providers.dart';
+import 'package:my_project_management_app/core/providers/auth_providers.dart';
+import 'package:my_project_management_app/core/providers/project_providers.dart';
 import 'package:my_project_management_app/models/project_model.dart';
+
 
 /// Model for chat messages
 class ChatMessage {
@@ -349,10 +351,11 @@ class _ProjectChatState extends ConsumerState<ProjectChat> {
     try {
       // Get current user for compliance logging
       final currentUserAsync = ref.read(currentUserProvider);
-      final currentUser = currentUserAsync.maybeWhen(
+      final currentUserValue = currentUserAsync.maybeWhen(
         data: (user) => user,
-        orElse: () => throw Exception('User not authenticated'),
+        orElse: () => null,
       );
+      final currentUser = currentUserValue;
 
       if (currentUser == null) {
         throw Exception('User not found');

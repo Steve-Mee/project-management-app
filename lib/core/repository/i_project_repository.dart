@@ -1,6 +1,28 @@
 /// Abstract interface for project repository
 /// Allows easy swapping of implementations (Hive, Supabase, mock for tests, etc.)
+library;
 import 'package:my_project_management_app/models/project_model.dart';
+
+/// Filter criteria for projects
+class ProjectFilter {
+  final String? status;
+  final String? searchQuery;
+  final DateTime? startDate;
+  final DateTime? endDate;
+  final String? priority;
+  final String? ownerId;
+  final List<String>? tags;
+
+  const ProjectFilter({
+    this.status,
+    this.searchQuery,
+    this.startDate,
+    this.endDate,
+    this.priority,
+    this.ownerId,
+    this.tags,
+  });
+}
 
 /// Define abstract class `IProjectRepository`.
 /// Keep method signatures narrow and backend-agnostic to allow swapping.
@@ -41,6 +63,8 @@ abstract class IProjectRepository {
     Map<String, Object?>? metadata,
   });
 
+  /// Efficient direct fetch of a single project by ID (Hive box.get)
+  /// Preferred over loading all projects
   Future<ProjectModel?> getProjectById(String id);
 
   // These helpers are present because some repository implementations
@@ -72,4 +96,32 @@ abstract class IProjectRepository {
   // Future methods to consider:
   // Future<List<ProjectModel>> getProjectsPaginated(int page, int limit);
   // Future<List<ProjectModel>> getProjectsByStatus(String status);
+
+  /// Fetch projects with pagination for large lists
+  /// `page` starts at 1
+  Future<List<ProjectModel>> getProjectsPaginated({
+    required int page,
+    required int limit,
+    String? statusFilter,
+    String? searchQuery,
+  });
+
+  /// Fetch projects filtered by a single status
+  Future<List<ProjectModel>> getProjectsByStatus(String status);
+
+  /// Advanced filtering with multiple criteria
+  Future<List<ProjectModel>> getFilteredProjects(ProjectFilter filter, {List<ProjectFilterConditions> extraConditions = const []});
+
+  /// Sync methods for future Supabase integration
+  /// NOTE: converted to issue 039
+  // Future<void> syncProjectsToSupabase();
+  // Future<void> syncProjectsFromSupabase();
+  // Future<void> resolveSyncConflicts(List<SyncConflict> conflicts);
+}
+
+/// Advanced filter conditions for projects
+class ProjectFilterConditions {
+  final bool Function(ProjectModel) condition;
+
+  const ProjectFilterConditions(this.condition);
 }

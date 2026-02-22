@@ -4,7 +4,9 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_spinkit/flutter_spinkit.dart';
 import 'package:my_project_management_app/generated/app_localizations.dart';
 // bring in only the necessary providers to avoid name clashes
-import '../../core/providers.dart' show aiChatProvider, useProjectFilesProvider, privacyConsentProvider, projectsProvider, AiChatState;
+import '../../core/providers/ai/index.dart' show aiChatProvider, useProjectFilesProvider, AiChatState;
+import '../../core/providers/auth_providers.dart' show privacyConsentProvider;
+import '../../core/providers/project_providers.dart' show projectsProvider;
 import '../../core/services/project_file_service.dart';
 import '../../models/chat_message_model.dart';
 
@@ -67,46 +69,52 @@ class _AiChatModalState extends ConsumerState<AiChatModal> {
 
   @override
   Widget build(BuildContext context) {
-    final chatState = ref.watch(aiChatProvider);
+    final asyncChatState = ref.watch(aiChatProvider);
     final keyboardHeight = MediaQuery.of(context).viewInsets.bottom;
     final dialogHeight = MediaQuery.of(context).size.height * 0.65 - keyboardHeight.clamp(0, 200);
 
-    if (chatState.error != null && !_isErrorDialogVisible) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        _showErrorDialog(chatState.error!);
-      });
-    }
+    return asyncChatState.when(
+      data: (chatState) {
+        if (chatState.error != null && !_isErrorDialogVisible) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            _showErrorDialog(chatState.error!);
+          });
+        }
 
-    return Dialog(
-      backgroundColor: Colors.transparent,
-      insetPadding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 24.h),
-      child: Container(
-        width: double.infinity,
-        height: dialogHeight,
-        decoration: BoxDecoration(
-          color: Theme.of(context).scaffoldBackgroundColor,
-          borderRadius: BorderRadius.circular(16.r),
-        ),
-        child: Column(
-          children: [
-            // Header
-            _buildHeader(context),
-            
-            // Chat messages and input
-            Expanded(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Expanded(
-                    child: _buildMessagesList(chatState),
-                  ),
-                  _buildInputField(chatState),
-                ],
-              ),
+        return Dialog(
+          backgroundColor: Colors.transparent,
+          insetPadding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 24.h),
+          child: Container(
+            width: double.infinity,
+            height: dialogHeight,
+            decoration: BoxDecoration(
+              color: Theme.of(context).scaffoldBackgroundColor,
+              borderRadius: BorderRadius.circular(16.r),
             ),
-          ],
-        ),
-      ),
+            child: Column(
+              children: [
+                // Header
+                _buildHeader(context),
+                
+                // Chat messages and input
+                Expanded(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Expanded(
+                        child: _buildMessagesList(chatState),
+                      ),
+                      _buildInputField(chatState),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (error, stack) => Center(child: Text('Error: $error')),
     );
   }
 
@@ -425,7 +433,10 @@ class _AiChatModalState extends ConsumerState<AiChatModal> {
       return userInput;
     }
 
-    final consentEnabled = ref.read(privacyConsentProvider);
+    final consentEnabled = ref.read(privacyConsentProvider).maybeWhen(
+      data: (enabled) => enabled,
+      orElse: () => false,
+    );
     if (!consentEnabled) {
       _showSnackBar(l10n.enableConsentInSettings);
       return userInput;
@@ -552,14 +563,16 @@ class _AiChatModalState extends ConsumerState<AiChatModal> {
   }
 
   String? _lastUserMessage() {
-    final messages = ref.read(aiChatProvider).messages;
-    for (var i = messages.length - 1; i >= 0; i -= 1) {
-      final message = messages[i];
-      if (message.isUser) {
-        return message.content;
+    final asyncState = ref.read(aiChatProvider);
+    if (asyncState.hasValue) {
+      final messages = asyncState.value!.messages;
+      for (var i = messages.length - 1; i >= 0; i -= 1) {
+        final message = messages[i];
+        if (message.isUser) {
+          return message.content;
+        }
       }
     }
-
     return null;
   }
 

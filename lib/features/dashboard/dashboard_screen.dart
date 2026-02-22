@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math';
 
 import 'package:flutter/material.dart';
@@ -5,25 +6,29 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:shimmer/shimmer.dart';
 import 'package:fl_chart/fl_chart.dart';
-import 'package:dashboard_grid/dashboard_grid.dart';
 import 'package:animate_do/animate_do.dart';
+import 'package:intl/intl.dart';
 import 'package:my_project_management_app/generated/app_localizations.dart';
-import 'package:go_router/go_router.dart';
 import 'package:my_project_management_app/core/auth/permissions.dart';
-import '../../core/providers.dart';
+import 'package:my_project_management_app/core/providers/project_providers.dart';
+import 'package:my_project_management_app/core/repository/i_project_repository.dart' as repo;
+import '../../core/providers/auth_providers.dart';
 import '../../core/theme.dart';
 import '../../models/project_meta.dart';
 import '../../models/project_model.dart';
 import '../../models/project_sort.dart';
 import '../ai_chat/ai_chat_modal.dart';
-import 'widgets/welcome_header_widget.dart';
-import 'widgets/empty_state_widget.dart';
-import 'widgets/filters_sort_widget.dart';
 import 'widgets/error_state_widget.dart';
 import 'widgets/loading_more_widget.dart';
-import 'widgets/recent_workflows_header_widget.dart';
-import 'widgets/task_chart_widget.dart';
 import 'widgets/project_card_widget.dart';
+import 'widgets/saved_view_widget.dart';
+import '../project/widgets/project_filter_dialog.dart';
+
+/// Filter state for projects list
+// final currentProjectFilterProvider = StateProvider<ProjectFilterParams>((ref) => const ProjectFilterParams());
+
+/// Sorting state for projects list
+final currentProjectSortProvider = StateProvider<ProjectSort>((ref) => ProjectSort.name);
 
 /// Dashboard screen - responsive main page with projects overview
 class DashboardScreen extends ConsumerStatefulWidget {
@@ -53,27 +58,37 @@ class _ChartColors {
 
 class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   final ScrollController _scrollController = ScrollController();
-  late final ProviderSubscription<String> _searchSubscription;
+  Timer? _debounce;
   static const int _pageSize = 9;
-  int _visibleCount = _pageSize;
-  String _selectedStatus = 'All';
-  ProjectSort _sortBy = ProjectSort.name;
+
+  // View mode: projects or saved views dashboard
+  bool _showSavedViewsDashboard = false;
+
+  // pagination state
+  int _page = 1;
+  bool _hasMore = true;
+  bool _isLoading = false;
+  List<ProjectModel> _projects = [];
+
+  // advanced filters state
+  bool _showAdvancedFilters = false;
+  RangeValues _progressRange = const RangeValues(0, 100);
+  // ignore: prefer_final_fields
+  Set<String> _selectedPriorities = {};
+  // ignore: prefer_final_fields
+  List<String> _selectedTags = [];
+  String? _customConditionType;
+  String? _customConditionValue;
+  String? _selectedPriority;
+  DateTime? _startDate;
+  DateTime? _endDate;
+
+  // we no longer keep local sort/status values; read from providers
 
   @override
   void initState() {
     super.initState();
     _scrollController.addListener(_onScroll);
-    _searchSubscription = ref.listenManual<String>(
-      searchQueryProvider,
-      (_, _) {
-      if (!mounted) {
-        return;
-      }
-      setState(() {
-        _visibleCount = _pageSize;
-      });
-      },
-    );
     // _loadDashboardConfig(); // Removed, now using provider
   }
 
@@ -88,125 +103,816 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   //   ];
   // }
 
-  Widget _buildWidgetForType(String type, List<ProjectModel> projects) {
-    switch (type) {
-      case 'welcome':
-        return FadeInDown(
-          duration: const Duration(milliseconds: 500),
-          child: const WelcomeHeaderWidget(),
-        );
-      case 'projectList':
-        final visibleProjects = projects.take(6).toList(); // Limit for grid
-        return Card(
-          elevation: 4,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
+  // custom widget formatter removed; not needed for combined list UI
+
+  /// Build shimmer loading skeleton
+  Widget _buildFilterBar(BuildContext context, ProjectFilter filter) {
+    final l10n = AppLocalizations.of(context)!;
+    final sort = ref.watch(currentProjectSortProvider);
+    final theme = Theme.of(context);
+
+    // helper for readable sort labels
+    String sortLabel(ProjectSort s) {
+      switch (s) {
+        case ProjectSort.name:
+          return 'Name A–Z';
+        case ProjectSort.progress:
+          return 'Progress ↓';
+        case ProjectSort.priority:
+          return 'Priority';
+        case ProjectSort.createdDate:
+          return 'Created (new→old)';
+        case ProjectSort.status:
+          return 'Status';
+      }
+    }
+
+    int countActiveFilters(ProjectFilter filter) {
+      int count = 0;
+      if (filter.priority != null) count++;
+      if (filter.status != null && filter.status != 'All') count++;
+      if (filter.ownerId != null) count++;
+      if (filter.searchQuery?.isNotEmpty == true) count++;
+      if (filter.startDate != null) count++;
+      if (filter.endDate != null) count++;
+      if (filter.dueDateStart != null) count++;
+      if (filter.dueDateEnd != null) count++;
+      return count;
+    }
+
+    String getSortChipLabel(ProjectFilter filter, AppLocalizations l10n) {
+      final sortBy = filter.sortBy ?? 'name';
+      switch (sortBy) {
+        case 'name':
+          return l10n.projectSortName;
+        case 'priority':
+          return l10n.projectSortPriority;
+        case 'startDate':
+          return l10n.projectSortStartDate;
+        case 'dueDate':
+          return l10n.projectSortDueDate;
+        case 'status':
+          return l10n.projectSortStatus;
+        default:
+          return sortBy;
+      }
+    }
+
+    return Column(
+      children: [
+        Card(
+          elevation: 2,
+          color: theme.colorScheme.surfaceContainerHighest,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
           child: Padding(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(12.0),
             child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  'Projects',
-                  style: Theme.of(context).textTheme.titleLarge,
-                ),
-                Expanded(
-                  child: GridView.builder(
-                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 2,
-                      crossAxisSpacing: 16,
-                      mainAxisSpacing: 16,
-                    ),
-                    itemCount: visibleProjects.length,
-                    itemBuilder: (context, index) {
-                      final project = visibleProjects[index];
-                      return FadeInRight(
-                        duration: Duration(milliseconds: 300 + (index * 100)),
-                        child: Hero(
-                          tag: 'project-${project.id}',
-                          child: Card(
-                            elevation: 4,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: InkWell(
-                              onTap: () {
-                                context.go('/projects/${project.id}');
-                              },
-                              borderRadius: BorderRadius.circular(12),
-                              child: ConstrainedBox(
-                                constraints: BoxConstraints(
-                                  minHeight: 120,
-                                  maxHeight: 160,
-                                ),
-                                child: Column(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Icon(
-                                      Icons.folder,
-                                      size: 32,
-                                      color: Theme.of(context).colorScheme.primary,
-                                    ),
-                                    const SizedBox(height: 8),
-                                    Flexible(
-                                      child: Text(
-                                        project.name,
-                                        style: Theme.of(context).textTheme.titleSmall,
-                                        textAlign: TextAlign.center,
-                                        maxLines: 2,
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 8),
-                                    SizedBox(
-                                      height: 4,
-                                      child: LinearProgressIndicator(
-                                        value: project.progress,
-                                        backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        decoration: InputDecoration(
+                          hintText: l10n.searchTasksHint,
+                          prefixIcon: const Icon(Icons.search),
+                          filled: true,
+                          fillColor: theme.colorScheme.surface,
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8.r),
+                            borderSide: BorderSide.none,
                           ),
                         ),
+                        onChanged: _updateSearch,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    DropdownButton<ProjectSort>(
+                      value: sort,
+                      dropdownColor: theme.colorScheme.surface,
+                      style: theme.textTheme.bodyMedium,
+                      items: ProjectSort.values
+                          .map((s) => DropdownMenuItem(
+                                value: s,
+                                child: Text(sortLabel(s)),
+                              ))
+                          .toList(),
+                      onChanged: (s) {
+                        if (s != null) {
+                          _updateSort(s);
+                        }
+                      },
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Wrap(
+                        spacing: 8,
+                        children: [
+                          ...['All', 'In Progress', 'Completed', 'On Hold', 'Cancelled']
+                              .map((status) => FilterChip(
+                                    label: Text(status),
+                                    selected: (filter.status ?? 'All') == status,
+                                    selectedColor: theme.colorScheme.secondaryContainer,
+                                    checkmarkColor: theme.colorScheme.onSecondaryContainer,
+                                    onSelected: (_) => _updateStatus(status),
+                                  )),
+                          // Sort Chip
+                          FilterChip(
+                            label: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(getSortChipLabel(filter, l10n)),
+                                const SizedBox(width: 4),
+                                Icon(
+                                  filter.sortAscending ? Icons.arrow_upward : Icons.arrow_downward,
+                                  size: 16,
+                                ),
+                              ],
+                            ),
+                            selected: false,
+                            onSelected: (_) async {
+                              final newFilter = await showProjectFilterDialog(
+                                context,
+                                filter,
+                                () => ref.read(persistentProjectFilterProvider.notifier).saveAsDefault(),
+                                _projects,
+                              );
+                              if (newFilter != null) {
+                                ref.read(persistentProjectFilterProvider.notifier).updateFilter(newFilter);
+                              }
+                            },
+                            avatar: const Icon(Icons.sort, size: 16),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    // Dashboard toggle button
+                    IconButton(
+                      icon: Icon(_showSavedViewsDashboard ? Icons.view_list : Icons.dashboard),
+                      tooltip: _showSavedViewsDashboard ? 'Show Projects' : 'Show Dashboard',
+                      onPressed: () {
+                        setState(() {
+                          _showSavedViewsDashboard = !_showSavedViewsDashboard;
+                          if (_showSavedViewsDashboard) {
+                            // Reset pagination when switching to dashboard view
+                            _resetPagination();
+                          }
+                        });
+                      },
+                    ),
+                    const SizedBox(width: 8),
+                    Badge.count(
+                      count: countActiveFilters(filter),
+                      isLabelVisible: countActiveFilters(filter) > 0,
+                      child: IconButton(
+                        icon: const Icon(Icons.filter_list),
+                        tooltip: l10n.filterButtonTooltip,
+                        onPressed: () async {
+                          final currentFilter = ProjectFilter(
+                            status: filter.status,
+                            ownerId: filter.ownerId,
+                            searchQuery: filter.searchQuery,
+                            priority: filter.priority,
+                            startDate: filter.startDate,
+                            endDate: filter.endDate,
+                          );
+                          final newFilter = await showProjectFilterDialog(
+                            context,
+                            currentFilter,
+                            () => ref.read(persistentProjectFilterProvider.notifier).saveAsDefault(),
+                            _projects, // Pass current filtered projects for export
+                          );
+                          if (newFilter != null) {
+                            ref.read(persistentProjectFilterProvider.notifier).updateFilter(newFilter);
+                          }
+                        },
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    FilledButton.tonal(
+                      onPressed: () {
+                        setState(() {
+                          _showAdvancedFilters = !_showAdvancedFilters;
+                        });
+                      },
+                      style: FilledButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text('Advanced'),
+                          const SizedBox(width: 4),
+                          Icon(
+                            _showAdvancedFilters ? Icons.expand_less : Icons.expand_more,
+                            size: 16,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+        AnimatedSwitcher(
+          duration: const Duration(milliseconds: 300),
+          transitionBuilder: (child, animation) {
+            return SizeTransition(
+              sizeFactor: animation,
+              axisAlignment: -1.0,
+              child: child,
+            );
+          },
+          child: _showAdvancedFilters ? _buildAdvancedFiltersCard(context, filter) : const SizedBox.shrink(),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildAdvancedFiltersCard(BuildContext context, ProjectFilter filter) {
+    final theme = Theme.of(context);
+
+    return Card(
+      key: const ValueKey('advanced_filters'),
+      elevation: 2,
+      margin: const EdgeInsets.only(top: 8),
+      color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.8),
+      surfaceTintColor: theme.colorScheme.surfaceTint,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Advanced Filters',
+              style: theme.textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 16),
+
+            // Progress Range Slider
+            Text(
+              'Progress Range',
+              style: theme.textTheme.bodyMedium?.copyWith(
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            const SizedBox(height: 8),
+            RangeSlider(
+              values: _progressRange,
+              min: 0,
+              max: 100,
+              divisions: 20,
+              labels: RangeLabels(
+                '${_progressRange.start.round()}%',
+                '${_progressRange.end.round()}%',
+              ),
+              onChanged: (values) {
+                setState(() {
+                  _progressRange = values;
+                });
+                _applyAdvancedFilters();
+              },
+              activeColor: theme.colorScheme.primary,
+              inactiveColor: theme.colorScheme.surfaceContainerHighest,
+            ),
+
+            const SizedBox(height: 16),
+
+            // Priority Multi-select Chips (using complexity as priority)
+            Text(
+              'Complexity',
+              style: theme.textTheme.bodyMedium?.copyWith(
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                _buildComplexityChip('simpel', Colors.green),
+                _buildComplexityChip('middel', Colors.orange),
+                _buildComplexityChip('complex', Colors.red),
+              ],
+            ),
+
+            const SizedBox(height: 16),
+
+            // Priority Dropdown
+            Text(
+              AppLocalizations.of(context)!.filterPriorityLabel,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            const SizedBox(height: 8),
+            DropdownButton<String?>(
+              value: _selectedPriority,
+              hint: const Text('Select Priority'),
+              items: [
+                const DropdownMenuItem(value: null, child: Text('Any')),
+                DropdownMenuItem(value: 'Low', child: Text(AppLocalizations.of(context)!.priorityLow)),
+                DropdownMenuItem(value: 'Medium', child: Text(AppLocalizations.of(context)!.priorityMedium)),
+                DropdownMenuItem(value: 'High', child: Text(AppLocalizations.of(context)!.priorityHigh)),
+              ],
+              onChanged: (value) {
+                setState(() {
+                  _selectedPriority = value;
+                });
+                _applyAdvancedFilters();
+              },
+            ),
+
+            const SizedBox(height: 16),
+
+            // Date Range
+            Text(
+              AppLocalizations.of(context)!.filterDateRangeLabel,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Expanded(
+                  child: TextFormField(
+                    decoration: InputDecoration(
+                      labelText: AppLocalizations.of(context)!.filterStartDateLabel,
+                    ),
+                    readOnly: true,
+                    controller: TextEditingController(
+                      text: _startDate != null ? _startDate!.toLocal().toString().split(' ')[0] : '',
+                    ),
+                    onTap: () async {
+                      final date = await showDatePicker(
+                        context: context,
+                        initialDate: _startDate ?? DateTime.now(),
+                        firstDate: DateTime(2000),
+                        lastDate: DateTime(2100),
                       );
+                      if (date != null) {
+                        setState(() {
+                          _startDate = date;
+                        });
+                        _applyAdvancedFilters();
+                      }
+                    },
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: TextFormField(
+                    decoration: InputDecoration(
+                      labelText: AppLocalizations.of(context)!.filterEndDateLabel,
+                    ),
+                    readOnly: true,
+                    controller: TextEditingController(
+                      text: _endDate != null ? _endDate!.toLocal().toString().split(' ')[0] : '',
+                    ),
+                    onTap: () async {
+                      final date = await showDatePicker(
+                        context: context,
+                        initialDate: _endDate ?? DateTime.now(),
+                        firstDate: DateTime(2000),
+                        lastDate: DateTime(2100),
+                      );
+                      if (date != null) {
+                        setState(() {
+                          _endDate = date;
+                        });
+                        _applyAdvancedFilters();
+                      }
                     },
                   ),
                 ),
               ],
             ),
-          ),
-        );
-      case 'taskChart':
-        return TaskChartWidget(projects: projects);
-      case 'aiUsage':
-        return const _AiUsageWidget();
-      case 'filters':
-        return FiltersSortWidget(
-          selectedStatus: _selectedStatus,
-          sortBy: _sortBy,
-          onStatusChanged: (status) {
-            setState(() {
-              _selectedStatus = status;
-              _visibleCount = _pageSize;
-            });
-          },
-          onSortChanged: (sort) {
-            setState(() {
-              _sortBy = sort;
-              _visibleCount = _pageSize;
-            });
-          },
-          projects: projects,
-        );
-      default:
-        return const Text('Unknown widget');
-    }
+
+            const SizedBox(height: 16),
+
+            // Category Multi-select
+            Text(
+              'Category',
+              style: theme.textTheme.bodyMedium?.copyWith(
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                ..._selectedTags.map((tag) {
+                  return InputChip(
+                    label: Text(tag),
+                    onDeleted: () {
+                      setState(() {
+                        _selectedTags.remove(tag);
+                      });
+                      _applyAdvancedFilters();
+                    },
+                    deleteIcon: const Icon(Icons.close, size: 16),
+                    backgroundColor: theme.colorScheme.secondaryContainer,
+                    labelStyle: TextStyle(color: theme.colorScheme.onSecondaryContainer),
+                  );
+                }),
+                ActionChip(
+                  label: const Text('+ Add Category'),
+                  onPressed: _showAddCategoryDialog,
+                  backgroundColor: theme.colorScheme.surface,
+                ),
+              ],
+            ),
+
+            const SizedBox(height: 16),
+
+            // Custom Condition Builder
+            Text(
+              'Custom Conditions',
+              style: theme.textTheme.bodyMedium?.copyWith(
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Expanded(
+                  flex: 2,
+                  child: DropdownButtonFormField<String>(
+                    decoration: InputDecoration(
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      filled: true,
+                      fillColor: theme.colorScheme.surface,
+                    ),
+                    hint: const Text('Condition'),
+                    initialValue: _customConditionType,
+                    items: const [
+                      DropdownMenuItem(value: 'progress_gt', child: Text('Progress >')),
+                      DropdownMenuItem(value: 'progress_lt', child: Text('Progress <')),
+                      DropdownMenuItem(value: 'name_contains', child: Text('Name contains')),
+                      DropdownMenuItem(value: 'description_contains', child: Text('Description contains')),
+                    ],
+                    onChanged: (value) {
+                      setState(() {
+                        _customConditionType = value;
+                      });
+                    },
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  flex: 1,
+                  child: TextField(
+                    decoration: InputDecoration(
+                      hintText: 'Value',
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      filled: true,
+                      fillColor: theme.colorScheme.surface,
+                    ),
+                    onChanged: (value) {
+                      _customConditionValue = value;
+                      _applyAdvancedFilters();
+                    },
+                  ),
+                ),
+              ],
+            ),
+
+            const SizedBox(height: 16),
+
+            // Action Buttons
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: _clearAdvancedFilters,
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                    ),
+                    child: const Text('Clear Advanced'),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: FilledButton(
+                    onPressed: _applyAdvancedFilters,
+                    style: FilledButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                    ),
+                    child: const Text('Apply'),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
-  /// Build shimmer loading skeleton
+  Widget _buildComplexityChip(String complexity, Color color) {
+    final isSelected = _selectedPriorities.contains(complexity);
+
+    return FilterChip(
+      label: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 8,
+            height: 8,
+            decoration: BoxDecoration(
+              color: color,
+              shape: BoxShape.circle,
+            ),
+          ),
+          const SizedBox(width: 6),
+          Text(complexity),
+        ],
+      ),
+      selected: isSelected,
+      selectedColor: color.withValues(alpha: 0.2),
+      checkmarkColor: color,
+      onSelected: (selected) {
+        setState(() {
+          if (selected) {
+            _selectedPriorities.add(complexity);
+          } else {
+            _selectedPriorities.remove(complexity);
+          }
+        });
+        _applyAdvancedFilters();
+      },
+    );
+  }
+
+  void _showAddCategoryDialog() {
+    final controller = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Add Category'),
+        content: TextField(
+          controller: controller,
+          decoration: const InputDecoration(hintText: 'Enter category name'),
+          onSubmitted: (value) {
+            if (value.isNotEmpty && !_selectedTags.contains(value)) {
+              setState(() {
+                _selectedTags.add(value);
+              });
+              _applyAdvancedFilters();
+            }
+            Navigator.of(context).pop();
+          },
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () {
+              final value = controller.text.trim();
+              if (value.isNotEmpty && !_selectedTags.contains(value)) {
+                setState(() {
+                  _selectedTags.add(value);
+                });
+                _applyAdvancedFilters();
+              }
+              Navigator.of(context).pop();
+            },
+            child: const Text('Add'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _applyAdvancedFilters() {
+    final conditions = <repo.ProjectFilterConditions>[];
+
+    // Progress range condition
+    if (_progressRange.start > 0 || _progressRange.end < 100) {
+      conditions.add(repo.ProjectFilterConditions(
+        (project) => project.progress >= _progressRange.start && project.progress <= _progressRange.end,
+      ));
+    }
+
+    // Complexity conditions (using complexity as priority)
+    if (_selectedPriorities.isNotEmpty) {
+      conditions.add(repo.ProjectFilterConditions(
+        (project) => _selectedPriorities.contains(project.complexity.name),
+      ));
+    }
+
+    // Category conditions (using category as tags)
+    if (_selectedTags.isNotEmpty) {
+      conditions.add(repo.ProjectFilterConditions(
+        (project) => project.category != null && _selectedTags.contains(project.category!),
+      ));
+    }
+
+    // Custom condition
+    if (_customConditionType != null && _customConditionValue != null && _customConditionValue!.isNotEmpty) {
+      switch (_customConditionType) {
+        case 'progress_gt':
+          final value = double.tryParse(_customConditionValue!);
+          if (value != null) {
+            conditions.add(repo.ProjectFilterConditions(
+              (project) => project.progress > value,
+            ));
+          }
+          break;
+        case 'progress_lt':
+          final value = double.tryParse(_customConditionValue!);
+          if (value != null) {
+            conditions.add(repo.ProjectFilterConditions(
+              (project) => project.progress < value,
+            ));
+          }
+          break;
+        case 'name_contains':
+          conditions.add(repo.ProjectFilterConditions(
+            (project) => project.name.toLowerCase().contains(_customConditionValue!.toLowerCase()),
+          ));
+          break;
+        case 'description_contains':
+          conditions.add(repo.ProjectFilterConditions(
+            (project) => (project.description ?? '').toLowerCase().contains(_customConditionValue!.toLowerCase()),
+          ));
+          break;
+      }
+    }
+
+    // Update the filter provider with extra conditions
+    ref.read(persistentProjectFilterProvider.notifier).updateFilter(
+      ProjectFilter(
+        status: ref.read(persistentProjectFilterProvider).status,
+        ownerId: ref.read(persistentProjectFilterProvider).ownerId,
+        searchQuery: ref.read(persistentProjectFilterProvider).searchQuery,
+        priority: _selectedPriority,
+        startDate: _startDate,
+        endDate: _endDate,
+        extraConditions: conditions,
+      ),
+    );
+
+    // Reset pagination to page 1
+    setState(() {
+      _page = 1;
+      _projects = [];
+      _hasMore = true;
+    });
+    // Projects will be reloaded automatically by the provider
+  }
+
+  void _clearAdvancedFilters() {
+    setState(() {
+      _progressRange = const RangeValues(0, 100);
+      _selectedPriorities.clear();
+      _selectedTags.clear();
+      _customConditionType = null;
+      _customConditionValue = null;
+      _selectedPriority = null;
+      _startDate = null;
+      _endDate = null;
+    });
+    _applyAdvancedFilters();
+  }
+
+  /// Build saved views dashboard
+  Widget _buildSavedViewsDashboard(BuildContext context, AppLocalizations l10n) {
+    final savedViews = ref.watch(dashboardViewsProvider);
+
+    if (savedViews.isEmpty) {
+      return _buildEmptySavedViewsState(context, l10n);
+    }
+
+    return RefreshIndicator(
+      onRefresh: () async {
+        // Refresh saved views from Supabase
+        await ref.read(savedProjectViewsProvider.notifier).syncFromSupabase();
+      },
+      child: CustomScrollView(
+        controller: _scrollController,
+        slivers: [
+          // Quick Overview Header
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: EdgeInsets.all(16.w),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Quick Overview',
+                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  SizedBox(height: 8.h),
+                  // Global stats could go here
+                  Text(
+                    'Your saved project views at a glance',
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+
+          // Saved Views Grid
+          SliverPadding(
+            padding: EdgeInsets.symmetric(horizontal: 16.w),
+            sliver: SliverGrid(
+              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: MediaQuery.of(context).size.width > 600 ? 3 : 2,
+                crossAxisSpacing: 8.w,
+                mainAxisSpacing: 8.h,
+                childAspectRatio: 1.2,
+              ),
+              delegate: SliverChildBuilderDelegate(
+                (context, index) {
+                  final savedView = savedViews[index];
+                  return SavedViewWidget(savedFilter: savedView);
+                },
+                childCount: savedViews.length,
+              ),
+            ),
+          ),
+
+          // Bottom padding
+          SliverPadding(
+            padding: EdgeInsets.only(bottom: 16.h),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEmptySavedViewsState(BuildContext context, AppLocalizations l10n) {
+    return Center(
+      child: Padding(
+        padding: EdgeInsets.all(32.w),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.dashboard_outlined,
+              size: 64.sp,
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
+            SizedBox(height: 16.h),
+            Text(
+              'No saved views yet',
+              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                fontWeight: FontWeight.w600,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            SizedBox(height: 8.h),
+            Text(
+              'Create your first saved view in the filter dialog to see it here on your dashboard.',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            SizedBox(height: 24.h),
+            FilledButton.icon(
+              onPressed: () {
+                // Switch to projects view and show filter dialog
+                setState(() {
+                  _showSavedViewsDashboard = false;
+                });
+                // The filter button will be available in the projects view
+              },
+              icon: const Icon(Icons.filter_list),
+              label: const Text('Create Saved View'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildShimmerLoading() {
     return AnimatedOpacity(
       opacity: 1.0,
@@ -238,22 +944,58 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
 
   @override
   void dispose() {
-    _searchSubscription.close();
+    _debounce?.cancel();
     _scrollController.dispose();
     super.dispose();
   }
 
   void _onScroll() {
-    if (!_scrollController.hasClients) {
-      return;
-    }
+    if (!_scrollController.hasClients || !_hasMore || _isLoading) return;
 
     final position = _scrollController.position;
     if (position.pixels >= position.maxScrollExtent - 200) {
-      setState(() {
-        _visibleCount += _pageSize;
-      });
+      _loadNextPage();
     }
+  }
+
+  void _loadNextPage() {
+    if (_isLoading || !_hasMore) return;
+
+    setState(() {
+      _isLoading = true;
+      _page += 1;
+    });
+  }
+
+  void _resetPagination() {
+    setState(() {
+      _page = 1;
+      _projects.clear();
+      _hasMore = true;
+      _isLoading = false;
+    });
+    if (_scrollController.hasClients) {
+      _scrollController.jumpTo(0);
+    }
+  }
+
+  void _updateSearch(String query) {
+    _debounce?.cancel();
+    _debounce = Timer(const Duration(milliseconds: 300), () {
+      final current = ref.read(persistentProjectFilterProvider);
+      ref.read(persistentProjectFilterProvider.notifier).updateFilter(
+        current.copyWith(searchQuery: query.isEmpty ? null : query),
+      );
+      _resetPagination();
+    });
+  }
+
+  void _updateStatus(String status) {
+    final current = ref.read(persistentProjectFilterProvider);
+    ref.read(persistentProjectFilterProvider.notifier).updateFilter(
+      current.copyWith(status: status == 'All' ? null : status),
+    );
+    _resetPagination();
   }
 
   _ChartColors _chartColors(BuildContext context) {
@@ -286,67 +1028,57 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
         .join(', ');
   }
 
-  Widget _buildProjectRow(BuildContext context, int rowIndex, List<ProjectModel> visibleProjects, bool isDesktop) {
-    if (isDesktop) {
-      const itemsPerRow = 3;
-      final start = rowIndex * itemsPerRow;
-      final end = min(start + itemsPerRow, visibleProjects.length);
-      final rowProjects = visibleProjects.sublist(start, end);
-
-      return Padding(
-        padding: EdgeInsets.only(bottom: 12.h),
-        child: Row(
-          children: List.generate(itemsPerRow, (colIndex) {
-            if (colIndex >= rowProjects.length) {
-              return const Spacer();
-            }
-
-            final project = rowProjects[colIndex];
-            return Expanded(
-              child: Padding(
-                padding: EdgeInsets.only(
-                  right: colIndex == itemsPerRow - 1 ? 0 : 12.w,
-                ),
-                child: AspectRatio(
-                  aspectRatio: 1 / 0.75,
-                  child: FadeInUp(
-                    duration: Duration(milliseconds: 400 + (rowIndex * itemsPerRow + colIndex) * 50),
-                    child: ProjectCardWidget(
-                      key: Key(project.id),
-                      project: project,
-                      onTap: () => _showProjectDetailSheet(context, project),
-                    ),
-                  ),
-                ),
-              ),
-            );
-          }),
-        ),
-      );
-    } else {
-      final project = visibleProjects[rowIndex];
-      return Padding(
-        padding: EdgeInsets.only(bottom: 12.h),
-        child: AspectRatio(
-          aspectRatio: 1 / 0.75,
-          child: FadeInUp(
-            duration: Duration(milliseconds: 400 + rowIndex * 100),
-            child: ProjectCardWidget(
-              key: Key(project.id),
-              project: project,
-              onTap: () => _showProjectDetailSheet(context, project),
-            ),
-          ),
-        ),
-      );
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    final projectsState = ref.watch(visibleProjectsProvider);
+    final filter = ref.watch(persistentProjectFilterProvider);
     final canUseAi = ref.watch(hasPermissionProvider(AppPermissions.useAi));
+
+    // watch paginated filtered projects data
+    final params = FilteredPaginationParams(
+      filter: filter,
+      page: _page,
+      limit: _pageSize,
+    );
+    final pageState = ref.watch(filteredProjectsPaginatedProvider(params));
+
+    // listen to new page results and append
+    ref.listen<AsyncValue<List<ProjectModel>>>(filteredProjectsPaginatedProvider(params),
+        (previous, next) {
+      next.whenData((newProjects) {
+        if (_page == 1) {
+          _projects = List.from(newProjects);
+        } else {
+          _projects.addAll(newProjects);
+        }
+        if (newProjects.length < _pageSize) {
+          _hasMore = false;
+        }
+        _sortProjectsLocal();
+        _isLoading = false;
+      });
+    });
+
+    Widget bodyContent;
+    if (_showSavedViewsDashboard) {
+      // Show saved views dashboard
+      bodyContent = _buildSavedViewsDashboard(context, l10n);
+    } else {
+      // Show projects list (existing functionality)
+      if (pageState.isLoading && _projects.isEmpty) {
+        bodyContent = _buildShimmerLoading();
+      } else if (pageState.hasError && _projects.isEmpty) {
+        bodyContent = ErrorStateWidget(
+          error: pageState.error!,
+          onRetry: () {
+            _resetPagination();
+          },
+        );
+      } else {
+        bodyContent = _buildListView();
+      }
+    }
 
     return Scaffold(
       body: Container(
@@ -361,26 +1093,50 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
           ),
         ),
         child: SafeArea(
-          child: SingleChildScrollView(
-            child: Center(
-              child: FadeIn(
-                duration: const Duration(milliseconds: 500),
-                child: ConstrainedBox(
-                  constraints: BoxConstraints(
-                    maxWidth: MediaQuery.of(context).size.width,
-                    maxHeight: MediaQuery.of(context).size.height,
-                  ),
-                  child: projectsState.when(
-                    loading: _buildShimmerLoading,
-                    error: (error, _) => ErrorStateWidget(
-                      error: error,
-                      onRetry: () => ref.read(projectsProvider.notifier).refresh(),
+          child: Column(
+            children: [
+              // Realtime notifications banner
+              Consumer(
+                builder: (context, ref, child) {
+                  final notifications = ref.watch(filterChangeNotificationsProvider);
+                  if (notifications.isEmpty) return const SizedBox.shrink();
+                  
+                  final latestNotification = notifications.last;
+                  return MaterialBanner(
+                    content: Text(
+                      'View "${latestNotification.viewName}" was ${latestNotification.changeType}d by another user',
+                      style: Theme.of(context).textTheme.bodyMedium,
                     ),
-                    data: (projects) => _buildDashboardContent(context, projects),
-                  ),
-                ),
+                    leading: Icon(
+                      latestNotification.changeType == 'save' ? Icons.save : Icons.delete,
+                      color: Theme.of(context).colorScheme.primary,
+                    ),
+                    actions: [
+                      TextButton(
+                        onPressed: () {
+                          ref.read(filterChangeNotificationsProvider.notifier).dismissNotification(latestNotification.id);
+                        },
+                        child: const Text('Dismiss'),
+                      ),
+                      if (latestNotification.changeType == 'save')
+                        TextButton(
+                          onPressed: () {
+                            // Switch to dashboard view to see the new view
+                            setState(() {
+                              _showSavedViewsDashboard = true;
+                            });
+                            ref.read(filterChangeNotificationsProvider.notifier).dismissNotification(latestNotification.id);
+                          },
+                          child: const Text('View Dashboard'),
+                        ),
+                    ],
+                    backgroundColor: Theme.of(context).colorScheme.secondaryContainer,
+                  );
+                },
               ),
-            ),
+              _buildFilterBar(context, filter),
+              Expanded(child: bodyContent),
+            ],
           ),
         ),
       ),
@@ -403,166 +1159,22 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   }
 
   /// Build main dashboard content with responsive layout
-  Widget _buildDashboardContent(
-    BuildContext context,
-    List<ProjectModel> projects,
-  ) {
-    final items = ref.watch(dashboardConfigProvider);
-    if (items.isEmpty) {
-      // Fallback to default layout
-      return _buildDefaultDashboard(context, projects);
-    }
+  // legacy dashboard helpers removed; combined list UI no longer uses them
 
-    return _buildCustomDashboard(context, items, projects);
-  }
 
-  /// Build custom dashboard with grid layout
-  Widget _buildCustomDashboard(
-    BuildContext context,
-    List<DashboardItem> items,
-    List<ProjectModel> projects,
-  ) {
-    final dashboardConfig = DashboardGrid(maxColumns: 4);
-    
-    // Add widgets to config
-    for (final item in items) {
-      dashboardConfig.addWidget(DashboardWidget(
-        id: '${item.widgetType}_${item.position['x']}_${item.position['y']}',
-        x: item.position['x'] ?? 0,
-        y: item.position['y'] ?? 0,
-        width: item.position['width'] ?? 2,
-        height: item.position['height'] ?? 1,
-        builder: (context) => Card(
-          elevation: 2,
-          color: Theme.of(context).colorScheme.surface,
-          child: Padding(
-            padding: EdgeInsets.all(16.w),
-            child: _buildWidgetForType(item.widgetType, projects),
-          ),
-        ),
-      ));
-    }
-
-    return Dashboard(
-      config: dashboardConfig,
-    );
-  }
-
-  Widget _buildDefaultDashboard(BuildContext context, List<ProjectModel> projects) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final isDesktop = constraints.maxWidth > 600;
-
-        // Filter projects based on search + status
-        final statusFilter = _selectedStatus;
-        final query = ref.watch(searchQueryProvider).toLowerCase();
-        final filteredProjects = projects
-            .where(
-              (p) =>
-                  p.name.toLowerCase().contains(query) ||
-                  p.status.toLowerCase().contains(query),
-            )
-            .where(
-              (p) => statusFilter == 'All' || p.status == statusFilter,
-            )
-            .toList();
-
-        final metaByProjectId = ref.watch(projectMetaProvider);
-        final sortedProjects =
-            _sortProjects(filteredProjects, metaByProjectId);
-
-        if (filteredProjects.isEmpty) {
-          return EmptyStateWidget(query: query);
-        }
-
-        final visibleProjects =
-          sortedProjects.take(_visibleCount).toList();
-        final hasMore = visibleProjects.length < sortedProjects.length;
-        final itemsPerRow = 3;
-        final rowCount = isDesktop
-            ? (visibleProjects.length / itemsPerRow).ceil()
-            : visibleProjects.length;
-        const headerCount = 2;
-        const footerCount = 3;
-        final totalCount = headerCount + rowCount + footerCount;
-
-        return ListView.builder(
-          controller: _scrollController,
-          padding: EdgeInsets.all(16.w),
-          itemCount: totalCount,
-          itemBuilder: (context, index) {
-            if (index == 0) {
-              return FadeInDown(
-                duration: const Duration(milliseconds: 500),
-                child: const WelcomeHeaderWidget(),
-              );
-            }
-
-            if (index == 1) {
-              return FadeInLeft(
-                duration: const Duration(milliseconds: 600),
-                child: FiltersSortWidget(
-                  selectedStatus: _selectedStatus,
-                  sortBy: _sortBy,
-                  onStatusChanged: (status) {
-                    setState(() {
-                      _selectedStatus = status;
-                      _visibleCount = _pageSize;
-                    });
-                  },
-                  onSortChanged: (sort) {
-                    setState(() {
-                      _sortBy = sort;
-                      _visibleCount = _pageSize;
-                    });
-                  },
-                  projects: projects,
-                ),
-              );
-            }
-
-            final projectStart = headerCount;
-            final projectEnd = projectStart + rowCount;
-            if (index >= projectStart && index < projectEnd) {
-              final rowIndex = index - projectStart;
-              return _buildProjectRow(context, rowIndex, visibleProjects, isDesktop);
-            }
-
-            final footerIndex = index - projectEnd;
-            if (footerIndex == 0) {
-              if (!hasMore) {
-                return const SizedBox.shrink();
-              }
-              return const LoadingMoreWidget();
-            }
-
-            if (footerIndex == 1) {
-              return const RecentWorkflowsHeaderWidget();
-            }
-
-            return TaskChartWidget(projects: projects);
-          },
-        );
-      },
-    );
-  }
-
-  List<ProjectModel> _sortProjects(
-    List<ProjectModel> projects,
-    Map<String, ProjectMeta> metaByProjectId,
-  ) {
-    final sorted = [...projects];
-    switch (_sortBy) {
+  // sort local accumulated projects according to provider state
+  void _sortProjectsLocal() {
+    final sort = ref.read(currentProjectSortProvider);
+    final metaByProjectId = ref.read(projectMetaProvider);
+    switch (sort) {
       case ProjectSort.name:
-        sorted.sort(
-          (a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()),
-        );
+        _projects.sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
         break;
       case ProjectSort.progress:
-        sorted.sort((a, b) => b.progress.compareTo(a.progress));
+        _projects.sort((a, b) => b.progress.compareTo(a.progress));
         break;
       case ProjectSort.priority:
-        sorted.sort((a, b) {
+        _projects.sort((a, b) {
           final metaA = metaByProjectId[a.id] ?? ProjectMeta.defaultFor(a.id);
           final metaB = metaByProjectId[b.id] ?? ProjectMeta.defaultFor(b.id);
           final urgencyCompare =
@@ -573,8 +1185,321 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
           return metaB.trackedSeconds.compareTo(metaA.trackedSeconds);
         });
         break;
+      case ProjectSort.createdDate:
+        // model doesn't have a createdAt field yet; leave order unchanged
+        break;
+      case ProjectSort.status:
+        _projects.sort((a, b) => a.status.compareTo(b.status));
+        break;
     }
-    return sorted;
+  }
+
+  void _updateSort(ProjectSort sort) {
+    ref.read(currentProjectSortProvider.notifier).state = sort;
+    _resetPagination();
+  }
+
+  Widget _buildListView() {
+    final filter = ref.watch(persistentProjectFilterProvider);
+    final l10n = AppLocalizations.of(context)!;
+    // center the list on wide layouts and cap the overall width so cards don't stretch
+    return LayoutBuilder(builder: (context, constraints) {
+      final maxWidth = constraints.maxWidth;
+      // determine number of columns for grid view
+      int columns = 1;
+      if (maxWidth > 1200) {
+        columns = 3;
+      } else if (maxWidth > 800) {
+        columns = 2;
+      }
+
+      List<Widget> activeFilterChips = [];
+
+      Color getPriorityColor(String priority) {
+        switch (priority) {
+          case 'High':
+            return Colors.red.shade600;
+          case 'Medium':
+            return Colors.orange.shade600;
+          case 'Low':
+            return Colors.green.shade600;
+          default:
+            return Theme.of(context).colorScheme.onSurface;
+        }
+      }
+
+      if (filter.priority != null) {
+        activeFilterChips.add(FilterChip(
+          label: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                Icons.circle,
+                size: 12,
+                color: getPriorityColor(filter.priority!),
+              ),
+              const SizedBox(width: 4),
+              Text(l10n.activeFilterPriority(filter.priority!)),
+            ],
+          ),
+          selected: false,
+          onSelected: (_) {},
+          onDeleted: () {
+            ref.read(persistentProjectFilterProvider.notifier).updateFilter(
+              ref.read(persistentProjectFilterProvider).copyWith(priority: null),
+            );
+          },
+        ));
+      }
+      if (filter.startDate != null) {
+        activeFilterChips.add(FilterChip(
+          label: Text(l10n.activeFilterStartDate(DateFormat('dd MMM').format(filter.startDate!))),
+          selected: false,
+          onSelected: (_) {},
+          onDeleted: () {
+            ref.read(persistentProjectFilterProvider.notifier).updateFilter(
+              ref.read(persistentProjectFilterProvider).copyWith(startDate: null),
+            );
+          },
+        ));
+      }
+      if (filter.endDate != null) {
+        activeFilterChips.add(FilterChip(
+          label: Text(l10n.activeFilterEndDate(DateFormat('dd MMM').format(filter.endDate!))),
+          selected: false,
+          onSelected: (_) {},
+          onDeleted: () {
+            ref.read(persistentProjectFilterProvider.notifier).updateFilter(
+              ref.read(persistentProjectFilterProvider).copyWith(endDate: null),
+            );
+          },
+        ));
+      }
+      if (filter.tags != null && filter.tags!.isNotEmpty) {
+        for (final tag in filter.tags!) {
+          activeFilterChips.add(FilterChip(
+            label: Text('#$tag'),
+            backgroundColor: Colors.purple.shade100,
+            selected: false,
+            onSelected: (_) {},
+            onDeleted: () {
+              final newTags = List<String>.from(filter.tags!)..remove(tag);
+              ref.read(persistentProjectFilterProvider.notifier).updateFilter(
+                ref.read(persistentProjectFilterProvider).copyWith(
+                  tags: newTags.isEmpty ? null : newTags,
+                ),
+              );
+            },
+          ));
+        }
+      }
+      if (filter.requiredTags != null && filter.requiredTags!.isNotEmpty) {
+        for (final tag in filter.requiredTags!) {
+          activeFilterChips.add(FilterChip(
+            label: Text('#$tag (required)'),
+            backgroundColor: Colors.red.shade100,
+            selected: false,
+            onSelected: (_) {},
+            onDeleted: () {
+              final newTags = List<String>.from(filter.requiredTags!)..remove(tag);
+              ref.read(persistentProjectFilterProvider.notifier).updateFilter(
+                ref.read(persistentProjectFilterProvider).copyWith(
+                  requiredTags: newTags.isEmpty ? null : newTags,
+                ),
+              );
+            },
+          ));
+        }
+      }
+
+      Widget content;
+      if (columns == 1) {
+        content = ListView.builder(
+          controller: _scrollController,
+          padding: EdgeInsets.all(16.w),
+          itemCount: _projects.length + (_hasMore ? 1 : 0),
+          itemBuilder: (context, index) {
+            if (index < _projects.length) {
+              final project = _projects[index];
+              return Padding(
+                padding: EdgeInsets.only(bottom: 12.h),
+                child: AspectRatio(
+                  aspectRatio: 1 / 0.75,
+                  child: FadeInUp(
+                    duration: Duration(milliseconds: 400 + index * 100),
+                    child: ProjectCardWidget(
+                      key: Key(project.id),
+                      project: project,
+                      onTap: () => _showProjectDetailSheet(context, project),
+                    ),
+                  ),
+                ),
+              );
+            }
+            return const LoadingMoreWidget();
+          },
+        );
+      } else {
+        content = GridView.builder(
+          controller: _scrollController,
+          padding: EdgeInsets.all(16.w),
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: columns,
+            mainAxisSpacing: 12.h,
+            crossAxisSpacing: 12.w,
+            childAspectRatio: 1 / 0.75,
+          ),
+          itemCount: _projects.length + (_hasMore ? 1 : 0),
+          itemBuilder: (context, index) {
+            if (index < _projects.length) {
+              final project = _projects[index];
+              return FadeInUp(
+                duration: Duration(milliseconds: 400 + index * 100),
+                child: ProjectCardWidget(
+                  key: Key(project.id),
+                  project: project,
+                  onTap: () => _showProjectDetailSheet(context, project),
+                ),
+              );
+            }
+            // show loading indicator spanning columns
+            return GridTile(
+              child: Padding(
+                padding: EdgeInsets.only(top: 24.h),
+                child: const LoadingMoreWidget(),
+              ),
+            );
+          },
+        );
+      }
+
+      Widget filterIndicator;
+      if (activeFilterChips.isNotEmpty) {
+        final allProjectsAsync = ref.watch(projectsProvider);
+        final totalCount = allProjectsAsync.maybeWhen(
+          data: (projects) => projects.length,
+          orElse: () => 0,
+        );
+        filterIndicator = Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                l10n.showingProjectsCount(_projects.length, totalCount),
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Expanded(
+                    child: Wrap(spacing: 8, children: activeFilterChips),
+                  ),
+                  TextButton.icon(
+                    onPressed: () {
+                      ref.read(persistentProjectFilterProvider.notifier).clearAll();
+                    },
+                    icon: Icon(Icons.clear_all, color: Theme.of(context).colorScheme.error),
+                    label: Text(l10n.clearAllFiltersButtonLabel),
+                    style: TextButton.styleFrom(
+                      foregroundColor: Theme.of(context).colorScheme.error,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        );
+      } else {
+        final allProjectsAsync = ref.watch(projectsProvider);
+        final totalCount = allProjectsAsync.maybeWhen(
+          data: (projects) => projects.length,
+          orElse: () => 0,
+        );
+        filterIndicator = Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          child: Text(
+            l10n.showingProjectsCount(_projects.length, totalCount),
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
+          ),
+        );
+      }
+
+      content = Column(
+        children: [
+          filterIndicator,
+          Expanded(
+            child: _projects.isEmpty && activeFilterChips.isNotEmpty
+                ? _buildEmptyState()
+                : content,
+          ),
+        ],
+      );
+
+      return Center(
+        child: ConstrainedBox(
+          constraints: BoxConstraints(maxWidth: min(1000.w, maxWidth)),
+          child: Card(
+            elevation: 2,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16.r),
+            ),
+            color: Theme.of(context).colorScheme.surface,
+            clipBehavior: Clip.antiAlias,
+            child: content,
+          ),
+        ),
+      );
+    });
+  }
+
+  Widget _buildEmptyState() {
+    final l10n = AppLocalizations.of(context)!;
+    final theme = Theme.of(context);
+
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.filter_list_off,
+              size: 64,
+              color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              l10n.noProjectsMatchFiltersTitle,
+              style: theme.textTheme.headlineSmall?.copyWith(
+                color: theme.colorScheme.onSurface,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              l10n.noProjectsMatchFiltersSubtitle,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 24),
+            FilledButton.icon(
+              onPressed: () {
+                ref.read(persistentProjectFilterProvider.notifier).clearAll();
+              },
+              icon: const Icon(Icons.clear_all),
+              label: Text(l10n.clearAllFiltersButtonLabel),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   /// Show project detail sheet with burndown chart
@@ -916,205 +1841,6 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
           ],
         ),
       ),
-    );
-  }
-}
-
-/// AI Usage Widget - displays token usage with chart and compliance note
-class _AiUsageWidget extends ConsumerWidget {
-  const _AiUsageWidget();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final aiUsageAsync = ref.watch(aiUsageProvider);
-    final theme = Theme.of(context);
-    final colors = _ChartColors(
-      primary: theme.colorScheme.primary,
-      secondary: theme.colorScheme.secondary,
-      success: theme.colorScheme.tertiary,
-      neutral: theme.colorScheme.outlineVariant,
-      grid: theme.colorScheme.outlineVariant.withValues(alpha: 0.4),
-      surface: theme.colorScheme.surface,
-    );
-
-    return aiUsageAsync.when(
-      loading: () => const Center(child: CircularProgressIndicator()),
-      error: (error, _) => Center(
-        child: Text(
-          'Error loading AI usage: $error',
-          style: Theme.of(context).textTheme.bodySmall,
-        ),
-      ),
-      data: (aiUsage) {
-        // Mock monthly data for chart - in production, fetch from Supabase
-        final monthlyData = [
-          FlSpot(1, 12000), // Jan
-          FlSpot(2, 15000), // Feb
-          FlSpot(3, 18000), // Mar
-          FlSpot(4, 14000), // Apr
-          FlSpot(5, 22000), // May
-          FlSpot(6, aiUsage.tokensUsed.toDouble()), // Current month
-        ];
-
-        final usagePercentage = aiUsage.tokensUsed / aiUsage.monthlyLimit;
-
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'AI Usage',
-              style: Theme.of(context).textTheme.titleLarge,
-            ),
-            const SizedBox(height: 16),
-            // Current usage display
-            Row(
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Tokens Used: ${aiUsage.tokensUsed.toStringAsFixed(0)}',
-                        style: Theme.of(context).textTheme.bodyLarge,
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        'Monthly Limit: ${aiUsage.monthlyLimit.toStringAsFixed(0)}',
-                        style: Theme.of(context).textTheme.bodyMedium,
-                      ),
-                    ],
-                  ),
-                ),
-                CircularProgressIndicator(
-                  value: usagePercentage.clamp(0.0, 1.0),
-                  backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
-                  valueColor: AlwaysStoppedAnimation<Color>(
-                    usagePercentage > 0.8
-                        ? Theme.of(context).colorScheme.error
-                        : Theme.of(context).colorScheme.primary,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            // Monthly breakdown chart
-            Text(
-              'Monthly Usage Trend',
-              style: Theme.of(context).textTheme.titleMedium,
-            ),
-            const SizedBox(height: 8),
-            SizedBox(
-              height: 200,
-              child: LineChart(
-                LineChartData(
-                  gridData: FlGridData(
-                    show: true,
-                    drawVerticalLine: true,
-                    horizontalInterval: 5000,
-                    verticalInterval: 1,
-                    getDrawingHorizontalLine: (value) {
-                      return FlLine(color: colors.grid, strokeWidth: 0.5);
-                    },
-                    getDrawingVerticalLine: (value) {
-                      return FlLine(color: colors.grid, strokeWidth: 0.5);
-                    },
-                  ),
-                  titlesData: FlTitlesData(
-                    show: true,
-                    rightTitles: const AxisTitles(
-                      sideTitles: SideTitles(showTitles: false),
-                    ),
-                    topTitles: const AxisTitles(
-                      sideTitles: SideTitles(showTitles: false),
-                    ),
-                    bottomTitles: AxisTitles(
-                      sideTitles: SideTitles(
-                        showTitles: true,
-                        reservedSize: 30,
-                        interval: 1,
-                        getTitlesWidget: (value, meta) {
-                          const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'];
-                          if (value.toInt() >= 1 && value.toInt() <= months.length) {
-                            return Text(
-                              months[value.toInt() - 1],
-                              style: TextStyle(fontSize: 10.sp),
-                            );
-                          }
-                          return const Text('');
-                        },
-                      ),
-                    ),
-                    leftTitles: AxisTitles(
-                      sideTitles: SideTitles(
-                        showTitles: true,
-                        reservedSize: 40,
-                        interval: 5000,
-                        getTitlesWidget: (value, meta) {
-                          return Text(
-                            '${(value / 1000).toStringAsFixed(0)}k',
-                            style: TextStyle(fontSize: 10.sp),
-                          );
-                        },
-                      ),
-                    ),
-                  ),
-                  borderData: FlBorderData(show: false),
-                  lineBarsData: [
-                    LineChartBarData(
-                      spots: monthlyData,
-                      isCurved: true,
-                      color: colors.primary,
-                      barWidth: 3,
-                      belowBarData: BarAreaData(
-                        show: true,
-                        color: colors.primary.withValues(alpha: 0.1),
-                      ),
-                      dotData: FlDotData(
-                        show: true,
-                        getDotPainter: (spot, percent, barData, index) {
-                          return FlDotCirclePainter(
-                            radius: 4,
-                            color: colors.primary,
-                            strokeWidth: 2,
-                            strokeColor: colors.surface,
-                          );
-                        },
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(height: 16),
-            // Compliance note
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.surfaceContainerHighest,
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Row(
-                children: [
-                  Icon(
-                    Icons.security,
-                    size: 20,
-                    color: Theme.of(context).colorScheme.primary,
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      'AI usage is monitored for compliance with worldwide privacy regulations (GDPR, CCPA, etc.). Only aggregate usage data is stored.',
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: Theme.of(context).colorScheme.onSurfaceVariant,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        );
-      },
     );
   }
 }

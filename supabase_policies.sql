@@ -6,6 +6,7 @@ ALTER TABLE project_members ENABLE ROW LEVEL SECURITY;
 ALTER TABLE tasks ENABLE ROW LEVEL SECURITY;
 ALTER TABLE invitations ENABLE ROW LEVEL SECURITY;
 ALTER TABLE analytics ENABLE ROW LEVEL SECURITY;
+ALTER TABLE user_views ENABLE ROW LEVEL SECURITY;
 
 -- A/B testing configs policies - allow authenticated users to read configs
 CREATE POLICY "ab_configs_select_policy" ON ab_configs
@@ -213,5 +214,19 @@ FOR DELETE USING (
     AND project_members.user_id = auth.uid()
     AND project_members.role IN ('owner', 'admin')
   )
-);</content>
+);
+
+-- User views policies - users can only access their own saved views
+CREATE POLICY "user_views_select_policy" ON user_views
+FOR SELECT USING (auth.uid() = user_id);
+
+CREATE POLICY "user_views_insert_policy" ON user_views
+FOR INSERT WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "user_views_update_policy" ON user_views
+FOR UPDATE USING (auth.uid() = user_id)
+WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "user_views_delete_policy" ON user_views
+FOR DELETE USING (auth.uid() = user_id);</content>
 <parameter name="filePath">c:\my_project_management_app\supabase_policies.sql

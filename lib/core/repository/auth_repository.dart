@@ -5,41 +5,16 @@ import 'package:hive_flutter/hive_flutter.dart';
 import 'package:my_project_management_app/core/services/app_logger.dart';
 import 'package:my_project_management_app/core/auth/permissions.dart';
 import 'package:my_project_management_app/core/auth/role_models.dart';
+import 'package:my_project_management_app/core/services/login_rate_limiter.dart';
+import 'package:my_project_management_app/core/auth/auth_user.dart';
+import 'package:my_project_management_app/core/repository/i_auth_repository.dart';
 
 enum Role {
   admin,
   user,
 }
 
-class AuthUser {
-  final String username;
-  final String password;
-  final String roleId;
-
-  const AuthUser({
-    required this.username,
-    required this.password,
-    this.roleId = AuthRepository.defaultUserRoleId,
-  });
-
-  Map<String, String> toMap() {
-    return {
-      'username': username,
-      'password': password,
-      'roleId': roleId,
-    };
-  }
-
-  static AuthUser fromMap(Map<String, dynamic> map) {
-    return AuthUser(
-      username: map['username'] as String? ?? '',
-      password: map['password'] as String? ?? '',
-      roleId: map['roleId'] as String? ?? AuthRepository.defaultUserRoleId,
-    );
-  }
-}
-
-/// Placeholder for future backend integration.
+/// NOTE: converted to issue 050
 class RemoteAuthService {
   Future<void> signIn(String username, String password) async {
     AppLogger.instance.w('Remote auth sign-in not configured.');
@@ -54,22 +29,28 @@ class RemoteAuthService {
   }
 }
 
-class AuthRepository {
+class AuthRepository implements IAuthRepository {
   static const String _boxName = 'auth';
   static const String _usersKey = 'users';
   static const String _currentUserKey = 'current_user';
   static const String _rolesKey = 'roles';
   static const String _groupsKey = 'groups';
 
-  static const String adminRoleId = 'role_admin';
-  static const String defaultUserRoleId = 'role_member';
-  static const String viewerRoleId = 'role_viewer';
-
   final RemoteAuthService _remote;
 
   AuthRepository({RemoteAuthService? remote})
       : _remote = remote ?? RemoteAuthService();
 
+  @override
+  String get adminRoleId => 'role_admin';
+
+  @override
+  String get defaultUserRoleId => 'role_member';
+
+  @override
+  String get viewerRoleId => 'role_viewer';
+
+  @override
   Future<void> initialize() async {
     await Hive.initFlutter();
     if (!Hive.isBoxOpen(_boxName)) {
@@ -81,19 +62,21 @@ class AuthRepository {
 
   Box get _box => Hive.box(_boxName);
 
-  List<AuthUser> getUsers() {
+  @override
+  List<AppUser> getUsers() {
     final raw = _box.get(_usersKey);
     if (raw is List) {
       return raw
           .whereType<Map>()
-          .map((entry) => AuthUser.fromMap(Map<String, dynamic>.from(entry)))
+          .map((entry) => AppUser.fromMap(Map<String, dynamic>.from(entry)))
           .where((user) => user.username.isNotEmpty)
           .toList();
     }
     return [];
   }
 
-  AuthUser? getUserByUsername(String username) {
+  @override
+  AppUser? getUserByUsername(String username) {
     final trimmed = username.trim().toLowerCase();
     if (trimmed.isEmpty) {
       return null;
@@ -107,6 +90,7 @@ class AuthRepository {
     return null;
   }
 
+  @override
   List<RoleDefinition> getRoles() {
     final raw = _box.get(_rolesKey);
     if (raw is List) {
@@ -119,6 +103,7 @@ class AuthRepository {
     return [];
   }
 
+  @override
   RoleDefinition? getRoleById(String roleId) {
     for (final role in getRoles()) {
       if (role.id == roleId) {
@@ -128,6 +113,7 @@ class AuthRepository {
     return null;
   }
 
+  @override
   Future<void> upsertRole(RoleDefinition role) async {
     final roles = getRoles();
     roles.removeWhere((item) => item.id == role.id);
@@ -138,6 +124,7 @@ class AuthRepository {
     );
   }
 
+  @override
   Future<void> deleteRole(String roleId) async {
     if (roleId == adminRoleId || roleId == defaultUserRoleId) {
       return;
@@ -149,6 +136,7 @@ class AuthRepository {
     );
   }
 
+  @override
   List<GroupDefinition> getGroups() {
     final raw = _box.get(_groupsKey);
     if (raw is List) {
@@ -161,6 +149,7 @@ class AuthRepository {
     return [];
   }
 
+  @override
   GroupDefinition? getGroupById(String groupId) {
     for (final group in getGroups()) {
       if (group.id == groupId) {
@@ -170,6 +159,7 @@ class AuthRepository {
     return null;
   }
 
+  @override
   List<GroupDefinition> getGroupsForUser(String username) {
     final trimmed = username.trim().toLowerCase();
     if (trimmed.isEmpty) {
@@ -183,6 +173,7 @@ class AuthRepository {
         .toList();
   }
 
+  @override
   Future<void> upsertGroup(GroupDefinition group) async {
     final groups = getGroups();
     groups.removeWhere((item) => item.id == group.id);
@@ -193,6 +184,7 @@ class AuthRepository {
     );
   }
 
+  @override
   Future<void> deleteGroup(String groupId) async {
     final groups = getGroups()..removeWhere((item) => item.id == groupId);
     await _box.put(
@@ -201,6 +193,7 @@ class AuthRepository {
     );
   }
 
+  @override
   Future<void> addUserToGroup(String groupId, String username) async {
     final group = getGroupById(groupId);
     if (group == null) {
@@ -219,6 +212,7 @@ class AuthRepository {
     );
   }
 
+  @override
   Future<void> removeUserFromGroup(String groupId, String username) async {
     final group = getGroupById(groupId);
     if (group == null) {
@@ -238,11 +232,12 @@ class AuthRepository {
     );
   }
 
+  @override
   Future<void> updateUserRole(String username, String roleId) async {
     final users = getUsers();
     final updated = users.map((user) {
       if (user.username.toLowerCase() == username.toLowerCase()) {
-        return AuthUser(
+        return AppUser(
           username: user.username,
           password: user.password,
           roleId: roleId,
@@ -257,7 +252,8 @@ class AuthRepository {
     );
   }
 
-  Future<void> addUser(AuthUser user) async {
+  @override
+  Future<void> addUser(AppUser user) async {
     // NOTE: Integreer Firebase Auth later; if (useRemote) { ... } else { local add }.
     final users = getUsers();
     final hashedPassword = _hashPassword(user.password);
@@ -265,7 +261,7 @@ class AuthRepository {
       (existing) => existing.username.toLowerCase() == user.username.toLowerCase(),
     );
     users.add(
-      AuthUser(
+      AppUser(
         username: user.username,
         password: hashedPassword,
         roleId: user.roleId,
@@ -278,6 +274,7 @@ class AuthRepository {
     // NOTE: Integreer Firebase Auth later; register remote user when online.
   }
 
+  @override
   Future<void> deleteUser(String username) async {
     final users = getUsers();
     users.removeWhere(
@@ -294,7 +291,8 @@ class AuthRepository {
     }
   }
 
-  AuthUser? validateUser(String username, String password) {
+  @override
+  AppUser? validateUser(String username, String password) {
     // NOTE: Integreer Firebase Auth later; if (useRemote) { ... } else { local validate }.
     final users = getUsers();
     final hashedPassword = _hashPassword(password);
@@ -304,7 +302,7 @@ class AuthRepository {
       }
       if (user.username == username && user.password == password) {
         _upgradeLegacyPassword(username, hashedPassword, users);
-        return AuthUser(
+        return AppUser(
           username: user.username,
           password: hashedPassword,
           roleId: user.roleId,
@@ -314,6 +312,7 @@ class AuthRepository {
     return null;
   }
 
+  @override
   String? getCurrentUser() {
     final value = _box.get(_currentUserKey);
     if (value is String && value.isNotEmpty) {
@@ -322,6 +321,7 @@ class AuthRepository {
     return null;
   }
 
+  @override
   Future<void> setCurrentUser(String? username) async {
     if (username == null || username.isEmpty) {
       await _box.delete(_currentUserKey);
@@ -330,9 +330,65 @@ class AuthRepository {
     await _box.put(_currentUserKey, username);
   }
 
+  @override
+  Future<bool> isLoginBlocked(String email) async {
+    return await LoginRateLimiter.instance.isBlocked(email);
+  }
+
+  @override
+  Future<void> recordLoginAttempt(String email) async {
+    await LoginRateLimiter.instance.recordAttempt(email);
+  }
+
+  @override
+  Future<void> resetLoginAttempts(String email) async {
+    await LoginRateLimiter.instance.resetOnSuccess(email);
+  }
+
+  @override
   Future<void> logout() async {
     await _remote.signOut();
     await setCurrentUser(null);
+  }
+
+  // Implement IAuthRepository's small wrappers
+  @override
+  Future<bool> login(String email, String password) async {
+    final validated = validateUser(email.trim(), password);
+    if (validated != null) {
+      await setCurrentUser(validated.username);
+      return true;
+    }
+    await recordFailedLoginAttempt(email.trim().toLowerCase());
+    return false;
+  }
+
+  @override
+  Future<void> register(String email, String password) async {
+    await addUser(AppUser(username: email.trim(), password: password));
+  }
+
+  @override
+  Future<bool> isLoggedIn() async {
+    return getCurrentUser() != null;
+  }
+
+  // Simple in-memory rate limiter stored per-repository instance
+  final Map<String, List<DateTime>> _failedAttempts = {};
+
+  @override
+  Future<bool> canAttemptLogin(String identifier) async {
+    final now = DateTime.now();
+    final list = _failedAttempts.putIfAbsent(identifier, () => []);
+    list.retainWhere((t) => now.difference(t) <= const Duration(minutes: 1));
+    return list.length < 5;
+  }
+
+  @override
+  Future<void> recordFailedLoginAttempt(String identifier) async {
+    final now = DateTime.now();
+    final list = _failedAttempts.putIfAbsent(identifier, () => []);
+    list.add(now);
   }
 
   Future<void> _seedDefaultsIfEmpty() async {
@@ -402,13 +458,13 @@ class AuthRepository {
   void _upgradeLegacyPassword(
     String username,
     String hashedPassword,
-    List<AuthUser> users,
+    List<AppUser> users,
   ) {
-    final updated = <AuthUser>[];
+    final updated = <AppUser>[];
     for (final user in users) {
       if (user.username == username) {
         updated.add(
-          AuthUser(
+          AppUser(
             username: user.username,
             password: hashedPassword,
             roleId: user.roleId,

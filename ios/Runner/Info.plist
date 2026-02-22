@@ -47,5 +47,7 @@
 	<true/>
 	<key>NSUserNotificationUsageDescription</key>
 	<string>Deze app gebruikt notificaties voor taak deadlines.</string>
+	<key>NSFaceIDUsageDescription</key>
+	<string>This app uses Face ID for biometric authentication.</string>
 </dict>
 </plist>

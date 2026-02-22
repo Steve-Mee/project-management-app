@@ -2,7 +2,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:my_project_management_app/core/providers.dart';
+import 'package:my_project_management_app/core/providers/project_providers.dart';
 import 'package:my_project_management_app/models/project_model.dart';
 
 // ============================================================================
@@ -14,7 +14,7 @@ class ProjectListWidget extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final projectsAsync = ref.watch(projectsProvider);
+    final projectsAsync = ref.watch(projectsPaginatedProvider(ProjectPaginationParams(page: 1, limit: 100)));
 
     return projectsAsync.when(
       data: (projects) {
@@ -298,14 +298,16 @@ class ProjectDetailsWidget extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final projectsAsync = ref.watch(projectsProvider);
+    final projectAsync = ref.watch(projectByIdProvider(projectId));
 
-    return projectsAsync.when(
-      data: (projects) {
-        final project = projects.firstWhere(
-          (p) => p.id == projectId,
-          orElse: () => throw Exception('Project not found'),
-        );
+    return projectAsync.when(
+      data: (project) {
+        if (project == null) {
+          return Scaffold(
+            appBar: AppBar(title: const Text('Project Not Found')),
+            body: const Center(child: Text('Project not found')),
+          );
+        }
 
         return Scaffold(
           appBar: AppBar(title: Text(project.name)),

@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:my_project_management_app/core/providers.dart';
+import 'package:my_project_management_app/core/providers/project_providers.dart';
+import 'package:my_project_management_app/core/providers/task_providers.dart';
+import 'package:my_project_management_app/core/providers/ai/index.dart' show aiChatProvider;
+import 'package:my_project_management_app/core/providers/auth_providers.dart';
 import 'package:my_project_management_app/models/project_model.dart';
 import 'package:my_project_management_app/models/task_model.dart';
-import 'package:my_project_management_app/core/repository/auth_repository.dart';
 import 'package:my_project_management_app/core/config/ai_config.dart';
 import 'package:my_project_management_app/core/services/ai_planning_helpers.dart';
+import 'package:my_project_management_app/core/auth/auth_user.dart';
 
 /// Model for chat history entries
 class ChatHistoryEntry {
@@ -80,71 +83,73 @@ class _AiChatBottomSheetState extends ConsumerState<AiChatBottomSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final chatState = ref.watch(aiChatProvider);
+    final asyncChatState = ref.watch(aiChatProvider);
     final history = ref.watch(chatHistoryProvider);
     final currentUserAsync = ref.watch(currentUserProvider);
 
-    // Update last AI response when chat state changes
-    if (chatState.messages.isNotEmpty && _isLoading) {
-      final lastMessage = chatState.messages.last;
-      if (!lastMessage.isUser) {
-        _lastAiResponse = lastMessage.content;
-        setState(() {
-          _isLoading = false;
-        });
-      }
-    }
+    return asyncChatState.when(
+      data: (chatState) {
+        // Update last AI response when chat state changes
+        if (chatState.messages.isNotEmpty && _isLoading) {
+          final lastMessage = chatState.messages.last;
+          if (!lastMessage.isUser) {
+            _lastAiResponse = lastMessage.content;
+            setState(() {
+              _isLoading = false;
+            });
+          }
+        }
 
-    return Container(
-      height: MediaQuery.of(context).size.height * 0.8,
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        children: [
-          // Header
-          Row(
+        return Container(
+          height: MediaQuery.of(context).size.height * 0.8,
+          padding: const EdgeInsets.all(16),
+          child: Column(
             children: [
-              const Icon(Icons.smart_toy),
-              const SizedBox(width: 8),
-              Text(
-                'AI Project Assistant',
-                style: Theme.of(context).textTheme.titleLarge,
-              ),
-              const Spacer(),
-              IconButton(
-                icon: const Icon(Icons.history),
-                onPressed: () => _showHistoryDialog(context, history),
-                tooltip: 'View History',
-              ),
-              IconButton(
-                icon: const Icon(Icons.close),
-                onPressed: () => Navigator.of(context).pop(),
-              ),
-            ],
-          ),
-          const Divider(),
-
-          // Chat messages area
-          Expanded(
-            child: ListView(
-              controller: _scrollController,
-              children: [
-                if (_lastAiResponse != null) ...[
-                  _buildAiMessage(_lastAiResponse!),
-                  const SizedBox(height: 16),
+              // Header
+              Row(
+                children: [
+                  const Icon(Icons.smart_toy),
+                  const SizedBox(width: 8),
+                  Text(
+                    'AI Project Assistant',
+                    style: Theme.of(context).textTheme.titleLarge,
+                  ),
+                  const Spacer(),
+                  IconButton(
+                    icon: const Icon(Icons.history),
+                    onPressed: () => _showHistoryDialog(context, history),
+                    tooltip: 'View History',
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close),
+                    onPressed: () => Navigator.of(context).pop(),
+                  ),
                 ],
-                if (_isLoading) ...[
-                  const Center(child: CircularProgressIndicator()),
-                  const SizedBox(height: 16),
-                ],
-              ],
-            ),
-          ),
+              ),
+              const Divider(),
 
-          // Message input
-          Row(
-            children: [
+              // Chat messages area
               Expanded(
-                child: TextField(
+                child: ListView(
+                  controller: _scrollController,
+                  children: [
+                    if (_lastAiResponse != null) ...[
+                      _buildAiMessage(_lastAiResponse!),
+                      const SizedBox(height: 16),
+                    ],
+                    if (_isLoading) ...[
+                      const Center(child: CircularProgressIndicator()),
+                      const SizedBox(height: 16),
+                    ],
+                  ],
+                ),
+              ),
+
+              // Message input
+              Row(
+                children: [
+                  Expanded(
+                    child: TextField(
                   controller: _messageController,
                   decoration: const InputDecoration(
                     hintText: 'Ask me anything about this project...',
@@ -183,6 +188,10 @@ class _AiChatBottomSheetState extends ConsumerState<AiChatBottomSheet> {
           ),
         ],
       ),
+    );
+      },
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (error, stack) => Center(child: Text('Error: $error')),
     );
   }
 
@@ -334,7 +343,7 @@ Current Date: ${DateTime.now().toString().split(' ')[0]}
     }
   }
 
-  void _showApplyConfirmationDialog(BuildContext context, AsyncValue<AuthUser?> currentUserAsync) {
+  void _showApplyConfirmationDialog(BuildContext context, AsyncValue<AppUser?> currentUserAsync) {
     if (_lastAiResponse == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('No AI response to apply')),
@@ -411,7 +420,7 @@ Current Date: ${DateTime.now().toString().split(' ')[0]}
     );
   }
 
-  Future<void> _applyChanges(BuildContext context, AsyncValue<AuthUser?> currentUserAsync) async {
+  Future<void> _applyChanges(BuildContext context, AsyncValue<AppUser?> currentUserAsync) async {
     if (_lastAiResponse == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('No AI response to apply')),

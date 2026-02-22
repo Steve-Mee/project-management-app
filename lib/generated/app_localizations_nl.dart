@@ -241,6 +241,33 @@ class AppLocalizationsNl extends AppLocalizations {
   String get projectSortPriority => 'Prioriteit';
 
   @override
+  String get projectSortCreatedDate => 'Aanmaakdatum';
+
+  @override
+  String get projectSortStatus => 'Status';
+
+  @override
+  String get projectSortStartDate => 'Startdatum';
+
+  @override
+  String get projectSortDueDate => 'Vervaldatum';
+
+  @override
+  String get sortDirectionLabel => 'Richting';
+
+  @override
+  String get sortAscendingLabel => 'Oplopend';
+
+  @override
+  String get sortDescendingLabel => 'Aflopend';
+
+  @override
+  String get exportToCsvLabel => 'Exporteren naar CSV';
+
+  @override
+  String get csvExportSuccessMessage => 'CSV succesvol geëxporteerd en gedeeld';
+
+  @override
   String get allLabel => 'Alles';
 
   @override
@@ -605,6 +632,11 @@ class AppLocalizationsNl extends AppLocalizations {
   String get loginFailedMessage => 'Inloggen mislukt. Controleer je gegevens.';
 
   @override
+  String rateLimitExceeded(Object seconds) {
+    return 'Te veel pogingen. Probeer opnieuw over $seconds seconden.';
+  }
+
+  @override
   String get registerTitle => 'Registreren';
 
   @override
@@ -824,4 +856,425 @@ class AppLocalizationsNl extends AppLocalizations {
 
   @override
   String get backupNoFileMessage => 'Nog geen back-upbestand';
+
+  @override
+  String get filterButtonTooltip => 'Filter projects';
+
+  @override
+  String get filterPriorityLabel => 'Priority';
+
+  @override
+  String get priorityLow => 'Low';
+
+  @override
+  String get priorityMedium => 'Medium';
+
+  @override
+  String get priorityHigh => 'High';
+
+  @override
+  String get filterDateRangeLabel => 'Date Range';
+
+  @override
+  String get filterStartDateLabel => 'Start Date';
+
+  @override
+  String get filterEndDateLabel => 'End Date';
+
+  @override
+  String activeFilterPriority(String priority) {
+    return 'Priority: $priority';
+  }
+
+  @override
+  String activeFilterStartDate(String date) {
+    return 'From $date';
+  }
+
+  @override
+  String activeFilterEndDate(String date) {
+    return 'To $date';
+  }
+
+  @override
+  String showingProjectsCount(int count, int total) {
+    return 'Showing $count of $total projects';
+  }
+
+  @override
+  String get clearAllFiltersButtonLabel => 'Clear All Filters';
+
+  @override
+  String get noProjectsMatchFiltersTitle => 'No projects match your filters';
+
+  @override
+  String get noProjectsMatchFiltersSubtitle =>
+      'Try changing or clearing your filters';
+
+  @override
+  String get projectFiltersTitle => 'Project Filters';
+
+  @override
+  String get allProjectsPresetLabel => 'All Projects';
+
+  @override
+  String get highPriorityPresetLabel => 'High Priority';
+
+  @override
+  String get dueThisWeekPresetLabel => 'Due This Week';
+
+  @override
+  String get overduePresetLabel => 'Overdue';
+
+  @override
+  String get myProjectsPresetLabel => 'My Projects';
+
+  @override
+  String get cancelLabel => 'Cancel';
+
+  @override
+  String get clearAllLabel => 'Clear All';
+
+  @override
+  String get saveAsDefaultSuccessMessage => 'Filter saved as default';
+
+  @override
+  String get saveAsDefaultViewLabel => 'Save as Default';
+
+  @override
+  String get applyFiltersLabel => 'Apply Filters';
+
+  @override
+  String get savedViewsTabLabel => 'Saved Views';
+
+  @override
+  String get filtersTabLabel => 'Filters';
+
+  @override
+  String get viewNameLabel => 'View Name';
+
+  @override
+  String get viewNameHint => 'Enter a name for this view';
+
+  @override
+  String get saveCurrentAsViewLabel => 'Save Current';
+
+  @override
+  String get viewSavedMessage => 'View saved successfully';
+
+  @override
+  String get noSavedViewsMessage => 'No saved views yet';
+
+  @override
+  String get savedViewsLabel => 'Saved Views';
+
+  @override
+  String get allViewsLabel => 'All Views';
+
+  @override
+  String get filterProjectsTooltip => 'Filter projects';
+
+  @override
+  String selectProjectsTitle(int count) {
+    return 'Select Projects ($count)';
+  }
+
+  @override
+  String get bulkActionsTooltip => 'Bulk actions';
+
+  @override
+  String get exitSelectionModeTooltip => 'Exit selection mode';
+
+  @override
+  String bulkActionsTitle(int count) {
+    return 'Bulk Actions ($count selected)';
+  }
+
+  @override
+  String get deleteSelectedProjectsLabel => 'Delete Selected Projects';
+
+  @override
+  String get changePriorityLabel => 'Change Priority';
+
+  @override
+  String get changeStatusLabel => 'Change Status';
+
+  @override
+  String get assignToUserLabel => 'Assign to User';
+
+  @override
+  String get exportSelectedToCsvLabel => 'Export Selected to CSV';
+
+  @override
+  String get applyActionsLabel => 'Apply Actions';
+
+  @override
+  String confirmDeleteSelectedProjectsMessage(int count) {
+    return 'Are you sure you want to delete $count selected projects? This action cannot be undone.';
+  }
+
+  @override
+  String bulkDeleteSuccessMessage(int count) {
+    return 'Successfully deleted $count projects.';
+  }
+
+  @override
+  String bulkActionsAppliedMessage(int actions, int count) {
+    return 'Applied $actions action(s) to $count projects.';
+  }
+
+  @override
+  String get searchProjectsLabel => 'Search Projects';
+
+  @override
+  String get searchProjectsHint => 'Search by name, description, or tags...';
+
+  @override
+  String get filterTagsLabel => 'Tags';
+
+  @override
+  String get addTagLabel => 'Add Tag';
+
+  @override
+  String get addTagHint => 'Enter tag name';
+
+  @override
+  String get availableTagsLabel => 'Available tags:';
+
+  @override
+  String get requiredTagsLabel => 'Required Tags (AND)';
+
+  @override
+  String get optionalTagsLabel => 'Optional Tags (OR)';
+
+  @override
+  String get requiredTagsDescription => 'Projects must have ALL of these tags';
+
+  @override
+  String get optionalTagsDescription => 'Projects can have ANY of these tags';
+
+  @override
+  String get listViewTooltip => 'List view';
+
+  @override
+  String get kanbanViewTooltip => 'Kanban view';
+
+  @override
+  String get tableViewTooltip => 'Table view';
+
+  @override
+  String get nameLabel => 'Name';
+
+  @override
+  String get priorityLabel => 'Priority';
+
+  @override
+  String get startDateLabel => 'Start Date';
+
+  @override
+  String get dueDateLabel => 'Due Date';
+
+  @override
+  String get tagsLabel => 'Tags';
+
+  @override
+  String get exportToPdfLabel => 'Export to PDF';
+
+  @override
+  String get exportingPdfMessage => 'Generating PDF report...';
+
+  @override
+  String get pdfExportedMessage => 'PDF exported successfully';
+
+  @override
+  String get pdfExportErrorMessage => 'Failed to export PDF';
+
+  @override
+  String get projectsReportTitle => 'Projects Report';
+
+  @override
+  String get generatedOnLabel => 'Generated on';
+
+  @override
+  String get activeFiltersLabel => 'Active Filters';
+
+  @override
+  String get summaryLabel => 'Summary';
+
+  @override
+  String get totalProjectsLabel => 'Total Projects';
+
+  @override
+  String get priorityDistributionLabel => 'Priority Distribution';
+
+  @override
+  String get dueDatesLabel => 'Due Dates';
+
+  @override
+  String get projectListLabel => 'Project List';
+
+  @override
+  String get recentFiltersTooltip => 'Recent filters';
+
+  @override
+  String get unnamedFilterLabel => 'Unnamed Filter';
+
+  @override
+  String get ownerLabel => 'Owner';
+
+  @override
+  String get ascendingLabel => 'ascending';
+
+  @override
+  String get descendingLabel => 'descending';
+
+  @override
+  String get allProjectsLabel => 'All Projects';
+
+  @override
+  String get ganttViewTitle => 'Gantt Chart';
+
+  @override
+  String get zoomInTooltip => 'Zoom in';
+
+  @override
+  String get zoomOutTooltip => 'Zoom out';
+
+  @override
+  String get selectDateRangeTooltip => 'Select date range';
+
+  @override
+  String get noProjectsForGantt => 'No projects to display';
+
+  @override
+  String get addProjectsWithDates =>
+      'Add projects with start and due dates to see them in the timeline.';
+
+  @override
+  String get openProjectTooltip => 'Open project';
+
+  @override
+  String get commentsTitle => 'Comments';
+
+  @override
+  String get addCommentHint => 'Add a comment...';
+
+  @override
+  String get noCommentsYet => 'No comments yet';
+
+  @override
+  String get editedLabel => 'edited';
+
+  @override
+  String get mentionedLabel => 'Mentioned';
+
+  @override
+  String get deleteCommentTooltip => 'Delete comment';
+
+  @override
+  String get settingsBiometricLoginTitle => 'Biometrische login';
+
+  @override
+  String get settingsBiometricLoginSubtitle =>
+      'Gebruik vingerafdruk of gezichts-ID om in te loggen';
+
+  @override
+  String get enableBiometricDialogTitle => 'Biometrische login inschakelen';
+
+  @override
+  String get enableBiometricDialogMessage =>
+      'Wilt u biometrische authenticatie inschakelen voor snellere login?';
+
+  @override
+  String get enableBiometricDialogYes => 'Inschakelen';
+
+  @override
+  String get enableBiometricDialogNo => 'Niet nu';
+
+  @override
+  String get loginWithBiometric => 'Inloggen met biometrie';
+
+  @override
+  String get loginWithPassword => 'Inloggen met wachtwoord';
+
+  @override
+  String get biometric_login_title => 'Biometrische Login';
+
+  @override
+  String get enable_biometric_login => 'Biometrische Login Inschakelen';
+
+  @override
+  String get biometric_not_available =>
+      'Biometrische authenticatie niet beschikbaar';
+
+  @override
+  String get use_password_instead => 'Gebruik wachtwoord in plaats daarvan';
+
+  @override
+  String get biometric_enroll_success => 'Biometrische login ingeschakeld';
+
+  @override
+  String get biometric_auth_failed => 'Biometrische authenticatie mislukt';
+
+  @override
+  String get smartFilterDialogTitle => 'Slim Filter';
+
+  @override
+  String get smartFilterHint => 'Beschrijf wat je wilt filteren...';
+
+  @override
+  String get smartFilterButtonLabel => 'Slim Filter Toepassen';
+
+  @override
+  String get smartFilterProcessing => 'Je verzoek wordt verwerkt...';
+
+  @override
+  String get smartFilterError =>
+      'Slim filter toepassen mislukt. Probeer het opnieuw.';
+
+  @override
+  String get aiSuggestedFilterLabel => 'AI Voorgesteld Filter';
+
+  @override
+  String get smartFilterButtonTooltip => 'Gebruik AI om projecten te filteren';
+
+  @override
+  String get editFilterButtonLabel => 'Filter Bewerken';
+
+  @override
+  String get acceptFilterButtonLabel => 'Filter Accepteren';
+
+  @override
+  String get ai_per_operation_limits => 'Per-Operatie Snelheidslimieten';
+
+  @override
+  String get limit_for_chat => 'Chat limiet';
+
+  @override
+  String get limit_for_summarize => 'Samenvatten limiet';
+
+  @override
+  String get limit_for_generate_tasks => 'Taken genereren limiet';
+
+  @override
+  String get per_op_limit_saved => 'Per-operatie limieten opgeslagen';
+
+  @override
+  String get undoTooltip => 'Undo last dashboard change';
+
+  @override
+  String get redoTooltip => 'Redo last undone dashboard change';
+
+  @override
+  String get offline_mode => 'Offline Modus';
+
+  @override
+  String get changes_queued => 'Wijzigingen in wachtrij voor synchronisatie';
+
+  @override
+  String get syncing_requirements => 'Vereisten synchroniseren...';
+
+  @override
+  String get offline_sync_success =>
+      'Offline synchronisatie succesvol voltooid';
 }

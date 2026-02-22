@@ -308,6 +308,42 @@
   "@projectSortPriority": {
     "description": "Auto-generated description for projectSortPriority."
   },
+  "projectSortCreatedDate": "Aanmaakdatum",
+  "@projectSortCreatedDate": {
+    "description": "Auto-generated description for projectSortCreatedDate."
+  },
+  "projectSortStatus": "Status",
+  "@projectSortStatus": {
+    "description": "Auto-generated description for projectSortStatus."
+  },
+  "projectSortStartDate": "Startdatum",
+  "@projectSortStartDate": {
+    "description": "Label for sorting projects by start date."
+  },
+  "projectSortDueDate": "Vervaldatum",
+  "@projectSortDueDate": {
+    "description": "Label for sorting projects by due date."
+  },
+  "sortDirectionLabel": "Richting",
+  "@sortDirectionLabel": {
+    "description": "Label for sort direction selection."
+  },
+  "sortAscendingLabel": "Oplopend",
+  "@sortAscendingLabel": {
+    "description": "Label for ascending sort order."
+  },
+  "sortDescendingLabel": "Aflopend",
+  "@sortDescendingLabel": {
+    "description": "Label for descending sort order."
+  },
+  "exportToCsvLabel": "Exporteren naar CSV",
+  "@exportToCsvLabel": {
+    "description": "Label for CSV export button."
+  },
+  "csvExportSuccessMessage": "CSV succesvol geëxporteerd en gedeeld",
+  "@csvExportSuccessMessage": {
+    "description": "Success message after CSV export."
+  },
   "allLabel": "Alles",
   "@allLabel": {
     "description": "Auto-generated description for allLabel."
@@ -737,10 +773,6 @@
   "@aiChatSemanticsLabel": {
     "description": "Auto-generated description for aiChatSemanticsLabel."
   },
-  "aiUsageTitle": "AI Gebruik",
-  "@aiUsageTitle": {
-    "description": "Title for the AI usage overview screen."
-  },
   "aiAssistantTitle": "AI Project Assistent",
   "@aiAssistantTitle": {
     "description": "Auto-generated description for aiAssistantTitle."
@@ -788,6 +820,10 @@
   "loginFailedMessage": "Inloggen mislukt. Controleer je gegevens.",
   "@loginFailedMessage": {
     "description": "Auto-generated description for loginFailedMessage."
+  },
+  "rateLimitExceeded": "Te veel pogingen. Probeer opnieuw over {seconds} seconden.",
+  "@rateLimitExceeded": {
+    "description": "Message shown when login rate limit is exceeded, with seconds parameter."
   },
   "registerTitle": "Registreren",
   "@registerTitle": {
@@ -1081,9 +1117,133 @@
   "backupNoFileMessage": "Nog geen back-upbestand",
   "@backupNoFileMessage": {
     "description": "Shown when no backup file path is available."
+  },
+  "settingsBiometricLoginTitle": "Biometrische login",
+  "@settingsBiometricLoginTitle": {
+    "description": "Title for biometric login toggle in settings."
+  },
+  "settingsBiometricLoginSubtitle": "Gebruik vingerafdruk of gezichts-ID om in te loggen",
+  "@settingsBiometricLoginSubtitle": {
+    "description": "Subtitle for biometric login toggle in settings."
+  },
+  "enableBiometricDialogTitle": "Biometrische login inschakelen",
+  "@enableBiometricDialogTitle": {
+    "description": "Title for the biometric enable dialog."
+  },
+  "enableBiometricDialogMessage": "Wilt u biometrische authenticatie inschakelen voor snellere login?",
+  "@enableBiometricDialogMessage": {
+    "description": "Message for the biometric enable dialog."
+  },
+  "enableBiometricDialogYes": "Inschakelen",
+  "@enableBiometricDialogYes": {
+    "description": "Yes button for the biometric enable dialog."
+  },
+  "enableBiometricDialogNo": "Niet nu",
+  "@enableBiometricDialogNo": {
+    "description": "No button for the biometric enable dialog."
+  },
+  "loginWithBiometric": "Inloggen met biometrie",
+  "@loginWithBiometric": {
+    "description": "Button to login with biometric authentication."
+  },
+  "loginWithPassword": "Inloggen met wachtwoord",
+  "@loginWithPassword": {
+    "description": "Button to switch to password login."
+  },
+  "biometric_login_title": "Biometrische Login",
+  "@biometric_login_title": {
+    "description": "Title for biometric login."
+  },
+  "enable_biometric_login": "Biometrische Login Inschakelen",
+  "@enable_biometric_login": {
+    "description": "Button or option to enable biometric login."
+  },
+  "biometric_not_available": "Biometrische authenticatie niet beschikbaar",
+  "@biometric_not_available": {
+    "description": "Message when biometric is not available."
+  },
+  "use_password_instead": "Gebruik wachtwoord in plaats daarvan",
+  "@use_password_instead": {
+    "description": "Option to use password login instead of biometric."
+  },
+  "biometric_enroll_success": "Biometrische login ingeschakeld",
+  "@biometric_enroll_success": {
+    "description": "Success message when biometric is enrolled."
+  },
+  "biometric_auth_failed": "Biometrische authenticatie mislukt",
+  "@biometric_auth_failed": {
+    "description": "Error message when biometric auth fails."
+  },
+  "smartFilterDialogTitle": "Slim Filter",
+  "@smartFilterDialogTitle": {
+    "description": "Title for the smart filter dialog."
+  },
+  "smartFilterHint": "Beschrijf wat je wilt filteren...",
+  "@smartFilterHint": {
+    "description": "Hint text for the smart filter input field."
+  },
+  "smartFilterButtonLabel": "Slim Filter Toepassen",
+  "@smartFilterButtonLabel": {
+    "description": "Label for the smart filter button."
+  },
+  "smartFilterProcessing": "Je verzoek wordt verwerkt...",
+  "@smartFilterProcessing": {
+    "description": "Message shown while processing smart filter."
+  },
+  "smartFilterError": "Slim filter toepassen mislukt. Probeer het opnieuw.",
+  "@smartFilterError": {
+    "description": "Error message when smart filter fails."
+  },
+  "aiSuggestedFilterLabel": "AI Voorgesteld Filter",
+  "@aiSuggestedFilterLabel": {
+    "description": "Label for AI suggested filter option."
+  },
+  "smartFilterButtonTooltip": "Gebruik AI om projecten te filteren",
+  "@smartFilterButtonTooltip": {
+    "description": "Tooltip for the smart filter button."
+  },
+  "editFilterButtonLabel": "Filter Bewerken",
+  "@editFilterButtonLabel": {
+    "description": "Label for the edit filter button."
+  },
+  "acceptFilterButtonLabel": "Filter Accepteren",
+  "@acceptFilterButtonLabel": {
+    "description": "Label for the accept filter button."
+  },
+  "ai_per_operation_limits": "Per-Operatie Snelheidslimieten",
+  "@ai_per_operation_limits": {
+    "description": "Section title for per-operation AI rate limits settings."
+  },
+  "limit_for_chat": "Chat limiet",
+  "@limit_for_chat": {
+    "description": "Label for chat operation rate limit setting."
+  },
+  "limit_for_summarize": "Samenvatten limiet",
+  "@limit_for_summarize": {
+    "description": "Label for summarize operation rate limit setting."
+  },
+  "limit_for_generate_tasks": "Taken genereren limiet",
+  "@limit_for_generate_tasks": {
+    "description": "Label for generate tasks operation rate limit setting."
+  },
+  "per_op_limit_saved": "Per-operatie limieten opgeslagen",
+  "@per_op_limit_saved": {
+    "description": "Confirmation message when per-operation rate limits are saved."
+  },
+  "offline_mode": "Offline Modus",
+  "@offline_mode": {
+    "description": "Indicator text when the app is in offline mode."
+  },
+  "changes_queued": "Wijzigingen in wachtrij voor synchronisatie",
+  "@changes_queued": {
+    "description": "Message indicating changes are queued while offline."
+  },
+  "syncing_requirements": "Vereisten synchroniseren...",
+  "@syncing_requirements": {
+    "description": "Status message when syncing queued requirements."
+  },
+  "offline_sync_success": "Offline synchronisatie succesvol voltooid",
+  "@offline_sync_success": {
+    "description": "Success message after offline sync completes."
   }
 }
-  "aiUsageTitle": "AI Usage",
-  "@aiUsageTitle": {
-    "description": "Title for the AI usage overview screen."
-  },

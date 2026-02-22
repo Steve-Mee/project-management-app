@@ -2,7 +2,8 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:my_project_management_app/generated/app_localizations.dart';
-import 'package:my_project_management_app/core/providers.dart' show aiChatProvider, helpLevelProvider;
+import 'package:my_project_management_app/core/providers/ai/index.dart' show aiChatProvider;
+import 'package:my_project_management_app/core/providers/auth_providers.dart' show helpLevelProvider;
 import 'package:my_project_management_app/core/services/ai_planning_helpers.dart';
 import 'package:my_project_management_app/core/config/ai_config.dart' as ai_config;
 import 'package:my_project_management_app/models/task_model.dart';
@@ -33,7 +34,10 @@ class _TaskHelpDialogState extends ConsumerState<TaskHelpDialog> {
   @override
   void initState() {
     super.initState();
-    _selectedLevel = ref.read(helpLevelProvider);
+    _selectedLevel = ref.read(helpLevelProvider).maybeWhen(
+      data: (level) => level,
+      orElse: () => ai_config.HelpLevel.basis,
+    );
     _selectedAiAssistant = widget.aiAssistant ?? 'none';
   }
 
@@ -46,54 +50,56 @@ class _TaskHelpDialogState extends ConsumerState<TaskHelpDialog> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    final chatState = ref.watch(aiChatProvider);
+    final asyncChatState = ref.watch(aiChatProvider);
 
-    // Update last AI response when chat state changes
-    if (chatState.messages.isNotEmpty && (_isGenerating || _isGeneratingQuestions)) {
-      final lastMessage = chatState.messages.last;
-      if (!lastMessage.isUser) {
-        _lastAiResponse = lastMessage.content;
-        
-        if (_isGeneratingQuestions && _generatedQuestions == null) {
-          // Parse questions from response
-          final questions = _parseQuestionsFromResponse(_lastAiResponse!);
-          setState(() {
-            _generatedQuestions = questions;
-            _isGeneratingQuestions = false;
-          });
-        } else if (_isGenerating && _generatedContent == null) {
-          setState(() {
-            _generatedContent = _lastAiResponse;
-            _isGenerating = false;
-          });
+    return asyncChatState.when(
+      data: (chatState) {
+        // Update last AI response when chat state changes
+        if (chatState.messages.isNotEmpty && (_isGenerating || _isGeneratingQuestions)) {
+          final lastMessage = chatState.messages.last;
+          if (!lastMessage.isUser) {
+            _lastAiResponse = lastMessage.content;
+            
+            if (_isGeneratingQuestions && _generatedQuestions == null) {
+              // Parse questions from response
+              final questions = _parseQuestionsFromResponse(_lastAiResponse!);
+              setState(() {
+                _generatedQuestions = questions;
+                _isGeneratingQuestions = false;
+              });
+            } else if (_isGenerating && _generatedContent == null) {
+              setState(() {
+                _generatedContent = _lastAiResponse;
+                _isGenerating = false;
+              });
+            }
+          }
         }
-      }
-    }
 
-    return AlertDialog(
-      title: Text('Task Help: ${widget.task.title}'),
-      content: SingleChildScrollView(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Help level selector
-            const Text('Help Level:', style: TextStyle(fontWeight: FontWeight.bold)),
-            SegmentedButton<ai_config.HelpLevel>(
-              segments: const [
-                ButtonSegment<ai_config.HelpLevel>(
-                  value: ai_config.HelpLevel.basis,
-                  label: Text('Basis'),
-                ),
-                ButtonSegment<ai_config.HelpLevel>(
-                  value: ai_config.HelpLevel.gedetailleerd,
-                  label: Text('Gedetailleerd'),
-                ),
-                ButtonSegment<ai_config.HelpLevel>(
-                  value: ai_config.HelpLevel.stapVoorStap,
-                  label: Text('Stap voor Stap'),
-                ),
-              ],
+        return AlertDialog(
+          title: Text('Task Help: ${widget.task.title}'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Help level selector
+                const Text('Help Level:', style: TextStyle(fontWeight: FontWeight.bold)),
+                SegmentedButton<ai_config.HelpLevel>(
+                  segments: const [
+                    ButtonSegment<ai_config.HelpLevel>(
+                      value: ai_config.HelpLevel.basis,
+                      label: Text('Basis'),
+                    ),
+                    ButtonSegment<ai_config.HelpLevel>(
+                      value: ai_config.HelpLevel.gedetailleerd,
+                      label: Text('Gedetailleerd'),
+                    ),
+                    ButtonSegment<ai_config.HelpLevel>(
+                      value: ai_config.HelpLevel.stapVoorStap,
+                      label: Text('Stap voor Stap'),
+                    ),
+                  ],
               selected: {_selectedLevel},
               onSelectionChanged: (selected) {
                 if (selected.isNotEmpty) {
@@ -291,6 +297,20 @@ class _TaskHelpDialogState extends ConsumerState<TaskHelpDialog> {
           child: Text(l10n.cancelButton),
         ),
       ],
+    );
+      },
+      loading: () => const AlertDialog(
+        content: Center(child: CircularProgressIndicator()),
+      ),
+      error: (error, stack) => AlertDialog(
+        content: Text('Error: $error'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Close'),
+          ),
+        ],
+      ),
     );
   }
 

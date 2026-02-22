@@ -35,10 +35,10 @@ void main() {
         AppLogger.instance.i('Real API key detected: ${apiKey!.substring(0, 10)}...');
       }
 
-      final state = container.read(aiChatProvider);
-      expect(state.error, isNull); // Provider initializes regardless of key validity
-      expect(state.messages, isEmpty);
-      expect(state.isLoading, isFalse);
+      final asyncState = container.read(aiChatProvider);
+      expect(asyncState.hasError, isFalse);
+      expect(asyncState.value!.messages, isEmpty);
+      expect(asyncState.value!.isLoading, isFalse);
     });
 
     test('should handle missing API key gracefully', () {
@@ -47,10 +47,11 @@ void main() {
       dotenv.env.remove('OPENAI_API_KEY');
 
       final testContainer = ProviderContainer();
-      final state = testContainer.read(aiChatProvider);
+      final asyncState = testContainer.read(aiChatProvider);
 
-      expect(state.error, contains('API key not found'));
-      expect(state.messages, isEmpty);
+      expect(asyncState.hasError, isTrue);
+      expect(asyncState.error, contains('API key not found'));
+      expect(asyncState.value?.messages, isEmpty);
 
       testContainer.dispose();
 
@@ -83,17 +84,17 @@ void main() {
       final chatNotifier = container.read(aiChatProvider.notifier);
       final initialState = container.read(aiChatProvider);
 
-      expect(initialState.error, isNull, reason: 'Should initialize without error with valid API key');
+      expect(initialState.hasError, isFalse, reason: 'Should initialize without error with valid API key');
 
       // Send a simple test message
       await chatNotifier.sendMessage('Hello Grok, this is a test message. Please respond with "Grok API test successful"');
 
-      final finalState = container.read(aiChatProvider);
+      final finalAsyncState = container.read(aiChatProvider);
 
-      expect(finalState.isLoading, isFalse, reason: 'Should not be loading after API call completes');
+      expect(finalAsyncState.value!.isLoading, isFalse, reason: 'Should not be loading after API call completes');
 
-      if (finalState.error != null) {
-        AppLogger.instance.e('Grok API call failed: ${finalState.error}');
+      if (finalAsyncState.hasError) {
+        AppLogger.instance.e('Grok API call failed: ${finalAsyncState.error}');
         AppLogger.instance.i('This could mean:');
         AppLogger.instance.i('- Invalid API key');
         AppLogger.instance.i('- Network connectivity issues');
@@ -101,15 +102,15 @@ void main() {
         AppLogger.instance.i('- Rate limiting');
 
         // For now, we'll mark this as expected since API keys can be invalid
-        expect(finalState.error, contains('Failed to get AI response'),
+        expect(finalAsyncState.error, contains('Failed to get AI response'),
             reason: 'API call failed as expected with potentially invalid key');
         return;
       }
 
-      expect(finalState.messages.length, equals(2), reason: 'Should have user message and AI response');
+      expect(finalAsyncState.value!.messages.length, equals(2), reason: 'Should have user message and AI response');
 
-      final userMessage = finalState.messages[0];
-      final aiMessage = finalState.messages[1];
+      final userMessage = finalAsyncState.value!.messages[0];
+      final aiMessage = finalAsyncState.value!.messages[1];
 
       expect(userMessage.isUser, isTrue, reason: 'First message should be from user');
       expect(userMessage.content, contains('Hello Grok'), reason: 'User message should contain test text');
