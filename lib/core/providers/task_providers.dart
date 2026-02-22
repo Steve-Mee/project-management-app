@@ -202,7 +202,10 @@ class TaskNotifier extends AsyncNotifier<List<Task>> {
   }
 
   Future<void> _syncTaskNotification(Task task) async {
-    final enabled = ref.read(notificationsProvider);
+    final enabled = ref.watch(notificationsProvider).maybeWhen(
+      data: (e) => e,
+      orElse: () => false,
+    );
     if (!enabled) {
       return;
     }
@@ -220,7 +223,10 @@ class TaskNotifier extends AsyncNotifier<List<Task>> {
   }
 
   Future<void> _rescheduleNotifications(List<Task> tasks) async {
-    final enabled = ref.read(notificationsProvider);
+    final enabled = ref.watch(notificationsProvider).maybeWhen(
+      data: (e) => e,
+      orElse: () => false,
+    );
     if (!enabled) {
       return;
     }

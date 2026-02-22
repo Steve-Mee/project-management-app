@@ -35,10 +35,13 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       data: (enabled) => enabled,
       orElse: () => false,
     );
-    final notificationsEnabled = ref.watch(notificationsProvider);
-    final themeMode = ref.watch(themeModeProvider);
+    final notificationsEnabled = ref.watch(notificationsProvider).maybeWhen(
+      data: (enabled) => enabled,
+      orElse: () => true,
+    );
+    final themeModeAsync = ref.watch(themeModeProvider);
     final useProjectFiles = ref.watch(useProjectFilesProvider);
-    final locale = ref.watch(localeProvider);
+    final localeAsync = ref.watch(localeProvider);
     final settingsAsync = ref.watch(settingsRepositoryProvider);
     final authState = ref.watch(authProvider).value!;
     final usersAsync = ref.watch(authUsersProvider);
@@ -52,8 +55,14 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     final canViewSettings =
       ref.watch(hasPermissionProvider(AppPermissions.viewSettings));
 
-    final isDarkMode = themeMode == ThemeMode.dark;
-    final isSystemMode = themeMode == ThemeMode.system;
+    final isDarkMode = themeModeAsync.maybeWhen(
+      data: (mode) => mode == ThemeMode.dark,
+      orElse: () => false,
+    );
+    final isSystemMode = themeModeAsync.maybeWhen(
+      data: (mode) => mode == ThemeMode.system,
+      orElse: () => false,
+    );
     final lastBackupTime = settingsAsync.maybeWhen(
       data: (settings) => settings.getLastBackupTime(),
       orElse: () => null,
@@ -141,7 +150,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             subtitle: Text(l10n.settingsLanguageSubtitle),
             trailing: DropdownButtonHideUnderline(
               child: DropdownButton<String?>(
-                value: locale?.languageCode,
+                value: localeAsync.maybeWhen(
+                  data: (loc) => loc?.languageCode,
+                  orElse: () => null,
+                ),
                 onChanged: (value) {
                   ref.read(localeProvider.notifier).setLocaleCode(value);
                   ref.invalidate(localeProvider);
@@ -477,7 +489,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             subtitle: Text(
               authState.username == null
                   ? l10n.settingsNotLoggedIn
-                  : '${authState.username} (${authState.roleName ?? l10n.settingsLocalUserLabel})',
+                  : '${authState.username!} (${authState.roleName ?? l10n.settingsLocalUserLabel})',
             ),
           ),
           usersAsync.when(

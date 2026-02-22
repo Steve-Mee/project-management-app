@@ -445,7 +445,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           ),
                           const SizedBox(height: 12),
                           DropdownButtonFormField<String?>(
-                            initialValue: locale?.languageCode,
+                            initialValue: locale.maybeWhen(
+                              data: (loc) => loc?.languageCode,
+                              orElse: () => null,
+                            ),
                             decoration: InputDecoration(
                               labelText: l10n.languageLabel,
                               border: OutlineInputBorder(

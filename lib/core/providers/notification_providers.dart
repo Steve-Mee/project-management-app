@@ -17,25 +17,22 @@ final notificationServiceProvider = Provider<NotificationService>((ref) {
 });
 
 /// Notifier for notifications toggle
-class NotificationsNotifier extends Notifier<bool> {
+class NotificationsNotifier extends AsyncNotifier<bool> {
   @override
-  bool build() {
-    final settingsAsync = ref.watch(settingsRepositoryProvider);
-    return settingsAsync.maybeWhen(
-      data: (settings) => settings.getNotificationsEnabled() ?? true,
-      orElse: () => true,
-    );
+  Future<bool> build() async {
+    final settings = await ref.watch(settingsRepositoryProvider.future);
+    return settings.getNotificationsEnabled() ?? true;
   }
 
   Future<void> setEnabled(bool enabled) async {
-    state = enabled;
+    state = AsyncValue.data(enabled);
     final settings = await ref.read(settingsRepositoryProvider.future);
     await settings.setNotificationsEnabled(enabled);
   }
 }
 
 /// Whether notifications are enabled globally (settings toggle)
-final notificationsProvider = NotifierProvider<NotificationsNotifier, bool>(
+final notificationsProvider = AsyncNotifierProvider<NotificationsNotifier, bool>(
   NotificationsNotifier.new,
 );
 

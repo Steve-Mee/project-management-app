@@ -89,7 +89,6 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
   Future<AuthState> _checkInitialAuthState() async {
     final current = Supabase.instance.client.auth.currentUser;
     if (current != null) {
-      // Implemented: initial auth state is created synchronously; settings-based checks occur after login
       return _createAuthenticatedState(current);
     }
 
@@ -423,12 +422,8 @@ class PrivacyConsentNotifier extends AsyncNotifier<bool> {
 
   Future<void> setConsent(bool enabled) async {
     state = AsyncValue.data(enabled);
-    try {
-      final settings = await ref.read(settingsRepositoryProvider.future);
-      await settings.setAiConsentEnabled(enabled);
-    } catch (e) {
-      rethrow;
-    }
+    final settings = await ref.read(settingsRepositoryProvider.future);
+    await settings.setAiConsentEnabled(enabled);
   }
 }
 

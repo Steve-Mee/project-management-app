@@ -97,6 +97,11 @@ void main() async {
   Hive.registerAdapter(ProjectModelAdapter());
   Hive.registerAdapter(TaskStatusAdapter());
   Hive.registerAdapter(TaskAdapter());
+  await Hive.initFlutter();
+  await Hive.openBox('settings');
+  await Hive.openBox('auth');
+  await Hive.openBox('groups');
+  await Hive.openBox('roles');
   await HiveInitializer.initialize();
   await LoginRateLimiter.instance.initialize();
   final abTesting = ABTestingService.instance;
@@ -315,9 +320,17 @@ class _MyAppState extends ConsumerState<MyApp> {
   @override
   Widget build(BuildContext context) {
     // Watch the theme mode provider to rebuild when it changes
-    final themeMode = ref.watch(themeModeProvider);
+    final themeModeAsync = ref.watch(themeModeProvider);
+    final currentThemeMode = themeModeAsync.maybeWhen(
+      data: (t) => t,
+      orElse: () => ThemeMode.system,
+    );
     final authState = ref.watch(authProvider).value!;
-    final locale = ref.watch(localeProvider);
+    final localeAsync = ref.watch(localeProvider);
+    final locale = localeAsync.maybeWhen(
+      data: (l) => l,
+      orElse: () => null,
+    );
     final effectiveLocale =
         locale ?? WidgetsBinding.instance.platformDispatcher.locale;
     final isRtl = _isRtlLocale(effectiveLocale);
@@ -347,7 +360,7 @@ class _MyAppState extends ConsumerState<MyApp> {
                   'Project Management App',
               debugShowCheckedModeBanner: false,
               locale: locale,
-              themeMode: themeMode,
+              themeMode: currentThemeMode,
               theme: AppTheme.lightTheme(),
               darkTheme: AppTheme.darkTheme(),
               localizationsDelegates: AppLocalizations.localizationsDelegates,
@@ -366,7 +379,7 @@ class _MyAppState extends ConsumerState<MyApp> {
             debugShowCheckedModeBanner: false,
 
             // Theme mode - supports system/dark/light
-            themeMode: themeMode,
+            themeMode: currentThemeMode,
 
             locale: locale,
 
@@ -659,19 +672,23 @@ class ResponsiveNavigationLayout extends ConsumerWidget {
   Widget _buildThemeToggle(WidgetRef ref) {
     return Consumer(
       builder: (context, ref, _) {
-        final themeMode = ref.watch(themeModeProvider);
+        final themeModeAsync = ref.watch(themeModeProvider);
+        final currentThemeMode = themeModeAsync.maybeWhen(
+          data: (t) => t,
+          orElse: () => ThemeMode.system,
+        );
         final l10n = AppLocalizations.of(context)!;
 
         return IconButton(
           icon: Icon(
-            _getThemeIcon(themeMode),
+            _getThemeIcon(currentThemeMode),
             size: 24.sp,
           ),
           onPressed: () {
             ThemeMode nextMode;
-            if (themeMode == ThemeMode.system) {
+            if (currentThemeMode == ThemeMode.system) {
               nextMode = ThemeMode.dark;
-            } else if (themeMode == ThemeMode.dark) {
+            } else if (currentThemeMode == ThemeMode.dark) {
               nextMode = ThemeMode.light;
             } else {
               nextMode = ThemeMode.system;

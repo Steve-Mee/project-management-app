@@ -287,7 +287,10 @@ class _ProjectsInitializerState extends ConsumerState<ProjectsInitializer> {
     try {
       // Projects notifier automatically initializes with repository in build()
 
-      final notificationsEnabled = ref.read(notificationsProvider);
+      final notificationsEnabled = ref.watch(notificationsProvider).maybeWhen(
+        data: (enabled) => enabled,
+        orElse: () => false,
+      );
       if (notificationsEnabled) {
         final taskRepository = await ref.read(taskRepositoryProvider.future);
         final notificationService = ref.read(notificationServiceProvider);
