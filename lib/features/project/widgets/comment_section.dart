@@ -148,7 +148,7 @@ class _CommentSectionState extends ConsumerState<CommentSection> {
 
   Widget _buildCommentItem(BuildContext context, CommentModel comment, AppLocalizations l10n) {
     final userProfilesAsync = ref.watch(userProfilesProvider);
-    final authState = ref.watch(authProvider);
+    final authState = ref.watch(authProvider).value!;
 
     return Padding(
       padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
@@ -245,7 +245,7 @@ class _CommentSectionState extends ConsumerState<CommentSection> {
     final text = _commentController.text.trim();
     if (text.isEmpty) return;
 
-    final authState = ref.read(authProvider);
+    final authState = ref.read(authProvider).value!;
     if (!authState.isAuthenticated || authState.username == null) return;
 
     setState(() => _isSubmitting = true);

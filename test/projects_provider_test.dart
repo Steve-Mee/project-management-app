@@ -8,7 +8,7 @@ import 'package:my_project_management_app/models/project_model.dart';
 
 class FakeAuthNotifier extends AuthNotifier {
   @override
-  AuthState build() {
+  Future<AuthState> build() async {
     return const AuthState(isAuthenticated: true, username: 'test');
   }
 }

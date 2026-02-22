@@ -1640,7 +1640,10 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen>
       return;
     }
 
-    final consentEnabled = ref.read(privacyConsentProvider);
+    final consentEnabled = ref.read(privacyConsentProvider).maybeWhen(
+      data: (enabled) => enabled,
+      orElse: () => false,
+    );
     if (!consentEnabled) {
       _showSnackBar(l10n.enableConsentInSettings);
       return;
@@ -1781,7 +1784,10 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen>
 
   /// Show AI chat bottom sheet with compliance check
   void _showChatBottomSheet(BuildContext context) {
-    final aiConsentEnabled = ref.read(aiConsentProvider);
+    final aiConsentEnabled = ref.read(aiConsentProvider).maybeWhen(
+      data: (enabled) => enabled,
+      orElse: () => false,
+    );
     final canUseAi = ref.read(hasPermissionProvider(AppPermissions.useAi));
     
     if (!canUseAi) {

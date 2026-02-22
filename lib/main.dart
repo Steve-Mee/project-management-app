@@ -270,7 +270,7 @@ class _MyAppState extends ConsumerState<MyApp> {
   }
 
   Future<void> _handleInvitationToken(String token) async {
-    final authState = ref.read(authProvider);
+    final authState = ref.read(authProvider).value!;
     if (!authState.isAuthenticated) {
       // Store token for after login
       setState(() {
@@ -316,7 +316,7 @@ class _MyAppState extends ConsumerState<MyApp> {
   Widget build(BuildContext context) {
     // Watch the theme mode provider to rebuild when it changes
     final themeMode = ref.watch(themeModeProvider);
-    final authState = ref.watch(authProvider);
+    final authState = ref.watch(authProvider).value!;
     final locale = ref.watch(localeProvider);
     final effectiveLocale =
         locale ?? WidgetsBinding.instance.platformDispatcher.locale;

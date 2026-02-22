@@ -499,11 +499,13 @@ class ProjectsNotifier extends Notifier<AsyncValue<List<ProjectModel>>> {
     return projects;
   }
 
-  /// Add a new project with guarded error handling
   Future<void> addProject(ProjectModel project) async {
     state = const AsyncValue.loading();
     state = await AsyncValue.guard(() async {
-      final userId = ref.read(authProvider).username ?? 'system'; // Use auth provider
+      final userId = ref.read(authProvider).maybeWhen(
+        data: (auth) => auth.username,
+        orElse: () => 'system',
+      ) ?? 'system'; // Use auth provider
       await _repository.addProject(
         project,
         userId: userId,
@@ -528,7 +530,10 @@ class ProjectsNotifier extends Notifier<AsyncValue<List<ProjectModel>>> {
   Future<void> updateProgress(String projectId, double newProgress) async {
     state = const AsyncValue.loading();
     state = await AsyncValue.guard(() async {
-      final userId = ref.read(authProvider).username ?? 'system'; // Use auth provider
+      final userId = ref.read(authProvider).maybeWhen(
+        data: (auth) => auth.username,
+        orElse: () => 'system',
+      ) ?? 'system'; // Use auth provider
       await _repository.updateProgress(
         projectId,
         newProgress,
@@ -547,7 +552,10 @@ class ProjectsNotifier extends Notifier<AsyncValue<List<ProjectModel>>> {
   Future<void> updateDirectoryPath(String projectId, String? directoryPath) async {
     state = const AsyncValue.loading();
     state = await AsyncValue.guard(() async {
-      final userId = ref.read(authProvider).username ?? 'system';
+      final userId = ref.read(authProvider).maybeWhen(
+        data: (auth) => auth.username,
+        orElse: () => 'system',
+      ) ?? 'system';
       await _repository.updateDirectoryPath(
         projectId,
         directoryPath,
@@ -567,7 +575,10 @@ class ProjectsNotifier extends Notifier<AsyncValue<List<ProjectModel>>> {
   }) async {
     state = const AsyncValue.loading();
     state = await AsyncValue.guard(() async {
-      final userId = ref.read(authProvider).username ?? 'system'; // Use auth provider
+      final userId = ref.read(authProvider).maybeWhen(
+        data: (auth) => auth.username,
+        orElse: () => 'system',
+      ) ?? 'system'; // Use auth provider
       await _repository.updateProject(
         projectId,
         updatedProject,
@@ -612,7 +623,10 @@ class ProjectsNotifier extends Notifier<AsyncValue<List<ProjectModel>>> {
   Future<void> deleteProject(String projectId) async {
     state = const AsyncValue.loading();
     state = await AsyncValue.guard(() async {
-      final userId = ref.read(authProvider).username ?? 'system';
+      final userId = ref.read(authProvider).maybeWhen(
+        data: (auth) => auth.username,
+        orElse: () => 'system',
+      ) ?? 'system';
       await _repository.deleteProject(projectId, userId: userId);
       AppLogger.event('project_deleted', details: {'id': projectId});
       return _loadProjects();
@@ -623,7 +637,10 @@ class ProjectsNotifier extends Notifier<AsyncValue<List<ProjectModel>>> {
   Future<void> updateTasks(String projectId, List<String> tasks) async {
     state = const AsyncValue.loading();
     state = await AsyncValue.guard(() async {
-      final userId = ref.read(authProvider).username ?? 'system';
+      final userId = ref.read(authProvider).maybeWhen(
+        data: (auth) => auth.username,
+        orElse: () => 'system',
+      ) ?? 'system';
       await _repository.updateTasks(
         projectId,
         tasks,
@@ -639,7 +656,10 @@ class ProjectsNotifier extends Notifier<AsyncValue<List<ProjectModel>>> {
   Future<void> updatePlanJson(String projectId, String? planJson) async {
     state = const AsyncValue.loading();
     state = await AsyncValue.guard(() async {
-      final userId = ref.read(authProvider).username ?? 'system';
+      final userId = ref.read(authProvider).maybeWhen(
+        data: (auth) => auth.username,
+        orElse: () => 'system',
+      ) ?? 'system';
       await _repository.updatePlanJson(
         projectId,
         planJson,
@@ -675,7 +695,7 @@ final projectMetaProvider = Provider<Map<String, ProjectMeta>>((ref) {
 /// Projects filtered by current user's permissions and sharing status
 final visibleProjectsProvider = Provider<AsyncValue<List<ProjectModel>>>((ref) {
   final projectsState = ref.watch(projectsProvider);
-  final authState = ref.watch(authProvider);
+  final authAsync = ref.watch(authProvider);
   final permissions = ref.watch(permissionsProvider);
 
   return projectsState.when(
@@ -687,8 +707,9 @@ final visibleProjectsProvider = Provider<AsyncValue<List<ProjectModel>>>((ref) {
         return AsyncValue.data(projects);
       }
       // fallback: only shared with user
+      final username = authAsync.maybeWhen(data: (auth) => auth.username, orElse: () => null);
       return AsyncValue.data(
-        projects.where((p) => p.sharedUsers.contains(authState.username ?? '')).toList(),
+        projects.where((p) => p.sharedUsers.contains(username ?? '')).toList(),
       );
     },
     loading: () => const AsyncValue.loading(),

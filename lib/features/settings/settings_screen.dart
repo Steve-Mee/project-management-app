@@ -31,13 +31,16 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    final consentEnabled = ref.watch(privacyConsentProvider);
+    final consentEnabled = ref.watch(privacyConsentProvider).maybeWhen(
+      data: (enabled) => enabled,
+      orElse: () => false,
+    );
     final notificationsEnabled = ref.watch(notificationsProvider);
     final themeMode = ref.watch(themeModeProvider);
     final useProjectFiles = ref.watch(useProjectFilesProvider);
     final locale = ref.watch(localeProvider);
     final settingsAsync = ref.watch(settingsRepositoryProvider);
-    final authState = ref.watch(authProvider);
+    final authState = ref.watch(authProvider).value!;
     final usersAsync = ref.watch(authUsersProvider);
     
     final canManageUsers =
@@ -308,7 +311,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             ),
           ),
           SwitchListTile(
-            value: ref.watch(biometricLoginProvider),
+            value: ref.watch(biometricLoginProvider).maybeWhen(
+              data: (enabled) => enabled,
+              orElse: () => false,
+            ),
             onChanged: (value) async {
               await ref.read(biometricLoginProvider.notifier).setEnabled(value);
             },
@@ -1061,7 +1067,10 @@ class _AiSettingsSection extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final aiConsentEnabled = ref.watch(aiConsentProvider);
+    final aiConsentEnabled = ref.watch(aiConsentProvider).maybeWhen(
+      data: (enabled) => enabled,
+      orElse: () => false,
+    );
 
     return Column(
       children: [
@@ -1127,7 +1136,10 @@ class _AiSettingsSection extends ConsumerWidget {
           subtitle: const Text('Choose how detailed task help should be'),
           trailing: DropdownButtonHideUnderline(
             child: DropdownButton<String>(
-              value: ref.watch(helpLevelProvider).name,
+              value: ref.watch(helpLevelProvider).maybeWhen(
+                data: (level) => level.name,
+                orElse: () => ai_config.HelpLevel.basis.name,
+              ),
               onChanged: (value) {
                 if (value != null) {
                   ai_config.HelpLevel level;

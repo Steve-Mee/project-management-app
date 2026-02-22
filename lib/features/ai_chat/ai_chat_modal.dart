@@ -427,7 +427,10 @@ class _AiChatModalState extends ConsumerState<AiChatModal> {
       return userInput;
     }
 
-    final consentEnabled = ref.read(privacyConsentProvider);
+    final consentEnabled = ref.read(privacyConsentProvider).maybeWhen(
+      data: (enabled) => enabled,
+      orElse: () => false,
+    );
     if (!consentEnabled) {
       _showSnackBar(l10n.enableConsentInSettings);
       return userInput;

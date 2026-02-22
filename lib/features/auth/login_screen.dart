@@ -65,7 +65,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     } else {
       // Check if biometric can be enabled
       final biometricAvailable = await ref.read(authProvider.notifier).isBiometricAvailable();
-      final biometricEnabled = ref.read(biometricLoginProvider);
+      final biometricEnabled = ref.read(biometricLoginProvider).maybeWhen(
+        data: (enabled) => enabled,
+        orElse: () => false,
+      );
       if (biometricAvailable && !biometricEnabled) {
         await _showBiometricDialog();
       }
@@ -348,7 +351,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final locale = ref.watch(localeProvider);
-    final biometricEnabled = ref.watch(biometricLoginProvider);
+    final biometricEnabled = ref.watch(biometricLoginProvider).maybeWhen(
+      data: (enabled) => enabled,
+      orElse: () => false,
+    );
     if (_biometricAvailable == null) {
       ref.read(authProvider.notifier).isBiometricAvailable().then((value) {
         if (mounted) setState(() => _biometricAvailable = value);

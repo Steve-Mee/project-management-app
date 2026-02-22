@@ -1406,7 +1406,7 @@ class _ProjectScreenState extends ConsumerState<ProjectScreen> {
     }
 
     // Get current user for sharing
-    final authState = ref.read(authProvider);
+    final authState = ref.read(authProvider).value!;
     final currentUsername = authState.username ?? '';
 
     final project = ProjectModel.create(

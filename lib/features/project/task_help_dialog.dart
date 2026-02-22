@@ -34,7 +34,10 @@ class _TaskHelpDialogState extends ConsumerState<TaskHelpDialog> {
   @override
   void initState() {
     super.initState();
-    _selectedLevel = ref.read(helpLevelProvider);
+    _selectedLevel = ref.read(helpLevelProvider).maybeWhen(
+      data: (level) => level,
+      orElse: () => ai_config.HelpLevel.basis,
+    );
     _selectedAiAssistant = widget.aiAssistant ?? 'none';
   }
 

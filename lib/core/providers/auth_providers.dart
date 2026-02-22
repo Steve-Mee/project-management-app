@@ -66,7 +66,7 @@ class AuthState {
 }
 
 /// Notifier for authentication with robust error handling
-class AuthNotifier extends Notifier<AuthState> {
+class AuthNotifier extends AsyncNotifier<AuthState> {
   final CloudSyncService _cloudSync = CloudSyncService();
   final ABTestingService _abTesting = ABTestingService.instance;
   final LocalAuthentication _localAuth = LocalAuthentication();
@@ -74,7 +74,7 @@ class AuthNotifier extends Notifier<AuthState> {
   bool _listening = false;
 
   @override
-  AuthState build() {
+  Future<AuthState> build() async {
     if (!_listening) {
       _listening = true;
       Supabase.instance.client.auth.onAuthStateChange.listen((event) async {
@@ -83,15 +83,23 @@ class AuthNotifier extends Notifier<AuthState> {
     }
 
     // Check initial auth state with error handling
-    return _checkInitialAuthState();
+    return await _checkInitialAuthState();
   }
 
-  AuthState _checkInitialAuthState() {
+  Future<AuthState> _checkInitialAuthState() async {
     final current = Supabase.instance.client.auth.currentUser;
     if (current != null) {
       // Implemented: initial auth state is created synchronously; settings-based checks occur after login
       return _createAuthenticatedState(current);
     }
+
+    // Add async settings check for auto-login
+    final settings = await ref.read(settingsRepositoryProvider.future);
+    if (settings.getAutoLoginEnabled() && settings.getEnableBiometricLogin() && await isBiometricAvailable()) {
+      await authenticateWithBiometrics();
+      return state.value!;
+    }
+
     return const AuthState(isAuthenticated: false);
   }
 
@@ -112,9 +120,9 @@ class AuthNotifier extends Notifier<AuthState> {
   Future<void> _handleAuthStateChange(dynamic event) async {
     final user = event.session?.user;
     if (user != null) {
-      state = _createAuthenticatedState(user);
+      state = AsyncValue.data(_createAuthenticatedState(user));
     } else {
-      state = const AuthState(isAuthenticated: false);
+      state = AsyncValue.data(const AuthState(isAuthenticated: false));
     }
   }
 
@@ -124,7 +132,7 @@ class AuthNotifier extends Notifier<AuthState> {
 
     // Check rate limiting before attempting login
     if (await repo.isLoginBlocked(username)) {
-      state = state.copyWith(error: 'Rate limit exceeded. Please try again later.');
+      state = AsyncValue.data(state.value!.copyWith(error: 'Rate limit exceeded. Please try again later.'));
       AppLogger.event('auth_rate_limit_exceeded', details: {'email': username, 'timestamp': DateTime.now().toIso8601String()});
       return false;
     }
@@ -154,12 +162,12 @@ class AuthNotifier extends Notifier<AuthState> {
         final localUser = repo.getUserByUsername(userEmail);
         final role = localUser != null ? repo.getRoleById(localUser.roleId) : null;
 
-        state = AuthState(
+        state = AsyncValue.data(AuthState(
           isAuthenticated: true,
           username: userEmail,
           roleId: role?.id ?? repo.defaultUserRoleId,
           roleName: role?.name ?? 'Member',
-        );
+        ));
 
         await _abTesting.initialize();
         await _abTesting.assignGroupForUser(userEmail);
@@ -196,13 +204,13 @@ class AuthNotifier extends Notifier<AuthState> {
       await repo.recordLoginAttempt(username);
     }
 
-    state = state.copyWith(error: 'Invalid username or password.');
+    state = AsyncValue.data(state.value!.copyWith(error: 'Invalid username or password.'));
     return false;
   }
 
   /// Logout with proper cleanup
   Future<void> logout() async {
-    final userId = state.username;
+    final userId = state.value!.username;
     AppLogger.event('auth_sign_out');
     await _cloudSync.authSignOutPlaceholder(userId: userId);
 
@@ -221,7 +229,7 @@ class AuthNotifier extends Notifier<AuthState> {
     String? roleId,
   }) async {
     if (username.trim().isEmpty || password.isEmpty) {
-      state = state.copyWith(error: 'Username and password are required.');
+      state = AsyncValue.data(state.value!.copyWith(error: 'Username and password are required.'));
       return false;
     }
 
@@ -237,7 +245,7 @@ class AuthNotifier extends Notifier<AuthState> {
       );
       return true;
     } catch (e) {
-      state = state.copyWith(error: 'Failed to add user: $e');
+      state = AsyncValue.error('Failed to add user: $e', StackTrace.current);
       return false;
     }
   }
@@ -277,10 +285,10 @@ class AuthNotifier extends Notifier<AuthState> {
       }
     } on AuthException catch (e) {
       AppLogger.instance.w('Supabase sign-up failed', error: e);
-      state = state.copyWith(error: 'Registration failed: ${e.message} (${e.code ?? 'no code'})');
+      state = AsyncValue.data(state.value!.copyWith(error: 'Registration failed: ${e.message} (${e.code ?? 'no code'})'));
     } catch (e, stack) {
       AppLogger.instance.e('Unexpected signup error', error: e, stackTrace: stack);
-      state = state.copyWith(error: 'Unexpected error during registration');
+      state = AsyncValue.data(state.value!.copyWith(error: 'Unexpected error during registration'));
     }
     return false;
   }
@@ -289,22 +297,22 @@ class AuthNotifier extends Notifier<AuthState> {
   Future<void> deleteUser(String username) async {
     try {
       final IAuthRepository repo = ref.read(authRepositoryProvider);
-      final roleId = state.roleId ?? repo.defaultUserRoleId;
+      final roleId = state.value!.roleId ?? repo.defaultUserRoleId;
       final role = repo.getRoleById(roleId);
       final canManageUsers = role?.permissions.contains(AppPermissions.manageUsers) ?? false;
 
       if (!canManageUsers) {
-        state = state.copyWith(error: 'You do not have permission to delete users.');
+        state = AsyncValue.data(state.value!.copyWith(error: 'You do not have permission to delete users.'));
         return;
       }
 
       await repo.deleteUser(username.trim());
       final current = repo.getCurrentUser();
       if (current == null) {
-        state = const AuthState(isAuthenticated: false);
+        state = AsyncValue.data(const AuthState(isAuthenticated: false));
       }
     } catch (e) {
-      state = state.copyWith(error: 'Failed to delete user: $e');
+      state = AsyncValue.error('Failed to delete user: $e', StackTrace.current);
     }
   }
 
@@ -324,7 +332,7 @@ class AuthNotifier extends Notifier<AuthState> {
   /// Authenticate using biometrics and perform login with stored credentials
   Future<bool> authenticateWithBiometrics() async {
     if (!await isBiometricAvailable()) {
-      state = state.copyWith(error: 'Biometric authentication not available.');
+      state = AsyncValue.data(state.value!.copyWith(error: 'Biometric authentication not available.'));
       return false;
     }
 
@@ -335,7 +343,7 @@ class AuthNotifier extends Notifier<AuthState> {
       );
 
       if (!authenticated) {
-        state = state.copyWith(error: 'Biometric authentication failed.');
+        state = AsyncValue.data(state.value!.copyWith(error: 'Biometric authentication failed.'));
         return false;
       }
 
@@ -344,7 +352,7 @@ class AuthNotifier extends Notifier<AuthState> {
       final storedUsername = await _secureStorage.read(key: 'biometric_username');
 
       if (storedPassword == null || storedUsername == null) {
-        state = state.copyWith(error: 'No stored credentials for biometric login.');
+        state = AsyncValue.data(state.value!.copyWith(error: 'No stored credentials for biometric login.'));
         return false;
       }
 
@@ -352,7 +360,7 @@ class AuthNotifier extends Notifier<AuthState> {
       return await login(storedUsername, storedPassword, enableAutoLogin: false);
     } catch (e) {
       AppLogger.instance.w('Biometric authentication failed', error: e);
-      state = state.copyWith(error: 'Biometric authentication error: $e');
+      state = AsyncValue.data(state.value!.copyWith(error: 'Biometric authentication error: $e'));
       return false;
     }
   }
@@ -375,19 +383,24 @@ class AuthNotifier extends Notifier<AuthState> {
 }
 
 /// Provider for authentication state
-final authProvider = NotifierProvider<AuthNotifier, AuthState>(
+final authProvider = AsyncNotifierProvider<AuthNotifier, AuthState>(
   AuthNotifier.new,
 );
 
 /// Provider exposing current user's permission set based on their role
 final permissionsProvider = Provider<Set<String>>((ref) {
-  final auth = ref.watch(authProvider);
-  if (!auth.isAuthenticated || auth.roleId == null) {
-    return <String>{};
-  }
-  final IAuthRepository repo = ref.read(authRepositoryProvider);
-  final role = repo.getRoleById(auth.roleId!);
-  return role?.permissions.toSet() ?? <String>{};
+  final authAsync = ref.watch(authProvider);
+  return authAsync.maybeWhen(
+    data: (auth) {
+      if (!auth.isAuthenticated || auth.roleId == null) {
+        return <String>{};
+      }
+      final IAuthRepository repo = ref.read(authRepositoryProvider);
+      final role = repo.getRoleById(auth.roleId!);
+      return role?.permissions.toSet() ?? <String>{};
+    },
+    orElse: () => <String>{},
+  );
 });
 
 /// Convenience family provider for checking a single permission
@@ -397,22 +410,19 @@ final hasPermissionProvider = Provider.family<bool, String>((ref, permission) {
 });
 
 /// Notifier for user consent to upload project files for AI prompts
-class PrivacyConsentNotifier extends Notifier<bool> {
+class PrivacyConsentNotifier extends AsyncNotifier<bool> {
   @override
-  bool build() {
+  Future<bool> build() async {
     // stored in settings repository
-    final settingsAsync = ref.watch(settingsRepositoryProvider);
-    return settingsAsync.maybeWhen(
-      data: (s) => s.getAiConsentEnabled(),
-      orElse: () => false,
-    );
+    final settings = await ref.read(settingsRepositoryProvider.future);
+    return settings.getAiConsentEnabled();
   }
 
   /// legacy name used by UI
   Future<void> setEnabled(bool enabled) => setConsent(enabled);
 
   Future<void> setConsent(bool enabled) async {
-    state = enabled;
+    state = AsyncValue.data(enabled);
     try {
       final settings = await ref.read(settingsRepositoryProvider.future);
       await settings.setAiConsentEnabled(enabled);
@@ -423,79 +433,68 @@ class PrivacyConsentNotifier extends Notifier<bool> {
 }
 
 /// Provider for privacy/AI consent toggle
-final privacyConsentProvider = NotifierProvider<PrivacyConsentNotifier, bool>(
+final privacyConsentProvider = AsyncNotifierProvider<PrivacyConsentNotifier, bool>(
   PrivacyConsentNotifier.new,
 );
 
 /// Notifier for AI consent setting.
-class AiConsentNotifier extends Notifier<bool> {
+class AiConsentNotifier extends AsyncNotifier<bool> {
   @override
-  bool build() {
-    final settingsAsync = ref.watch(settingsRepositoryProvider);
-    return settingsAsync.maybeWhen(
-      data: (settings) => settings.getAiConsentEnabled(),
-      orElse: () => false,
-    );
+  Future<bool> build() async {
+    final settings = await ref.read(settingsRepositoryProvider.future);
+    return settings.getAiConsentEnabled();
   }
 
   Future<void> setEnabled(bool value) async {
     final settings = await ref.read(settingsRepositoryProvider.future);
     await settings.setAiConsentEnabled(value);
-    state = value;
+    state = AsyncValue.data(value);
   }
 }
 
 /// Whether the user has consented to AI usage with compliance.
-final aiConsentProvider = NotifierProvider<AiConsentNotifier, bool>(
+final aiConsentProvider = AsyncNotifierProvider<AiConsentNotifier, bool>(
   AiConsentNotifier.new,
 );
 
 /// Notifier for biometric login setting.
-class BiometricLoginNotifier extends Notifier<bool> {
+class BiometricLoginNotifier extends AsyncNotifier<bool> {
   @override
-  bool build() {
-    final settingsAsync = ref.watch(settingsRepositoryProvider);
-    return settingsAsync.maybeWhen(
-      data: (settings) => settings.getEnableBiometricLogin(),
-      orElse: () => false,
-    );
+  Future<bool> build() async {
+    final settings = await ref.read(settingsRepositoryProvider.future);
+    return settings.getEnableBiometricLogin();
   }
 
   Future<void> setEnabled(bool value) async {
     final settings = await ref.read(settingsRepositoryProvider.future);
     await settings.setEnableBiometricLogin(value);
-    state = value;
+    state = AsyncValue.data(value);
   }
 }
 
 /// Provider for biometric login toggle
-final biometricLoginProvider = NotifierProvider<BiometricLoginNotifier, bool>(
+final biometricLoginProvider = AsyncNotifierProvider<BiometricLoginNotifier, bool>(
   BiometricLoginNotifier.new,
 );
 
 /// Notifier for help level setting.
-class HelpLevelNotifier extends Notifier<ai_config.HelpLevel> {
+class HelpLevelNotifier extends AsyncNotifier<ai_config.HelpLevel> {
   @override
-  ai_config.HelpLevel build() {
-    final settingsAsync = ref.watch(settingsRepositoryProvider);
-    return settingsAsync.maybeWhen(
-      data: (settings) {
-        final level = settings.getHelpLevel();
-        switch (level) {
-          case 'gedetailleerd':
-            return ai_config.HelpLevel.gedetailleerd;
-          case 'stapVoorStap':
-            return ai_config.HelpLevel.stapVoorStap;
-          default:
-            return ai_config.HelpLevel.basis;
-        }
-      },
-      orElse: () => ai_config.HelpLevel.basis,
-    );
+  Future<ai_config.HelpLevel> build() async {
+    final settings = await ref.read(settingsRepositoryProvider.future);
+    final level = settings.getHelpLevel();
+    switch (level) {
+      case 'gedetailleerd':
+        return ai_config.HelpLevel.gedetailleerd;
+      case 'stapVoorStap':
+        return ai_config.HelpLevel.stapVoorStap;
+      default:
+        return ai_config.HelpLevel.basis;
+    }
   }
 
   void setHelpLevel(ai_config.HelpLevel level) {
-    state = level;
+    state = AsyncValue.data(level);
     ref
         .read(settingsRepositoryProvider.future)
         .then((settings) => settings.setHelpLevel(level.name));
@@ -503,7 +502,7 @@ class HelpLevelNotifier extends Notifier<ai_config.HelpLevel> {
 }
 
 /// Provider for help level setting (basic/detailed).
-final helpLevelProvider = NotifierProvider<HelpLevelNotifier, ai_config.HelpLevel>(
+final helpLevelProvider = AsyncNotifierProvider<HelpLevelNotifier, ai_config.HelpLevel>(
   HelpLevelNotifier.new,
 );
 
@@ -517,24 +516,21 @@ final biometricSupportedProvider = FutureProvider<bool>((ref) async {
   }
 });
 
-class UseBiometricsNotifier extends Notifier<bool> {
+class UseBiometricsNotifier extends AsyncNotifier<bool> {
   @override
-  bool build() {
-    final settingsAsync = ref.watch(settingsRepositoryProvider);
-    return settingsAsync.maybeWhen(
-      data: (s) => s.getUseBiometricsEnabled(),
-      orElse: () => false,
-    );
+  Future<bool> build() async {
+    final settings = await ref.read(settingsRepositoryProvider.future);
+    return settings.getUseBiometricsEnabled();
   }
 
   Future<void> setEnabled(bool enabled) async {
     final settings = await ref.watch(settingsRepositoryProvider.future);
     await settings.setUseBiometricsEnabled(enabled);
-    state = enabled;
+    state = AsyncValue.data(enabled);
   }
 }
 
-final useBiometricsProvider = NotifierProvider<UseBiometricsNotifier, bool>(
+final useBiometricsProvider = AsyncNotifierProvider<UseBiometricsNotifier, bool>(
   UseBiometricsNotifier.new,
 );
 
@@ -545,7 +541,7 @@ final authUsersProvider = FutureProvider<List<AppUser>>((ref) {
 
 /// Provider for current authenticated user
 final currentUserProvider = FutureProvider<AppUser?>((ref) async {
-  final authState = ref.watch(authProvider);
+  final authState = await ref.watch(authProvider.future);
   if (!authState.isAuthenticated || authState.username == null) {
     return null;
   }
