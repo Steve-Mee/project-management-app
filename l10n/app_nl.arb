@@ -1385,6 +1385,18 @@
   "ai_config_saved": "AI configuratie succesvol opgeslagen",
   "@ai_config_saved": {
     "description": "Success message when AI rate limits are saved."
+  },
+  "max_requests_per_window": "Max verzoeken per venster",
+  "@max_requests_per_window": {
+    "description": "Label for maximum requests per time window setting."
+  },
+  "ai_max_requests_label": "AI Max Verzoeken",
+  "@ai_max_requests_label": {
+    "description": "Label for AI maximum requests configuration section."
+  },
+  "ai_requests_per_minute": "verzoeken per minuut",
+  "@ai_requests_per_minute": {
+    "description": "Unit label showing requests per minute for rate limiting."
   }
 }
 }

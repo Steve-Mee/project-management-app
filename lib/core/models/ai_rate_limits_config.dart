@@ -1,14 +1,18 @@
-/// Configuration for AI rate limits
-///
-/// This model defines configurable rate limits for AI operations.
-/// See .github/issues/030-ai-configurable-rate-limits.md for requirements.
-///
+// Configuration for AI rate limits
+//
+// This model defines configurable rate limits for AI operations.
+// See .github/issues/030-ai-configurable-rate-limits.md for requirements.
+//
+import '../services/app_logger.dart';
+
 class AiRateLimitsConfig {
   final int maxRequestsPerMinute;
   final int maxRequestsPerHour;
   final int maxRequestsPerDay;
   final int maxTokensPerRequest;
   final int maxTotalTokensPerDay;
+  final int maxRequestsPerWindow;
+  final Duration timeWindowDuration;
 
   /// Validates and clamps AI rate limits configuration to safe ranges.
   ///
@@ -18,12 +22,18 @@ class AiRateLimitsConfig {
   ///
   /// Returns a new AiRateLimitsConfig with validated values.
   static AiRateLimitsConfig validateAiRateLimits(AiRateLimitsConfig config) {
+    final maxRequestsPerWindow = config.maxRequestsPerWindow;
+    if (maxRequestsPerWindow < 1) {
+      AppLogger.event('Invalid maxRequestsPerWindow', params: {'value': maxRequestsPerWindow, 'action': 'clamping to 1'});
+    }
     return AiRateLimitsConfig(
       maxRequestsPerMinute: config.maxRequestsPerMinute.clamp(1, 1000),
       maxRequestsPerHour: config.maxRequestsPerHour.clamp(1, 10000),
       maxRequestsPerDay: config.maxRequestsPerDay.clamp(1, 50000),
       maxTokensPerRequest: config.maxTokensPerRequest.clamp(100, 100000),
       maxTotalTokensPerDay: config.maxTotalTokensPerDay.clamp(1000, 10000000),
+      maxRequestsPerWindow: maxRequestsPerWindow.clamp(1, 1000),
+      timeWindowDuration: config.timeWindowDuration,
     );
   }
 
@@ -33,6 +43,8 @@ class AiRateLimitsConfig {
     required this.maxRequestsPerDay,
     required this.maxTokensPerRequest,
     required this.maxTotalTokensPerDay,
+    required this.maxRequestsPerWindow,
+    required this.timeWindowDuration,
   });
 
   const AiRateLimitsConfig.defaults()
@@ -40,7 +52,9 @@ class AiRateLimitsConfig {
         maxRequestsPerHour = 100,
         maxRequestsPerDay = 500,
         maxTokensPerRequest = 4000,
-        maxTotalTokensPerDay = 100000;
+        maxTotalTokensPerDay = 100000,
+        maxRequestsPerWindow = 10,
+        timeWindowDuration = const Duration(minutes: 1);
 
   AiRateLimitsConfig copyWith({
     int? maxRequestsPerMinute,
@@ -48,6 +62,8 @@ class AiRateLimitsConfig {
     int? maxRequestsPerDay,
     int? maxTokensPerRequest,
     int? maxTotalTokensPerDay,
+    int? maxRequestsPerWindow,
+    Duration? timeWindowDuration,
   }) {
     return AiRateLimitsConfig(
       maxRequestsPerMinute: maxRequestsPerMinute ?? this.maxRequestsPerMinute,
@@ -55,6 +71,8 @@ class AiRateLimitsConfig {
       maxRequestsPerDay: maxRequestsPerDay ?? this.maxRequestsPerDay,
       maxTokensPerRequest: maxTokensPerRequest ?? this.maxTokensPerRequest,
       maxTotalTokensPerDay: maxTotalTokensPerDay ?? this.maxTotalTokensPerDay,
+      maxRequestsPerWindow: maxRequestsPerWindow ?? this.maxRequestsPerWindow,
+      timeWindowDuration: timeWindowDuration ?? this.timeWindowDuration,
     );
   }
 
@@ -65,6 +83,8 @@ class AiRateLimitsConfig {
       maxRequestsPerDay: json['maxRequestsPerDay'] as int? ?? 500,
       maxTokensPerRequest: json['maxTokensPerRequest'] as int? ?? 4000,
       maxTotalTokensPerDay: json['maxTotalTokensPerDay'] as int? ?? 100000,
+      maxRequestsPerWindow: json['maxRequestsPerWindow'] as int? ?? 10,
+      timeWindowDuration: Duration(seconds: json['timeWindowDurationSeconds'] as int? ?? 60),
     );
   }
 
@@ -75,12 +95,14 @@ class AiRateLimitsConfig {
       'maxRequestsPerDay': maxRequestsPerDay,
       'maxTokensPerRequest': maxTokensPerRequest,
       'maxTotalTokensPerDay': maxTotalTokensPerDay,
+      'maxRequestsPerWindow': maxRequestsPerWindow,
+      'timeWindowDurationSeconds': timeWindowDuration.inSeconds,
     };
   }
 
   @override
   String toString() {
-    return 'AiRateLimitsConfig(maxRequestsPerMinute: $maxRequestsPerMinute, maxRequestsPerHour: $maxRequestsPerHour, maxRequestsPerDay: $maxRequestsPerDay, maxTokensPerRequest: $maxTokensPerRequest, maxTotalTokensPerDay: $maxTotalTokensPerDay)';
+    return 'AiRateLimitsConfig(maxRequestsPerMinute: $maxRequestsPerMinute, maxRequestsPerHour: $maxRequestsPerHour, maxRequestsPerDay: $maxRequestsPerDay, maxTokensPerRequest: $maxTokensPerRequest, maxTotalTokensPerDay: $maxTotalTokensPerDay, maxRequestsPerWindow: $maxRequestsPerWindow, timeWindowDuration: $timeWindowDuration)';
   }
 
   @override
@@ -91,7 +113,9 @@ class AiRateLimitsConfig {
         other.maxRequestsPerHour == maxRequestsPerHour &&
         other.maxRequestsPerDay == maxRequestsPerDay &&
         other.maxTokensPerRequest == maxTokensPerRequest &&
-        other.maxTotalTokensPerDay == maxTotalTokensPerDay;
+        other.maxTotalTokensPerDay == maxTotalTokensPerDay &&
+        other.maxRequestsPerWindow == maxRequestsPerWindow &&
+        other.timeWindowDuration == timeWindowDuration;
   }
 
   @override
@@ -100,7 +124,9 @@ class AiRateLimitsConfig {
         maxRequestsPerHour.hashCode ^
         maxRequestsPerDay.hashCode ^
         maxTokensPerRequest.hashCode ^
-        maxTotalTokensPerDay.hashCode;
+        maxTotalTokensPerDay.hashCode ^
+        maxRequestsPerWindow.hashCode ^
+        timeWindowDuration.hashCode;
   }
 }
 
@@ -113,6 +139,8 @@ Only show this section for admins or when a feature flag is enabled.
 
 Required imports:
 import 'package:flutter/material.dart';
+import '../services/app_logger.dart';
+import '../services/app_logger.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:my_project_management_app/core/models/ai_rate_limits_config.dart';
 import 'package:my_project_management_app/core/providers/auth_providers.dart';
@@ -339,5 +367,85 @@ class _AiRateLimitsSectionState extends ConsumerState<AiRateLimitsSection> {
 ///     );
 ///   }
 /// }
-
+///
+/// // Example: Max Requests Per Window Setting Widget
+/// // Add to your settings screen AI section
+/// class AiMaxRequestsSetting extends ConsumerWidget {
+///   const AiMaxRequestsSetting({super.key});
+///
+///   @override
+///   Widget build(BuildContext context, WidgetRef ref) {
+///     final settings = ref.watch(settingsRepositoryProvider);
+///     final rateLimits = settings.getAiRateLimitsConfig();
+///
+///     return Column(
+///       crossAxisAlignment: CrossAxisAlignment.start,
+///       children: [
+///         Text(
+///           AppLocalizations.of(context)!.ai_max_requests_label,
+///           style: Theme.of(context).textTheme.titleMedium,
+///         ),
+///         const SizedBox(height: 8),
+///         Row(
+///           children: [
+///             Expanded(
+///               child: Slider(
+///                 value: rateLimits.maxRequestsPerWindow.toDouble(),
+///                 min: 1,
+///                 max: 50,
+///                 divisions: 49,
+///                 label: rateLimits.maxRequestsPerWindow.toString(),
+///                 onChanged: (value) {
+///                   final newConfig = rateLimits.copyWith(
+///                     maxRequestsPerWindow: value.toInt(),
+///                   );
+///                   ref.read(settingsRepositoryProvider).setAiRateLimitsConfig(newConfig);
+///                 },
+///               ),
+///             ),
+///             const SizedBox(width: 16),
+///             Text(
+///               '${rateLimits.maxRequestsPerWindow} ${AppLocalizations.of(context)!.ai_requests_per_minute}',
+///               style: Theme.of(context).textTheme.bodyMedium,
+///             ),
+///           ],
+///         ),
+///         Text(
+///           AppLocalizations.of(context)!.max_requests_per_window,
+///           style: Theme.of(context).textTheme.bodySmall?.copyWith(
+///             color: Theme.of(context).colorScheme.onSurfaceVariant,
+///           ),
+///         ),
+///       ],
+///     );
+///   }
+/// }
+///
+/// // Example: Settings Screen AI Section
+/// class AiRateLimitsSection extends ConsumerWidget {
+///   const AiRateLimitsSection({super.key});
+///
+///   @override
+///   Widget build(BuildContext context, WidgetRef ref) {
+///     return Card(
+///       margin: const EdgeInsets.all(16),
+///       child: Padding(
+///         padding: const EdgeInsets.all(16),
+///         child: Column(
+///           crossAxisAlignment: CrossAxisAlignment.start,
+///           children: [
+///             Text(
+///               AppLocalizations.of(context)!.ai_rate_limits_title,
+///               style: Theme.of(context).textTheme.titleLarge,
+///             ),
+///             const SizedBox(height: 16),
+///             const AiMaxRequestsSetting(),
+///             // Add other AI settings here...
+///           ],
+///         ),
+///       ),
+///     );
+///   }
+/// }
+///
 */

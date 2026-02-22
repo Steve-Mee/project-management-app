@@ -2,13 +2,15 @@ import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:my_project_management_app/core/models/ai_rate_limits_config.dart';
-import 'package:my_project_management_app/core/providers/ai/ai_chat_provider.dart';
+import 'package:my_project_management_app/core/providers/ai_chat_provider.dart' as ai_provider;
+import 'package:my_project_management_app/core/providers/ai_chat_provider.dart' show aiChatProvider;
 import 'package:my_project_management_app/core/providers/auth_providers.dart';
 import 'package:my_project_management_app/core/repository/settings_repository.dart';
+import 'package:my_project_management_app/models/chat_message_model.dart';
 
-class FakeAiChatNotifier extends AiChatNotifier {
+class FakeAiChatNotifier extends ai_provider.AiChatNotifier {
   @override
-  Future<AiChatState> build() async {
+  Future<ai_provider.AiChatState> build() async {
     final settings = await ref.watch(settingsRepositoryProvider.future);
     var config = settings.getAiRateLimitsConfig();
     // Validate if the config has invalid values (negative or zero)
@@ -17,7 +19,60 @@ class FakeAiChatNotifier extends AiChatNotifier {
         config.maxTotalTokensPerDay <= 0) {
       config = AiRateLimitsConfig.validateAiRateLimits(config);
     }
-    return AiChatState(rateLimitsConfig: config);
+    return ai_provider.AiChatState(rateLimits: config);
+  }
+
+  @override
+  Future<void> sendMessage(
+    String userMessage, {
+    String? promptOverride,
+    String? projectId,
+  }) async {
+    if (userMessage.trim().isEmpty) return;
+
+    final currentState = state.value!;
+    
+    // Check rate limit before proceeding
+    if (currentState.isRateLimited) {
+      throw ai_provider.RateLimitExceededException(currentState.timeUntilReset);
+    }
+
+    // Simulate successful message processing without API call
+    final now = DateTime.now();
+    final newRequestCount = _calculateNewRequestCount(now, currentState);
+
+    final userMsg = ChatMessage(
+      id: now.millisecondsSinceEpoch.toString(),
+      content: userMessage,
+      isUser: true,
+      timestamp: now,
+    );
+
+    final aiMsg = ChatMessage(
+      id: (now.millisecondsSinceEpoch + 1).toString(),
+      content: 'Mock AI response to: $userMessage',
+      isUser: false,
+      timestamp: now,
+    );
+
+    state = AsyncValue.data(currentState.copyWith(
+      messages: [...currentState.messages, userMsg, aiMsg],
+      isLoading: false,
+      error: null,
+      lastRequestTime: now,
+      requestCountInWindow: newRequestCount,
+    ));
+  }
+
+  int _calculateNewRequestCount(DateTime now, ai_provider.AiChatState currentState) {
+    if (currentState.lastRequestTime == null) return 1;
+
+    final timeSinceLastRequest = now.difference(currentState.lastRequestTime!);
+    if (timeSinceLastRequest > currentState.rateLimits.timeWindowDuration) {
+      return 1; // Window expired, reset to 1
+    }
+
+    return currentState.requestCountInWindow + 1;
   }
 }
 
@@ -54,20 +109,19 @@ void main() {
       container = ProviderContainer(
         overrides: [
           settingsRepositoryProvider.overrideWith((ref) => Future.value(fakeSettingsRepo)),
-          aiChatProvider.overrideWith(() => FakeAiChatNotifier()),
         ],
       );
     });
 
     test('should load default rate limits when no config is set', () async {
       // Wait for the provider to initialize
-      final asyncState = await container.read(aiChatProvider.future);
+      final asyncState = await container.read(ai_provider.aiChatProvider.future);
 
-      expect(asyncState.rateLimitsConfig.maxRequestsPerMinute, equals(10));
-      expect(asyncState.rateLimitsConfig.maxRequestsPerHour, equals(100));
-      expect(asyncState.rateLimitsConfig.maxRequestsPerDay, equals(500));
-      expect(asyncState.rateLimitsConfig.maxTokensPerRequest, equals(4000));
-      expect(asyncState.rateLimitsConfig.maxTotalTokensPerDay, equals(100000));
+      expect(asyncState.rateLimits.maxRequestsPerMinute, equals(10));
+      expect(asyncState.rateLimits.maxRequestsPerHour, equals(100));
+      expect(asyncState.rateLimits.maxRequestsPerDay, equals(500));
+      expect(asyncState.rateLimits.maxTokensPerRequest, equals(4000));
+      expect(asyncState.rateLimits.maxTotalTokensPerDay, equals(100000));
     });
 
     test('should load custom rate limits from settings', () async {
@@ -77,6 +131,8 @@ void main() {
         maxRequestsPerDay: 250,
         maxTokensPerRequest: 2000,
         maxTotalTokensPerDay: 50000,
+        maxRequestsPerWindow: 5,
+        timeWindowDuration: const Duration(minutes: 1),
       );
 
       fakeSettingsRepo = FakeSettingsRepository(aiRateLimitsConfig: customConfig);
@@ -89,11 +145,11 @@ void main() {
 
       final asyncState = await container.read(aiChatProvider.future);
 
-      expect(asyncState.rateLimitsConfig.maxRequestsPerMinute, equals(5));
-      expect(asyncState.rateLimitsConfig.maxRequestsPerHour, equals(50));
-      expect(asyncState.rateLimitsConfig.maxRequestsPerDay, equals(250));
-      expect(asyncState.rateLimitsConfig.maxTokensPerRequest, equals(2000));
-      expect(asyncState.rateLimitsConfig.maxTotalTokensPerDay, equals(50000));
+      expect(asyncState.rateLimits.maxRequestsPerMinute, equals(5));
+      expect(asyncState.rateLimits.maxRequestsPerHour, equals(50));
+      expect(asyncState.rateLimits.maxRequestsPerDay, equals(250));
+      expect(asyncState.rateLimits.maxTokensPerRequest, equals(2000));
+      expect(asyncState.rateLimits.maxTotalTokensPerDay, equals(50000));
     });
 
     test('should enforce per-minute rate limit', () async {
@@ -103,34 +159,34 @@ void main() {
         maxRequestsPerDay: 500,
         maxTokensPerRequest: 1000,
         maxTotalTokensPerDay: 100000,
+        maxRequestsPerWindow: 2,
+        timeWindowDuration: const Duration(minutes: 1),
       );
 
       fakeSettingsRepo = FakeSettingsRepository(aiRateLimitsConfig: config);
       container = ProviderContainer(
         overrides: [
           settingsRepositoryProvider.overrideWith((ref) => Future.value(fakeSettingsRepo)),
-          aiChatProvider.overrideWith(() => FakeAiChatNotifier()),
+          ai_provider.aiChatProvider.overrideWith(() => FakeAiChatNotifier()),
         ],
       );
 
-      await container.read(aiChatProvider.future);
+      await container.read(ai_provider.aiChatProvider.future);
 
-      final notifier = container.read(aiChatProvider.notifier);
+      final notifier = container.read(ai_provider.aiChatProvider.notifier);
 
       // First request should succeed
       await notifier.sendMessage('Test message 1');
-      expect(container.read(aiChatProvider).value!.error, isNull);
+      expect(container.read(ai_provider.aiChatProvider).value!.error, isNull);
 
       // Second request should succeed
       await notifier.sendMessage('Test message 2');
-      expect(container.read(aiChatProvider).value!.error, isNull);
+      expect(container.read(ai_provider.aiChatProvider).value!.error, isNull);
 
       // Third request should be rate limited
-      await notifier.sendMessage('Test message 3');
-      expect(container.read(aiChatProvider).value!.error, isNotNull);
       expect(
-        container.read(aiChatProvider).value!.error.toString(),
-        contains('Rate limit exceeded'),
+        () async => await notifier.sendMessage('Test message 3'),
+        throwsA(isA<ai_provider.RateLimitExceededException>()),
       );
     });
 
@@ -141,6 +197,8 @@ void main() {
         maxRequestsPerDay: 500,
         maxTokensPerRequest: 1000,
         maxTotalTokensPerDay: 100000,
+        maxRequestsPerWindow: 10,
+        timeWindowDuration: const Duration(minutes: 1),
       );
 
       fakeSettingsRepo = FakeSettingsRepository(aiRateLimitsConfig: config);
@@ -181,6 +239,8 @@ void main() {
         maxRequestsPerDay: 2,
         maxTokensPerRequest: 1000,
         maxTotalTokensPerDay: 100000,
+        maxRequestsPerWindow: 10,
+        timeWindowDuration: const Duration(minutes: 1),
       );
 
       fakeSettingsRepo = FakeSettingsRepository(aiRateLimitsConfig: config);
@@ -218,6 +278,8 @@ void main() {
         maxRequestsPerDay: 500,
         maxTokensPerRequest: 100,
         maxTotalTokensPerDay: 100000,
+        maxRequestsPerWindow: 10,
+        timeWindowDuration: const Duration(minutes: 1),
       );
 
       fakeSettingsRepo = FakeSettingsRepository(aiRateLimitsConfig: config);
@@ -248,6 +310,8 @@ void main() {
         maxRequestsPerDay: 500,
         maxTokensPerRequest: 1000,
         maxTotalTokensPerDay: 3,
+        maxRequestsPerWindow: 10,
+        timeWindowDuration: const Duration(minutes: 1),
       );
 
       fakeSettingsRepo = FakeSettingsRepository(aiRateLimitsConfig: config);
@@ -285,9 +349,9 @@ void main() {
 
         // This should not crash the provider, should use defaults
         final asyncState = await errorContainer.read(aiChatProvider.future);
-        expect(asyncState.rateLimitsConfig, isNotNull);
+        expect(asyncState.rateLimits, isNotNull);
         // Should have fallen back to defaults
-        expect(asyncState.rateLimitsConfig.maxRequestsPerMinute, equals(10));
+        expect(asyncState.rateLimits.maxRequestsPerMinute, equals(10));
 
         errorContainer.dispose();
       }, (error, stack) {
@@ -303,6 +367,8 @@ void main() {
         maxRequestsPerDay: -10,
         maxTokensPerRequest: -100,
         maxTotalTokensPerDay: -1000,
+        maxRequestsPerWindow: -1,
+        timeWindowDuration: const Duration(minutes: 1),
       );
 
       fakeSettingsRepo = FakeSettingsRepository(aiRateLimitsConfig: invalidConfig);
@@ -316,11 +382,12 @@ void main() {
       final asyncState = await container.read(aiChatProvider.future);
 
       // Should have been clamped to minimum values
-      expect(asyncState.rateLimitsConfig.maxRequestsPerMinute, equals(1));
-      expect(asyncState.rateLimitsConfig.maxRequestsPerHour, equals(1));
-      expect(asyncState.rateLimitsConfig.maxRequestsPerDay, equals(1));
-      expect(asyncState.rateLimitsConfig.maxTokensPerRequest, equals(100));
-      expect(asyncState.rateLimitsConfig.maxTotalTokensPerDay, equals(1000));
+      expect(asyncState.rateLimits.maxRequestsPerMinute, equals(1));
+      expect(asyncState.rateLimits.maxRequestsPerHour, equals(1));
+      expect(asyncState.rateLimits.maxRequestsPerDay, equals(1));
+      expect(asyncState.rateLimits.maxTokensPerRequest, equals(100));
+      expect(asyncState.rateLimits.maxTotalTokensPerDay, equals(1000));
+      expect(asyncState.rateLimits.maxRequestsPerWindow, equals(1));
     });
 
     test('should reset rate limits after time windows', () async {
@@ -330,6 +397,8 @@ void main() {
         maxRequestsPerDay: 500,
         maxTokensPerRequest: 1000,
         maxTotalTokensPerDay: 100000,
+        maxRequestsPerWindow: 1,
+        timeWindowDuration: const Duration(minutes: 1),
       );
 
       fakeSettingsRepo = FakeSettingsRepository(aiRateLimitsConfig: config);
@@ -365,6 +434,8 @@ void main() {
         maxRequestsPerDay: 500,
         maxTokensPerRequest: 1000,
         maxTotalTokensPerDay: 100000,
+        maxRequestsPerWindow: 2,
+        timeWindowDuration: const Duration(minutes: 1),
       );
 
       fakeSettingsRepo = FakeSettingsRepository(aiRateLimitsConfig: config);
@@ -388,6 +459,162 @@ void main() {
       // Only 2 should succeed due to rate limiting
       final messages = state.value!.messages;
       expect(messages.length, lessThanOrEqualTo(4)); // 2 successful requests = 4 messages (user + AI each)
+    });
+
+    test('should use default maxRequestsPerWindow value of 10 when no config', () async {
+      // Wait for the provider to initialize
+      final asyncState = await container.read(aiChatProvider.future);
+
+      expect(asyncState.rateLimits.maxRequestsPerWindow, equals(10));
+    });
+
+    test('should respect custom maxRequestsPerWindow value in rate-limiter', () async {
+      final config = AiRateLimitsConfig(
+        maxRequestsPerMinute: 10,
+        maxRequestsPerHour: 100,
+        maxRequestsPerDay: 500,
+        maxTokensPerRequest: 1000,
+        maxTotalTokensPerDay: 100000,
+        maxRequestsPerWindow: 3,
+        timeWindowDuration: const Duration(minutes: 1),
+      );
+
+      fakeSettingsRepo = FakeSettingsRepository(aiRateLimitsConfig: config);
+      container = ProviderContainer(
+        overrides: [
+          settingsRepositoryProvider.overrideWith((ref) => Future.value(fakeSettingsRepo)),
+          aiChatProvider.overrideWith(() => FakeAiChatNotifier()),
+        ],
+      );
+
+      await container.read(aiChatProvider.future);
+
+      final notifier = container.read(aiChatProvider.notifier);
+
+      // First 3 requests should succeed
+      await notifier.sendMessage('Test message 1');
+      expect(container.read(aiChatProvider).value!.error, isNull);
+
+      await notifier.sendMessage('Test message 2');
+      expect(container.read(aiChatProvider).value!.error, isNull);
+
+      await notifier.sendMessage('Test message 3');
+      expect(container.read(aiChatProvider).value!.error, isNull);
+
+      // Fourth request should be rate limited
+      expect(
+        () async => await notifier.sendMessage('Test message 4'),
+        throwsA(isA<ai_provider.RateLimitExceededException>()),
+      );
+    });
+
+    test('should fallback to default when maxRequestsPerWindow is invalid (0 or negative)', () async {
+      final config = AiRateLimitsConfig(
+        maxRequestsPerMinute: 10,
+        maxRequestsPerHour: 100,
+        maxRequestsPerDay: 500,
+        maxTokensPerRequest: 1000,
+        maxTotalTokensPerDay: 100000,
+        maxRequestsPerWindow: 0, // Invalid value
+        timeWindowDuration: const Duration(minutes: 1),
+      );
+
+      fakeSettingsRepo = FakeSettingsRepository(aiRateLimitsConfig: config);
+      container = ProviderContainer(
+        overrides: [
+          settingsRepositoryProvider.overrideWith((ref) => Future.value(fakeSettingsRepo)),
+          aiChatProvider.overrideWith(() => FakeAiChatNotifier()),
+        ],
+      );
+
+      await container.read(aiChatProvider.future);
+
+      final notifier = container.read(aiChatProvider.notifier);
+
+      // Should allow 10 requests (default fallback) before rate limiting
+      for (int i = 1; i <= 10; i++) {
+        await notifier.sendMessage('Test message $i');
+        expect(container.read(aiChatProvider).value!.error, isNull);
+      }
+
+      // 11th request should be rate limited
+      expect(
+        () async => await notifier.sendMessage('Test message 11'),
+        throwsA(isA<ai_provider.RateLimitExceededException>()),
+      );
+    });
+
+    test('should block requests correctly at configured maxRequestsPerWindow limit', () async {
+      final config = AiRateLimitsConfig(
+        maxRequestsPerMinute: 10,
+        maxRequestsPerHour: 100,
+        maxRequestsPerDay: 500,
+        maxTokensPerRequest: 1000,
+        maxTotalTokensPerDay: 100000,
+        maxRequestsPerWindow: 2,
+        timeWindowDuration: const Duration(minutes: 1),
+      );
+
+      fakeSettingsRepo = FakeSettingsRepository(aiRateLimitsConfig: config);
+      container = ProviderContainer(
+        overrides: [
+          settingsRepositoryProvider.overrideWith((ref) => Future.value(fakeSettingsRepo)),
+          aiChatProvider.overrideWith(() => FakeAiChatNotifier()),
+        ],
+      );
+
+      await container.read(aiChatProvider.future);
+
+      final notifier = container.read(aiChatProvider.notifier);
+
+      // First request should succeed
+      await notifier.sendMessage('Test message 1');
+      expect(container.read(aiChatProvider).value!.error, isNull);
+
+      // Second request should succeed
+      await notifier.sendMessage('Test message 2');
+      expect(container.read(aiChatProvider).value!.error, isNull);
+
+      // Third request should be blocked
+      expect(
+        () async => await notifier.sendMessage('Test message 3'),
+        throwsA(isA<ai_provider.RateLimitExceededException>()),
+      );
+
+      // Verify the state shows correct request count
+      final state = container.read(aiChatProvider).value!;
+      expect(state.requestCountInWindow, equals(2));
+      expect(state.isRateLimited, isTrue);
+    });
+
+    test('should save and load maxRequestsPerWindow setting roundtrip', () async {
+      final customConfig = AiRateLimitsConfig(
+        maxRequestsPerMinute: 10,
+        maxRequestsPerHour: 100,
+        maxRequestsPerDay: 500,
+        maxTokensPerRequest: 4000,
+        maxTotalTokensPerDay: 100000,
+        maxRequestsPerWindow: 7,
+        timeWindowDuration: const Duration(minutes: 2),
+      );
+
+      // Save the config
+      await fakeSettingsRepo.setAiRateLimitsConfig(customConfig);
+
+      // Create new container to simulate fresh load
+      final newContainer = ProviderContainer(
+        overrides: [
+          settingsRepositoryProvider.overrideWith((ref) => Future.value(fakeSettingsRepo)),
+          aiChatProvider.overrideWith(() => FakeAiChatNotifier()),
+        ],
+      );
+
+      // Load and verify
+      final loadedState = await newContainer.read(aiChatProvider.future);
+      expect(loadedState.rateLimits.maxRequestsPerWindow, equals(7));
+      expect(loadedState.rateLimits.timeWindowDuration, equals(const Duration(minutes: 2)));
+
+      newContainer.dispose();
     });
   });
 }

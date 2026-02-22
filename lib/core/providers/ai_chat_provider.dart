@@ -59,7 +59,11 @@ class AiChatState {
   }
 
   /// Check if rate limit is exceeded based on configurable limits
-  /// 
+  ///
+  /// Implements sliding window rate limiting with configurable max requests per window.
+  /// Falls back to default of 10 requests if maxRequestsPerWindow <= 0.
+  /// See .github/issues/031-ai-max-requests-config.md for configuration details.
+  ///
   /// Uses the rateLimits configuration to determine if the user has exceeded
   /// the allowed number of requests within the configured time window.
   /// Returns true if rate limited, false otherwise.
@@ -68,11 +72,13 @@ class AiChatState {
     final now = DateTime.now();
     final timeSinceLastRequest = now.difference(lastRequestTime!);
 
-    if (timeSinceLastRequest > const Duration(minutes: 1)) {
+    if (timeSinceLastRequest > rateLimits.timeWindowDuration) {
       return false; // Window expired, reset counter
     }
 
-    return requestCountInWindow >= rateLimits.maxRequestsPerMinute;
+    // Safe fallback: use default 10 if maxRequestsPerWindow is invalid
+    final maxRequests = rateLimits.maxRequestsPerWindow <= 0 ? 10 : rateLimits.maxRequestsPerWindow;
+    return requestCountInWindow >= maxRequests;
   }
 
   /// Get remaining time until rate limit resets
@@ -81,7 +87,7 @@ class AiChatState {
   /// and the request counter resets. Returns Duration.zero if not rate limited.
   Duration get timeUntilReset {
     if (lastRequestTime == null) return Duration.zero;
-    final resetTime = lastRequestTime!.add(const Duration(minutes: 1));
+    final resetTime = lastRequestTime!.add(rateLimits.timeWindowDuration);
     final remaining = resetTime.difference(DateTime.now());
     return remaining.isNegative ? Duration.zero : remaining;
   }
@@ -98,6 +104,7 @@ class AiChatNotifier extends AsyncNotifier<AiChatState> {
     try {
       final settings = await ref.watch(settingsRepositoryProvider.future);
       final rateLimits = settings.getAiRateLimitsConfig();
+      AppLogger.event('ai_max_requests_config_loaded', params: {'value': rateLimits.maxRequestsPerWindow});
       return AiChatState(rateLimits: rateLimits);
     } catch (e) {
       // Fallback to defaults if settings fail to load
@@ -133,7 +140,8 @@ class AiChatNotifier extends AsyncNotifier<AiChatState> {
       AppLogger.event('ai_rate_limit_exceeded', params: {
         'remainingTime': remainingTime.inSeconds,
         'requestCount': currentState.requestCountInWindow,
-        'maxRequestsPerMinute': currentState.rateLimits.maxRequestsPerMinute,
+        'maxRequestsPerWindow': currentState.rateLimits.maxRequestsPerWindow,
+        'timeWindowDuration': currentState.rateLimits.timeWindowDuration.inSeconds,
       });
       throw RateLimitExceededException(remainingTime);
     }
@@ -197,7 +205,7 @@ class AiChatNotifier extends AsyncNotifier<AiChatState> {
     if (currentState.lastRequestTime == null) return 1;
 
     final timeSinceLastRequest = now.difference(currentState.lastRequestTime!);
-    if (timeSinceLastRequest > const Duration(minutes: 1)) {
+    if (timeSinceLastRequest > currentState.rateLimits.timeWindowDuration) {
       return 1; // Window expired, reset to 1
     }
 

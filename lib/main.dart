@@ -31,6 +31,7 @@ import 'core/services/project_invitation_service.dart';
 import 'features/auth/login_screen.dart';
 import 'models/project_model.dart';
 import 'models/task_model.dart';
+import 'models/comment_model.dart';
 
 /// Initializes environment variables from .env file
 /// Loads dotenv for development. In production, uses secure storage if available
@@ -97,6 +98,7 @@ void main() async {
   Hive.registerAdapter(ProjectModelAdapter());
   Hive.registerAdapter(TaskStatusAdapter());
   Hive.registerAdapter(TaskAdapter());
+  Hive.registerAdapter(CommentModelAdapter());
   await Hive.initFlutter();
   await Hive.openBox('settings');
   await Hive.openBox('auth');

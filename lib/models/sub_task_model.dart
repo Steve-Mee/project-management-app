@@ -3,7 +3,7 @@ import 'package:hive/hive.dart';
 part 'sub_task_model.g.dart';
 
 /// Sub-task model for breaking down tasks into smaller components
-@HiveType(typeId: 3)
+@HiveType(typeId: 4)
 class SubTask {
   @HiveField(0)
   final String id;
