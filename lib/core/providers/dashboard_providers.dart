@@ -28,13 +28,14 @@ DashboardWidgetType validateWidgetType(String value) {
   }
 }
 
-/// Notifier for managing dashboard configuration with persistence and widget type validation
+/// Notifier for managing dashboard configuration with persistence, widget type validation, and undo/redo functionality
 /// TODO: Add dashboard templates
 /// TODO: Add collaborative dashboard sharing
 class DashboardConfigNotifier extends Notifier<List<DashboardItem>> {
   late final IDashboardRepository _repository;
 
   /// Maximum number of history entries to maintain (prevents memory bloat)
+  /// See .github/issues/022-dashboard-undo-redo.md for details
   static const int _maxHistoryEntries = 50;
 
   /// History stack storing snapshots of dashboard state for undo/redo
@@ -48,8 +49,9 @@ class DashboardConfigNotifier extends Notifier<List<DashboardItem>> {
   @override
   List<DashboardItem> build() {
     _repository = ref.read(dashboardRepositoryProvider);
-    loadConfig();
-    _pushToHistory(); // Push initial state
+    _history.clear();
+    _currentIndex = -1;
+    loadConfig().then((_) => _pushToHistory());
     return [];
   }
 
@@ -67,6 +69,7 @@ class DashboardConfigNotifier extends Notifier<List<DashboardItem>> {
     try {
       await _repository.saveDashboardConfig(items);
       state = items;
+      _currentIndex = _history.length - 1;
     } catch (e) {
       // TODO: Add error handling/logging
       rethrow;
@@ -180,8 +183,8 @@ class DashboardConfigNotifier extends Notifier<List<DashboardItem>> {
   }
 
   /// Pushes current state to history stack and trims if necessary
-  void _pushToHistory() {
-    _history.add(_deepCopyState(state));
+  void _pushToHistory([List<DashboardItem>? stateToPush]) {
+    _history.add(_deepCopyState(stateToPush ?? state));
     _currentIndex = _history.length - 1;
     _trimHistory();
   }
@@ -199,9 +202,11 @@ class DashboardConfigNotifier extends Notifier<List<DashboardItem>> {
   /// See .github/issues/022-dashboard-undo-redo.md for details.
   Future<void> undo() async {
     if (canUndo) {
-      _currentIndex--;
+      int targetIndex = _currentIndex - 1;
+      _currentIndex = targetIndex;
       state = _deepCopyState(_history[_currentIndex]);
       await saveConfig(state);
+      _currentIndex = targetIndex;
       AppLogger.instance.d('Undid dashboard change');
     }
   }
@@ -211,9 +216,11 @@ class DashboardConfigNotifier extends Notifier<List<DashboardItem>> {
   /// See .github/issues/022-dashboard-undo-redo.md for details.
   Future<void> redo() async {
     if (canRedo) {
-      _currentIndex++;
+      int targetIndex = _currentIndex + 1;
+      _currentIndex = targetIndex;
       state = _deepCopyState(_history[_currentIndex]);
       await saveConfig(state);
+      _currentIndex = targetIndex;
       AppLogger.instance.d('Redid dashboard change');
     }
   }
@@ -226,6 +233,38 @@ class DashboardConfigNotifier extends Notifier<List<DashboardItem>> {
   /// See .github/issues/022-dashboard-undo-redo.md for details.
   bool get canRedo => _currentIndex < _history.length - 1;
 }
+
+/// Example usage of undo/redo API in a ConsumerWidget:
+/// 
+/// ```dart
+/// class DashboardToolbar extends ConsumerWidget {
+///   @override
+///   Widget build(BuildContext context, WidgetRef ref) {
+///     final notifier = ref.read(dashboardConfigProvider.notifier);
+///     final canUndo = ref.watch(dashboardConfigProvider.notifier).canUndo;
+///     final canRedo = ref.watch(dashboardConfigProvider.notifier).canRedo;
+///     final l10n = AppLocalizations.of(context)!;
+/// 
+///     return Row(
+///       children: [
+///         IconButton(
+///           onPressed: canUndo ? () => notifier.undo() : null,
+///           icon: const Icon(Icons.undo),
+///           tooltip: l10n.undoTooltip,
+///         ),
+///         IconButton(
+///           onPressed: canRedo ? () => notifier.redo() : null,
+///           icon: const Icon(Icons.redo),
+///           tooltip: l10n.redoTooltip,
+///         ),
+///       ],
+///     );
+///   }
+/// }
+/// ```
+/// 
+/// Localization keys required: undo, redo, undoTooltip, redoTooltip
+/// See .github/issues/022-dashboard-undo-redo.md for details
 
 /// Provider for dashboard configuration with widget type validation
 final dashboardConfigProvider = NotifierProvider<DashboardConfigNotifier, List<DashboardItem>>(
