@@ -80,10 +80,21 @@ class AuthState {
   }
 }
 
-/// Filter parameters for user search and filtering
+/// Filter parameters for user search and filtering operations.
+/// 
+/// This immutable class encapsulates all filtering criteria that can be applied
+/// to user collections. All fields are optional and null values indicate no filtering
+/// on that criterion.
+/// 
+/// Used by [filteredUsersProvider] family provider for client-side filtering.
 class UsersFilter {
+  /// Optional search query to filter users by username (case-insensitive substring match).
   final String? searchQuery;
+  
+  /// Optional role ID to filter users by their assigned role.
   final String? role;
+  
+  /// Optional status filter (reserved for future implementation when AppUser model supports status).
   final String? status;
 
   const UsersFilter({
@@ -92,6 +103,8 @@ class UsersFilter {
     this.status,
   });
 
+  /// Creates a copy of this filter with optionally updated fields.
+  /// Null values in parameters preserve the current values.
   UsersFilter copyWith({
     String? searchQuery,
     String? role,
@@ -104,6 +117,7 @@ class UsersFilter {
     );
   }
 
+  /// Returns an empty filter with all criteria set to null (no filtering).
   UsersFilter get empty => const UsersFilter();
 }
 
@@ -670,7 +684,7 @@ final authUsersProvider = FutureProvider<List<AppUser>>((ref) {
 });
 
 /// Family provider for searching users by query (case-insensitive on username)
-final searchUsersProvider = Provider.family<List<AppUser>, String>((ref, query) {
+final searchUsersProvider = Provider.autoDispose.family<List<AppUser>, String>((ref, query) {
   final usersAsync = ref.watch(authUsersProvider);
   return usersAsync.maybeWhen(
     data: (users) => _searchUsers(users, query),
@@ -679,7 +693,7 @@ final searchUsersProvider = Provider.family<List<AppUser>, String>((ref, query) 
 });
 
 /// Family provider for filtering users by role and status
-final filteredUsersProvider = Provider.family<List<AppUser>, UsersFilter>((ref, filter) {
+final filteredUsersProvider = Provider.autoDispose.family<List<AppUser>, UsersFilter>((ref, filter) {
   final usersAsync = ref.watch(authUsersProvider);
   return usersAsync.maybeWhen(
     data: (users) => _filterUsers(users, filter),
