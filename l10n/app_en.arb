@@ -1908,6 +1908,23 @@
   "ai_requests_per_minute": "requests per minute",
   "@ai_requests_per_minute": {
     "description": "Unit label showing requests per minute for rate limiting."
+  },
+  "ai_retry_attempt": "Retrying AI request in {seconds} seconds...",
+  "@ai_retry_attempt": {
+    "description": "Message shown during AI retry backoff period.",
+    "placeholders": {
+      "seconds": {
+        "type": "int"
+      }
+    }
+  },
+  "ai_backoff_waiting": "Waiting for AI retry...",
+  "@ai_backoff_waiting": {
+    "description": "Message shown while waiting for AI retry."
+  },
+  "ai_rate_limit_retry_failed": "AI request failed after retries. Please try again later.",
+  "@ai_rate_limit_retry_failed": {
+    "description": "Error message when AI request fails after maximum retries."
   }
 }
 }

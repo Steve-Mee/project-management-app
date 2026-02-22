@@ -66,7 +66,8 @@ class AppLocalizationsNl extends AppLocalizations {
   String get settingsNotificationsTitle => 'Notificaties';
 
   @override
-  String get settingsNotificationsSubtitle => 'Meldingen voor updates en reminders';
+  String get settingsNotificationsSubtitle =>
+      'Meldingen voor updates en reminders';
 
   @override
   String get settingsPrivacySection => 'Privacy';
@@ -75,13 +76,15 @@ class AppLocalizationsNl extends AppLocalizations {
   String get settingsLocalFilesConsentTitle => 'Toestemming lokale bestanden';
 
   @override
-  String get settingsLocalFilesConsentSubtitle => 'Sta toe dat de app lokale projectbestanden leest voor AI-context.';
+  String get settingsLocalFilesConsentSubtitle =>
+      'Sta toe dat de app lokale projectbestanden leest voor AI-context.';
 
   @override
   String get settingsUseProjectFilesTitle => 'Gebruik project bestanden';
 
   @override
-  String get settingsUseProjectFilesSubtitle => 'Voeg lokale bestanden toe aan AI prompts';
+  String get settingsUseProjectFilesSubtitle =>
+      'Voeg lokale bestanden toe aan AI prompts';
 
   @override
   String get settingsProjectsSection => 'Projecten';
@@ -160,7 +163,8 @@ class AppLocalizationsNl extends AppLocalizations {
   String get exportPasswordTitle => 'Export versleutelen';
 
   @override
-  String get exportPasswordSubtitle => 'Stel een wachtwoord in om de exportbestanden te versleutelen.';
+  String get exportPasswordSubtitle =>
+      'Stel een wachtwoord in om de exportbestanden te versleutelen.';
 
   @override
   String get exportPasswordMismatch => 'Wachtwoorden komen niet overeen.';
@@ -437,7 +441,8 @@ class AppLocalizationsNl extends AppLocalizations {
   }
 
   @override
-  String get noProjectMapLinked => 'Nog geen map gekoppeld. Koppel een map om bestanden in te lezen.';
+  String get noProjectMapLinked =>
+      'Nog geen map gekoppeld. Koppel een map om bestanden in te lezen.';
 
   @override
   String get projectNotAvailable => 'Project niet beschikbaar.';
@@ -452,7 +457,8 @@ class AppLocalizationsNl extends AppLocalizations {
   String get privacyWarningTitle => 'Privacy waarschuwing';
 
   @override
-  String get privacyWarningContent => 'Waarschuwing: Gevoelige data kan worden gelezen.';
+  String get privacyWarningContent =>
+      'Waarschuwing: Gevoelige data kan worden gelezen.';
 
   @override
   String get continueButton => 'Doorgaan';
@@ -472,7 +478,8 @@ class AppLocalizationsNl extends AppLocalizations {
   String get welcomeBack => 'Welkom terug! 👋';
 
   @override
-  String get projectsOverviewSubtitle => 'Hier is een overzicht van je actieve projecten';
+  String get projectsOverviewSubtitle =>
+      'Hier is een overzicht van je actieve projecten';
 
   @override
   String get recentWorkflowsTitle => 'Recente workflows';
@@ -493,7 +500,12 @@ class AppLocalizationsNl extends AppLocalizations {
   String get unknownProject => 'Onbekend project';
 
   @override
-  String projectTaskStatusSemantics(Object projectName, Object taskTitle, Object statusLabel, Object timeLabel) {
+  String projectTaskStatusSemantics(
+    Object projectName,
+    Object taskTitle,
+    Object statusLabel,
+    Object timeLabel,
+  ) {
     return 'Project $projectName, taak $taskTitle, status $statusLabel, $timeLabel';
   }
 
@@ -531,7 +543,11 @@ class AppLocalizationsNl extends AppLocalizations {
   }
 
   @override
-  String projectProgressChartSemantics(Object projectName, Object completedPercent, Object pendingPercent) {
+  String projectProgressChartSemantics(
+    Object projectName,
+    Object completedPercent,
+    Object pendingPercent,
+  ) {
     return 'Project voortgangsgrafiek voor $projectName. Voltooid $completedPercent procent, resterend $pendingPercent procent.';
   }
 
@@ -567,7 +583,11 @@ class AppLocalizationsNl extends AppLocalizations {
   String get statusLabel => 'Status';
 
   @override
-  String burndownChartSemantics(Object projectName, Object actualPoints, Object idealPoints) {
+  String burndownChartSemantics(
+    Object projectName,
+    Object actualPoints,
+    Object idealPoints,
+  ) {
     return 'Burndown grafiek voor $projectName. Werkelijke punten: $actualPoints. Ideale punten: $idealPoints.';
   }
 
@@ -587,7 +607,8 @@ class AppLocalizationsNl extends AppLocalizations {
   String get aiEmptyTitle => 'Start een gesprek met de AI assistent';
 
   @override
-  String get aiEmptySubtitle => 'Vraag bijvoorbeeld: \"Genereer stappenplan voor project: webshop\"';
+  String get aiEmptySubtitle =>
+      'Vraag bijvoorbeeld: \"Genereer stappenplan voor project: webshop\"';
 
   @override
   String get useProjectFilesLabel => 'Gebruik project bestanden';
@@ -783,13 +804,15 @@ class AppLocalizationsNl extends AppLocalizations {
   String get settingsBackupTitle => 'Back-up maken';
 
   @override
-  String get settingsBackupSubtitle => 'Een lokale back-up van Hive-gegevens opslaan.';
+  String get settingsBackupSubtitle =>
+      'Een lokale back-up van Hive-gegevens opslaan.';
 
   @override
   String get settingsRestoreTitle => 'Back-up herstellen';
 
   @override
-  String get settingsRestoreSubtitle => 'Lokale gegevens vervangen door een back-upbestand.';
+  String get settingsRestoreSubtitle =>
+      'Lokale gegevens vervangen door een back-upbestand.';
 
   @override
   String backupSuccessMessage(Object path) {
@@ -802,7 +825,8 @@ class AppLocalizationsNl extends AppLocalizations {
   }
 
   @override
-  String get restoreSuccessMessage => 'Back-up hersteld. Herstart de app om gegevens opnieuw te laden.';
+  String get restoreSuccessMessage =>
+      'Back-up hersteld. Herstart de app om gegevens opnieuw te laden.';
 
   @override
   String restoreFailedMessage(Object error) {
@@ -884,7 +908,8 @@ class AppLocalizationsNl extends AppLocalizations {
   String get noProjectsMatchFiltersTitle => 'No projects match your filters';
 
   @override
-  String get noProjectsMatchFiltersSubtitle => 'Try changing or clearing your filters';
+  String get noProjectsMatchFiltersSubtitle =>
+      'Try changing or clearing your filters';
 
   @override
   String get projectFiltersTitle => 'Project Filters';
@@ -1122,7 +1147,8 @@ class AppLocalizationsNl extends AppLocalizations {
   String get noProjectsForGantt => 'No projects to display';
 
   @override
-  String get addProjectsWithDates => 'Add projects with start and due dates to see them in the timeline.';
+  String get addProjectsWithDates =>
+      'Add projects with start and due dates to see them in the timeline.';
 
   @override
   String get openProjectTooltip => 'Open project';
@@ -1149,13 +1175,15 @@ class AppLocalizationsNl extends AppLocalizations {
   String get settingsBiometricLoginTitle => 'Biometrische login';
 
   @override
-  String get settingsBiometricLoginSubtitle => 'Gebruik vingerafdruk of gezichts-ID om in te loggen';
+  String get settingsBiometricLoginSubtitle =>
+      'Gebruik vingerafdruk of gezichts-ID om in te loggen';
 
   @override
   String get enableBiometricDialogTitle => 'Biometrische login inschakelen';
 
   @override
-  String get enableBiometricDialogMessage => 'Wilt u biometrische authenticatie inschakelen voor snellere login?';
+  String get enableBiometricDialogMessage =>
+      'Wilt u biometrische authenticatie inschakelen voor snellere login?';
 
   @override
   String get enableBiometricDialogYes => 'Inschakelen';
@@ -1176,7 +1204,8 @@ class AppLocalizationsNl extends AppLocalizations {
   String get enable_biometric_login => 'Biometrische Login Inschakelen';
 
   @override
-  String get biometric_not_available => 'Biometrische authenticatie niet beschikbaar';
+  String get biometric_not_available =>
+      'Biometrische authenticatie niet beschikbaar';
 
   @override
   String get use_password_instead => 'Gebruik wachtwoord in plaats daarvan';
@@ -1200,7 +1229,8 @@ class AppLocalizationsNl extends AppLocalizations {
   String get smartFilterProcessing => 'Je verzoek wordt verwerkt...';
 
   @override
-  String get smartFilterError => 'Slim filter toepassen mislukt. Probeer het opnieuw.';
+  String get smartFilterError =>
+      'Slim filter toepassen mislukt. Probeer het opnieuw.';
 
   @override
   String get aiSuggestedFilterLabel => 'AI Voorgesteld Filter';
@@ -1230,5 +1260,6 @@ class AppLocalizationsNl extends AppLocalizations {
   String get syncing_requirements => 'Vereisten synchroniseren...';
 
   @override
-  String get offline_sync_success => 'Offline synchronisatie succesvol voltooid';
+  String get offline_sync_success =>
+      'Offline synchronisatie succesvol voltooid';
 }

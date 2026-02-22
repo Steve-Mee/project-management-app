@@ -75,13 +75,15 @@ class AppLocalizationsHi extends AppLocalizations {
   String get settingsLocalFilesConsentTitle => 'लोकल फाइल अनुमति';
 
   @override
-  String get settingsLocalFilesConsentSubtitle => 'AI संदर्भ के लिए ऐप को लोकल प्रोजेक्ट फाइलें पढ़ने की अनुमति दें।';
+  String get settingsLocalFilesConsentSubtitle =>
+      'AI संदर्भ के लिए ऐप को लोकल प्रोजेक्ट फाइलें पढ़ने की अनुमति दें।';
 
   @override
   String get settingsUseProjectFilesTitle => 'प्रोजेक्ट फाइलें उपयोग करें';
 
   @override
-  String get settingsUseProjectFilesSubtitle => 'लोकल फाइलें AI प्रॉम्प्ट में जोड़ें';
+  String get settingsUseProjectFilesSubtitle =>
+      'लोकल फाइलें AI प्रॉम्प्ट में जोड़ें';
 
   @override
   String get settingsProjectsSection => 'प्रोजेक्ट';
@@ -160,7 +162,8 @@ class AppLocalizationsHi extends AppLocalizations {
   String get exportPasswordTitle => 'एक्सपोर्ट एन्क्रिप्ट करें';
 
   @override
-  String get exportPasswordSubtitle => 'एक्सपोर्ट फाइलों को एन्क्रिप्ट करने के लिए पासवर्ड सेट करें।';
+  String get exportPasswordSubtitle =>
+      'एक्सपोर्ट फाइलों को एन्क्रिप्ट करने के लिए पासवर्ड सेट करें।';
 
   @override
   String get exportPasswordMismatch => 'पासवर्ड मेल नहीं खाते।';
@@ -437,7 +440,8 @@ class AppLocalizationsHi extends AppLocalizations {
   }
 
   @override
-  String get noProjectMapLinked => 'कोई फ़ोल्डर लिंक नहीं है। फ़ाइलें पढ़ने के लिए फ़ोल्डर लिंक करें।';
+  String get noProjectMapLinked =>
+      'कोई फ़ोल्डर लिंक नहीं है। फ़ाइलें पढ़ने के लिए फ़ोल्डर लिंक करें।';
 
   @override
   String get projectNotAvailable => 'प्रोजेक्ट उपलब्ध नहीं है।';
@@ -452,7 +456,8 @@ class AppLocalizationsHi extends AppLocalizations {
   String get privacyWarningTitle => 'गोपनीयता चेतावनी';
 
   @override
-  String get privacyWarningContent => 'चेतावनी: संवेदनशील डेटा पढ़ा जा सकता है।';
+  String get privacyWarningContent =>
+      'चेतावनी: संवेदनशील डेटा पढ़ा जा सकता है।';
 
   @override
   String get continueButton => 'जारी रखें';
@@ -472,7 +477,8 @@ class AppLocalizationsHi extends AppLocalizations {
   String get welcomeBack => 'वापस स्वागत है! 👋';
 
   @override
-  String get projectsOverviewSubtitle => 'यह आपके सक्रिय प्रोजेक्ट्स का सारांश है';
+  String get projectsOverviewSubtitle =>
+      'यह आपके सक्रिय प्रोजेक्ट्स का सारांश है';
 
   @override
   String get recentWorkflowsTitle => 'हाल के वर्कफ़्लो';
@@ -493,7 +499,12 @@ class AppLocalizationsHi extends AppLocalizations {
   String get unknownProject => 'अज्ञात प्रोजेक्ट';
 
   @override
-  String projectTaskStatusSemantics(Object projectName, Object taskTitle, Object statusLabel, Object timeLabel) {
+  String projectTaskStatusSemantics(
+    Object projectName,
+    Object taskTitle,
+    Object statusLabel,
+    Object timeLabel,
+  ) {
     return 'प्रोजेक्ट $projectName, कार्य $taskTitle, स्थिति $statusLabel, $timeLabel';
   }
 
@@ -531,7 +542,11 @@ class AppLocalizationsHi extends AppLocalizations {
   }
 
   @override
-  String projectProgressChartSemantics(Object projectName, Object completedPercent, Object pendingPercent) {
+  String projectProgressChartSemantics(
+    Object projectName,
+    Object completedPercent,
+    Object pendingPercent,
+  ) {
     return '$projectName के लिए प्रगति चार्ट। पूरा $completedPercent प्रतिशत, लंबित $pendingPercent प्रतिशत।';
   }
 
@@ -567,7 +582,11 @@ class AppLocalizationsHi extends AppLocalizations {
   String get statusLabel => 'स्थिति';
 
   @override
-  String burndownChartSemantics(Object projectName, Object actualPoints, Object idealPoints) {
+  String burndownChartSemantics(
+    Object projectName,
+    Object actualPoints,
+    Object idealPoints,
+  ) {
     return '$projectName के लिए बरडाउन चार्ट। वास्तविक बिंदु: $actualPoints। आदर्श बिंदु: $idealPoints।';
   }
 
@@ -587,7 +606,8 @@ class AppLocalizationsHi extends AppLocalizations {
   String get aiEmptyTitle => 'AI सहायक से बातचीत शुरू करें';
 
   @override
-  String get aiEmptySubtitle => 'उदाहरण: \"प्रोजेक्ट के लिए योजना बनाएं: वेब शॉप\"';
+  String get aiEmptySubtitle =>
+      'उदाहरण: \"प्रोजेक्ट के लिए योजना बनाएं: वेब शॉप\"';
 
   @override
   String get useProjectFilesLabel => 'प्रोजेक्ट फाइलें उपयोग करें';
@@ -802,7 +822,8 @@ class AppLocalizationsHi extends AppLocalizations {
   }
 
   @override
-  String get restoreSuccessMessage => 'बैकअप पुनर्स्थापित हो गया। डेटा लोड करने के लिए ऐप रीस्टार्ट करें.';
+  String get restoreSuccessMessage =>
+      'बैकअप पुनर्स्थापित हो गया। डेटा लोड करने के लिए ऐप रीस्टार्ट करें.';
 
   @override
   String restoreFailedMessage(Object error) {
@@ -884,7 +905,8 @@ class AppLocalizationsHi extends AppLocalizations {
   String get noProjectsMatchFiltersTitle => 'No projects match your filters';
 
   @override
-  String get noProjectsMatchFiltersSubtitle => 'Try changing or clearing your filters';
+  String get noProjectsMatchFiltersSubtitle =>
+      'Try changing or clearing your filters';
 
   @override
   String get projectFiltersTitle => 'Project Filters';
@@ -1122,7 +1144,8 @@ class AppLocalizationsHi extends AppLocalizations {
   String get noProjectsForGantt => 'No projects to display';
 
   @override
-  String get addProjectsWithDates => 'Add projects with start and due dates to see them in the timeline.';
+  String get addProjectsWithDates =>
+      'Add projects with start and due dates to see them in the timeline.';
 
   @override
   String get openProjectTooltip => 'Open project';
@@ -1149,13 +1172,15 @@ class AppLocalizationsHi extends AppLocalizations {
   String get settingsBiometricLoginTitle => 'Biometric login';
 
   @override
-  String get settingsBiometricLoginSubtitle => 'Use fingerprint or face ID to sign in';
+  String get settingsBiometricLoginSubtitle =>
+      'Use fingerprint or face ID to sign in';
 
   @override
   String get enableBiometricDialogTitle => 'Enable Biometric Login';
 
   @override
-  String get enableBiometricDialogMessage => 'Would you like to enable biometric authentication for faster login?';
+  String get enableBiometricDialogMessage =>
+      'Would you like to enable biometric authentication for faster login?';
 
   @override
   String get enableBiometricDialogYes => 'Enable';
@@ -1176,7 +1201,8 @@ class AppLocalizationsHi extends AppLocalizations {
   String get enable_biometric_login => 'Enable Biometric Login';
 
   @override
-  String get biometric_not_available => 'Biometric authentication not available';
+  String get biometric_not_available =>
+      'Biometric authentication not available';
 
   @override
   String get use_password_instead => 'Use password instead';
@@ -1200,7 +1226,8 @@ class AppLocalizationsHi extends AppLocalizations {
   String get smartFilterProcessing => 'Processing your request...';
 
   @override
-  String get smartFilterError => 'Failed to apply smart filter. Please try again.';
+  String get smartFilterError =>
+      'Failed to apply smart filter. Please try again.';
 
   @override
   String get aiSuggestedFilterLabel => 'AI Suggested Filter';

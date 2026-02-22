@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../services/app_logger.dart';
 import '../services/ai_planning_helpers.dart';
@@ -171,7 +173,7 @@ class AiChatNotifier extends AsyncNotifier<AiChatState> {
       final anonymizedMessage = _anonymizeMessage(userMessage);
 
       // Use AiPlanningHelpers for modular API calls
-      final result = await _callAiWithAnonymizedPrompt(anonymizedMessage);
+      final result = await _callAiWithRetry(anonymizedMessage);
 
       // Add AI message
       final aiMsg = ChatMessage(
@@ -192,6 +194,15 @@ class AiChatNotifier extends AsyncNotifier<AiChatState> {
     } catch (e) {
       final errorMsg = e.toString();
       AppLogger.instance.e('AI Error', error: errorMsg);
+      // UI Example: Show error snackbar for final failure
+      // Requires BuildContext from UI layer
+      // final l10n = AppLocalizations.of(context)!;
+      // ScaffoldMessenger.of(context).showSnackBar(
+      //   SnackBar(
+      //     content: Text(_isThrottlingError(e) ? l10n.ai_rate_limit_retry_failed : 'Failed to get AI response: $errorMsg'),
+      //     backgroundColor: Colors.red,
+      //   ),
+      // );
       final updatedState = state.value!;
       state = AsyncValue.data(updatedState.copyWith(
         isLoading: false,
@@ -212,10 +223,99 @@ class AiChatNotifier extends AsyncNotifier<AiChatState> {
     return currentState.requestCountInWindow + 1;
   }
 
-  /// Modular method for AI API calls using AiPlanningHelpers
   Future<AiApiResult<String>> _callAiWithAnonymizedPrompt(String prompt) async {
     // Use the new general chat method from AiPlanningHelpers
     return await AiPlanningHelpers.sendChatMessage(prompt);
+  }
+
+  /// Check if an error is a throttling/rate limit error that should be retried
+  bool _isThrottlingError(Object error) {
+    if (error is RateLimitExceededException) return true;
+    final errorString = error.toString().toLowerCase();
+    return errorString.contains('rate limit') ||
+           errorString.contains('throttle') ||
+           errorString.contains('too many requests');
+  }
+
+  /// Call AI with retry logic for throttling errors
+  ///
+  /// Wraps the AI call with exponential backoff retry for throttling errors.
+  /// Retries up to maxRetryAttempts with backoff on RateLimitExceededException or API throttling errors.
+  /// See .github/issues/032-ai-exponential-backoff.md
+  Future<AiApiResult<String>> _callAiWithRetry(String prompt) async {
+    final currentState = state.value!;
+    final maxAttempts = currentState.rateLimits.maxRetryAttempts;
+    for (int attempt = 0; attempt <= maxAttempts; attempt++) {
+      try {
+        return await _callAiWithAnonymizedPrompt(prompt);
+      } catch (e) {
+        if (attempt < maxAttempts && _isThrottlingError(e)) {
+          final baseDelay = currentState.rateLimits.backoffBaseDelay;
+          final maxDelay = currentState.rateLimits.backoffMaxDelay;
+          final maxDelayMs = maxDelay.inMilliseconds;
+          final calculatedDelayMs = (baseDelay.inMilliseconds * pow(2, attempt)).toInt();
+          final clampedDelayMs = calculatedDelayMs > maxDelayMs ? maxDelayMs : calculatedDelayMs;
+          final delay = Duration(milliseconds: (Random().nextDouble() * clampedDelayMs).round());
+          AppLogger.event('ai_retry_attempt', params: {
+            'attempt': attempt,
+            'delay_ms': delay.inMilliseconds,
+            'reason': e.toString(),
+          });
+          await Future.delayed(delay);
+        } else {
+          if (attempt == maxAttempts) {
+            AppLogger.error('AI call failed after maximum retries', error: e);
+          }
+          rethrow;
+        }
+      }
+    }
+    // This should not be reached, but just in case
+    throw Exception('AI call failed after $maxAttempts retries');
+  }
+
+  /// Generic retry wrapper for AI API calls with exponential backoff
+  ///
+  /// Implements configurable retry logic with exponential backoff for AI API calls.
+  /// Retries on throttling errors up to maxRetryAttempts, using full jitter backoff.
+  /// Logs each retry attempt and final failures. See .github/issues/032-ai-exponential-backoff.md
+  Future<T> _retryAiCall<T>(Future<T> Function() aiCall) async {
+    final currentState = state.value!;
+    final maxAttempts = currentState.rateLimits.maxRetryAttempts;
+    for (int attempt = 0; attempt < maxAttempts; attempt++) {
+      try {
+        return await aiCall();
+      } catch (e) {
+        if (attempt < maxAttempts - 1 && _isThrottlingError(e)) {
+          final baseDelay = currentState.rateLimits.backoffBaseDelay;
+          final maxDelay = currentState.rateLimits.backoffMaxDelay;
+          final calculatedDelay = baseDelay * pow(2, attempt);
+          final clampedDelay = calculatedDelay > maxDelay ? maxDelay : calculatedDelay;
+          final delay = Duration(milliseconds: (Random().nextDouble() * clampedDelay.inMilliseconds).round());
+          AppLogger.event('ai_retry_attempt', params: {
+            'attempt': attempt,
+            'delay_ms': delay.inMilliseconds,
+            'reason': e.toString(),
+          });
+          // UI Example: Show snackbar/toast during backoff period
+          // Requires BuildContext from UI layer (e.g., chat screen)
+          // final l10n = AppLocalizations.of(context)!;
+          // ScaffoldMessenger.of(context).showSnackBar(
+          //   SnackBar(
+          //     content: Text(l10n.ai_retry_attempt(delay.inSeconds)),
+          //     duration: delay,
+          //   ),
+          // );
+          await Future.delayed(delay);
+        } else {
+          if (attempt == maxAttempts - 1) {
+            AppLogger.error('AI call failed after maximum retries', error: e);
+          }
+          rethrow;
+        }
+      }
+    }
+    throw Exception('AI call failed after $maxAttempts retries');
   }
 
   /// Anonymize message for worldwide compliance
@@ -273,10 +373,10 @@ class AiChatNotifier extends AsyncNotifier<AiChatState> {
     }
 
     try {
-      final result = await AiPlanningHelpers.generatePlanningQuestions(
+      final result = await _retryAiCall(() => AiPlanningHelpers.generatePlanningQuestions(
         projectData,
         helpLevel,
-      );
+      ));
 
       // Log token usage
       ref.read(aiUsageUpdateProvider(result.tokensUsed));
@@ -325,11 +425,11 @@ class AiChatNotifier extends AsyncNotifier<AiChatState> {
     }
 
     try {
-      final result = await AiPlanningHelpers.generateProposals(
+      final result = await _retryAiCall(() => AiPlanningHelpers.generateProposals(
         projectData,
         helpLevel,
         answers: answers,
-      );
+      ));
 
       // Log token usage
       ref.read(aiUsageUpdateProvider(result.tokensUsed));
@@ -373,7 +473,7 @@ class AiChatNotifier extends AsyncNotifier<AiChatState> {
     }
 
     try {
-      final result = await AiPlanningHelpers.generateFinalPlan(projectData);
+      final result = await _retryAiCall(() => AiPlanningHelpers.generateFinalPlan(projectData));
 
       // Log token usage
       ref.read(aiUsageUpdateProvider(result.tokensUsed));

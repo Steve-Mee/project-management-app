@@ -13,6 +13,9 @@ class AiRateLimitsConfig {
   final int maxTotalTokensPerDay;
   final int maxRequestsPerWindow;
   final Duration timeWindowDuration;
+  final Duration backoffBaseDelay;
+  final Duration backoffMaxDelay;
+  final int maxRetryAttempts;
 
   /// Validates and clamps AI rate limits configuration to safe ranges.
   ///
@@ -24,7 +27,23 @@ class AiRateLimitsConfig {
   static AiRateLimitsConfig validateAiRateLimits(AiRateLimitsConfig config) {
     final maxRequestsPerWindow = config.maxRequestsPerWindow;
     if (maxRequestsPerWindow < 1) {
-      AppLogger.event('Invalid maxRequestsPerWindow', params: {'value': maxRequestsPerWindow, 'action': 'clamping to 1'});
+      AppLogger.warning('Invalid maxRequestsPerWindow', params: {'value': maxRequestsPerWindow, 'action': 'clamping to 1'});
+    }
+    final backoffBaseDelay = config.backoffBaseDelay;
+    final minBaseDelay = const Duration(milliseconds: 100);
+    final maxBaseDelay = const Duration(seconds: 10);
+    if (backoffBaseDelay < minBaseDelay || backoffBaseDelay > maxBaseDelay) {
+      AppLogger.warning('Invalid backoffBaseDelay', params: {'value': backoffBaseDelay.inMilliseconds, 'action': 'clamping to 100-10000ms'});
+    }
+    final backoffMaxDelay = config.backoffMaxDelay;
+    final minMaxDelay = const Duration(seconds: 5);
+    final maxMaxDelay = const Duration(minutes: 5);
+    if (backoffMaxDelay < minMaxDelay || backoffMaxDelay > maxMaxDelay) {
+      AppLogger.warning('Invalid backoffMaxDelay', params: {'value': backoffMaxDelay.inSeconds, 'action': 'clamping to 5-300s'});
+    }
+    final maxRetryAttempts = config.maxRetryAttempts;
+    if (maxRetryAttempts < 0 || maxRetryAttempts > 10) {
+      AppLogger.warning('Invalid maxRetryAttempts', params: {'value': maxRetryAttempts, 'action': 'clamping to 0-10 range'});
     }
     return AiRateLimitsConfig(
       maxRequestsPerMinute: config.maxRequestsPerMinute.clamp(1, 1000),
@@ -34,6 +53,9 @@ class AiRateLimitsConfig {
       maxTotalTokensPerDay: config.maxTotalTokensPerDay.clamp(1000, 10000000),
       maxRequestsPerWindow: maxRequestsPerWindow.clamp(1, 1000),
       timeWindowDuration: config.timeWindowDuration,
+      backoffBaseDelay: backoffBaseDelay < minBaseDelay ? minBaseDelay : backoffBaseDelay > maxBaseDelay ? maxBaseDelay : backoffBaseDelay,
+      backoffMaxDelay: backoffMaxDelay < minMaxDelay ? minMaxDelay : backoffMaxDelay > maxMaxDelay ? maxMaxDelay : backoffMaxDelay,
+      maxRetryAttempts: maxRetryAttempts.clamp(0, 10),
     );
   }
 
@@ -45,6 +67,9 @@ class AiRateLimitsConfig {
     required this.maxTotalTokensPerDay,
     required this.maxRequestsPerWindow,
     required this.timeWindowDuration,
+    required this.backoffBaseDelay,
+    required this.backoffMaxDelay,
+    required this.maxRetryAttempts,
   });
 
   const AiRateLimitsConfig.defaults()
@@ -54,7 +79,10 @@ class AiRateLimitsConfig {
         maxTokensPerRequest = 4000,
         maxTotalTokensPerDay = 100000,
         maxRequestsPerWindow = 10,
-        timeWindowDuration = const Duration(minutes: 1);
+        timeWindowDuration = const Duration(minutes: 1),
+        backoffBaseDelay = const Duration(milliseconds: 500),
+        backoffMaxDelay = const Duration(seconds: 30),
+        maxRetryAttempts = 3;
 
   AiRateLimitsConfig copyWith({
     int? maxRequestsPerMinute,
@@ -64,6 +92,9 @@ class AiRateLimitsConfig {
     int? maxTotalTokensPerDay,
     int? maxRequestsPerWindow,
     Duration? timeWindowDuration,
+    Duration? backoffBaseDelay,
+    Duration? backoffMaxDelay,
+    int? maxRetryAttempts,
   }) {
     return AiRateLimitsConfig(
       maxRequestsPerMinute: maxRequestsPerMinute ?? this.maxRequestsPerMinute,
@@ -73,6 +104,9 @@ class AiRateLimitsConfig {
       maxTotalTokensPerDay: maxTotalTokensPerDay ?? this.maxTotalTokensPerDay,
       maxRequestsPerWindow: maxRequestsPerWindow ?? this.maxRequestsPerWindow,
       timeWindowDuration: timeWindowDuration ?? this.timeWindowDuration,
+      backoffBaseDelay: backoffBaseDelay ?? this.backoffBaseDelay,
+      backoffMaxDelay: backoffMaxDelay ?? this.backoffMaxDelay,
+      maxRetryAttempts: maxRetryAttempts ?? this.maxRetryAttempts,
     );
   }
 
@@ -85,6 +119,9 @@ class AiRateLimitsConfig {
       maxTotalTokensPerDay: json['maxTotalTokensPerDay'] as int? ?? 100000,
       maxRequestsPerWindow: json['maxRequestsPerWindow'] as int? ?? 10,
       timeWindowDuration: Duration(seconds: json['timeWindowDurationSeconds'] as int? ?? 60),
+      backoffBaseDelay: Duration(milliseconds: json['backoffBaseDelayMs'] as int? ?? 500),
+      backoffMaxDelay: Duration(seconds: json['backoffMaxDelaySeconds'] as int? ?? 30),
+      maxRetryAttempts: json['maxRetryAttempts'] as int? ?? 3,
     );
   }
 
@@ -97,12 +134,15 @@ class AiRateLimitsConfig {
       'maxTotalTokensPerDay': maxTotalTokensPerDay,
       'maxRequestsPerWindow': maxRequestsPerWindow,
       'timeWindowDurationSeconds': timeWindowDuration.inSeconds,
+      'backoffBaseDelayMs': backoffBaseDelay.inMilliseconds,
+      'backoffMaxDelaySeconds': backoffMaxDelay.inSeconds,
+      'maxRetryAttempts': maxRetryAttempts,
     };
   }
 
   @override
   String toString() {
-    return 'AiRateLimitsConfig(maxRequestsPerMinute: $maxRequestsPerMinute, maxRequestsPerHour: $maxRequestsPerHour, maxRequestsPerDay: $maxRequestsPerDay, maxTokensPerRequest: $maxTokensPerRequest, maxTotalTokensPerDay: $maxTotalTokensPerDay, maxRequestsPerWindow: $maxRequestsPerWindow, timeWindowDuration: $timeWindowDuration)';
+    return 'AiRateLimitsConfig(maxRequestsPerMinute: $maxRequestsPerMinute, maxRequestsPerHour: $maxRequestsPerHour, maxRequestsPerDay: $maxRequestsPerDay, maxTokensPerRequest: $maxTokensPerRequest, maxTotalTokensPerDay: $maxTotalTokensPerDay, maxRequestsPerWindow: $maxRequestsPerWindow, timeWindowDuration: $timeWindowDuration, backoffBaseDelay: $backoffBaseDelay, backoffMaxDelay: $backoffMaxDelay, maxRetryAttempts: $maxRetryAttempts)';
   }
 
   @override
@@ -115,7 +155,10 @@ class AiRateLimitsConfig {
         other.maxTokensPerRequest == maxTokensPerRequest &&
         other.maxTotalTokensPerDay == maxTotalTokensPerDay &&
         other.maxRequestsPerWindow == maxRequestsPerWindow &&
-        other.timeWindowDuration == timeWindowDuration;
+        other.timeWindowDuration == timeWindowDuration &&
+        other.backoffBaseDelay == backoffBaseDelay &&
+        other.backoffMaxDelay == backoffMaxDelay &&
+        other.maxRetryAttempts == maxRetryAttempts;
   }
 
   @override
@@ -126,7 +169,10 @@ class AiRateLimitsConfig {
         maxTokensPerRequest.hashCode ^
         maxTotalTokensPerDay.hashCode ^
         maxRequestsPerWindow.hashCode ^
-        timeWindowDuration.hashCode;
+        timeWindowDuration.hashCode ^
+        backoffBaseDelay.hashCode ^
+        backoffMaxDelay.hashCode ^
+        maxRetryAttempts.hashCode;
   }
 }
 

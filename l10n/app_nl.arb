@@ -1397,6 +1397,23 @@
   "ai_requests_per_minute": "verzoeken per minuut",
   "@ai_requests_per_minute": {
     "description": "Unit label showing requests per minute for rate limiting."
+  },
+  "ai_retry_attempt": "AI-verzoek opnieuw proberen over {seconds} seconden...",
+  "@ai_retry_attempt": {
+    "description": "Message shown during AI retry backoff period.",
+    "placeholders": {
+      "seconds": {
+        "type": "int"
+      }
+    }
+  },
+  "ai_backoff_waiting": "Wachten op AI-herpoging...",
+  "@ai_backoff_waiting": {
+    "description": "Message shown while waiting for AI retry."
+  },
+  "ai_rate_limit_retry_failed": "AI-verzoek mislukt na herpogingen. Probeer het later opnieuw.",
+  "@ai_rate_limit_retry_failed": {
+    "description": "Error message when AI request fails after maximum retries."
   }
 }
 }
