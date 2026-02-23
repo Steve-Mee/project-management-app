@@ -1,9 +1,15 @@
 import 'dart:convert';
 import 'package:my_project_management_app/core/services/app_logger.dart';
+import 'package:my_project_management_app/models/project_model.dart';
+import 'package:my_project_management_app/core/repository/project_repository.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 /// Stub for future cloud sync (Supabase/Firestore/etc.).
 class CloudSyncService {
+  final ProjectRepository? repository;
+
+  CloudSyncService({this.repository});
+
   static final RegExp _uuidRegex = RegExp(
     r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-'
     r'[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$',
@@ -135,8 +141,25 @@ class CloudSyncService {
       return;
     }
 
-    // NOTE: Vervang door Supabase call later; controleer auth sessie.
-    AppLogger.instance.i('Placeholder sync update: $projectId');
+    // Upsert project data to Supabase
+    try {
+      final updateData = <String, Object?>{
+        'id': projectId,
+        'updated_at': DateTime.now().toIso8601String(),
+        'user_id': currentUser.id,
+      };
+
+      if (metadata != null) {
+        // Add metadata fields to update data
+        updateData.addAll(metadata);
+      }
+
+      await Supabase.instance.client.from('projects').upsert(updateData);
+      AppLogger.instance.i('Project $projectId upserted to Supabase');
+    } catch (e) {
+      AppLogger.instance.w('Project upsert failed for $projectId', error: e);
+    }
+
     await _insertAnalytics(
       'project_updated',
       entityId: projectId,
@@ -157,8 +180,14 @@ class CloudSyncService {
       return;
     }
 
-    // NOTE: Vervang door Supabase call later; controleer auth sessie.
-    AppLogger.instance.i('Placeholder sync delete: $projectId');
+    // Delete project from Supabase
+    try {
+      await Supabase.instance.client.from('projects').delete().eq('id', projectId);
+      AppLogger.instance.i('Project $projectId deleted from Supabase');
+    } catch (e) {
+      AppLogger.instance.w('Project delete failed for $projectId', error: e);
+    }
+
     await _insertAnalytics(
       'project_deleted',
       entityId: projectId,
@@ -187,9 +216,62 @@ class CloudSyncService {
       return;
     }
 
-    // NOTE: Vervang door Supabase call later; controleer auth sessie.
-    AppLogger.instance.i('Placeholder sync full');
+    if (repository == null) {
+      AppLogger.instance.w('Skipping project sync: no repository provided');
+      return;
+    }
+
+    // Fetch all projects from Supabase for sync
+    try {
+      final response = await Supabase.instance.client.from('projects').select();
+      AppLogger.instance.i('Fetched ${response.length} projects from Supabase for sync');
+
+      final localProjects = await repository!.getAllProjects();
+      // final remoteProjects = response.map((json) => ProjectModel.fromJson(json)).toList();
+
+      // Sync differences
+      final localMap = {for (var p in localProjects) p.id: p};
+
+      for (final remoteJson in response) {
+        final remote = ProjectModel.fromJson(remoteJson);
+        final remoteTime = DateTime.parse(remoteJson['updated_at'] as String);
+        final local = localMap[remote.id];
+        if (local == null || remoteTime.isAfter(local.lastUpdated)) {
+          // Download remote
+          await repository!.updateProject(remote.id, remote);
+          AppLogger.instance.i('Downloaded project ${remote.id} from Supabase');
+        } else if (local.lastUpdated.isAfter(remoteTime)) {
+          // Upload local
+          await syncProjectUpdate(local.id, metadata: local.toJson());
+          AppLogger.instance.i('Uploaded project ${local.id} to Supabase');
+        }
+      }
+
+      // Upload local projects not in remote
+      for (final local in localProjects) {
+        if (!response.any((r) => r['id'] == local.id)) {
+          await syncProjectUpdate(local.id, metadata: local.toJson());
+          AppLogger.instance.i('Uploaded new project ${local.id} to Supabase');
+        }
+      }
+    } catch (e) {
+      AppLogger.instance.w('Failed to sync projects', error: e);
+    }
+
     await _insertAnalytics('sync_all', userId: currentUser.id);
+  }
+
+  // Fully implemented in 040-supabase-sync-cleanup.md
+
+  /// Get real-time stream of projects changes
+  Stream<List<Map<String, dynamic>>> getProjectsStream() {
+    final currentUser = Supabase.instance.client.auth.currentUser;
+    if (currentUser == null) {
+      AppLogger.instance.w('Cannot stream projects: no authenticated user');
+      return const Stream.empty();
+    }
+
+    return Supabase.instance.client.from('projects').stream(primaryKey: ['id']);
   }
 
   Future<void> authSignInPlaceholder(

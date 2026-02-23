@@ -185,6 +185,23 @@ class ProjectModel {
     );
   }
 
+  /// Get the last updated timestamp from project history
+  DateTime get lastUpdated {
+    if (history.isNotEmpty) {
+      final lastEntry = history.last;
+      final timeStr = lastEntry['time'] as String?;
+      if (timeStr != null) {
+        try {
+          return DateTime.parse(timeStr);
+        } catch (e) {
+          // Invalid timestamp, fall back to now
+        }
+      }
+    }
+    // No history or invalid, use current time as fallback
+    return DateTime.now();
+  }
+
   /// Convert to JSON
   Map<String, dynamic> toJson() {
     return {

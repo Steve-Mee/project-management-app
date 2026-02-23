@@ -1468,6 +1468,26 @@
   "ai_usage_export": "Gebruiksgegevens Exporteren",
   "@ai_usage_export": {
     "description": "Button text for exporting AI usage data."
+  },
+  "sync_status_online": "Net gesynchroniseerd",
+  "@sync_status_online": {
+    "description": "Status message when sync is successful and online."
+  },
+  "sync_status_offline": "Offline – in wachtrij",
+  "@sync_status_offline": {
+    "description": "Status message when offline with queued changes."
+  },
+  "syncing_projects": "Projecten synchroniseren...",
+  "@syncing_projects": {
+    "description": "Status message when syncing projects."
+  },
+  "conflict_resolved": "Conflict opgelost",
+  "@conflict_resolved": {
+    "description": "Message when a sync conflict has been resolved."
+  },
+  "sync_error": "Synchronisatiefout",
+  "@sync_error": {
+    "description": "Error message for sync failures."
   }
 }
 }

@@ -18,6 +18,8 @@ import 'package:app_links/app_links.dart';
 import 'package:my_project_management_app/generated/app_localizations.dart';
 import 'core/theme.dart';
 import 'package:my_project_management_app/core/providers.dart';
+import 'package:my_project_management_app/core/services/cloud_sync_service.dart';
+import 'package:my_project_management_app/core/repository/project_repository.dart';
 import 'package:my_project_management_app/core/providers/ai/index.dart' show aiChatProvider;
 import 'core/providers/auth_providers.dart';
 import 'core/providers/theme_providers.dart';
@@ -26,7 +28,6 @@ import 'core/routes.dart';
 import 'core/repository/hive_initializer.dart';
 import 'core/services/app_logger.dart';
 import 'core/services/ab_testing_service.dart';
-import 'core/services/cloud_sync_service.dart';
 import 'core/services/login_rate_limiter.dart';
 import 'core/services/project_invitation_service.dart';
 import 'features/auth/login_screen.dart';
@@ -145,10 +146,13 @@ void main() async {
 class _AppLifecycleHandler extends WidgetsBindingObserver {
   final ProviderContainer _container;
   bool _closed = false;
-  final CloudSyncService _cloudSync = CloudSyncService();
+  late final CloudSyncService _cloudSync;
   Timer? _backupTimer;
 
-  _AppLifecycleHandler(this._container);
+  _AppLifecycleHandler(this._container) {
+    final repository = _container.read(projectRepositoryProvider) as ProjectRepository;
+    _cloudSync = CloudSyncService(repository: repository);
+  }
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
@@ -174,6 +178,8 @@ class _AppLifecycleHandler extends WidgetsBindingObserver {
       AppLogger.instance.e('Error syncing on resume', error: e);
     }
   }
+
+  // Fully implemented in 040-supabase-sync-cleanup.md
 
   Future<void> _backupOnBackground() async {
     try {

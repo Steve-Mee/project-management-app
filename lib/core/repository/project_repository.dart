@@ -799,6 +799,142 @@ class ProjectRepository implements IProjectRepository {
     await _projectsBox.close();
   }
 
+  /// Sync methods for Supabase integration (039-supabase-sync-implementation.md)
+  @override
+  Future<void> syncProject(String projectId) async {
+    await bidirectionalSyncProject(projectId);
+  }
+
+  @override
+  Future<void> bidirectionalSyncProject(String projectId) async {
+    // Get local project
+    final localProject = await getProjectById(projectId);
+    if (localProject == null) {
+      AppLogger.instance.w('Local project $projectId not found for sync');
+      return;
+    }
+
+    try {
+      // Fetch remote project from Supabase
+      final supabase = Supabase.instance.client;
+      final remoteResponse = await supabase
+          .from('projects')
+          .select()
+          .eq('id', projectId)
+          .maybeSingle();
+
+      if (remoteResponse == null) {
+        // No remote project, upload local
+        await _cloudSync.syncProjectUpdate(projectId, metadata: {
+          'name': localProject.name,
+          'progress': localProject.progress,
+          'status': localProject.status,
+          'description': localProject.description,
+          // Add other fields as needed
+        });
+        AppLogger.instance.i('Uploaded local project $projectId to Supabase');
+        return;
+      }
+
+      // Both exist, compare timestamps
+      final remoteProject = ProjectModel.fromJson(remoteResponse);
+      final localTime = _getLastUpdated(localProject);
+      final remoteTime = _getLastUpdated(remoteProject);
+
+      if (remoteTime.isAfter(localTime)) {
+        // Remote is newer, download
+        await updateProject(projectId, remoteProject, userId: 'sync-download');
+        AppLogger.instance.i('Downloaded remote changes for project $projectId');
+      } else if (localTime.isAfter(remoteTime)) {
+        // Local is newer, upload
+        await _cloudSync.syncProjectUpdate(projectId, metadata: {
+          'name': localProject.name,
+          'progress': localProject.progress,
+          'status': localProject.status,
+          'description': localProject.description,
+        });
+        AppLogger.instance.i('Uploaded local changes for project $projectId');
+      } else {
+        // Same timestamp, no action needed
+        AppLogger.instance.d('Project $projectId is in sync');
+      }
+    } catch (e) {
+      AppLogger.instance.w('Failed bidirectional sync for project $projectId', error: e);
+      rethrow;
+    }
+  }
+
+  @override
+  Future<void> syncAllProjects() async {
+    final allProjects = await getAllProjects();
+    AppLogger.instance.i('Starting sync for ${allProjects.length} projects');
+
+    for (final project in allProjects) {
+      try {
+        await bidirectionalSyncProject(project.id);
+      } catch (e) {
+        AppLogger.instance.w('Failed to sync project ${project.id}', error: e);
+        // Continue with other projects
+      }
+    }
+
+    AppLogger.instance.i('Completed sync for all projects');
+  }
+
+  // Fully implemented in 040-supabase-sync-cleanup.md
+
+  @override
+  Stream<List<ProjectModel>> watchProjectChanges(String projectId) {
+    return _cloudSync.getProjectsStream().map((changes) {
+      return changes
+          .where((change) => change['id'] == projectId)
+          .map((json) => ProjectModel.fromJson(json))
+          .toList();
+    });
+  }
+
+  @override
+  Future<void> resolveConflict(ProjectModel local, ProjectModel remote) async {
+    final resolved = _resolveConflict(local, remote);
+    await _projectsBox.put(resolved.id, resolved.toJson());
+    AppLogger.event('sync_conflict_resolved', params: {
+      'project_id': resolved.id,
+      'winner': resolved == remote ? 'remote' : 'local',
+    });
+  }
+
+  /// Helper to resolve conflict between local and remote project versions
+  /// Uses last-write-wins based on history timestamps
+  ProjectModel _resolveConflict(ProjectModel local, ProjectModel remote) {
+    final localTime = _getLastUpdated(local);
+    final remoteTime = _getLastUpdated(remote);
+
+    if (remoteTime.isAfter(localTime)) {
+      AppLogger.instance.i('Resolved conflict for ${local.id}: remote wins (remote: $remoteTime, local: $localTime)');
+      return remote;
+    } else {
+      AppLogger.instance.i('Resolved conflict for ${local.id}: local wins (remote: $remoteTime, local: $localTime)');
+      return local;
+    }
+  }
+
+  /// Get the last updated timestamp from project history
+  DateTime _getLastUpdated(ProjectModel project) {
+    if (project.history.isNotEmpty) {
+      final lastEntry = project.history.last;
+      final timeStr = lastEntry['time'] as String?;
+      if (timeStr != null) {
+        try {
+          return DateTime.parse(timeStr);
+        } catch (e) {
+          // Invalid timestamp, fall back to now
+        }
+      }
+    }
+    // No history or invalid, use current time as fallback
+    return DateTime.now();
+  }
+
   /// Get project count
   int getProjectCount() {
     return _projectsBox.length;

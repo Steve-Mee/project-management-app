@@ -112,11 +112,23 @@ abstract class IProjectRepository {
   /// Advanced filtering with multiple criteria
   Future<List<ProjectModel>> getFilteredProjects(ProjectFilter filter, {List<ProjectFilterConditions> extraConditions = const []});
 
-  /// Sync methods for future Supabase integration
-  /// NOTE: converted to issue 039
-  // Future<void> syncProjectsToSupabase();
-  // Future<void> syncProjectsFromSupabase();
-  // Future<void> resolveSyncConflicts(List<SyncConflict> conflicts);
+  /// Sync methods for Supabase integration (039-supabase-sync-implementation.md)
+  /// Syncs a specific project to/from Supabase
+  Future<void> syncProject(String projectId);
+
+  /// Syncs all projects to/from Supabase
+  Future<void> syncAllProjects();
+
+  // Fully implemented in 040-supabase-sync-cleanup.md
+
+  /// Performs bidirectional sync for a specific project (upload local + download remote)
+  Future<void> bidirectionalSyncProject(String projectId);
+
+  /// Watches for real-time changes to a specific project
+  Stream<List<ProjectModel>> watchProjectChanges(String projectId);
+
+  /// Resolves sync conflicts between local and remote project versions
+  Future<void> resolveConflict(ProjectModel local, ProjectModel remote);
 }
 
 /// Advanced filter conditions for projects
