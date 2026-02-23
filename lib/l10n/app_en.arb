@@ -1732,5 +1732,21 @@
   "recaptcha_site_key_hint": "Enter your reCAPTCHA v3 site key",
   "@recaptcha_site_key_hint": {
     "description": "Hint text for the reCAPTCHA site key input field."
+  },
+  "ai_usage_charts": "AI Usage Charts",
+  "@ai_usage_charts": {
+    "description": "Title for AI usage analytics charts section."
+  },
+  "export_csv": "Export CSV",
+  "@export_csv": {
+    "description": "Button label for exporting AI usage data to CSV."
+  },
+  "average_cost": "Average Cost",
+  "@average_cost": {
+    "description": "Label for average cost per operation metric."
+  },
+  "peak_times": "Peak Times",
+  "@peak_times": {
+    "description": "Label for peak usage times metric."
   }
 }

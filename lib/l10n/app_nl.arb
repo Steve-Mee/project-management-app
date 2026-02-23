@@ -1265,5 +1265,21 @@
   "recaptcha_site_key_hint": "Voer uw reCAPTCHA v3 site sleutel in",
   "@recaptcha_site_key_hint": {
     "description": "Hint text for the reCAPTCHA site key input field."
+  },
+  "ai_usage_charts": "AI Gebruiksdiagrammen",
+  "@ai_usage_charts": {
+    "description": "Title for AI usage analytics charts section."
+  },
+  "export_csv": "CSV Exporteren",
+  "@export_csv": {
+    "description": "Button label for exporting AI usage data to CSV."
+  },
+  "average_cost": "Gemiddelde Kosten",
+  "@average_cost": {
+    "description": "Label for average cost per operation metric."
+  },
+  "peak_times": "Piek Tijden",
+  "@peak_times": {
+    "description": "Label for peak usage times metric."
   }
 }

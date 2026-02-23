@@ -1300,4 +1300,16 @@ class AppLocalizationsHi extends AppLocalizations {
 
   @override
   String get recaptcha_site_key_hint => 'Enter your reCAPTCHA v3 site key';
+
+  @override
+  String get ai_usage_charts => 'AI Usage Charts';
+
+  @override
+  String get export_csv => 'Export CSV';
+
+  @override
+  String get average_cost => 'Average Cost';
+
+  @override
+  String get peak_times => 'Peak Times';
 }

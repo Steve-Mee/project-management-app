@@ -1,18 +1,19 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:my_project_management_app/core/auth/permissions.dart';
 import 'package:my_project_management_app/core/auth/role_models.dart';
 import 'package:my_project_management_app/core/providers/auth_providers.dart';
+import 'package:my_project_management_app/core/providers/ai/ai_usage_provider.dart';
+import 'package:my_project_management_app/core/auth/auth_user.dart';
 import 'package:my_project_management_app/generated/app_localizations.dart';
-
 class AdminScreen extends ConsumerStatefulWidget {
   const AdminScreen({super.key});
-
   @override
   ConsumerState<AdminScreen> createState() => _AdminScreenState();
 }
-
 class _AdminScreenState extends ConsumerState<AdminScreen> {
+  String _userFilter = '';
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
@@ -29,7 +30,6 @@ class _AdminScreenState extends ConsumerState<AdminScreen> {
         ),
       );
     }
-
     final repo = ref.watch(authRepositoryProvider);
     final roles = repo.getRoles();
     final groups = repo.getGroups();
@@ -88,11 +88,18 @@ class _AdminScreenState extends ConsumerState<AdminScreen> {
                       onTap: () => _showGroupMembers(context, group),
                     ),
                   ),
+              const SizedBox(height: 24),
+              _buildSectionHeader(
+                context,
+                'AI Usage Analytics',
+                onAdd: () {},
+              ),
+              const SizedBox(height: 8),
+              _buildAIUsageAnalyticsSection(context),
             ],
           ),
         );
   }
-
   Widget _buildSectionHeader(
     BuildContext context,
     String title, {
@@ -111,7 +118,6 @@ class _AdminScreenState extends ConsumerState<AdminScreen> {
       ],
     );
   }
-
   Future<void> _promptCreateRole(
     BuildContext context,
     List<RoleDefinition> roles,
@@ -143,31 +149,26 @@ class _AdminScreenState extends ConsumerState<AdminScreen> {
         );
       },
     );
-
     controller.dispose();
     if (name == null || name.isEmpty) {
       return;
     }
-
     final roleIdBase = name.toLowerCase().replaceAll(' ', '_');
     final roleId = roles.any((role) => role.id == 'role_$roleIdBase')
         ? 'role_${roleIdBase}_${DateTime.now().millisecondsSinceEpoch}'
         : 'role_$roleIdBase';
-
     final repo = ref.read(authRepositoryProvider);
     await repo.upsertRole(
       RoleDefinition(id: roleId, name: name, permissions: const []),
     );
     setState(() {});
   }
-
   Future<void> _promptEditPermissions(
     BuildContext context,
     RoleDefinition role,
   ) async {
     final l10n = AppLocalizations.of(context)!;
     final selected = role.permissions.toSet();
-
     final result = await showDialog<bool>(
       context: context,
       builder: (dialogContext) {
@@ -208,16 +209,13 @@ class _AdminScreenState extends ConsumerState<AdminScreen> {
         );
       },
     );
-
     if (result != true) {
       return;
     }
-
     final repo = ref.read(authRepositoryProvider);
     await repo.upsertRole(role.copyWith(permissions: selected.toList()));
     setState(() {});
   }
-
   Future<void> _promptCreateGroup(
     BuildContext context,
     List<RoleDefinition> roles,
@@ -228,7 +226,6 @@ class _AdminScreenState extends ConsumerState<AdminScreen> {
     String selectedRole = roles.isNotEmpty
         ? roles.first.id
         : repo.defaultUserRoleId;
-
     final result = await showDialog<bool>(
       context: context,
       builder: (dialogContext) {
@@ -283,13 +280,11 @@ class _AdminScreenState extends ConsumerState<AdminScreen> {
         );
       },
     );
-
     final name = nameController.text.trim();
     nameController.dispose();
     if (result != true || name.isEmpty) {
       return;
     }
-
     final groupId = name.toLowerCase().replaceAll(' ', '_');
     await repo.upsertGroup(
       GroupDefinition(
@@ -301,7 +296,6 @@ class _AdminScreenState extends ConsumerState<AdminScreen> {
     );
     setState(() {});
   }
-
   Future<void> _promptAddGroupMember(
     BuildContext context,
     GroupDefinition group,
@@ -333,17 +327,14 @@ class _AdminScreenState extends ConsumerState<AdminScreen> {
         );
       },
     );
-
     controller.dispose();
     if (username == null || username.isEmpty) {
       return;
     }
-
     final repo = ref.read(authRepositoryProvider);
     await repo.addUserToGroup(group.id, username);
     setState(() {});
   }
-
   Future<void> _showGroupMembers(
     BuildContext context,
     GroupDefinition group,
@@ -391,4 +382,71 @@ class _AdminScreenState extends ConsumerState<AdminScreen> {
       },
     );
    }
- }
+
+  Widget _buildAIUsageAnalyticsSection(BuildContext context) {
+    final usersAsync = ref.watch(authUsersProvider);
+
+    return usersAsync.when(
+      data: (users) => Card(
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('AI Usage Analytics', style: Theme.of(context).textTheme.titleMedium),
+              const SizedBox(height: 8),
+              TextField(
+                decoration: const InputDecoration(labelText: 'Filter users'),
+                onChanged: (value) => setState(() => _userFilter = value),
+              ),
+              const SizedBox(height: 16),
+              ...users.where((u) => u.username.contains(_userFilter)).map((user) => _buildUserUsageTile(user)),
+              const SizedBox(height: 16),
+              ElevatedButton(
+                onPressed: _exportAllUsage,
+                child: const Text('Export All Usage'),
+              ),
+            ],
+          ),
+        ),
+      ),
+      loading: () => const Card(child: Padding(padding: EdgeInsets.all(16), child: CircularProgressIndicator())),
+      error: (e, _) => Card(child: Padding(padding: EdgeInsets.all(16), child: Text('Error loading users: $e'))),
+    );
+  }
+
+  Widget _buildUserUsageTile(AppUser user) {
+    final usageAsync = ref.watch(aiUsageUserProvider(user.username));
+    return usageAsync.when(
+      data: (usage) => ListTile(
+        title: Text(user.username),
+        subtitle: Text('Total Cost: \$${usage['totalCost']?.toStringAsFixed(2) ?? '0.00'}'),
+      ),
+      loading: () => ListTile(
+        title: Text(user.username),
+        subtitle: const Text('Loading...'),
+      ),
+      error: (e, _) => ListTile(
+        title: Text(user.username),
+        subtitle: Text('Error: $e'),
+      ),
+    );
+  }
+
+  Future<void> _exportAllUsage() async {
+    try {
+      final data = await ref.read(aiUsageHistoryProvider.notifier).exportUsageHistory(format: 'csv');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Exported ${data.length} characters')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Export failed: $e')),
+        );
+      }
+    }
+  }
+}

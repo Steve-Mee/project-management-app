@@ -1,5 +1,9 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:fl_chart/fl_chart.dart';
+import 'package:flutter/material.dart';
+import 'dart:convert';
+import 'package:csv/csv.dart';
 import '../../services/app_logger.dart';
 import '../../models/ai_usage_record.dart';
 import '../../repository/i_ai_usage_repository.dart';
@@ -204,11 +208,138 @@ Map<String, Map<String, dynamic>> getPerProjectAggregation(List<AiUsageRecord> r
   return aggregation;
 }
 
+/// Gets the time period key for grouping based on timeRange
+String _getTimePeriodKey(DateTime timestamp, String timeRange) {
+  switch (timeRange) {
+    case 'day':
+      return '${timestamp.year}-${timestamp.month.toString().padLeft(2, '0')}-${timestamp.day.toString().padLeft(2, '0')}';
+    case 'week':
+      final weekStart = timestamp.subtract(Duration(days: timestamp.weekday - 1));
+      return '${weekStart.year}-${weekStart.month.toString().padLeft(2, '0')}-${weekStart.day.toString().padLeft(2, '0')}';
+    case 'month':
+      return '${timestamp.year}-${timestamp.month.toString().padLeft(2, '0')}';
+    default:
+      return '${timestamp.year}-${timestamp.month.toString().padLeft(2, '0')}-${timestamp.day.toString().padLeft(2, '0')}';
+  }
+}
+
+/// Computes chart data for AI usage analytics
+Map<String, dynamic> computeUsageChartData(List<AiUsageRecord> records, String timeRange) {
+  AppLogger.debug('Computing chart data for ${records.length} records, timeRange: $timeRange');
+
+  // Tokens over time (Line Chart)
+  final tokensOverTime = <String, int>{};
+  for (final record in records) {
+    final key = _getTimePeriodKey(record.timestamp, timeRange);
+    tokensOverTime[key] = (tokensOverTime[key] ?? 0) + record.inputTokens + record.outputTokens;
+  }
+  final sortedKeys = tokensOverTime.keys.toList()..sort();
+  final lineData = LineChartData(
+    lineBarsData: [
+      LineChartBarData(
+        spots: sortedKeys.asMap().entries.map((e) => FlSpot(e.key.toDouble(), tokensOverTime[e.value]!.toDouble())).toList(),
+        isCurved: true,
+        color: const Color(0xFF2196F3),
+        barWidth: 3,
+        belowBarData: BarAreaData(show: true, color: const Color(0xFF2196F3).withValues(alpha: 0.1)),
+      ),
+    ],
+    titlesData: FlTitlesData(
+      bottomTitles: AxisTitles(
+        sideTitles: SideTitles(
+          showTitles: true,
+          getTitlesWidget: (value, meta) => Text(sortedKeys[value.toInt()], style: const TextStyle(fontSize: 10)),
+        ),
+      ),
+      leftTitles: AxisTitles(sideTitles: SideTitles(showTitles: true)),
+    ),
+    borderData: FlBorderData(show: true),
+    gridData: FlGridData(show: true),
+  );
+
+  // Cost per operation (Pie Chart)
+  final costByOperation = <String, double>{};
+  for (final record in records) {
+    costByOperation[record.operation] = (costByOperation[record.operation] ?? 0.0) + record.estimatedCost;
+  }
+  final pieData = PieChartData(
+    sections: costByOperation.entries.map((e) => PieChartSectionData(
+      value: e.value,
+      title: '${e.key}\n\$${e.value.toStringAsFixed(2)}',
+      color: _getOperationColor(e.key),
+      radius: 60,
+    )).toList(),
+  );
+
+  // Usage count by operation (Bar Chart)
+  final usageByOperation = <String, int>{};
+  for (final record in records) {
+    usageByOperation[record.operation] = (usageByOperation[record.operation] ?? 0) + 1;
+  }
+  final barData = BarChartData(
+    barGroups: usageByOperation.entries.map((e) => BarChartGroupData(
+      x: usageByOperation.keys.toList().indexOf(e.key),
+      barRods: [BarChartRodData(toY: e.value.toDouble(), color: _getOperationColor(e.key))],
+    )).toList(),
+    titlesData: FlTitlesData(
+      bottomTitles: AxisTitles(
+        sideTitles: SideTitles(
+          showTitles: true,
+          getTitlesWidget: (value, meta) => Text(usageByOperation.keys.elementAt(value.toInt()), style: const TextStyle(fontSize: 10)),
+        ),
+      ),
+      leftTitles: AxisTitles(sideTitles: SideTitles(showTitles: true)),
+    ),
+    borderData: FlBorderData(show: true),
+    gridData: FlGridData(show: true),
+  );
+
+  return {
+    'tokensOverTime': lineData,
+    'costPerOperation': pieData,
+    'usageByOperation': barData,
+  };
+}
+
+/// Gets color for operation type
+Color _getOperationColor(String operation) {
+  final colors = [
+    const Color(0xFF2196F3), // Blue
+    const Color(0xFF4CAF50), // Green
+    const Color(0xFFFF9800), // Orange
+    const Color(0xFFE91E63), // Pink
+    const Color(0xFF9C27B0), // Purple
+    const Color(0xFF00BCD4), // Cyan
+  ];
+  return colors[operation.hashCode % colors.length];
+}
+
 /// Notifier for AI usage history
 class AiUsageNotifier extends StateNotifier<AsyncValue<List<AiUsageRecord>>> {
   final IAiUsageRepository _repository;
 
-  AiUsageNotifier(this._repository) : super(const AsyncValue.data([]));
+  AiUsageNotifier(this._repository) : super(const AsyncValue.data([])) {
+    // Subscribe to real-time AI usage updates
+    final channel = Supabase.instance.client.channel('ai_usage_realtime');
+    channel.onPostgresChanges(
+      event: PostgresChangeEvent.insert,
+      schema: 'public',
+      table: 'ai_usage',
+      callback: (payload) {
+        try {
+          final newRecord = AiUsageRecord.fromJson(payload.newRecord);
+          state = state.maybeWhen(
+            data: (records) => AsyncValue.data([...records, newRecord]),
+            orElse: () => state,
+          );
+          AppLogger.event('ai_usage_realtime_update');
+        } catch (e) {
+          AppLogger.error('Failed to process AI usage realtime update: $e');
+        }
+      },
+    );
+    channel.subscribe();
+  }
 
   /// Logs a new usage record and updates the state
   Future<void> logUsage(AiUsageRecord record) async {
@@ -246,6 +377,52 @@ class AiUsageNotifier extends StateNotifier<AsyncValue<List<AiUsageRecord>>> {
     String? projectId,
   }) async {
     return await _repository.getUsageTotals(userId: userId, projectId: projectId);
+  }
+
+  /// Exports usage history in specified format with optional filters
+  Future<String> exportUsageHistory({
+    required String format,
+    DateTime? from,
+    DateTime? to,
+    String? userId,
+    String? projectId,
+  }) async {
+    final records = await _repository.getUsageHistory(
+      from: from,
+      to: to,
+      userId: userId,
+      projectId: projectId,
+    );
+
+    String data;
+    if (format == 'csv') {
+      final csvData = [
+        ['Timestamp', 'Operation', 'Input Tokens', 'Output Tokens', 'Estimated Cost', 'User ID', 'Project ID', 'Success', 'Error Message'],
+        ...records.map((r) => [
+          r.timestamp.toIso8601String(),
+          r.operation,
+          r.inputTokens.toString(),
+          r.outputTokens.toString(),
+          r.estimatedCost.toString(),
+          r.userId ?? '',
+          r.projectId ?? '',
+          r.success.toString(),
+          r.errorMessage ?? '',
+        ]),
+      ];
+      data = const ListToCsvConverter().convert(csvData);
+    } else if (format == 'json') {
+      data = jsonEncode(records.map((r) => r.toJson()).toList());
+    } else {
+      throw ArgumentError('Unsupported format: $format. Use "csv" or "json".');
+    }
+
+    AppLogger.event('ai_usage_exported', params: {
+      'format': format,
+      'count': records.length,
+    });
+
+    return data;
   }
 }
 
@@ -294,6 +471,32 @@ final aiUsagePerProjectProvider = Provider<Map<String, Map<String, dynamic>>>((r
     data: getPerProjectAggregation,
     orElse: () => {},
   );
+});
+
+/// Stream provider for chart data based on usage history
+/// Returns Map with 'tokensOverTime' (LineChartData), 'costPerOperation' (PieChartData), 'usageByOperation' (BarChartData)
+final aiUsageChartDataProvider = StreamProvider.family<Map<String, dynamic>, String>((ref, timeRange) {
+  final historyAsync = ref.watch(aiUsageHistoryProvider);
+  return historyAsync.maybeWhen(
+    data: (records) {
+      final chartData = computeUsageChartData(records, timeRange);
+      AppLogger.debug('Chart data refreshed for timeRange: $timeRange');
+      return Stream.value(chartData);
+    },
+    orElse: () => Stream.value({}),
+  );
+});
+
+/// Family provider for user-specific AI usage totals
+final aiUsageUserProvider = FutureProvider.family<Map<String, dynamic>, String>((ref, userId) async {
+  final notifier = ref.watch(aiUsageHistoryProvider.notifier);
+  return await notifier.getTotals(userId: userId);
+});
+
+/// Family provider for project-specific AI usage totals
+final aiUsageProjectProvider = FutureProvider.family<Map<String, dynamic>, String>((ref, projectId) async {
+  final notifier = ref.watch(aiUsageHistoryProvider.notifier);
+  return await notifier.getTotals(projectId: projectId);
 });
 
 /*

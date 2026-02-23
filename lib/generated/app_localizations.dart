@@ -2496,6 +2496,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Enter your reCAPTCHA v3 site key'**
   String get recaptcha_site_key_hint;
+
+  /// Title for AI usage analytics charts section.
+  ///
+  /// In en, this message translates to:
+  /// **'AI Usage Charts'**
+  String get ai_usage_charts;
+
+  /// Button label for exporting AI usage data to CSV.
+  ///
+  /// In en, this message translates to:
+  /// **'Export CSV'**
+  String get export_csv;
+
+  /// Label for average cost per operation metric.
+  ///
+  /// In en, this message translates to:
+  /// **'Average Cost'**
+  String get average_cost;
+
+  /// Label for peak usage times metric.
+  ///
+  /// In en, this message translates to:
+  /// **'Peak Times'**
+  String get peak_times;
 }
 
 class _AppLocalizationsDelegate

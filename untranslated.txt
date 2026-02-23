@@ -131,7 +131,11 @@
     "captcha_loading",
     "captcha_error",
     "recaptcha_site_key",
-    "recaptcha_site_key_hint"
+    "recaptcha_site_key_hint",
+    "ai_usage_charts",
+    "export_csv",
+    "average_cost",
+    "peak_times"
   ],
 
   "de": [
@@ -266,7 +270,11 @@
     "captcha_loading",
     "captcha_error",
     "recaptcha_site_key",
-    "recaptcha_site_key_hint"
+    "recaptcha_site_key_hint",
+    "ai_usage_charts",
+    "export_csv",
+    "average_cost",
+    "peak_times"
   ],
 
   "es": [
@@ -401,7 +409,11 @@
     "captcha_loading",
     "captcha_error",
     "recaptcha_site_key",
-    "recaptcha_site_key_hint"
+    "recaptcha_site_key_hint",
+    "ai_usage_charts",
+    "export_csv",
+    "average_cost",
+    "peak_times"
   ],
 
   "fr": [
@@ -536,7 +548,11 @@
     "captcha_loading",
     "captcha_error",
     "recaptcha_site_key",
-    "recaptcha_site_key_hint"
+    "recaptcha_site_key_hint",
+    "ai_usage_charts",
+    "export_csv",
+    "average_cost",
+    "peak_times"
   ],
 
   "hi": [
@@ -671,7 +687,11 @@
     "captcha_loading",
     "captcha_error",
     "recaptcha_site_key",
-    "recaptcha_site_key_hint"
+    "recaptcha_site_key_hint",
+    "ai_usage_charts",
+    "export_csv",
+    "average_cost",
+    "peak_times"
   ],
 
   "it": [
@@ -806,7 +826,11 @@
     "captcha_loading",
     "captcha_error",
     "recaptcha_site_key",
-    "recaptcha_site_key_hint"
+    "recaptcha_site_key_hint",
+    "ai_usage_charts",
+    "export_csv",
+    "average_cost",
+    "peak_times"
   ],
 
   "ja": [
@@ -941,7 +965,11 @@
     "captcha_loading",
     "captcha_error",
     "recaptcha_site_key",
-    "recaptcha_site_key_hint"
+    "recaptcha_site_key_hint",
+    "ai_usage_charts",
+    "export_csv",
+    "average_cost",
+    "peak_times"
   ],
 
   "ko": [
@@ -1076,7 +1104,11 @@
     "captcha_loading",
     "captcha_error",
     "recaptcha_site_key",
-    "recaptcha_site_key_hint"
+    "recaptcha_site_key_hint",
+    "ai_usage_charts",
+    "export_csv",
+    "average_cost",
+    "peak_times"
   ],
 
   "nl": [
@@ -1318,7 +1350,11 @@
     "captcha_loading",
     "captcha_error",
     "recaptcha_site_key",
-    "recaptcha_site_key_hint"
+    "recaptcha_site_key_hint",
+    "ai_usage_charts",
+    "export_csv",
+    "average_cost",
+    "peak_times"
   ],
 
   "ru": [
@@ -1453,7 +1489,11 @@
     "captcha_loading",
     "captcha_error",
     "recaptcha_site_key",
-    "recaptcha_site_key_hint"
+    "recaptcha_site_key_hint",
+    "ai_usage_charts",
+    "export_csv",
+    "average_cost",
+    "peak_times"
   ],
 
   "zh": [
@@ -1588,6 +1628,10 @@
     "captcha_loading",
     "captcha_error",
     "recaptcha_site_key",
-    "recaptcha_site_key_hint"
+    "recaptcha_site_key_hint",
+    "ai_usage_charts",
+    "export_csv",
+    "average_cost",
+    "peak_times"
   ]
 }

@@ -135,7 +135,7 @@ class AiUsageRepository implements IAiUsageRepository {
     try {
       final history = await getUsageHistory(userId: userId, projectId: projectId);
 
-      final totals = {
+      final Map<String, dynamic> totals = {
         'totalTokens': history.fold<int>(0, (sum, r) => sum + r.inputTokens + r.outputTokens),
         'inputTokens': history.fold<int>(0, (sum, r) => sum + r.inputTokens),
         'outputTokens': history.fold<int>(0, (sum, r) => sum + r.outputTokens),
@@ -144,6 +144,51 @@ class AiUsageRepository implements IAiUsageRepository {
         'successfulRequests': history.where((r) => r.success).length,
         'failedRequests': history.where((r) => !r.success).length,
       };
+
+      // Advanced metrics
+      final requestCount = totals['requestCount'] as int;
+      final totalCost = totals['totalCost'] as double;
+
+      // Average cost per operation
+      final averageCostPerOperation = requestCount > 0 ? totalCost / requestCount : 0.0;
+
+      // Peak usage times (hourly aggregates)
+      final hourlyUsage = <int, int>{};
+      for (final record in history) {
+        final hour = record.timestamp.hour;
+        hourlyUsage[hour] = (hourlyUsage[hour] ?? 0) + 1;
+      }
+      final peakHour = hourlyUsage.isNotEmpty ? hourlyUsage.entries.reduce((a, b) => a.value > b.value ? a : b).key : null;
+
+      // Daily aggregates (last 30 days)
+      final dailyUsage = <String, int>{};
+      final thirtyDaysAgo = DateTime.now().subtract(const Duration(days: 30));
+      for (final record in history.where((r) => r.timestamp.isAfter(thirtyDaysAgo))) {
+        final day = '${record.timestamp.year}-${record.timestamp.month.toString().padLeft(2, '0')}-${record.timestamp.day.toString().padLeft(2, '0')}';
+        dailyUsage[day] = (dailyUsage[day] ?? 0) + 1;
+      }
+      final peakDay = dailyUsage.isNotEmpty ? dailyUsage.entries.reduce((a, b) => a.value > b.value ? a : b).key : null;
+
+      // Total by operation
+      final totalByOperation = <String, Map<String, dynamic>>{};
+      for (final record in history) {
+        final op = record.operation;
+        if (!totalByOperation.containsKey(op)) {
+          totalByOperation[op] = {'count': 0, 'totalCost': 0.0, 'totalTokens': 0};
+        }
+        totalByOperation[op]!['count'] += 1;
+        totalByOperation[op]!['totalCost'] += record.estimatedCost;
+        totalByOperation[op]!['totalTokens'] += record.inputTokens + record.outputTokens;
+      }
+
+      totals.addAll({
+        'averageCostPerOperation': averageCostPerOperation,
+        'peakUsageHour': peakHour,
+        'peakUsageDay': peakDay,
+        'totalByOperation': totalByOperation,
+      });
+
+      AppLogger.debug('Computed advanced AI usage metrics for ${history.length} records');
 
       // Update cache
       _updateCache(totals);
@@ -159,6 +204,10 @@ class AiUsageRepository implements IAiUsageRepository {
         'requestCount': 0,
         'successfulRequests': 0,
         'failedRequests': 0,
+        'averageCostPerOperation': 0.0,
+        'peakUsageHour': null,
+        'peakUsageDay': null,
+        'totalByOperation': <String, Map<String, dynamic>>{},
       };
     }
   }

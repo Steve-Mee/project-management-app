@@ -1305,4 +1305,16 @@ class AppLocalizationsNl extends AppLocalizations {
 
   @override
   String get recaptcha_site_key_hint => 'Voer uw reCAPTCHA v3 site sleutel in';
+
+  @override
+  String get ai_usage_charts => 'AI Gebruiksdiagrammen';
+
+  @override
+  String get export_csv => 'CSV Exporteren';
+
+  @override
+  String get average_cost => 'Gemiddelde Kosten';
+
+  @override
+  String get peak_times => 'Piek Tijden';
 }
