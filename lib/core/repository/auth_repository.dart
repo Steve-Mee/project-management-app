@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:crypto/crypto.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:my_project_management_app/core/services/app_logger.dart';
 import 'package:my_project_management_app/core/auth/permissions.dart';
 import 'package:my_project_management_app/core/auth/role_models.dart';
@@ -14,18 +15,25 @@ enum Role {
   user,
 }
 
-/// NOTE: converted to issue 050
+/// Remote auth service using Supabase
 class RemoteAuthService {
-  Future<void> signIn(String username, String password) async {
-    AppLogger.instance.w('Remote auth sign-in not configured.');
+  Future<void> signIn(String username, String password, {String? captchaToken}) async {
+    await Supabase.instance.client.auth.signInWithPassword(
+      email: username.trim(),
+      password: password,
+      captchaToken: captchaToken,
+    );
   }
 
   Future<void> signOut() async {
-    AppLogger.instance.w('Remote auth sign-out not configured.');
+    await Supabase.instance.client.auth.signOut();
   }
 
   Future<void> registerUser(String username, String password) async {
-    AppLogger.instance.w('Remote auth register not configured.');
+    await Supabase.instance.client.auth.signUp(
+      email: username.trim(),
+      password: password,
+    );
   }
 }
 
@@ -354,23 +362,25 @@ class AuthRepository implements IAuthRepository {
   // Implement IAuthRepository's small wrappers
   @override
   Future<bool> login(String email, String password) async {
-    final validated = validateUser(email.trim(), password);
-    if (validated != null) {
-      await setCurrentUser(validated.username);
+    try {
+      await _remote.signIn(email, password);
+      await setCurrentUser(email.trim());
       return true;
+    } catch (e) {
+      AppLogger.instance.w('Supabase login failed', error: e);
+      await recordFailedLoginAttempt(email.trim().toLowerCase());
+      return false;
     }
-    await recordFailedLoginAttempt(email.trim().toLowerCase());
-    return false;
   }
 
   @override
   Future<void> register(String email, String password) async {
-    await addUser(AppUser(username: email.trim(), password: password));
+    await _remote.registerUser(email, password);
   }
 
   @override
   Future<bool> isLoggedIn() async {
-    return getCurrentUser() != null;
+    return Supabase.instance.client.auth.currentSession != null;
   }
 
   // Simple in-memory rate limiter stored per-repository instance

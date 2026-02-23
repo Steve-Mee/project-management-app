@@ -29,6 +29,7 @@ import 'core/repository/hive_initializer.dart';
 import 'core/services/app_logger.dart';
 import 'core/services/ab_testing_service.dart';
 import 'core/services/login_rate_limiter.dart';
+import 'core/services/recaptcha_config.dart';
 import 'core/services/project_invitation_service.dart';
 import 'features/auth/login_screen.dart';
 import 'models/project_model.dart';
@@ -112,6 +113,11 @@ void main() async {
   await abTesting.initialize();
   await abTesting.fetchRemoteConfigs();
   final container = ProviderContainer();
+  
+  // Initialize reCAPTCHA config with settings repository
+  final settingsRepo = await container.read(settingsRepositoryProvider.future);
+  RecaptchaConfig.initializeWithRepository(settingsRepo);
+  RecaptchaConfig.initialize();
   final lifecycleHandler = _AppLifecycleHandler(container);
   lifecycleHandler.startPeriodicBackup();
   WidgetsBinding.instance.addObserver(lifecycleHandler);

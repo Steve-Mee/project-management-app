@@ -75,8 +75,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get settingsLocalFilesConsentTitle => '로컬 파일 권한';
 
   @override
-  String get settingsLocalFilesConsentSubtitle =>
-      'AI 컨텍스트를 위해 로컬 프로젝트 파일을 읽도록 허용합니다.';
+  String get settingsLocalFilesConsentSubtitle => 'AI 컨텍스트를 위해 로컬 프로젝트 파일을 읽도록 허용합니다.';
 
   @override
   String get settingsUseProjectFilesTitle => '프로젝트 파일 사용';
@@ -494,12 +493,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get unknownProject => '알 수 없는 프로젝트';
 
   @override
-  String projectTaskStatusSemantics(
-    Object projectName,
-    Object taskTitle,
-    Object statusLabel,
-    Object timeLabel,
-  ) {
+  String projectTaskStatusSemantics(Object projectName, Object taskTitle, Object statusLabel, Object timeLabel) {
     return '프로젝트 $projectName, 작업 $taskTitle, 상태 $statusLabel, $timeLabel';
   }
 
@@ -537,11 +531,7 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
-  String projectProgressChartSemantics(
-    Object projectName,
-    Object completedPercent,
-    Object pendingPercent,
-  ) {
+  String projectProgressChartSemantics(Object projectName, Object completedPercent, Object pendingPercent) {
     return '$projectName 프로젝트 진행 차트. 완료 $completedPercent 퍼센트, 대기 $pendingPercent 퍼센트.';
   }
 
@@ -577,11 +567,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get statusLabel => '상태';
 
   @override
-  String burndownChartSemantics(
-    Object projectName,
-    Object actualPoints,
-    Object idealPoints,
-  ) {
+  String burndownChartSemantics(Object projectName, Object actualPoints, Object idealPoints) {
     return '$projectName의 번다운 차트. 실제 포인트: $actualPoints. 이상적인 포인트: $idealPoints.';
   }
 
@@ -628,6 +614,18 @@ class AppLocalizationsKo extends AppLocalizations {
   String rateLimitExceeded(Object seconds) {
     return 'Too many attempts. Try again in $seconds seconds.';
   }
+
+  @override
+  String get captchaTitle => 'Security Verification';
+
+  @override
+  String get captchaMessage => 'Please complete the captcha to continue.';
+
+  @override
+  String get captchaVerifyButton => 'Verify';
+
+  @override
+  String get captchaFailedMessage => 'Captcha verification failed.';
 
   @override
   String get registerTitle => '등록';
@@ -898,8 +896,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get noProjectsMatchFiltersTitle => 'No projects match your filters';
 
   @override
-  String get noProjectsMatchFiltersSubtitle =>
-      'Try changing or clearing your filters';
+  String get noProjectsMatchFiltersSubtitle => 'Try changing or clearing your filters';
 
   @override
   String get projectFiltersTitle => 'Project Filters';
@@ -1137,8 +1134,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get noProjectsForGantt => 'No projects to display';
 
   @override
-  String get addProjectsWithDates =>
-      'Add projects with start and due dates to see them in the timeline.';
+  String get addProjectsWithDates => 'Add projects with start and due dates to see them in the timeline.';
 
   @override
   String get openProjectTooltip => 'Open project';
@@ -1165,15 +1161,13 @@ class AppLocalizationsKo extends AppLocalizations {
   String get settingsBiometricLoginTitle => 'Biometric login';
 
   @override
-  String get settingsBiometricLoginSubtitle =>
-      'Use fingerprint or face ID to sign in';
+  String get settingsBiometricLoginSubtitle => 'Use fingerprint or face ID to sign in';
 
   @override
   String get enableBiometricDialogTitle => 'Enable Biometric Login';
 
   @override
-  String get enableBiometricDialogMessage =>
-      'Would you like to enable biometric authentication for faster login?';
+  String get enableBiometricDialogMessage => 'Would you like to enable biometric authentication for faster login?';
 
   @override
   String get enableBiometricDialogYes => 'Enable';
@@ -1194,8 +1188,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get enable_biometric_login => 'Enable Biometric Login';
 
   @override
-  String get biometric_not_available =>
-      'Biometric authentication not available';
+  String get biometric_not_available => 'Biometric authentication not available';
 
   @override
   String get use_password_instead => 'Use password instead';
@@ -1219,8 +1212,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get smartFilterProcessing => 'Processing your request...';
 
   @override
-  String get smartFilterError =>
-      'Failed to apply smart filter. Please try again.';
+  String get smartFilterError => 'Failed to apply smart filter. Please try again.';
 
   @override
   String get aiSuggestedFilterLabel => 'AI Suggested Filter';
@@ -1266,4 +1258,13 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get offline_sync_success => 'Offline sync completed successfully';
+
+  @override
+  String get captcha_verification_required => 'Security verification required';
+
+  @override
+  String get captcha_loading => 'Verifying security check...';
+
+  @override
+  String get captcha_error => 'Security verification failed. Please try again.';
 }

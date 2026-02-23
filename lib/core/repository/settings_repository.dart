@@ -18,6 +18,7 @@ class SettingsRepository {
   static const String _useBiometricsKey = 'use_biometrics_enabled';
   static const String _enableBiometricLoginKey = 'enable_biometric_login';
   static const String _aiRateLimitsKey = 'ai_rate_limits';
+  static const String _recaptchaSiteKey = 'recaptcha_site_key';
 
   Future<void> initialize() async {
     await Hive.initFlutter();
@@ -191,5 +192,15 @@ class SettingsRepository {
       AppLogger.event('AI rate limits config contained invalid values when saving, clamping to valid ranges');
     }
     await _box.put(_aiRateLimitsKey, validatedConfig.toJson());
+  }
+
+  String getRecaptchaSiteKey() {
+    final key = _box.get(_recaptchaSiteKey, defaultValue: '');
+    AppLogger.debug('reCAPTCHA site key loaded', params: {'configured': key.isNotEmpty});
+    return key;
+  }
+
+  Future<void> setRecaptchaSiteKey(String key) async {
+    await _box.put(_recaptchaSiteKey, key);
   }
 }

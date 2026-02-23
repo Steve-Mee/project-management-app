@@ -10,6 +10,10 @@
     "exportToCsvLabel",
     "csvExportSuccessMessage",
     "rateLimitExceeded",
+    "captchaTitle",
+    "captchaMessage",
+    "captchaVerifyButton",
+    "captchaFailedMessage",
     "filterButtonTooltip",
     "activeFilterPriority",
     "activeFilterStartDate",
@@ -122,7 +126,10 @@
     "offline_mode",
     "changes_queued",
     "syncing_requirements",
-    "offline_sync_success"
+    "offline_sync_success",
+    "captcha_verification_required",
+    "captcha_loading",
+    "captcha_error"
   ],
 
   "de": [
@@ -136,6 +143,10 @@
     "exportToCsvLabel",
     "csvExportSuccessMessage",
     "rateLimitExceeded",
+    "captchaTitle",
+    "captchaMessage",
+    "captchaVerifyButton",
+    "captchaFailedMessage",
     "filterButtonTooltip",
     "activeFilterPriority",
     "activeFilterStartDate",
@@ -248,7 +259,10 @@
     "offline_mode",
     "changes_queued",
     "syncing_requirements",
-    "offline_sync_success"
+    "offline_sync_success",
+    "captcha_verification_required",
+    "captcha_loading",
+    "captcha_error"
   ],
 
   "es": [
@@ -262,6 +276,10 @@
     "exportToCsvLabel",
     "csvExportSuccessMessage",
     "rateLimitExceeded",
+    "captchaTitle",
+    "captchaMessage",
+    "captchaVerifyButton",
+    "captchaFailedMessage",
     "filterButtonTooltip",
     "activeFilterPriority",
     "activeFilterStartDate",
@@ -374,7 +392,10 @@
     "offline_mode",
     "changes_queued",
     "syncing_requirements",
-    "offline_sync_success"
+    "offline_sync_success",
+    "captcha_verification_required",
+    "captcha_loading",
+    "captcha_error"
   ],
 
   "fr": [
@@ -388,6 +409,10 @@
     "exportToCsvLabel",
     "csvExportSuccessMessage",
     "rateLimitExceeded",
+    "captchaTitle",
+    "captchaMessage",
+    "captchaVerifyButton",
+    "captchaFailedMessage",
     "filterButtonTooltip",
     "activeFilterPriority",
     "activeFilterStartDate",
@@ -500,7 +525,10 @@
     "offline_mode",
     "changes_queued",
     "syncing_requirements",
-    "offline_sync_success"
+    "offline_sync_success",
+    "captcha_verification_required",
+    "captcha_loading",
+    "captcha_error"
   ],
 
   "hi": [
@@ -514,6 +542,10 @@
     "exportToCsvLabel",
     "csvExportSuccessMessage",
     "rateLimitExceeded",
+    "captchaTitle",
+    "captchaMessage",
+    "captchaVerifyButton",
+    "captchaFailedMessage",
     "filterButtonTooltip",
     "activeFilterPriority",
     "activeFilterStartDate",
@@ -626,7 +658,10 @@
     "offline_mode",
     "changes_queued",
     "syncing_requirements",
-    "offline_sync_success"
+    "offline_sync_success",
+    "captcha_verification_required",
+    "captcha_loading",
+    "captcha_error"
   ],
 
   "it": [
@@ -640,6 +675,10 @@
     "exportToCsvLabel",
     "csvExportSuccessMessage",
     "rateLimitExceeded",
+    "captchaTitle",
+    "captchaMessage",
+    "captchaVerifyButton",
+    "captchaFailedMessage",
     "filterButtonTooltip",
     "activeFilterPriority",
     "activeFilterStartDate",
@@ -752,7 +791,10 @@
     "offline_mode",
     "changes_queued",
     "syncing_requirements",
-    "offline_sync_success"
+    "offline_sync_success",
+    "captcha_verification_required",
+    "captcha_loading",
+    "captcha_error"
   ],
 
   "ja": [
@@ -766,6 +808,10 @@
     "exportToCsvLabel",
     "csvExportSuccessMessage",
     "rateLimitExceeded",
+    "captchaTitle",
+    "captchaMessage",
+    "captchaVerifyButton",
+    "captchaFailedMessage",
     "filterButtonTooltip",
     "activeFilterPriority",
     "activeFilterStartDate",
@@ -878,7 +924,10 @@
     "offline_mode",
     "changes_queued",
     "syncing_requirements",
-    "offline_sync_success"
+    "offline_sync_success",
+    "captcha_verification_required",
+    "captcha_loading",
+    "captcha_error"
   ],
 
   "ko": [
@@ -892,6 +941,10 @@
     "exportToCsvLabel",
     "csvExportSuccessMessage",
     "rateLimitExceeded",
+    "captchaTitle",
+    "captchaMessage",
+    "captchaVerifyButton",
+    "captchaFailedMessage",
     "filterButtonTooltip",
     "activeFilterPriority",
     "activeFilterStartDate",
@@ -1004,10 +1057,17 @@
     "offline_mode",
     "changes_queued",
     "syncing_requirements",
-    "offline_sync_success"
+    "offline_sync_success",
+    "captcha_verification_required",
+    "captcha_loading",
+    "captcha_error"
   ],
 
   "nl": [
+    "captchaTitle",
+    "captchaMessage",
+    "captchaVerifyButton",
+    "captchaFailedMessage",
     "filterButtonTooltip",
     "filterPriorityLabel",
     "priorityLow",
@@ -1121,6 +1181,10 @@
     "exportToCsvLabel",
     "csvExportSuccessMessage",
     "rateLimitExceeded",
+    "captchaTitle",
+    "captchaMessage",
+    "captchaVerifyButton",
+    "captchaFailedMessage",
     "filterButtonTooltip",
     "activeFilterPriority",
     "activeFilterStartDate",
@@ -1233,7 +1297,10 @@
     "offline_mode",
     "changes_queued",
     "syncing_requirements",
-    "offline_sync_success"
+    "offline_sync_success",
+    "captcha_verification_required",
+    "captcha_loading",
+    "captcha_error"
   ],
 
   "ru": [
@@ -1247,6 +1314,10 @@
     "exportToCsvLabel",
     "csvExportSuccessMessage",
     "rateLimitExceeded",
+    "captchaTitle",
+    "captchaMessage",
+    "captchaVerifyButton",
+    "captchaFailedMessage",
     "filterButtonTooltip",
     "activeFilterPriority",
     "activeFilterStartDate",
@@ -1359,7 +1430,10 @@
     "offline_mode",
     "changes_queued",
     "syncing_requirements",
-    "offline_sync_success"
+    "offline_sync_success",
+    "captcha_verification_required",
+    "captcha_loading",
+    "captcha_error"
   ],
 
   "zh": [
@@ -1373,6 +1447,10 @@
     "exportToCsvLabel",
     "csvExportSuccessMessage",
     "rateLimitExceeded",
+    "captchaTitle",
+    "captchaMessage",
+    "captchaVerifyButton",
+    "captchaFailedMessage",
     "filterButtonTooltip",
     "activeFilterPriority",
     "activeFilterStartDate",
@@ -1485,6 +1563,9 @@
     "offline_mode",
     "changes_queued",
     "syncing_requirements",
-    "offline_sync_success"
+    "offline_sync_success",
+    "captcha_verification_required",
+    "captcha_loading",
+    "captcha_error"
   ]
 }

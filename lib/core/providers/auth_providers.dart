@@ -14,6 +14,7 @@ import 'package:my_project_management_app/core/services/cloud_sync_service.dart'
 import 'package:my_project_management_app/core/services/ab_testing_service.dart';
 import 'package:my_project_management_app/core/services/app_logger.dart';
 import 'package:my_project_management_app/core/services/login_rate_limiter.dart';
+import 'package:my_project_management_app/core/services/recaptcha_service.dart';
 import 'package:my_project_management_app/core/auth/permissions.dart';
 import 'package:my_project_management_app/core/config/ai_config.dart' as ai_config;
 
@@ -31,6 +32,16 @@ class RateLimitExceededException implements Exception {
   String toString() => 'Rate limit exceeded. Try again in ${backoffDuration.inSeconds} seconds.';
 }
 
+/// Custom exception for captcha required
+class CaptchaRequiredException implements Exception {
+  final String? recaptchaToken;
+
+  CaptchaRequiredException({this.recaptchaToken});
+
+  @override
+  String toString() => 'Captcha verification required.';
+}
+
 /// Provider for auth repository (exposed via interface to allow swapping)
 final authRepositoryProvider = Provider<IAuthRepository>((ref) {
   return AuthRepository();
@@ -46,6 +57,15 @@ final settingsRepositoryProvider = FutureProvider<SettingsRepository>((ref) asyn
 
 /// Provider for LoginRateLimiter
 final loginRateLimiterProvider = Provider<LoginRateLimiter>((ref) => LoginRateLimiter.instance);
+
+/// Provider for RecaptchaService
+final recaptchaServiceProvider = Provider<RecaptchaService>((ref) {
+  final settings = ref.watch(settingsRepositoryProvider).maybeWhen(
+    data: (settings) => settings,
+    orElse: () => SettingsRepository(), // Fallback if not initialized
+  );
+  return RecaptchaService(settings);
+});
 
 /// Auth state for basic login flow with error handling
 class AuthState {
@@ -185,55 +205,38 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
     }
   }
 
-  Future<List<DateTime>> _loadFailedAttempts() async {
-    final attempts = attemptsBox.get('global') ?? [];
-    final now = DateTime.now();
-    final cleaned = attempts.where((t) => now.difference(t).inSeconds <= 60).toList();
-    if (cleaned.length != attempts.length) {
-      await _saveFailedAttempts(cleaned);
-    }
-    return cleaned;
-  }
-
-  Future<void> _saveFailedAttempts(List<DateTime> attempts) async {
-    await attemptsBox.put('global', attempts);
-  }
-
-  bool _canAttemptLogin(List<DateTime> attempts) {
-    return attempts.length < 5;
-  }
-
-  Future<void> _recordFailedAttempt() async {
-    final attempts = await _loadFailedAttempts();
-    attempts.add(DateTime.now());
-    await _saveFailedAttempts(attempts);
-  }
-
-  Duration? _getBackoffTime(List<DateTime> attempts) {
-    if (attempts.length >= 5) {
-      return const Duration(seconds: 60);
-    }
-    return null;
-  }
-
-  Future<void> _resetAttempts() async {
-    await _saveFailedAttempts([]);
-  }
-
   /// Login with error handling and persistent rate limiting
-  Future<bool> login(String username, String password, {bool enableAutoLogin = false}) async {
+  Future<bool> login(String username, String password, {bool enableAutoLogin = false, bool skipCaptchaCheck = false, String? captchaToken}) async {
+    final limiter = ref.read(loginRateLimiterProvider);
 
-    // Check rate limiting before attempting login
-    final attempts = await _loadFailedAttempts();
-    if (!_canAttemptLogin(attempts)) {
-      AppLogger.event('auth_rate_limit_exceeded', params: {'email': username, 'timestamp': DateTime.now().toIso8601String()});
-      throw RateLimitExceededException(_getBackoffTime(attempts)!);
+    // Check rate limiting
+    final attemptCount = await limiter.getAttemptCount(username);
+    final backoffDuration = await limiter.getBackoffDuration(username);
+    if (backoffDuration != null) {
+      AppLogger.event('rate_limit_triggered', params: {'email': username, 'backoff_seconds': backoffDuration.inSeconds, 'timestamp': DateTime.now().toIso8601String()});
+      throw RateLimitExceededException(backoffDuration);
+    }
+
+    // Check if captcha is required (3+ failed attempts)
+    if (!skipCaptchaCheck && attemptCount >= 3) {
+      final recaptchaService = ref.read(recaptchaServiceProvider);
+      final token = await recaptchaService.getRecaptchaToken();
+      AppLogger.event('captcha_attempt', params: {'email': username, 'attempts': attemptCount, 'timestamp': DateTime.now().toIso8601String(), 'has_token': token != null});
+      if (token == null) {
+        // Could not get captcha token, fail the login
+        AppLogger.event('captcha_failed', params: {'email': username, 'attempts': attemptCount});
+        state = AsyncValue.data(state.value!.copyWith(error: 'Captcha verification failed. Please try again.'));
+        return false;
+      }
+      // Use the token for login
+      captchaToken ??= token;
     }
 
     try {
       await Supabase.instance.client.auth.signInWithPassword(
         email: username.trim(),
         password: password,
+        captchaToken: captchaToken,
       );
 
       final session = Supabase.instance.client.auth.currentSession;
@@ -289,13 +292,13 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
         }
 
         // Reset rate limiter on successful login
-        await _resetAttempts();
+        await limiter.resetOnSuccess(username);
         return true;
       }
     } catch (e) {
       AppLogger.instance.w('Supabase login failed', error: e);
       // Record failed attempt for rate limiting
-      await _recordFailedAttempt();
+      await limiter.recordAttempt(username);
     }
 
     state = AsyncValue.data(state.value!.copyWith(error: 'Invalid username or password.'));

@@ -33,12 +33,8 @@ Onderstaand een gegroepeerde lijst van alle "TODO"-aantekeningen die in de codeb
   - Verwachte actie: Implementeer hulpmiddel (memory/redis) om max login pogingen per tijdsvenster af te dwingen.
 - TODO: Add biometric authentication support
   - Verwachte actie: Voeg optionele biometry provider/integratie toe (met feature flag en platform checks).
-- TODO: Implement proper async checking with settings
-  - Verwachte actie: Haal instellingen asynchroon op uit `settingsRepository` i.p.v. sync benadering.
 - TODO: Implement rate limiting (max 5 attempts per minute)
   - Verwachte actie: Concretiseer en implementeer limiet (backoff + captcha fallback).
-- TODO: Access settings repository properly
-  - Verwachte actie: Gebruik `ref.read(settingsRepositoryProvider.future)` op de juiste plekken.
 - TODO: Add search/filtering capabilities
   - Verwachte actie: Voeg zoek- en filteropties toe aan gebruikers/auth providers indien nodig.
 

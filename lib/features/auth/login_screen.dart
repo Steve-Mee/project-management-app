@@ -76,7 +76,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       }
     } on RateLimitExceededException catch (e) {
       _showSnackBar(l10n.rateLimitExceeded(e.backoffDuration.inSeconds));
-      // NOTE: converted to issue 040
     } catch (e) {
       _showSnackBar(l10n.loginFailedMessage);
     }
@@ -320,6 +319,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     setState(() => _submitting = true);
     final success = await ref.read(authProvider.notifier).authenticateWithBiometrics();
     if (!success) {
+      // Fallback to password login on biometric failure
+      if (mounted) {
+        setState(() => _usePasswordLogin = true);
+      }
       _showSnackBar(l10n.biometric_auth_failed);
     }
     if (mounted) {
@@ -533,12 +536,19 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                               child: ElevatedButton(
                                 onPressed: _submitting ? null : _authenticateBiometric,
                                 child: _submitting
-                                    ? const SizedBox(
-                                        height: 20,
-                                        width: 20,
-                                        child: CircularProgressIndicator(
-                                          strokeWidth: 2,
-                                        ),
+                                    ? Row(
+                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        children: [
+                                          const SizedBox(
+                                            height: 20,
+                                            width: 20,
+                                            child: CircularProgressIndicator(
+                                              strokeWidth: 2,
+                                            ),
+                                          ),
+                                          const SizedBox(width: 12),
+                                          Text(l10n.captcha_loading),
+                                        ],
                                       )
                                     : Row(
                                         mainAxisAlignment: MainAxisAlignment.center,
@@ -619,12 +629,19 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                 key: const ValueKey('login_button'),
                                 onPressed: _submitting ? null : _submitLogin,
                                 child: _submitting
-                                    ? const SizedBox(
-                                        height: 20,
-                                        width: 20,
-                                        child: CircularProgressIndicator(
-                                          strokeWidth: 2,
-                                        ),
+                                    ? Row(
+                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        children: [
+                                          const SizedBox(
+                                            height: 20,
+                                            width: 20,
+                                            child: CircularProgressIndicator(
+                                              strokeWidth: 2,
+                                            ),
+                                          ),
+                                          const SizedBox(width: 12),
+                                          Text(l10n.captcha_loading),
+                                        ],
                                       )
                                     : Text(l10n.loginButton),
                               ),

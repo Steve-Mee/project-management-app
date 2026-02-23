@@ -75,8 +75,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsLocalFilesConsentTitle => 'Local file permission';
 
   @override
-  String get settingsLocalFilesConsentSubtitle =>
-      'Allow the app to read local project files for AI context.';
+  String get settingsLocalFilesConsentSubtitle => 'Allow the app to read local project files for AI context.';
 
   @override
   String get settingsUseProjectFilesTitle => 'Use project files';
@@ -161,8 +160,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get exportPasswordTitle => 'Encrypt export';
 
   @override
-  String get exportPasswordSubtitle =>
-      'Set a password to encrypt the export files.';
+  String get exportPasswordSubtitle => 'Set a password to encrypt the export files.';
 
   @override
   String get exportPasswordMismatch => 'Passwords do not match.';
@@ -439,8 +437,7 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get noProjectMapLinked =>
-      'No folder linked yet. Link a folder to read files.';
+  String get noProjectMapLinked => 'No folder linked yet. Link a folder to read files.';
 
   @override
   String get projectNotAvailable => 'Project not available.';
@@ -475,8 +472,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get welcomeBack => 'Welcome back! 👋';
 
   @override
-  String get projectsOverviewSubtitle =>
-      'Here\'s an overview of your active projects';
+  String get projectsOverviewSubtitle => 'Here\'s an overview of your active projects';
 
   @override
   String get recentWorkflowsTitle => 'Recent workflows';
@@ -497,12 +493,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get unknownProject => 'Unknown project';
 
   @override
-  String projectTaskStatusSemantics(
-    Object projectName,
-    Object taskTitle,
-    Object statusLabel,
-    Object timeLabel,
-  ) {
+  String projectTaskStatusSemantics(Object projectName, Object taskTitle, Object statusLabel, Object timeLabel) {
     return 'Project $projectName, task $taskTitle, status $statusLabel, $timeLabel';
   }
 
@@ -540,11 +531,7 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String projectProgressChartSemantics(
-    Object projectName,
-    Object completedPercent,
-    Object pendingPercent,
-  ) {
+  String projectProgressChartSemantics(Object projectName, Object completedPercent, Object pendingPercent) {
     return 'Project progress chart for $projectName. Completed $completedPercent percent, pending $pendingPercent percent.';
   }
 
@@ -580,11 +567,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get statusLabel => 'Status';
 
   @override
-  String burndownChartSemantics(
-    Object projectName,
-    Object actualPoints,
-    Object idealPoints,
-  ) {
+  String burndownChartSemantics(Object projectName, Object actualPoints, Object idealPoints) {
     return 'Burndown chart for $projectName. Actual points: $actualPoints. Ideal points: $idealPoints.';
   }
 
@@ -604,8 +587,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get aiEmptyTitle => 'Start a conversation with the AI assistant';
 
   @override
-  String get aiEmptySubtitle =>
-      'For example: \"Generate a plan for project: webshop\"';
+  String get aiEmptySubtitle => 'For example: \"Generate a plan for project: webshop\"';
 
   @override
   String get useProjectFilesLabel => 'Use project files';
@@ -632,6 +614,18 @@ class AppLocalizationsEn extends AppLocalizations {
   String rateLimitExceeded(Object seconds) {
     return 'Too many attempts. Try again in $seconds seconds.';
   }
+
+  @override
+  String get captchaTitle => 'Security Verification';
+
+  @override
+  String get captchaMessage => 'Please complete the captcha to continue.';
+
+  @override
+  String get captchaVerifyButton => 'Verify';
+
+  @override
+  String get captchaFailedMessage => 'Captcha verification failed.';
 
   @override
   String get registerTitle => 'Register';
@@ -807,8 +801,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsRestoreTitle => 'Restore backup';
 
   @override
-  String get settingsRestoreSubtitle =>
-      'Replace local data with a backup file.';
+  String get settingsRestoreSubtitle => 'Replace local data with a backup file.';
 
   @override
   String backupSuccessMessage(Object path) {
@@ -821,8 +814,7 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get restoreSuccessMessage =>
-      'Backup restored. Restart the app to reload data.';
+  String get restoreSuccessMessage => 'Backup restored. Restart the app to reload data.';
 
   @override
   String restoreFailedMessage(Object error) {
@@ -904,8 +896,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get noProjectsMatchFiltersTitle => 'No projects match your filters';
 
   @override
-  String get noProjectsMatchFiltersSubtitle =>
-      'Try changing or clearing your filters';
+  String get noProjectsMatchFiltersSubtitle => 'Try changing or clearing your filters';
 
   @override
   String get projectFiltersTitle => 'Project Filters';
@@ -1143,8 +1134,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get noProjectsForGantt => 'No projects to display';
 
   @override
-  String get addProjectsWithDates =>
-      'Add projects with start and due dates to see them in the timeline.';
+  String get addProjectsWithDates => 'Add projects with start and due dates to see them in the timeline.';
 
   @override
   String get openProjectTooltip => 'Open project';
@@ -1171,15 +1161,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsBiometricLoginTitle => 'Biometric login';
 
   @override
-  String get settingsBiometricLoginSubtitle =>
-      'Use fingerprint or face ID to sign in';
+  String get settingsBiometricLoginSubtitle => 'Use fingerprint or face ID to sign in';
 
   @override
   String get enableBiometricDialogTitle => 'Enable Biometric Login';
 
   @override
-  String get enableBiometricDialogMessage =>
-      'Would you like to enable biometric authentication for faster login?';
+  String get enableBiometricDialogMessage => 'Would you like to enable biometric authentication for faster login?';
 
   @override
   String get enableBiometricDialogYes => 'Enable';
@@ -1200,8 +1188,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get enable_biometric_login => 'Enable Biometric Login';
 
   @override
-  String get biometric_not_available =>
-      'Biometric authentication not available';
+  String get biometric_not_available => 'Biometric authentication not available';
 
   @override
   String get use_password_instead => 'Use password instead';
@@ -1225,8 +1212,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get smartFilterProcessing => 'Processing your request...';
 
   @override
-  String get smartFilterError =>
-      'Failed to apply smart filter. Please try again.';
+  String get smartFilterError => 'Failed to apply smart filter. Please try again.';
 
   @override
   String get aiSuggestedFilterLabel => 'AI Suggested Filter';
@@ -1272,4 +1258,13 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get offline_sync_success => 'Offline sync completed successfully';
+
+  @override
+  String get captcha_verification_required => 'Security verification required';
+
+  @override
+  String get captcha_loading => 'Verifying security check...';
+
+  @override
+  String get captcha_error => 'Security verification failed. Please try again.';
 }

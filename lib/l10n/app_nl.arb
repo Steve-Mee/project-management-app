@@ -1245,5 +1245,25 @@
   "offline_sync_success": "Offline synchronisatie succesvol voltooid",
   "@offline_sync_success": {
     "description": "Success message after offline sync completes."
+  },
+  "captcha_verification_required": "Beveiligingsverificatie vereist",
+  "@captcha_verification_required": {
+    "description": "Message shown when captcha verification is required after failed login attempts."
+  },
+  "captcha_loading": "Beveiligingscontrole verifiëren...",
+  "@captcha_loading": {
+    "description": "Loading message shown while captcha verification is in progress."
+  },
+  "captcha_error": "Beveiligingsverificatie mislukt. Probeer het opnieuw.",
+  "@captcha_error": {
+    "description": "Error message shown when captcha verification fails."
+  },
+  "recaptcha_site_key": "reCAPTCHA v3 Site Sleutel",
+  "@recaptcha_site_key": {
+    "description": "Label for the reCAPTCHA site key input field in settings."
+  },
+  "recaptcha_site_key_hint": "Voer uw reCAPTCHA v3 site sleutel in",
+  "@recaptcha_site_key_hint": {
+    "description": "Hint text for the reCAPTCHA site key input field."
   }
 }

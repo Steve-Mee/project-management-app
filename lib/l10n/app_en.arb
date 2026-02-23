@@ -825,6 +825,22 @@
   "@rateLimitExceeded": {
     "description": "Message shown when login rate limit is exceeded, with seconds parameter."
   },
+  "captchaTitle": "Security Verification",
+  "@captchaTitle": {
+    "description": "Title for captcha verification dialog."
+  },
+  "captchaMessage": "Please complete the captcha to continue.",
+  "@captchaMessage": {
+    "description": "Message explaining captcha requirement."
+  },
+  "captchaVerifyButton": "Verify",
+  "@captchaVerifyButton": {
+    "description": "Button text for captcha verification."
+  },
+  "captchaFailedMessage": "Captcha verification failed.",
+  "@captchaFailedMessage": {
+    "description": "Message shown when captcha verification fails."
+  },
   "registerTitle": "Register",
   "@registerTitle": {
     "description": "Auto-generated description for registerTitle."
@@ -1696,5 +1712,25 @@
   "offline_sync_success": "Offline sync completed successfully",
   "@offline_sync_success": {
     "description": "Success message after offline sync completes."
+  },
+  "captcha_verification_required": "Security verification required",
+  "@captcha_verification_required": {
+    "description": "Message shown when captcha verification is required after failed login attempts."
+  },
+  "captcha_loading": "Verifying security check...",
+  "@captcha_loading": {
+    "description": "Loading message shown while captcha verification is in progress."
+  },
+  "captcha_error": "Security verification failed. Please try again.",
+  "@captcha_error": {
+    "description": "Error message shown when captcha verification fails."
+  },
+  "recaptcha_site_key": "reCAPTCHA v3 Site Key",
+  "@recaptcha_site_key": {
+    "description": "Label for the reCAPTCHA site key input field in settings."
+  },
+  "recaptcha_site_key_hint": "Enter your reCAPTCHA v3 site key",
+  "@recaptcha_site_key_hint": {
+    "description": "Hint text for the reCAPTCHA site key input field."
   }
 }

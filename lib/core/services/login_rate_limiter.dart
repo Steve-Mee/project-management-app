@@ -111,6 +111,52 @@ class LoginRateLimiter {
     }
   }
 
+  /// Gets the current number of attempts in the sliding window for the given email.
+  Future<int> getAttemptCount(String email) async {
+    try {
+      final key = _hashEmail(email);
+      final data = _box.get(key) ?? {};
+      final attempts = List<DateTime>.from(data['attempts'] ?? []);
+      _cleanOldAttempts(attempts);
+      await _box.put(key, {
+        ...data,
+        'attempts': attempts,
+      });
+      return attempts.length;
+    } catch (e, stack) {
+      AppLogger.instance.e('Error getting attempt count for $email', error: e, stackTrace: stack);
+      return 0;
+    }
+  }
+
+  /// Gets the current backoff duration if blocked, null otherwise.
+  Future<Duration?> getBackoffDuration(String email) async {
+    try {
+      final key = _hashEmail(email);
+      final data = _box.get(key) ?? {};
+      final attempts = List<DateTime>.from(data['attempts'] ?? []);
+      final consecutiveFailures = data['consecutiveFailures'] ?? 0;
+      final lastBlockTime = data['lastBlockTime'] as DateTime?;
+      _cleanOldAttempts(attempts);
+      if (attempts.length < maxAttempts) {
+        return null;
+      }
+      if (lastBlockTime == null) {
+        return null;
+      }
+      final backoffIndex = (consecutiveFailures - 1).clamp(0, _backoffDurations.length - 1);
+      final lockoutDuration = _backoffDurations[backoffIndex];
+      final timeSinceBlock = DateTime.now().difference(lastBlockTime);
+      if (timeSinceBlock < lockoutDuration) {
+        return lockoutDuration - timeSinceBlock;
+      }
+      return null;
+    } catch (e, stack) {
+      AppLogger.instance.e('Error getting backoff duration for $email', error: e, stackTrace: stack);
+      return null;
+    }
+  }
+
   /// Resets the rate limiter state for the given email on successful login.
   /// Clears attempts and consecutive failures.
   Future<void> resetOnSuccess(String email) async {
