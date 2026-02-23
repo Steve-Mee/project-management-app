@@ -25,8 +25,7 @@ class _ProjectGanttViewState extends ConsumerState<ProjectGanttView> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    final filter = ref.watch(persistentProjectFilterProvider);
-    final projectsAsync = ref.watch(filteredProjectsProvider(filter));
+    final projectsAsync = ref.watch(projectsProvider);
 
     return Scaffold(
       appBar: AppBar(

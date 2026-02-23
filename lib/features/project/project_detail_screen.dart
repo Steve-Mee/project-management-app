@@ -135,12 +135,7 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen>
         appBar: AppBar(title: const Text('Error')),
         body: Center(child: Text('Failed to load project: $error')),
       ),
-      data: (project) => project == null
-          ? Scaffold(
-              appBar: AppBar(title: const Text('Project Not Found')),
-              body: const Center(child: Text('Project not found')),
-            )
-          : Scaffold(
+      data: (project) => Scaffold(
               appBar: _buildAppBar(context, project, isFromCache),
               body: ConstrainedBox(
                 constraints: BoxConstraints(

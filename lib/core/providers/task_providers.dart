@@ -45,7 +45,7 @@ class TaskNotifier extends AsyncNotifier<List<Task>> {
       if (tasks.isEmpty) {
         // Migrated to use projectByIdProvider for consistency with Riverpod patterns.
         final project = await ref.read(projectByIdProvider(projectId).future);
-        final legacyTitles = project?.tasks ?? const <String>[];
+        final legacyTitles = project.tasks;
         if (legacyTitles.isNotEmpty) {
           tasks = List.generate(legacyTitles.length, (index) {
             final title = legacyTitles[index];

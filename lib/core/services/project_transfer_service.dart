@@ -101,8 +101,13 @@ class ProjectTransferService {
       };
 
       for (final project in projects) {
-        final existing = await projectRepository.getProjectById(project.id);
-        originalProjectsById[project.id] = existing;
+        try {
+          final existing = await projectRepository.getProjectById(project.id);
+          originalProjectsById[project.id] = existing;
+        } catch (e) {
+          // Project doesn't exist, no original to store
+          originalProjectsById[project.id] = null;
+        }
         await projectRepository.addProject(project);
         importedProjectIds.add(project.id);
       }

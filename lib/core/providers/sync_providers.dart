@@ -67,15 +67,20 @@ class SyncNotifier extends StateNotifier<AsyncValue<SyncStatus>> {
   /// Compare local and remote project and sync differences
   Future<void> _compareAndSync(Map<String, dynamic> remoteJson) async {
     final remote = ProjectModel.fromJson(remoteJson);
-    final local = await _projectRepository.getProjectById(remote.id);
-
-    if (local == null) {
+    try {
+      final local = await _projectRepository.getProjectById(remote.id);
+      // Existing project, compare and sync
+      await _syncProjectDifferences(local, remote);
+    } catch (e) {
       // New remote project, add to local
       await _projectRepository.updateProject(remote.id, remote, userId: 'realtime-sync');
       return;
     }
+  }
 
-    final remoteTime = DateTime.parse(remoteJson['updated_at'] as String);
+  /// Sync differences between local and remote projects
+  Future<void> _syncProjectDifferences(ProjectModel local, ProjectModel remote) async {
+    final remoteTime = remote.lastUpdated;
     final localTime = local.lastUpdated;
 
     if (remoteTime.isAfter(localTime)) {

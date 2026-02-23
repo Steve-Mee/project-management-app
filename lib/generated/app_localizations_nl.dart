@@ -226,6 +226,23 @@ class AppLocalizationsNl extends AppLocalizations {
   String get noProjectsFound => 'Geen projecten gevonden';
 
   @override
+  String get projectsSearchHint => 'Zoek projecten...';
+
+  @override
+  String get filterByStatus => 'Filter op status';
+
+  @override
+  String get filterByPriority => 'Filter op prioriteit';
+
+  @override
+  String get filterByDateRange => 'Filter op datumbereik';
+
+  @override
+  String pageXOfY(int current, int total) {
+    return 'Pagina $current van $total';
+  }
+
+  @override
   String get loadingMoreProjects => 'Meer projecten laden...';
 
   @override

@@ -1,5 +1,6 @@
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:my_project_management_app/models/project_model.dart';
+import 'package:my_project_management_app/models/project_filter.dart' as models;
 import 'package:my_project_management_app/core/services/cloud_sync_service.dart';
 import 'package:my_project_management_app/core/services/project_members_service.dart';
 import 'package:my_project_management_app/core/services/app_logger.dart';
@@ -18,12 +19,15 @@ class ProjectRepository implements IProjectRepository {
   late Box<Map<dynamic, dynamic>> _projectsBox;
   final CloudSyncService _cloudSync;
   final ProjectMembersService _membersService;
+  final bool _isTestMode;
 
   ProjectRepository({
     CloudSyncService? cloudSync,
     ProjectMembersService? membersService,
+    bool isTestMode = false,
   })  : _cloudSync = cloudSync ?? CloudSyncService(),
-        _membersService = membersService ?? ProjectMembersService();
+        _membersService = membersService ?? ProjectMembersService(),
+        _isTestMode = isTestMode;
 
   /// Initialize Hive and open the projects box
   Future<void> initialize({String? testPath}) async {
@@ -60,7 +64,7 @@ class ProjectRepository implements IProjectRepository {
     ProjectModel project,
     String storageKey,
   ) async {
-    if (_isValidUuid(project.id) && !project.id.startsWith('project_')) {
+    if (_isTestMode || (_isValidUuid(project.id) && !project.id.startsWith('project_'))) {
       return project;
     }
 
@@ -82,7 +86,7 @@ class ProjectRepository implements IProjectRepository {
     Map<String, Object?>? metadata,
   }) async {
     var resolved = project;
-    if (!_isValidUuid(project.id) || project.id.startsWith('project_')) {
+    if (!_isTestMode && (!_isValidUuid(project.id) || project.id.startsWith('project_'))) {
       final newId = _uuid.v4();
       resolved = _withNewId(project, newId);
       AppLogger.instance.i(
@@ -90,6 +94,11 @@ class ProjectRepository implements IProjectRepository {
       );
     }
     await _projectsBox.put(resolved.id, resolved.toJson());
+
+    // Skip Supabase sync in test mode
+    if (_isTestMode) {
+      return;
+    }
 
     final currentUser = Supabase.instance.client.auth.currentUser;
     if (currentUser == null) {
@@ -113,7 +122,7 @@ class ProjectRepository implements IProjectRepository {
       for (final entry in entries) {
         final projectData = Map<String, dynamic>.from(entry.value);
         var project = ProjectModel.fromJson(projectData);
-        if (!_isValidUuid(project.id) || project.id.startsWith('project_')) {
+        if (!_isTestMode && (!_isValidUuid(project.id) || project.id.startsWith('project_'))) {
           project = _withNewId(project, _uuid.v4());
           _projectsBox.delete(entry.key);
           _projectsBox.put(project.id, project.toJson());
@@ -131,26 +140,40 @@ class ProjectRepository implements IProjectRepository {
 
   @override
   Future<List<ProjectModel>> getProjectsPaginated({
-    required int page,
-    required int limit,
-    String? statusFilter,
-    String? searchQuery,
+    int page = 1,
+    int limit = 20,
+    models.ProjectFilter? filter,
   }) async {
     try {
       final allProjects = await getAllProjects();
 
       // Apply optional filters
       var filtered = allProjects;
-      if (statusFilter != null && statusFilter.isNotEmpty) {
-        filtered = filtered.where((p) => p.status == statusFilter).toList();
-      }
-      if (searchQuery != null && searchQuery.isNotEmpty) {
-        final q = searchQuery.toLowerCase();
-        filtered = filtered.where((p) {
-          final nameMatch = p.name.toLowerCase().contains(q);
-          final descMatch = (p.description != null) && p.description!.toLowerCase().contains(q);
-          return nameMatch || descMatch;
-        }).toList();
+      if (filter != null) {
+        if (filter.status != null && filter.status!.isNotEmpty) {
+          filtered = filtered.where((p) => p.status == filter.status).toList();
+        }
+        if (filter.searchQuery != null && filter.searchQuery!.isNotEmpty) {
+          final q = filter.searchQuery!.toLowerCase();
+          filtered = filtered.where((p) {
+            final nameMatch = p.name.toLowerCase().contains(q);
+            final descMatch = (p.description != null) && p.description!.toLowerCase().contains(q);
+            final tagsMatch = p.tags.any((tag) => tag.toLowerCase().contains(q));
+            return nameMatch || descMatch || tagsMatch;
+          }).toList();
+        }
+        if (filter.priority != null && filter.priority!.isNotEmpty) {
+          filtered = filtered.where((p) => p.priority == filter.priority).toList();
+        }
+        if (filter.tags != null && filter.tags!.isNotEmpty) {
+          filtered = filtered.where((p) => filter.tags!.any((tag) => p.tags.contains(tag))).toList();
+        }
+        if (filter.startDate != null) {
+          filtered = filtered.where((p) => p.startDate != null && p.startDate!.isAfter(filter.startDate!.subtract(const Duration(days: 1)))).toList();
+        }
+        if (filter.endDate != null) {
+          filtered = filtered.where((p) => p.dueDate != null && p.dueDate!.isBefore(filter.endDate!.add(const Duration(days: 1)))).toList();
+        }
       }
 
       // Pagination (page starts at 1)
@@ -200,9 +223,22 @@ class ProjectRepository implements IProjectRepository {
 
   /// Get a single project by ID
   @override
-  Future<ProjectModel?> getProjectById(String id) async {
-    final box = await Hive.openBox<ProjectModel>('projects');
-    return box.get(id);
+  Future<ProjectModel> getProjectById(String id) async {
+    final data = _projectsBox.get(id);
+    if (data == null) {
+      throw Exception('Project with id $id not found');
+    }
+    final projectData = Map<String, dynamic>.from(data);
+    var project = ProjectModel.fromJson(projectData);
+    if (!_isTestMode && (!_isValidUuid(project.id) || project.id.startsWith('project_'))) {
+      project = _withNewId(project, _uuid.v4());
+      _projectsBox.delete(id);
+      _projectsBox.put(project.id, project.toJson());
+      AppLogger.instance.i(
+        'Migrated project id from $id to ${project.id}',
+      );
+    }
+    return project;
   }
 
   /// Update project progress
@@ -235,11 +271,15 @@ class ProjectRepository implements IProjectRepository {
         );
         
         await _projectsBox.put(resolvedId, updatedProject.toJson());
-        await _cloudSync.syncProjectUpdate(
-          resolvedId,
-          userId: userId,
-          metadata: metadata,
-        );
+        
+        // Skip Supabase sync in test mode
+        if (!_isTestMode) {
+          await _cloudSync.syncProjectUpdate(
+            resolvedId,
+            userId: userId,
+            metadata: metadata,
+          );
+        }
       }
     } catch (e) {
       AppLogger.instance.e('Error updating project progress', error: e);
@@ -277,11 +317,15 @@ class ProjectRepository implements IProjectRepository {
         );
         
         await _projectsBox.put(resolvedId, updatedProject.toJson());
-        await _cloudSync.syncProjectUpdate(
-          resolvedId,
-          userId: userId,
-          metadata: metadata,
-        );
+        
+        // Skip Supabase sync in test mode
+        if (!_isTestMode) {
+          await _cloudSync.syncProjectUpdate(
+            resolvedId,
+            userId: userId,
+            metadata: metadata,
+          );
+        }
       }
     } catch (e) {
       AppLogger.instance.e('Error updating project tasks', error: e);
@@ -455,19 +499,27 @@ class ProjectRepository implements IProjectRepository {
         project = await _ensureValidId(project, projectId);
         final resolvedId = project.id;
         await _projectsBox.delete(resolvedId);
-        await _cloudSync.syncProjectDelete(
-          resolvedId,
-          userId: userId,
-          metadata: metadata,
-        );
+        
+        // Skip Supabase sync in test mode
+        if (!_isTestMode) {
+          await _cloudSync.syncProjectDelete(
+            resolvedId,
+            userId: userId,
+            metadata: metadata,
+          );
+        }
         return;
       }
       await _projectsBox.delete(projectId);
-      await _cloudSync.syncProjectDelete(
-        projectId,
-        userId: userId,
-        metadata: metadata,
-      );
+      
+      // Skip Supabase sync in test mode
+      if (!_isTestMode) {
+        await _cloudSync.syncProjectDelete(
+          projectId,
+          userId: userId,
+          metadata: metadata,
+        );
+      }
     } catch (e) {
       AppLogger.instance.e('Error deleting project', error: e);
       rethrow;
@@ -808,8 +860,10 @@ class ProjectRepository implements IProjectRepository {
   @override
   Future<void> bidirectionalSyncProject(String projectId) async {
     // Get local project
-    final localProject = await getProjectById(projectId);
-    if (localProject == null) {
+    ProjectModel? localProject;
+    try {
+      localProject = await getProjectById(projectId);
+    } catch (e) {
       AppLogger.instance.w('Local project $projectId not found for sync');
       return;
     }

@@ -5,6 +5,7 @@ import 'package:my_project_management_app/core/providers/project_providers.dart'
 import 'package:my_project_management_app/core/providers/auth_providers.dart';
 import 'package:my_project_management_app/core/repository/project_repository.dart';
 import 'package:my_project_management_app/models/project_model.dart';
+import 'package:my_project_management_app/models/project_filter.dart' as models;
 
 class FakeAuthNotifier extends AuthNotifier {
   @override
@@ -45,8 +46,12 @@ class FakeProjectRepository extends ProjectRepository {
   }
 
   @override
-  Future<ProjectModel?> getProjectById(String id) async {
-    return _store[id];
+  Future<ProjectModel> getProjectById(String id) async {
+    final project = _store[id];
+    if (project == null) {
+      throw Exception('Project with id $id not found');
+    }
+    return project;
   }
 
   @override
@@ -240,5 +245,94 @@ void main() {
     final state = container.read(projectsProvider);
     expect(state, isA<AsyncData<List<ProjectModel>>>());
     expect(state.asData!.value.isEmpty, true);
+  });
+
+  test('fuzzy search matches projects by name', () async {
+    final repository = FakeProjectRepository();
+    final container = ProviderContainer(overrides: [
+      projectRepositoryProvider.overrideWithValue(repository),
+      authProvider.overrideWith(() => FakeAuthNotifier()),
+    ]);
+    addTearDown(container.dispose);
+
+    final notifier = container.read(projectsProvider.notifier);
+
+    // Add test projects
+    await notifier.addProject(ProjectModel(
+      id: 'p1',
+      name: 'Flutter Project',
+      progress: 0.5,
+      status: 'In Progress',
+      tasks: const [],
+      description: 'A mobile app',
+    ));
+
+    await notifier.addProject(ProjectModel(
+      id: 'p2',
+      name: 'React Website',
+      progress: 0.3,
+      status: 'Planning',
+      tasks: const [],
+      description: 'A web application',
+    ));
+
+    // Test fuzzy search
+    final filter = models.ProjectFilter(searchQuery: 'flutter');
+    final results = container.read(filteredProjectsProvider(filter));
+    expect(results.length, 1);
+    expect(results[0].id, 'p1');
+  });
+
+  test('fuzzy search matches projects by description', () async {
+    final repository = FakeProjectRepository();
+    final container = ProviderContainer(overrides: [
+      projectRepositoryProvider.overrideWithValue(repository),
+      authProvider.overrideWith(() => FakeAuthNotifier()),
+    ]);
+    addTearDown(container.dispose);
+
+    final notifier = container.read(projectsProvider.notifier);
+
+    await notifier.addProject(ProjectModel(
+      id: 'p1',
+      name: 'Mobile App',
+      progress: 0.5,
+      status: 'In Progress',
+      tasks: const [],
+      description: 'Built with Flutter framework',
+    ));
+
+    // Test fuzzy search on description
+    final filter = models.ProjectFilter(searchQuery: 'flutter');
+    final results = container.read(filteredProjectsProvider(filter));
+    expect(results.length, 1);
+    expect(results[0].id, 'p1');
+  });
+
+  test('fuzzy search matches projects by tags', () async {
+    final repository = FakeProjectRepository();
+    final container = ProviderContainer(overrides: [
+      projectRepositoryProvider.overrideWithValue(repository),
+      authProvider.overrideWith(() => FakeAuthNotifier()),
+    ]);
+    addTearDown(container.dispose);
+
+    final notifier = container.read(projectsProvider.notifier);
+
+    await notifier.addProject(ProjectModel(
+      id: 'p1',
+      name: 'Web App',
+      progress: 0.5,
+      status: 'In Progress',
+      tasks: const [],
+      description: 'A web application',
+      tags: const ['flutter', 'mobile', 'dart'],
+    ));
+
+    // Test fuzzy search on tags
+    final filter = models.ProjectFilter(searchQuery: 'mobile');
+    final results = container.read(filteredProjectsProvider(filter));
+    expect(results.length, 1);
+    expect(results[0].id, 'p1');
   });
 }

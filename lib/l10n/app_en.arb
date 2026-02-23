@@ -288,6 +288,34 @@
   "@noProjectsFound": {
     "description": "Auto-generated description for noProjectsFound."
   },
+  "projectsSearchHint": "Search projects...",
+  "@projectsSearchHint": {
+    "description": "Hint text for project search input field."
+  },
+  "filterByStatus": "Filter by status",
+  "@filterByStatus": {
+    "description": "Label for status filter dropdown."
+  },
+  "filterByPriority": "Filter by priority",
+  "@filterByPriority": {
+    "description": "Label for priority filter dropdown."
+  },
+  "filterByDateRange": "Filter by date range",
+  "@filterByDateRange": {
+    "description": "Label for date range filter."
+  },
+  "pageXOfY": "Page {current} of {total}",
+  "@pageXOfY": {
+    "description": "Pagination display showing current page and total pages.",
+    "placeholders": {
+      "current": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
   "loadingMoreProjects": "Loading more projects...",
   "@loadingMoreProjects": {
     "description": "Auto-generated description for loadingMoreProjects."

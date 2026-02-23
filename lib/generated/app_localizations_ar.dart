@@ -225,6 +225,23 @@ class AppLocalizationsAr extends AppLocalizations {
   String get noProjectsFound => 'لم يتم العثور على مشاريع';
 
   @override
+  String get projectsSearchHint => 'Search projects...';
+
+  @override
+  String get filterByStatus => 'Filter by status';
+
+  @override
+  String get filterByPriority => 'Filter by priority';
+
+  @override
+  String get filterByDateRange => 'Filter by date range';
+
+  @override
+  String pageXOfY(int current, int total) {
+    return 'Page $current of $total';
+  }
+
+  @override
   String get loadingMoreProjects => 'جاري تحميل المزيد من المشاريع...';
 
   @override

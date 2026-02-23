@@ -224,6 +224,23 @@ class AppLocalizationsEn extends AppLocalizations {
   String get noProjectsFound => 'No projects found';
 
   @override
+  String get projectsSearchHint => 'Search projects...';
+
+  @override
+  String get filterByStatus => 'Filter by status';
+
+  @override
+  String get filterByPriority => 'Filter by priority';
+
+  @override
+  String get filterByDateRange => 'Filter by date range';
+
+  @override
+  String pageXOfY(int current, int total) {
+    return 'Page $current of $total';
+  }
+
+  @override
   String get loadingMoreProjects => 'Loading more projects...';
 
   @override

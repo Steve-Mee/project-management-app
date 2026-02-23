@@ -302,13 +302,6 @@ class ProjectDetailsWidget extends ConsumerWidget {
 
     return projectAsync.when(
       data: (project) {
-        if (project == null) {
-          return Scaffold(
-            appBar: AppBar(title: const Text('Project Not Found')),
-            body: const Center(child: Text('Project not found')),
-          );
-        }
-
         return Scaffold(
           appBar: AppBar(title: Text(project.name)),
           body: SingleChildScrollView(

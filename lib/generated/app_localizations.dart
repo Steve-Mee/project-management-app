@@ -522,6 +522,36 @@ abstract class AppLocalizations {
   /// **'No projects found'**
   String get noProjectsFound;
 
+  /// Hint text for project search input field.
+  ///
+  /// In en, this message translates to:
+  /// **'Search projects...'**
+  String get projectsSearchHint;
+
+  /// Label for status filter dropdown.
+  ///
+  /// In en, this message translates to:
+  /// **'Filter by status'**
+  String get filterByStatus;
+
+  /// Label for priority filter dropdown.
+  ///
+  /// In en, this message translates to:
+  /// **'Filter by priority'**
+  String get filterByPriority;
+
+  /// Label for date range filter.
+  ///
+  /// In en, this message translates to:
+  /// **'Filter by date range'**
+  String get filterByDateRange;
+
+  /// Pagination display showing current page and total pages.
+  ///
+  /// In en, this message translates to:
+  /// **'Page {current} of {total}'**
+  String pageXOfY(int current, int total);
+
   /// Auto-generated description for loadingMoreProjects.
   ///
   /// In en, this message translates to:

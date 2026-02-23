@@ -288,6 +288,34 @@
   "@noProjectsFound": {
     "description": "Auto-generated description for noProjectsFound."
   },
+  "projectsSearchHint": "Zoek projecten...",
+  "@projectsSearchHint": {
+    "description": "Hint text for project search input field."
+  },
+  "filterByStatus": "Filter op status",
+  "@filterByStatus": {
+    "description": "Label for status filter dropdown."
+  },
+  "filterByPriority": "Filter op prioriteit",
+  "@filterByPriority": {
+    "description": "Label for priority filter dropdown."
+  },
+  "filterByDateRange": "Filter op datumbereik",
+  "@filterByDateRange": {
+    "description": "Label for date range filter."
+  },
+  "pageXOfY": "Pagina {current} van {total}",
+  "@pageXOfY": {
+    "description": "Pagination display showing current page and total pages.",
+    "placeholders": {
+      "current": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
   "loadingMoreProjects": "Meer projecten laden...",
   "@loadingMoreProjects": {
     "description": "Auto-generated description for loadingMoreProjects."

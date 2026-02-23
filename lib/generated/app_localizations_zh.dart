@@ -222,6 +222,23 @@ class AppLocalizationsZh extends AppLocalizations {
   String get noProjectsFound => '未找到项目';
 
   @override
+  String get projectsSearchHint => 'Search projects...';
+
+  @override
+  String get filterByStatus => 'Filter by status';
+
+  @override
+  String get filterByPriority => 'Filter by priority';
+
+  @override
+  String get filterByDateRange => 'Filter by date range';
+
+  @override
+  String pageXOfY(int current, int total) {
+    return 'Page $current of $total';
+  }
+
+  @override
   String get loadingMoreProjects => '正在加载更多项目...';
 
   @override

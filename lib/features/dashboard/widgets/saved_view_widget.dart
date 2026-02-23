@@ -4,6 +4,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 import 'package:my_project_management_app/core/providers/project_providers.dart';
 import 'package:my_project_management_app/generated/app_localizations.dart';
+import 'package:my_project_management_app/models/project_model.dart';
 import 'package:animate_do/animate_do.dart';
 
 /// Widget that displays a saved view as a card with stats and quick access
@@ -20,7 +21,7 @@ class SavedViewWidget extends ConsumerWidget {
     final l10n = AppLocalizations.of(context)!;
 
     // Get projects that match this filter
-    final filteredProjectsAsync = ref.watch(filteredProjectsProvider(savedFilter));
+    final projectsAsync = ref.watch(projectsProvider);
 
     return FadeInUp(
       duration: const Duration(milliseconds: 300),
@@ -62,8 +63,11 @@ class SavedViewWidget extends ConsumerWidget {
                 SizedBox(height: 12.h),
 
                 // Project count and stats
-                filteredProjectsAsync.when(
-                  data: (projects) => _buildStats(context, projects, l10n),
+                projectsAsync.when(
+                  data: (projects) {
+                    final filteredProjects = _filterProjects(projects, savedFilter);
+                    return _buildStats(context, filteredProjects, l10n);
+                  },
                   loading: () => _buildLoadingStats(context),
                   error: (error, stack) => _buildErrorStats(context, l10n),
                 ),
@@ -243,6 +247,89 @@ class SavedViewWidget extends ConsumerWidget {
       maxLines: 1,
       overflow: TextOverflow.ellipsis,
     );
+  }
+
+  List<ProjectModel> _filterProjects(List<ProjectModel> projects, ProjectFilter filter) {
+    var filtered = projects;
+
+    // Apply status filter
+    if (filter.status != null && filter.status!.isNotEmpty) {
+      filtered = filtered.where((p) => p.status == filter.status).toList();
+    }
+
+    // Apply owner filter
+    if (filter.ownerId != null && filter.ownerId!.isNotEmpty) {
+      filtered = filtered.where((p) => p.sharedUsers.contains(filter.ownerId)).toList();
+    }
+
+    // Apply search query with fuzzy matching
+    if (filter.searchQuery != null && filter.searchQuery!.isNotEmpty) {
+      final query = filter.searchQuery!.toLowerCase();
+      filtered = filtered.where((p) => _matchesFuzzySearch(p, query)).toList();
+    }
+
+    // Apply priority filter
+    if (filter.priority != null && filter.priority!.isNotEmpty) {
+      filtered = filtered.where((p) => p.priority == filter.priority).toList();
+    }
+
+    // Apply tags filter (OR logic - project must have at least one of the tags)
+    if (filter.tags != null && filter.tags!.isNotEmpty) {
+      filtered = filtered.where((p) => filter.tags!.any((tag) => p.tags.contains(tag))).toList();
+    }
+
+    // Apply required tags filter (AND logic - project must have ALL of the tags)
+    if (filter.requiredTags != null && filter.requiredTags!.isNotEmpty) {
+      filtered = filtered.where((p) => filter.requiredTags!.every((tag) => p.tags.contains(tag))).toList();
+    }
+
+    // Apply start date filter: include projects with startDate on or after the filter startDate
+    if (filter.startDate != null) {
+      filtered = filtered.where((p) => p.startDate != null && p.startDate!.isAfter(filter.startDate!.subtract(const Duration(days: 1)))).toList();
+    }
+
+    // Apply end date filter: include projects with dueDate on or before the filter endDate
+    if (filter.endDate != null) {
+      filtered = filtered.where((p) => p.dueDate != null && p.dueDate!.isBefore(filter.endDate!.add(const Duration(days: 1)))).toList();
+    }
+
+    // Apply due date start filter
+    if (filter.dueDateStart != null) {
+      filtered = filtered.where((p) => p.dueDate != null && p.dueDate!.isAfter(filter.dueDateStart!.subtract(const Duration(days: 1)))).toList();
+    }
+
+    // Apply due date end filter
+    if (filter.dueDateEnd != null) {
+      filtered = filtered.where((p) => p.dueDate != null && p.dueDate!.isBefore(filter.dueDateEnd!.add(const Duration(days: 1)))).toList();
+    }
+
+    return filtered;
+  }
+
+  bool _matchesFuzzySearch(ProjectModel project, String query) {
+    final searchFields = [
+      project.name.toLowerCase(),
+      project.description?.toLowerCase() ?? '',
+      ...project.tags.map((tag) => tag.toLowerCase()),
+    ];
+
+    // Simple fuzzy search: check if query words are contained in any field
+    final queryWords = query.split(' ').where((word) => word.isNotEmpty);
+    
+    for (final field in searchFields) {
+      // Exact match gets highest priority
+      if (field.contains(query)) return true;
+      
+      // Check if all query words are present in the field (fuzzy match)
+      if (queryWords.every((word) => field.contains(word))) return true;
+      
+      // Check for partial matches (e.g., "proj" matches "project")
+      for (final word in queryWords) {
+        if (field.contains(word)) return true;
+      }
+    }
+    
+    return false;
   }
 
   void _navigateToProjects(BuildContext context, WidgetRef ref) {

@@ -2,6 +2,7 @@
 /// Allows easy swapping of implementations (Hive, Supabase, mock for tests, etc.)
 library;
 import 'package:my_project_management_app/models/project_model.dart';
+import 'package:my_project_management_app/models/project_filter.dart' as models;
 
 /// Filter criteria for projects
 class ProjectFilter {
@@ -65,7 +66,7 @@ abstract class IProjectRepository {
 
   /// Efficient direct fetch of a single project by ID (Hive box.get)
   /// Preferred over loading all projects
-  Future<ProjectModel?> getProjectById(String id);
+  Future<ProjectModel> getProjectById(String id);
 
   // These helpers are present because some repository implementations
   // used by the app rely on them; keeping them in the interface prevents
@@ -100,10 +101,9 @@ abstract class IProjectRepository {
   /// Fetch projects with pagination for large lists
   /// `page` starts at 1
   Future<List<ProjectModel>> getProjectsPaginated({
-    required int page,
-    required int limit,
-    String? statusFilter,
-    String? searchQuery,
+    int page = 1,
+    int limit = 20,
+    models.ProjectFilter? filter,
   });
 
   /// Fetch projects filtered by a single status

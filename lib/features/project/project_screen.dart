@@ -218,7 +218,7 @@ class _ProjectScreenState extends ConsumerState<ProjectScreen> {
         _resetPagination();
       },
     );
-    _searchController.text = ref.read(searchQueryProvider);
+    _searchController.text = ref.read(persistentProjectFilterProvider).searchQuery ?? '';
     WidgetsBinding.instance.addPostFrameCallback((_) => _resetPagination());
 
     // Initialize shortcuts and actions
@@ -241,7 +241,6 @@ class _ProjectScreenState extends ConsumerState<ProjectScreen> {
     };
   }
 
-  String _selectedStatus = 'All';
   ProjectSort _sortBy = ProjectSort.name;
   bool _sortAscending = true;
   String? _loadError;
@@ -282,11 +281,14 @@ class _ProjectScreenState extends ConsumerState<ProjectScreen> {
     if (_isLoading || !_hasMore) return;
     setState(() => _isLoading = true);
     try {
+      final currentFilter = ref.read(persistentProjectFilterProvider);
       final filter = ProjectFilter(
-        status: _selectedStatus == 'All' ? null : _selectedStatus,
-        searchQuery: ref.watch(searchQueryProvider).isEmpty
-            ? null
-            : ref.watch(searchQueryProvider),
+        status: currentFilter.status,
+        searchQuery: currentFilter.searchQuery,
+        startDate: currentFilter.startDate,
+        endDate: currentFilter.endDate,
+        priority: currentFilter.priority,
+        tags: currentFilter.tags,
       );
       final params = ProjectParams(
         page: _page,
@@ -364,6 +366,7 @@ class _ProjectScreenState extends ConsumerState<ProjectScreen> {
           isSelectionMode,
           selectedIds,
           currentFilter.viewMode,
+          currentFilter,
         ),
       ),
     );
@@ -377,9 +380,10 @@ class _ProjectScreenState extends ConsumerState<ProjectScreen> {
     bool isSelectionMode,
     Set<String> selectedIds,
     String viewMode,
+    ProjectFilter currentFilter,
   ) {
     final l10n = AppLocalizations.of(context)!;
-    final filtered = _filterProjects(projects);
+    final filtered = _filterProjects(projects, currentFilter);
     final sorted = _sortProjects(filtered, metaByProjectId);
 
     const baseCount = 4; // title + search + filters/sort + view mode
@@ -524,12 +528,14 @@ class _ProjectScreenState extends ConsumerState<ProjectScreen> {
                   decoration: InputDecoration(
                     hintText: 'Search projects...',
                     prefixIcon: const Icon(Icons.search),
-                    suffixIcon: _searchController.text.isNotEmpty
+                    suffixIcon: ref.watch(persistentProjectFilterProvider).searchQuery?.isNotEmpty ?? false
                         ? IconButton(
                             icon: const Icon(Icons.clear),
                             onPressed: () {
                               _searchController.clear();
-                              ref.read(searchQueryProvider.notifier).setQuery('');
+                              final currentFilter = ref.read(persistentProjectFilterProvider);
+                              final newFilter = currentFilter.copyWith(searchQuery: null);
+                              ref.read(persistentProjectFilterProvider.notifier).updateFilter(newFilter);
                             },
                           )
                         : null,
@@ -540,12 +546,14 @@ class _ProjectScreenState extends ConsumerState<ProjectScreen> {
                   onChanged: (value) {
                     _searchDebounce?.cancel();
                     _searchDebounce = Timer(const Duration(milliseconds: 300), () {
-                      ref.read(searchQueryProvider.notifier).setQuery(value);
+                      final currentFilter = ref.read(persistentProjectFilterProvider);
+                      final newFilter = currentFilter.copyWith(searchQuery: value.isEmpty ? null : value);
+                      ref.read(persistentProjectFilterProvider.notifier).updateFilter(newFilter);
                     });
                   },
                 ),
                 // Tag suggestions
-                if (_searchController.text.isNotEmpty) _buildTagSuggestions(context, ref),
+                if (ref.watch(persistentProjectFilterProvider).searchQuery?.isNotEmpty ?? false) _buildTagSuggestions(context, ref),
               ],
             ),
           );
@@ -557,6 +565,12 @@ class _ProjectScreenState extends ConsumerState<ProjectScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 _buildStatusFilters(context, projects),
+                SizedBox(height: 12.h),
+                _buildPriorityFilters(context, projects),
+                SizedBox(height: 12.h),
+                _buildDateRangeFilters(context),
+                SizedBox(height: 12.h),
+                _buildTagFilters(context, projects),
                 SizedBox(height: 12.h),
                 _buildSortControls(context),
               ],
@@ -792,17 +806,14 @@ class _ProjectScreenState extends ConsumerState<ProjectScreen> {
   }
 
   // old filtering now mostly handled by repository; keep for fallback
-  List<ProjectModel> _filterProjects(List<ProjectModel> projects) {
-    final query = ref.watch(searchQueryProvider).toLowerCase();
-    return projects
-        .where((project) =>
-            project.name.toLowerCase().contains(query) ||
-            project.status.toLowerCase().contains(query))
-        .where(
-          (project) =>
-              _selectedStatus == 'All' || project.status == _selectedStatus,
-        )
-        .toList();
+  List<ProjectModel> _filterProjects(List<ProjectModel> projects, ProjectFilter currentFilter) {
+    // Since pagination already applies filtering, we only need minimal client-side filtering
+    // for any additional filters that might not be handled by the server
+    var filtered = projects;
+
+    // Apply any additional client-side filtering if needed
+    // For now, return as-is since pagination handles the main filtering
+    return filtered;
   }
 
   List<ProjectModel> _sortProjects(
@@ -848,6 +859,7 @@ class _ProjectScreenState extends ConsumerState<ProjectScreen> {
     final l10n = AppLocalizations.of(context)!;
     final screenWidth = MediaQuery.of(context).size.width;
     final isCompact = screenWidth < 400;
+    final currentFilter = ref.watch(persistentProjectFilterProvider);
     final statuses = <String>{'All'};
     for (final project in projects) {
       statuses.add(project.status);
@@ -863,7 +875,8 @@ class _ProjectScreenState extends ConsumerState<ProjectScreen> {
       spacing: isCompact ? 4.w : 8.w,
       runSpacing: isCompact ? 4.h : 8.h,
       children: items.map((status) {
-        final isSelected = _selectedStatus == status;
+        final isSelected = currentFilter.status == null && status == 'All' ||
+                          currentFilter.status == status;
         return ChoiceChip(
           label: Text(
             status == 'All' ? l10n.allLabel : status,
@@ -875,9 +888,176 @@ class _ProjectScreenState extends ConsumerState<ProjectScreen> {
             vertical: isCompact ? 4.h : 8.h,
           ),
           onSelected: (_) {
-            setState(() {
-              _selectedStatus = status;
-            });
+            final newFilter = currentFilter.copyWith(
+              status: status == 'All' ? null : status,
+            );
+            ref.read(persistentProjectFilterProvider.notifier).updateFilter(newFilter);
+            _resetPagination();
+          },
+        );
+      }).toList(),
+    );
+  }
+
+  Widget _buildPriorityFilters(
+    BuildContext context,
+    List<ProjectModel> projects,
+  ) {
+    final l10n = AppLocalizations.of(context)!;
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isCompact = screenWidth < 400;
+    final currentFilter = ref.watch(persistentProjectFilterProvider);
+    final priorities = <String>{'All'};
+    for (final project in projects) {
+      if (project.priority != null) {
+        priorities.add(project.priority!);
+      }
+    }
+
+    final items = priorities.toList()..sort();
+    if (items.first != 'All') {
+      items.remove('All');
+      items.insert(0, 'All');
+    }
+
+    return Wrap(
+      spacing: isCompact ? 4.w : 8.w,
+      runSpacing: isCompact ? 4.h : 8.h,
+      children: items.map((priority) {
+        final isSelected = currentFilter.priority == null && priority == 'All' ||
+                          currentFilter.priority == priority;
+        return ChoiceChip(
+          label: Text(
+            priority == 'All' ? l10n.allLabel : priority,
+            style: TextStyle(fontSize: isCompact ? 12.sp : 14.sp),
+          ),
+          selected: isSelected,
+          padding: EdgeInsets.symmetric(
+            horizontal: isCompact ? 8.w : 12.w,
+            vertical: isCompact ? 4.h : 8.h,
+          ),
+          onSelected: (_) {
+            final newFilter = currentFilter.copyWith(
+              priority: priority == 'All' ? null : priority,
+            );
+            ref.read(persistentProjectFilterProvider.notifier).updateFilter(newFilter);
+            _resetPagination();
+          },
+        );
+      }).toList(),
+    );
+  }
+
+  Widget _buildDateRangeFilters(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final currentFilter = ref.watch(persistentProjectFilterProvider);
+    
+    return Row(
+      children: [
+        Expanded(
+          child: TextField(
+            decoration: InputDecoration(
+              labelText: l10n.filterStartDateLabel,
+              hintText: 'YYYY-MM-DD',
+              prefixIcon: const Icon(Icons.calendar_today),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8.r),
+              ),
+            ),
+            controller: TextEditingController(
+              text: currentFilter.startDate != null 
+                  ? DateFormat('yyyy-MM-dd').format(currentFilter.startDate!)
+                  : '',
+            ),
+            onChanged: (value) {
+              DateTime? date;
+              if (value.isNotEmpty) {
+                try {
+                  date = DateFormat('yyyy-MM-dd').parse(value);
+                } catch (_) {
+                  // Invalid date format, ignore
+                }
+              }
+              final newFilter = currentFilter.copyWith(startDate: date);
+              ref.read(persistentProjectFilterProvider.notifier).updateFilter(newFilter);
+              _resetPagination();
+            },
+          ),
+        ),
+        SizedBox(width: 12.w),
+        Expanded(
+          child: TextField(
+            decoration: InputDecoration(
+              labelText: l10n.filterEndDateLabel,
+              hintText: 'YYYY-MM-DD',
+              prefixIcon: const Icon(Icons.calendar_today),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8.r),
+              ),
+            ),
+            controller: TextEditingController(
+              text: currentFilter.endDate != null 
+                  ? DateFormat('yyyy-MM-dd').format(currentFilter.endDate!)
+                  : '',
+            ),
+            onChanged: (value) {
+              DateTime? date;
+              if (value.isNotEmpty) {
+                try {
+                  date = DateFormat('yyyy-MM-dd').parse(value);
+                } catch (_) {
+                  // Invalid date format, ignore
+                }
+              }
+              final newFilter = currentFilter.copyWith(endDate: date);
+              ref.read(persistentProjectFilterProvider.notifier).updateFilter(newFilter);
+              _resetPagination();
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildTagFilters(
+    BuildContext context,
+    List<ProjectModel> projects,
+  ) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isCompact = screenWidth < 400;
+    final currentFilter = ref.watch(persistentProjectFilterProvider);
+    final allTags = <String>{};
+    for (final project in projects) {
+      allTags.addAll(project.tags);
+    }
+
+    final tags = allTags.toList()..sort();
+    if (tags.isEmpty) return const SizedBox.shrink();
+
+    return Wrap(
+      spacing: isCompact ? 4.w : 8.w,
+      runSpacing: isCompact ? 4.h : 8.h,
+      children: tags.take(10).map((tag) { // Limit to 10 tags to avoid UI clutter
+        final isSelected = currentFilter.tags?.contains(tag) ?? false;
+        return FilterChip(
+          label: Text(
+            tag,
+            style: TextStyle(fontSize: isCompact ? 12.sp : 14.sp),
+          ),
+          selected: isSelected,
+          padding: EdgeInsets.symmetric(
+            horizontal: isCompact ? 8.w : 12.w,
+            vertical: isCompact ? 4.h : 8.h,
+          ),
+          onSelected: (selected) {
+            final currentTags = currentFilter.tags ?? [];
+            final newTags = selected 
+                ? [...currentTags, tag]
+                : currentTags.where((t) => t != tag).toList();
+            final newFilter = currentFilter.copyWith(
+              tags: newTags.isEmpty ? null : newTags,
+            );
+            ref.read(persistentProjectFilterProvider.notifier).updateFilter(newFilter);
             _resetPagination();
           },
         );
@@ -963,54 +1143,62 @@ class _ProjectScreenState extends ConsumerState<ProjectScreen> {
   }
 
   Widget _buildTagSuggestions(BuildContext context, WidgetRef ref) {
-    final projects = ref.watch(filteredProjectsProvider(ref.watch(persistentProjectFilterProvider))).maybeWhen(
-      data: (data) => data,
-      orElse: () => <ProjectModel>[],
-    );
+    final projectsAsync = ref.watch(projectsProvider);
+    
+    return projectsAsync.when(
+      data: (projects) {
+        final currentFilter = ref.watch(persistentProjectFilterProvider);
+        final filteredProjects = _filterProjects(projects, currentFilter);
+        
+        final allTags = <String>{};
+        for (final project in filteredProjects) {
+          allTags.addAll(project.tags);
+        }
 
-    final allTags = <String>{};
-    for (final project in projects) {
-      allTags.addAll(project.tags);
-    }
+        final query = _searchController.text.toLowerCase();
+        final matchingTags = allTags.where((tag) => tag.toLowerCase().contains(query)).toList()..sort();
 
-    final query = _searchController.text.toLowerCase();
-    final matchingTags = allTags.where((tag) => tag.toLowerCase().contains(query)).toList()..sort();
+        if (matchingTags.isEmpty) return const SizedBox.shrink();
 
-    if (matchingTags.isEmpty) return const SizedBox.shrink();
-
-    return Container(
-      margin: EdgeInsets.only(top: 4.h),
-      padding: EdgeInsets.all(8.w),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
-        borderRadius: BorderRadius.circular(8.r),
-        border: Border.all(color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.3)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Tag suggestions:',
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              color: Theme.of(context).colorScheme.onSurfaceVariant,
-            ),
+        return Container(
+          margin: EdgeInsets.only(top: 4.h),
+          padding: EdgeInsets.all(8.w),
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.surface,
+            borderRadius: BorderRadius.circular(8.r),
+            border: Border.all(color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.3)),
           ),
-          SizedBox(height: 4.h),
-          Wrap(
-            spacing: 4.w,
-            runSpacing: 4.h,
-            children: matchingTags.take(5).map((tag) => ActionChip(
-              label: Text('#$tag'),
-              onPressed: () {
-                final currentQuery = _searchController.text;
-                final newQuery = currentQuery.isEmpty ? '#$tag' : '$currentQuery #$tag';
-                _searchController.text = newQuery;
-                ref.read(searchQueryProvider.notifier).setQuery(newQuery);
-              },
-            )).toList(),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Tag suggestions:',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
+              ),
+              SizedBox(height: 4.h),
+              Wrap(
+                spacing: 4.w,
+                runSpacing: 4.h,
+                children: matchingTags.take(5).map((tag) => ActionChip(
+                  label: Text('#$tag'),
+                  onPressed: () {
+                    final currentQuery = _searchController.text;
+                    final newQuery = currentQuery.isEmpty ? '#$tag' : '$currentQuery #$tag';
+                    _searchController.text = newQuery;
+                    final currentFilter = ref.read(persistentProjectFilterProvider);
+                    final updatedFilter = currentFilter.copyWith(searchQuery: newQuery);
+                    ref.read(persistentProjectFilterProvider.notifier).updateFilter(updatedFilter);
+                  },
+                )).toList(),
+              ),
+            ],
           ),
-        ],
-      ),
+        );
+      },
+      loading: () => const SizedBox.shrink(),
+      error: (_, __) => const SizedBox.shrink(),
     );
   }
 
@@ -1627,9 +1815,7 @@ class _BulkActionsBottomSheetState extends ConsumerState<BulkActionsBottomSheet>
       
       for (final id in widget.selectedProjectIds) {
         final project = await ref.read(projectByIdProvider(id).future);
-        if (project != null) {
-          projects.add(project);
-        }
+        projects.add(project);
       }
 
       final csvData = [
@@ -1683,9 +1869,7 @@ class _BulkActionsBottomSheetState extends ConsumerState<BulkActionsBottomSheet>
 
       for (final id in widget.selectedProjectIds) {
         final project = await ref.read(projectByIdProvider(id).future);
-        if (project != null) {
-          projects.add(project);
-        }
+        projects.add(project);
       }
 
       // Create a filter for selected projects

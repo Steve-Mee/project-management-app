@@ -10,6 +10,7 @@ import 'package:my_project_management_app/core/repository/project_meta_repositor
 import 'package:my_project_management_app/models/project_meta.dart';
 import 'package:my_project_management_app/core/auth/permissions.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:my_project_management_app/models/project_filter.dart' as models;
 
 /// Parameters for the filtered projects family provider
 class ProjectFilterParams {
@@ -96,112 +97,20 @@ final projectsProvider = NotifierProvider<ProjectsNotifier, AsyncValue<List<Proj
 
 
 /// Cached individual project provider (keeps alive for 5 minutes)
-final projectByIdProvider = FutureProvider.autoDispose.family<ProjectModel?, String>((ref, id) async {
+final projectByIdProvider = FutureProvider.autoDispose.family<ProjectModel, String>((ref, id) async {
   final repository = ref.watch(projectRepositoryProvider);
   return repository.getProjectById(id);
 });
 
-/// Family provider for filtered projects (e.g., by status, user, etc.)
-/// Extensible for future filtering needs
-final filteredProjectsProvider = FutureProvider.autoDispose.family<List<ProjectModel>, ProjectFilter>((ref, params) async {
-  final repository = ref.watch(projectRepositoryProvider);
-  var projects = await repository.getFilteredProjects(
-    repo.ProjectFilter( // map params to repository filter
-      status: params.status,
-      searchQuery: null, // handle search client-side for fuzzy matching
-      startDate: null, // dates handled client-side below
-      endDate: null,
-      priority: null, // priority handled client-side below
-      ownerId: params.ownerId,
-      tags: null,
-    ),
-    extraConditions: [],
+/// Family provider for filtered projects (synchronous filtering)
+/// Uses the projectsProvider for data and filters synchronously
+final filteredProjectsProvider = Provider.autoDispose.family<List<ProjectModel>, models.ProjectFilter>((ref, filter) {
+  final projectsAsync = ref.watch(projectsProvider);
+  return projectsAsync.maybeWhen(
+    data: (projects) => _filterProjects(projects, filter),
+    orElse: () => <ProjectModel>[],
   );
-
-  // Apply fuzzy search on name, description, and tags
-  if (params.searchQuery != null && params.searchQuery!.isNotEmpty) {
-    final query = params.searchQuery!.toLowerCase();
-    projects = projects.where((p) => _matchesFuzzySearch(p, query)).toList();
-  }
-
-  // Apply tags filter (OR logic - project must have at least one of the tags)
-  if (params.tags != null && params.tags!.isNotEmpty) {
-    projects = projects.where((p) => params.tags!.any((tag) => p.tags.contains(tag))).toList();
-  }
-
-  // Apply required tags filter (AND logic - project must have ALL required tags)
-  if (params.requiredTags != null && params.requiredTags!.isNotEmpty) {
-    projects = projects.where((p) => params.requiredTags!.every((tag) => p.tags.contains(tag))).toList();
-  }
-
-  // Apply priority filter: exact match if specified
-  if (params.priority != null) {
-    projects = projects.where((p) => p.priority == params.priority).toList();
-  }
-
-  // Apply start date filter: include projects with startDate on or after the filter startDate
-  if (params.startDate != null) {
-    projects = projects.where((p) => p.startDate != null && p.startDate!.isAfter(params.startDate!.subtract(const Duration(days: 1)))).toList();
-  }
-
-  // Apply end date filter: include projects with dueDate on or before the filter endDate
-  if (params.endDate != null) {
-    projects = projects.where((p) => p.dueDate != null && p.dueDate!.isBefore(params.endDate!.add(const Duration(days: 1)))).toList();
-  }
-
-  // Apply sorting
-  if (params.sortBy != null) {
-    projects = _applySort(projects, params.sortBy!, params.sortAscending);
-  }
-
-  return projects;
 });
-
-List<ProjectModel> _applySort(List<ProjectModel> projects, String sortBy, bool ascending) {
-  projects.sort((a, b) {
-    int compare = 0;
-    switch (sortBy) {
-      case 'name':
-        compare = a.name.toLowerCase().compareTo(b.name.toLowerCase());
-        break;
-      case 'priority':
-        final priorityOrder = {'Low': 1, 'Medium': 2, 'High': 3};
-        final aPriority = priorityOrder[a.priority] ?? 0;
-        final bPriority = priorityOrder[b.priority] ?? 0;
-        compare = aPriority.compareTo(bPriority);
-        break;
-      case 'startDate':
-        if (a.startDate == null && b.startDate == null) {
-          compare = 0;
-        } else if (a.startDate == null) {
-          compare = 1;
-        } else if (b.startDate == null) {
-          compare = -1;
-        } else {
-          compare = a.startDate!.compareTo(b.startDate!);
-        }
-        break;
-      case 'dueDate':
-        if (a.dueDate == null && b.dueDate == null) {
-          compare = 0;
-        } else if (a.dueDate == null) {
-          compare = 1;
-        } else if (b.dueDate == null) {
-          compare = -1;
-        } else {
-          compare = a.dueDate!.compareTo(b.dueDate!);
-        }
-        break;
-      case 'status':
-        compare = a.status.compareTo(b.status);
-        break;
-      default:
-        compare = 0;
-    }
-    return ascending ? compare : -compare;
-  });
-  return projects;
-}
 
 /// Fuzzy search implementation for project name, description, and tags
 bool _matchesFuzzySearch(ProjectModel project, String query) {
@@ -228,6 +137,55 @@ bool _matchesFuzzySearch(ProjectModel project, String query) {
   }
   
   return false;
+}
+
+/// Fuzzy search helper: filters projects by search query
+/// Searches on name, description and tags (case-insensitive, contains or Levenshtein if simple)
+List<ProjectModel> _fuzzySearch(List<ProjectModel> projects, String query) {
+  if (query.isEmpty) return projects;
+  
+  AppLogger.debug('Fuzzy search: filtering ${projects.length} projects with query "$query"');
+  final filtered = projects.where((p) => _matchesFuzzySearch(p, query.toLowerCase())).toList();
+  AppLogger.debug('Fuzzy search: found ${filtered.length} matching projects');
+  
+  return filtered;
+}
+
+/// Synchronous filtering function for projects using ProjectFilter
+List<ProjectModel> _filterProjects(List<ProjectModel> projects, models.ProjectFilter filter) {
+  var filtered = projects;
+
+  // Apply status filter
+  if (filter.status != null && filter.status!.isNotEmpty) {
+    filtered = filtered.where((p) => p.status == filter.status).toList();
+  }
+
+  // Apply search query with fuzzy matching
+  if (filter.searchQuery != null && filter.searchQuery!.isNotEmpty) {
+    filtered = _fuzzySearch(filtered, filter.searchQuery!);
+  }
+
+  // Apply priority filter
+  if (filter.priority != null && filter.priority!.isNotEmpty) {
+    filtered = filtered.where((p) => p.priority == filter.priority).toList();
+  }
+
+  // Apply tags filter (OR logic - project must have at least one of the tags)
+  if (filter.tags != null && filter.tags!.isNotEmpty) {
+    filtered = filtered.where((p) => filter.tags!.any((tag) => p.tags.contains(tag))).toList();
+  }
+
+  // Apply start date filter: include projects with startDate on or after the filter startDate
+  if (filter.startDate != null) {
+    filtered = filtered.where((p) => p.startDate != null && p.startDate!.isAfter(filter.startDate!.subtract(const Duration(days: 1)))).toList();
+  }
+
+  // Apply end date filter: include projects with dueDate on or before the filter endDate
+  if (filter.endDate != null) {
+    filtered = filtered.where((p) => p.dueDate != null && p.dueDate!.isBefore(filter.endDate!.add(const Duration(days: 1)))).toList();
+  }
+
+  return filtered;
 }
 // Ready for UI integration
 
@@ -278,8 +236,7 @@ final projectsPaginatedProvider = FutureProvider.autoDispose.family<List<Project
     return repository.getProjectsPaginated(
       page: params.page,
       limit: params.limit,
-      statusFilter: params.statusFilter,
-      searchQuery: params.searchQuery,
+      filter: params.filter,
     );
   },
 );
@@ -460,14 +417,12 @@ class ProjectFilter {
 class ProjectPaginationParams {
   final int page;
   final int limit;
-  final String? statusFilter;
-  final String? searchQuery;
+  final models.ProjectFilter? filter;
 
   const ProjectPaginationParams({
     required this.page,
     required this.limit,
-    this.statusFilter,
-    this.searchQuery,
+    this.filter,
   });
 }
 
@@ -608,14 +563,14 @@ class ProjectsNotifier extends Notifier<AsyncValue<List<ProjectModel>>> {
 
   @Deprecated('Use projectByIdProvider(id) family provider instead. It provides better performance by only loading the specific project when needed and auto-disposing when no longer watched. Migration: replace ref.read(projectsProvider.notifier).getProjectById(id) with ref.watch(projectByIdProvider(id)) or ref.read(projectByIdProvider(id).future)')
   /// Use projectByIdProvider family provider instead for better performance and Riverpod patterns.
-  Future<ProjectModel?> getProjectById(String id) async {
+  Future<ProjectModel> getProjectById(String id) async {
     final projects = state.maybeWhen(
       data: (data) => data,
       orElse: () => <ProjectModel>[],
     );
-    return projects.cast<ProjectModel?>().firstWhere(
-      (p) => p?.id == id,
-      orElse: () => null,
+    return projects.firstWhere(
+      (p) => p.id == id,
+      orElse: () => throw Exception('Project with id $id not found'),
     );
   }
 
@@ -996,8 +951,7 @@ class ProjectFilterNotifier extends StateNotifier<ProjectFilter> {
     final repository = ref.read(projectRepositoryProvider);
     for (final id in projectIds) {
       final project = await ref.read(projectByIdProvider(id).future);
-      if (project != null) {
-        final updated = ProjectModel(
+      final updated = ProjectModel(
           id: project.id,
           name: project.name,
           progress: project.progress,
@@ -1018,7 +972,6 @@ class ProjectFilterNotifier extends StateNotifier<ProjectFilter> {
           dueDate: project.dueDate,
         );
         await repository.updateProject(id, updated);
-      }
     }
   }
 
@@ -1027,8 +980,7 @@ class ProjectFilterNotifier extends StateNotifier<ProjectFilter> {
     final repository = ref.read(projectRepositoryProvider);
     for (final id in projectIds) {
       final project = await ref.read(projectByIdProvider(id).future);
-      if (project != null) {
-        final updated = ProjectModel(
+      final updated = ProjectModel(
           id: project.id,
           name: project.name,
           progress: project.progress,
@@ -1049,7 +1001,6 @@ class ProjectFilterNotifier extends StateNotifier<ProjectFilter> {
           dueDate: project.dueDate,
         );
         await repository.updateProject(id, updated);
-      }
     }
   }
 

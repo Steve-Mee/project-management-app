@@ -1,5 +1,10 @@
 {
   "ar": [
+    "projectsSearchHint",
+    "filterByStatus",
+    "filterByPriority",
+    "filterByDateRange",
+    "pageXOfY",
     "projectSortCreatedDate",
     "projectSortStatus",
     "projectSortStartDate",
@@ -139,6 +144,11 @@
   ],
 
   "de": [
+    "projectsSearchHint",
+    "filterByStatus",
+    "filterByPriority",
+    "filterByDateRange",
+    "pageXOfY",
     "projectSortCreatedDate",
     "projectSortStatus",
     "projectSortStartDate",
@@ -278,6 +288,11 @@
   ],
 
   "es": [
+    "projectsSearchHint",
+    "filterByStatus",
+    "filterByPriority",
+    "filterByDateRange",
+    "pageXOfY",
     "projectSortCreatedDate",
     "projectSortStatus",
     "projectSortStartDate",
@@ -417,6 +432,11 @@
   ],
 
   "fr": [
+    "projectsSearchHint",
+    "filterByStatus",
+    "filterByPriority",
+    "filterByDateRange",
+    "pageXOfY",
     "projectSortCreatedDate",
     "projectSortStatus",
     "projectSortStartDate",
@@ -556,6 +576,11 @@
   ],
 
   "hi": [
+    "projectsSearchHint",
+    "filterByStatus",
+    "filterByPriority",
+    "filterByDateRange",
+    "pageXOfY",
     "projectSortCreatedDate",
     "projectSortStatus",
     "projectSortStartDate",
@@ -695,6 +720,11 @@
   ],
 
   "it": [
+    "projectsSearchHint",
+    "filterByStatus",
+    "filterByPriority",
+    "filterByDateRange",
+    "pageXOfY",
     "projectSortCreatedDate",
     "projectSortStatus",
     "projectSortStartDate",
@@ -834,6 +864,11 @@
   ],
 
   "ja": [
+    "projectsSearchHint",
+    "filterByStatus",
+    "filterByPriority",
+    "filterByDateRange",
+    "pageXOfY",
     "projectSortCreatedDate",
     "projectSortStatus",
     "projectSortStartDate",
@@ -973,6 +1008,11 @@
   ],
 
   "ko": [
+    "projectsSearchHint",
+    "filterByStatus",
+    "filterByPriority",
+    "filterByDateRange",
+    "pageXOfY",
     "projectSortCreatedDate",
     "projectSortStatus",
     "projectSortStartDate",
@@ -1219,6 +1259,11 @@
   ],
 
   "pt": [
+    "projectsSearchHint",
+    "filterByStatus",
+    "filterByPriority",
+    "filterByDateRange",
+    "pageXOfY",
     "projectSortCreatedDate",
     "projectSortStatus",
     "projectSortStartDate",
@@ -1358,6 +1403,11 @@
   ],
 
   "ru": [
+    "projectsSearchHint",
+    "filterByStatus",
+    "filterByPriority",
+    "filterByDateRange",
+    "pageXOfY",
     "projectSortCreatedDate",
     "projectSortStatus",
     "projectSortStartDate",
@@ -1497,6 +1547,11 @@
   ],
 
   "zh": [
+    "projectsSearchHint",
+    "filterByStatus",
+    "filterByPriority",
+    "filterByDateRange",
+    "pageXOfY",
     "projectSortCreatedDate",
     "projectSortStatus",
     "projectSortStartDate",
