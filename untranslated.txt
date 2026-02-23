@@ -129,7 +129,9 @@
     "offline_sync_success",
     "captcha_verification_required",
     "captcha_loading",
-    "captcha_error"
+    "captcha_error",
+    "recaptcha_site_key",
+    "recaptcha_site_key_hint"
   ],
 
   "de": [
@@ -262,7 +264,9 @@
     "offline_sync_success",
     "captcha_verification_required",
     "captcha_loading",
-    "captcha_error"
+    "captcha_error",
+    "recaptcha_site_key",
+    "recaptcha_site_key_hint"
   ],
 
   "es": [
@@ -395,7 +399,9 @@
     "offline_sync_success",
     "captcha_verification_required",
     "captcha_loading",
-    "captcha_error"
+    "captcha_error",
+    "recaptcha_site_key",
+    "recaptcha_site_key_hint"
   ],
 
   "fr": [
@@ -528,7 +534,9 @@
     "offline_sync_success",
     "captcha_verification_required",
     "captcha_loading",
-    "captcha_error"
+    "captcha_error",
+    "recaptcha_site_key",
+    "recaptcha_site_key_hint"
   ],
 
   "hi": [
@@ -661,7 +669,9 @@
     "offline_sync_success",
     "captcha_verification_required",
     "captcha_loading",
-    "captcha_error"
+    "captcha_error",
+    "recaptcha_site_key",
+    "recaptcha_site_key_hint"
   ],
 
   "it": [
@@ -794,7 +804,9 @@
     "offline_sync_success",
     "captcha_verification_required",
     "captcha_loading",
-    "captcha_error"
+    "captcha_error",
+    "recaptcha_site_key",
+    "recaptcha_site_key_hint"
   ],
 
   "ja": [
@@ -927,7 +939,9 @@
     "offline_sync_success",
     "captcha_verification_required",
     "captcha_loading",
-    "captcha_error"
+    "captcha_error",
+    "recaptcha_site_key",
+    "recaptcha_site_key_hint"
   ],
 
   "ko": [
@@ -1060,7 +1074,9 @@
     "offline_sync_success",
     "captcha_verification_required",
     "captcha_loading",
-    "captcha_error"
+    "captcha_error",
+    "recaptcha_site_key",
+    "recaptcha_site_key_hint"
   ],
 
   "nl": [
@@ -1300,7 +1316,9 @@
     "offline_sync_success",
     "captcha_verification_required",
     "captcha_loading",
-    "captcha_error"
+    "captcha_error",
+    "recaptcha_site_key",
+    "recaptcha_site_key_hint"
   ],
 
   "ru": [
@@ -1433,7 +1451,9 @@
     "offline_sync_success",
     "captcha_verification_required",
     "captcha_loading",
-    "captcha_error"
+    "captcha_error",
+    "recaptcha_site_key",
+    "recaptcha_site_key_hint"
   ],
 
   "zh": [
@@ -1566,6 +1586,8 @@
     "offline_sync_success",
     "captcha_verification_required",
     "captcha_loading",
-    "captcha_error"
+    "captcha_error",
+    "recaptcha_site_key",
+    "recaptcha_site_key_hint"
   ]
 }

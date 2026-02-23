@@ -75,13 +75,15 @@ class AppLocalizationsPt extends AppLocalizations {
   String get settingsLocalFilesConsentTitle => 'Permissao de arquivos locais';
 
   @override
-  String get settingsLocalFilesConsentSubtitle => 'Permitir que o app leia arquivos locais do projeto para contexto de IA.';
+  String get settingsLocalFilesConsentSubtitle =>
+      'Permitir que o app leia arquivos locais do projeto para contexto de IA.';
 
   @override
   String get settingsUseProjectFilesTitle => 'Usar arquivos do projeto';
 
   @override
-  String get settingsUseProjectFilesSubtitle => 'Adicionar arquivos locais aos prompts de IA';
+  String get settingsUseProjectFilesSubtitle =>
+      'Adicionar arquivos locais aos prompts de IA';
 
   @override
   String get settingsProjectsSection => 'Projetos';
@@ -160,7 +162,8 @@ class AppLocalizationsPt extends AppLocalizations {
   String get exportPasswordTitle => 'Criptografar exportacao';
 
   @override
-  String get exportPasswordSubtitle => 'Defina uma senha para criptografar os arquivos de exportacao.';
+  String get exportPasswordSubtitle =>
+      'Defina uma senha para criptografar os arquivos de exportacao.';
 
   @override
   String get exportPasswordMismatch => 'As senhas nao correspondem.';
@@ -309,7 +312,8 @@ class AppLocalizationsPt extends AppLocalizations {
   String get projectDetailsTitle => 'Detalhes do projeto';
 
   @override
-  String get aiChatWithProjectFilesTooltip => 'Chat de IA com arquivos do projeto';
+  String get aiChatWithProjectFilesTooltip =>
+      'Chat de IA com arquivos do projeto';
 
   @override
   String get moreOptionsLabel => 'Mais opcoes';
@@ -437,7 +441,8 @@ class AppLocalizationsPt extends AppLocalizations {
   }
 
   @override
-  String get noProjectMapLinked => 'Nenhuma pasta vinculada. Vincule uma pasta para ler arquivos.';
+  String get noProjectMapLinked =>
+      'Nenhuma pasta vinculada. Vincule uma pasta para ler arquivos.';
 
   @override
   String get projectNotAvailable => 'Projeto nao disponivel.';
@@ -472,7 +477,8 @@ class AppLocalizationsPt extends AppLocalizations {
   String get welcomeBack => 'Bem-vindo de volta! 👋';
 
   @override
-  String get projectsOverviewSubtitle => 'Aqui esta um resumo dos seus projetos ativos';
+  String get projectsOverviewSubtitle =>
+      'Aqui esta um resumo dos seus projetos ativos';
 
   @override
   String get recentWorkflowsTitle => 'Fluxos recentes';
@@ -493,7 +499,12 @@ class AppLocalizationsPt extends AppLocalizations {
   String get unknownProject => 'Projeto desconhecido';
 
   @override
-  String projectTaskStatusSemantics(Object projectName, Object taskTitle, Object statusLabel, Object timeLabel) {
+  String projectTaskStatusSemantics(
+    Object projectName,
+    Object taskTitle,
+    Object statusLabel,
+    Object timeLabel,
+  ) {
     return 'Projeto $projectName, tarefa $taskTitle, status $statusLabel, $timeLabel';
   }
 
@@ -531,7 +542,11 @@ class AppLocalizationsPt extends AppLocalizations {
   }
 
   @override
-  String projectProgressChartSemantics(Object projectName, Object completedPercent, Object pendingPercent) {
+  String projectProgressChartSemantics(
+    Object projectName,
+    Object completedPercent,
+    Object pendingPercent,
+  ) {
     return 'Grafico de progresso do projeto para $projectName. Concluido $completedPercent por cento, pendente $pendingPercent por cento.';
   }
 
@@ -567,7 +582,11 @@ class AppLocalizationsPt extends AppLocalizations {
   String get statusLabel => 'Status';
 
   @override
-  String burndownChartSemantics(Object projectName, Object actualPoints, Object idealPoints) {
+  String burndownChartSemantics(
+    Object projectName,
+    Object actualPoints,
+    Object idealPoints,
+  ) {
     return 'Grafico burndown para $projectName. Pontos reais: $actualPoints. Pontos ideais: $idealPoints.';
   }
 
@@ -587,7 +606,8 @@ class AppLocalizationsPt extends AppLocalizations {
   String get aiEmptyTitle => 'Inicie uma conversa com o assistente de IA';
 
   @override
-  String get aiEmptySubtitle => 'Por exemplo: \"Gere um plano para o projeto: loja web\"';
+  String get aiEmptySubtitle =>
+      'Por exemplo: \"Gere um plano para o projeto: loja web\"';
 
   @override
   String get useProjectFilesLabel => 'Usar arquivos do projeto';
@@ -608,7 +628,8 @@ class AppLocalizationsPt extends AppLocalizations {
   String get loginMissingCredentials => 'Informe usuario e senha.';
 
   @override
-  String get loginFailedMessage => 'Falha ao entrar. Verifique suas credenciais.';
+  String get loginFailedMessage =>
+      'Falha ao entrar. Verifique suas credenciais.';
 
   @override
   String rateLimitExceeded(Object seconds) {
@@ -795,13 +816,15 @@ class AppLocalizationsPt extends AppLocalizations {
   String get settingsBackupTitle => 'Criar backup';
 
   @override
-  String get settingsBackupSubtitle => 'Salvar um backup local dos dados do Hive.';
+  String get settingsBackupSubtitle =>
+      'Salvar um backup local dos dados do Hive.';
 
   @override
   String get settingsRestoreTitle => 'Restaurar backup';
 
   @override
-  String get settingsRestoreSubtitle => 'Substituir os dados locais por um arquivo de backup.';
+  String get settingsRestoreSubtitle =>
+      'Substituir os dados locais por um arquivo de backup.';
 
   @override
   String backupSuccessMessage(Object path) {
@@ -814,7 +837,8 @@ class AppLocalizationsPt extends AppLocalizations {
   }
 
   @override
-  String get restoreSuccessMessage => 'Backup restaurado. Reinicie o app para recarregar os dados.';
+  String get restoreSuccessMessage =>
+      'Backup restaurado. Reinicie o app para recarregar os dados.';
 
   @override
   String restoreFailedMessage(Object error) {
@@ -896,7 +920,8 @@ class AppLocalizationsPt extends AppLocalizations {
   String get noProjectsMatchFiltersTitle => 'No projects match your filters';
 
   @override
-  String get noProjectsMatchFiltersSubtitle => 'Try changing or clearing your filters';
+  String get noProjectsMatchFiltersSubtitle =>
+      'Try changing or clearing your filters';
 
   @override
   String get projectFiltersTitle => 'Project Filters';
@@ -1134,7 +1159,8 @@ class AppLocalizationsPt extends AppLocalizations {
   String get noProjectsForGantt => 'No projects to display';
 
   @override
-  String get addProjectsWithDates => 'Add projects with start and due dates to see them in the timeline.';
+  String get addProjectsWithDates =>
+      'Add projects with start and due dates to see them in the timeline.';
 
   @override
   String get openProjectTooltip => 'Open project';
@@ -1161,13 +1187,15 @@ class AppLocalizationsPt extends AppLocalizations {
   String get settingsBiometricLoginTitle => 'Biometric login';
 
   @override
-  String get settingsBiometricLoginSubtitle => 'Use fingerprint or face ID to sign in';
+  String get settingsBiometricLoginSubtitle =>
+      'Use fingerprint or face ID to sign in';
 
   @override
   String get enableBiometricDialogTitle => 'Enable Biometric Login';
 
   @override
-  String get enableBiometricDialogMessage => 'Would you like to enable biometric authentication for faster login?';
+  String get enableBiometricDialogMessage =>
+      'Would you like to enable biometric authentication for faster login?';
 
   @override
   String get enableBiometricDialogYes => 'Enable';
@@ -1188,7 +1216,8 @@ class AppLocalizationsPt extends AppLocalizations {
   String get enable_biometric_login => 'Enable Biometric Login';
 
   @override
-  String get biometric_not_available => 'Biometric authentication not available';
+  String get biometric_not_available =>
+      'Biometric authentication not available';
 
   @override
   String get use_password_instead => 'Use password instead';
@@ -1212,7 +1241,8 @@ class AppLocalizationsPt extends AppLocalizations {
   String get smartFilterProcessing => 'Processing your request...';
 
   @override
-  String get smartFilterError => 'Failed to apply smart filter. Please try again.';
+  String get smartFilterError =>
+      'Failed to apply smart filter. Please try again.';
 
   @override
   String get aiSuggestedFilterLabel => 'AI Suggested Filter';
@@ -1267,4 +1297,10 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get captcha_error => 'Security verification failed. Please try again.';
+
+  @override
+  String get recaptcha_site_key => 'reCAPTCHA v3 Site Key';
+
+  @override
+  String get recaptcha_site_key_hint => 'Enter your reCAPTCHA v3 site key';
 }

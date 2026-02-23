@@ -75,7 +75,8 @@ class AppLocalizationsJa extends AppLocalizations {
   String get settingsLocalFilesConsentTitle => 'ローカルファイルの許可';
 
   @override
-  String get settingsLocalFilesConsentSubtitle => 'AIのコンテキストのためにローカルのプロジェクトファイルを読み取ることを許可します。';
+  String get settingsLocalFilesConsentSubtitle =>
+      'AIのコンテキストのためにローカルのプロジェクトファイルを読み取ることを許可します。';
 
   @override
   String get settingsUseProjectFilesTitle => 'プロジェクトファイルを使用';
@@ -493,7 +494,12 @@ class AppLocalizationsJa extends AppLocalizations {
   String get unknownProject => '不明なプロジェクト';
 
   @override
-  String projectTaskStatusSemantics(Object projectName, Object taskTitle, Object statusLabel, Object timeLabel) {
+  String projectTaskStatusSemantics(
+    Object projectName,
+    Object taskTitle,
+    Object statusLabel,
+    Object timeLabel,
+  ) {
     return 'プロジェクト $projectName、タスク $taskTitle、ステータス $statusLabel、$timeLabel';
   }
 
@@ -531,7 +537,11 @@ class AppLocalizationsJa extends AppLocalizations {
   }
 
   @override
-  String projectProgressChartSemantics(Object projectName, Object completedPercent, Object pendingPercent) {
+  String projectProgressChartSemantics(
+    Object projectName,
+    Object completedPercent,
+    Object pendingPercent,
+  ) {
     return '$projectName の進捗チャート。完了 $completedPercent パーセント、保留 $pendingPercent パーセント。';
   }
 
@@ -567,7 +577,11 @@ class AppLocalizationsJa extends AppLocalizations {
   String get statusLabel => 'ステータス';
 
   @override
-  String burndownChartSemantics(Object projectName, Object actualPoints, Object idealPoints) {
+  String burndownChartSemantics(
+    Object projectName,
+    Object actualPoints,
+    Object idealPoints,
+  ) {
     return '$projectName のバーンダウンチャート。実測点: $actualPoints。理想点: $idealPoints。';
   }
 
@@ -896,7 +910,8 @@ class AppLocalizationsJa extends AppLocalizations {
   String get noProjectsMatchFiltersTitle => 'No projects match your filters';
 
   @override
-  String get noProjectsMatchFiltersSubtitle => 'Try changing or clearing your filters';
+  String get noProjectsMatchFiltersSubtitle =>
+      'Try changing or clearing your filters';
 
   @override
   String get projectFiltersTitle => 'Project Filters';
@@ -1134,7 +1149,8 @@ class AppLocalizationsJa extends AppLocalizations {
   String get noProjectsForGantt => 'No projects to display';
 
   @override
-  String get addProjectsWithDates => 'Add projects with start and due dates to see them in the timeline.';
+  String get addProjectsWithDates =>
+      'Add projects with start and due dates to see them in the timeline.';
 
   @override
   String get openProjectTooltip => 'Open project';
@@ -1161,13 +1177,15 @@ class AppLocalizationsJa extends AppLocalizations {
   String get settingsBiometricLoginTitle => 'Biometric login';
 
   @override
-  String get settingsBiometricLoginSubtitle => 'Use fingerprint or face ID to sign in';
+  String get settingsBiometricLoginSubtitle =>
+      'Use fingerprint or face ID to sign in';
 
   @override
   String get enableBiometricDialogTitle => 'Enable Biometric Login';
 
   @override
-  String get enableBiometricDialogMessage => 'Would you like to enable biometric authentication for faster login?';
+  String get enableBiometricDialogMessage =>
+      'Would you like to enable biometric authentication for faster login?';
 
   @override
   String get enableBiometricDialogYes => 'Enable';
@@ -1188,7 +1206,8 @@ class AppLocalizationsJa extends AppLocalizations {
   String get enable_biometric_login => 'Enable Biometric Login';
 
   @override
-  String get biometric_not_available => 'Biometric authentication not available';
+  String get biometric_not_available =>
+      'Biometric authentication not available';
 
   @override
   String get use_password_instead => 'Use password instead';
@@ -1212,7 +1231,8 @@ class AppLocalizationsJa extends AppLocalizations {
   String get smartFilterProcessing => 'Processing your request...';
 
   @override
-  String get smartFilterError => 'Failed to apply smart filter. Please try again.';
+  String get smartFilterError =>
+      'Failed to apply smart filter. Please try again.';
 
   @override
   String get aiSuggestedFilterLabel => 'AI Suggested Filter';
@@ -1267,4 +1287,10 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get captcha_error => 'Security verification failed. Please try again.';
+
+  @override
+  String get recaptcha_site_key => 'reCAPTCHA v3 Site Key';
+
+  @override
+  String get recaptcha_site_key_hint => 'Enter your reCAPTCHA v3 site key';
 }
