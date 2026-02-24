@@ -60,6 +60,30 @@
   "@settingsFollowSystemSubtitle": {
     "description": "Auto-generated description for settingsFollowSystemSubtitle."
   },
+  "settingsColorSchemeTitle": "Color scheme",
+  "@settingsColorSchemeTitle": {
+    "description": "Title for color scheme customization section."
+  },
+  "settingsColorSchemeSubtitle": "Choose your preferred colors",
+  "@settingsColorSchemeSubtitle": {
+    "description": "Subtitle for color scheme customization section."
+  },
+  "settingsColorSchemeDefault": "Default (Green)",
+  "@settingsColorSchemeDefault": {
+    "description": "Label for default green color scheme option."
+  },
+  "settingsColorSchemeBlue": "Blue",
+  "@settingsColorSchemeBlue": {
+    "description": "Label for blue color scheme option."
+  },
+  "settingsColorSchemePurple": "Purple",
+  "@settingsColorSchemePurple": {
+    "description": "Label for purple color scheme option."
+  },
+  "settingsColorSchemeOrange": "Orange",
+  "@settingsColorSchemeOrange": {
+    "description": "Label for orange color scheme option."
+  },
   "settingsLanguageTitle": "Language",
   "@settingsLanguageTitle": {
     "description": "Auto-generated description for settingsLanguageTitle."
@@ -67,6 +91,30 @@
   "settingsLanguageSubtitle": "Choose the app language",
   "@settingsLanguageSubtitle": {
     "description": "Auto-generated description for settingsLanguageSubtitle."
+  },
+  "settingsColorSchemeTitle": "Color scheme",
+  "@settingsColorSchemeTitle": {
+    "description": "Title for the color scheme settings section."
+  },
+  "settingsColorSchemeSubtitle": "Choose your preferred color theme",
+  "@settingsColorSchemeSubtitle": {
+    "description": "Subtitle for the color scheme settings section."
+  },
+  "settingsColorSchemeDefault": "Default (Green)",
+  "@settingsColorSchemeDefault": {
+    "description": "Label for the default green color scheme option."
+  },
+  "settingsColorSchemeBlue": "Blue",
+  "@settingsColorSchemeBlue": {
+    "description": "Label for the blue color scheme option."
+  },
+  "settingsColorSchemePurple": "Purple",
+  "@settingsColorSchemePurple": {
+    "description": "Label for the purple color scheme option."
+  },
+  "settingsColorSchemeOrange": "Orange",
+  "@settingsColorSchemeOrange": {
+    "description": "Label for the orange color scheme option."
   },
   "settingsNotificationsSection": "Notifications",
   "@settingsNotificationsSection": {
@@ -1776,5 +1824,21 @@
   "peak_times": "Peak Times",
   "@peak_times": {
     "description": "Label for peak usage times metric."
+  },
+  "dashboard_theme_custom": "Custom Theme",
+  "@dashboard_theme_custom": {
+    "description": "Label for custom dashboard theme option."
+  },
+  "select_layout_template": "Select Layout Template",
+  "@select_layout_template": {
+    "description": "Button label for selecting a dashboard layout template."
+  },
+  "resize_widget": "Resize Widget",
+  "@resize_widget": {
+    "description": "Label for widget resize functionality."
+  },
+  "create_custom_widget": "Create Custom Widget",
+  "@create_custom_widget": {
+    "description": "Button label for creating a custom dashboard widget."
   }
 }

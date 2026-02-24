@@ -1309,5 +1309,21 @@
   "peak_times": "Piek Tijden",
   "@peak_times": {
     "description": "Label for peak usage times metric."
+  },
+  "dashboard_theme_custom": "Aangepast Thema",
+  "@dashboard_theme_custom": {
+    "description": "Label for custom dashboard theme option."
+  },
+  "select_layout_template": "Selecteer Layout Sjabloon",
+  "@select_layout_template": {
+    "description": "Button label for selecting a dashboard layout template."
+  },
+  "resize_widget": "Widget Formaat Wijzigen",
+  "@resize_widget": {
+    "description": "Label for widget resize functionality."
+  },
+  "create_custom_widget": "Aangepaste Widget Maken",
+  "@create_custom_widget": {
+    "description": "Button label for creating a custom dashboard widget."
   }
 }

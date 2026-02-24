@@ -13,6 +13,7 @@ import 'package:my_project_management_app/models/project_sort.dart';
 import 'package:my_project_management_app/core/providers/dashboard_providers.dart';
 import 'package:my_project_management_app/core/providers/project_providers.dart';
 import 'package:my_project_management_app/core/repository/i_dashboard_repository.dart';
+import 'package:my_project_management_app/core/services/app_logger.dart';
 
 class CustomizeDashboardScreen extends ConsumerStatefulWidget {
   const CustomizeDashboardScreen({super.key});
@@ -25,11 +26,13 @@ class _CustomizeDashboardScreenState extends ConsumerState<CustomizeDashboardScr
   List<DashboardItem> _dashboardItems = [];
   List<ProjectModel> _projects = [];
   late DashboardGrid _dashboardConfig;
+  late TextEditingController _customWidgetJsonController;
 
   @override
   void initState() {
     super.initState();
     _dashboardConfig = DashboardGrid(maxColumns: 4);
+    _customWidgetJsonController = TextEditingController();
     _dashboardConfig.addListener(_configListener);
     _dashboardConfig.listener = _onDashboardChanged;
     // Load config from provider
@@ -43,6 +46,7 @@ class _CustomizeDashboardScreenState extends ConsumerState<CustomizeDashboardScr
   @override
   void dispose() {
     _dashboardConfig.removeListener(_configListener);
+    _customWidgetJsonController.dispose();
     super.dispose();
   }
 
@@ -51,6 +55,8 @@ class _CustomizeDashboardScreenState extends ConsumerState<CustomizeDashboardScr
   }
 
   void _onDashboardChanged(Iterable<DashboardGridChangeSnapshot> changes) {
+    final oldItems = List<DashboardItem>.from(_dashboardItems);
+    
     setState(() {
       _dashboardItems = _dashboardConfig.widgets.map((widget) => DashboardItem(
         widgetType: DashboardWidgetType.fromString(widget.id.split('_')[0]), // Extract type from id
@@ -62,6 +68,23 @@ class _CustomizeDashboardScreenState extends ConsumerState<CustomizeDashboardScr
         },
       )).toList();
     });
+
+    // Update positions in provider for moved widgets
+    for (int i = 0; i < _dashboardItems.length; i++) {
+      final newItem = _dashboardItems[i];
+      final oldItem = i < oldItems.length ? oldItems[i] : null;
+      
+      // Check if position changed
+      if (oldItem == null || 
+          oldItem.position['x'] != newItem.position['x'] ||
+          oldItem.position['y'] != newItem.position['y'] ||
+          oldItem.position['width'] != newItem.position['width'] ||
+          oldItem.position['height'] != newItem.position['height']) {
+        
+        ref.read(dashboardConfigProvider.notifier).updateItemPosition(i, newItem.position);
+        AppLogger.event('widget_arranged');
+      }
+    }
   }
 
   @override
@@ -72,11 +95,13 @@ class _CustomizeDashboardScreenState extends ConsumerState<CustomizeDashboardScr
 
   void _loadConfig() {
     // Load from provider
-    final items = ref.read(dashboardConfigProvider);
+    final itemsAsync = ref.read(dashboardConfigProvider);
     final projects = ref.read(projectsProvider).maybeWhen(
       data: (data) => data,
       orElse: () => <ProjectModel>[],
     );
+
+    final items = itemsAsync.value ?? [];
 
     setState(() {
       if (items.isNotEmpty) {
@@ -152,6 +177,55 @@ class _CustomizeDashboardScreenState extends ConsumerState<CustomizeDashboardScr
     );
   }
 
+  void _showTemplateSelector() {
+    final templates = ref.read(layoutTemplatesProvider);
+    
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Choose Dashboard Template'),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: ListView.builder(
+            shrinkWrap: true,
+            itemCount: templates.length,
+            itemBuilder: (context, index) {
+              final template = templates[index];
+              return ListTile(
+                leading: Icon(
+                  template.isPreset ? Icons.star : Icons.bookmark,
+                  color: template.isPreset ? Colors.amber : Colors.blue,
+                ),
+                title: Text(template.name),
+                subtitle: Text('${template.items.length} widgets'),
+                onTap: () async {
+                  final templateName = template.name;
+                  await ref.read(dashboardConfigProvider.notifier).loadTemplate(template.id);
+                  // Reload the config to update the UI
+                  if (!context.mounted) return;
+                  Navigator.of(context).pop();
+                  _loadConfig();
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    if (!context.mounted) return;
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Applied template: $templateName')),
+                    );
+                  });
+                },
+              );
+            },
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Cancel'),
+          ),
+        ],
+      ),
+    );
+  }
+
   void _addWidget(String type, int x, int y) {
     final item = DashboardItem(
       widgetType: DashboardWidgetType.fromString(type),
@@ -173,6 +247,24 @@ class _CustomizeDashboardScreenState extends ConsumerState<CustomizeDashboardScr
       );
       _dashboardConfig.removeWidget(widgetToRemove);
     });
+  }
+
+  Future<void> _createCustomWidget() async {
+    final jsonInput = _customWidgetJsonController.text.trim();
+    if (jsonInput.isEmpty) return;
+
+    try {
+      await ref.read(dashboardConfigProvider.notifier).createCustomWidget(jsonInput);
+      _customWidgetJsonController.clear();
+      // Refresh the local state
+      _loadConfig();
+    } catch (e) {
+      // Error is handled by the provider and shown via dashboardErrorProvider
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to create custom widget: $e')),
+      );
+    }
   }
 
   Widget _buildWidgetForType(String type) {
@@ -209,6 +301,11 @@ class _CustomizeDashboardScreenState extends ConsumerState<CustomizeDashboardScr
       appBar: AppBar(
         title: const Text('Customize Dashboard'),
         actions: [
+          TextButton.icon(
+            onPressed: _showTemplateSelector,
+            icon: const Icon(Icons.view_module),
+            label: const Text('Templates'),
+          ),
           TextButton(
             onPressed: _saveConfig,
             child: const Text('Save'),
@@ -281,6 +378,8 @@ class _CustomizeDashboardScreenState extends ConsumerState<CustomizeDashboardScr
                   _buildDraggablePreview('filters', 'Filters & Sort'),
                   SizedBox(height: 8.h),
                   _buildDraggablePreview('recentWorkflows', 'Recent Workflows'),
+                  SizedBox(height: 16.h),
+                  _buildCustomWidgetCreator(),
                 ],
               ),
             ),
@@ -408,6 +507,45 @@ class _CustomizeDashboardScreenState extends ConsumerState<CustomizeDashboardScr
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCustomWidgetCreator() {
+    return Card(
+      elevation: 2,
+      child: Padding(
+        padding: EdgeInsets.all(12.w),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Create Custom Widget',
+              style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            SizedBox(height: 8.h),
+            TextField(
+              controller: _customWidgetJsonController,
+              maxLines: 3,
+              decoration: InputDecoration(
+                hintText: '{"widgetType": "metricCard", "position": {"x": 0, "y": 0, "width": 2, "height": 1}}',
+                border: const OutlineInputBorder(),
+                contentPadding: EdgeInsets.all(8.w),
+              ),
+            ),
+            SizedBox(height: 8.h),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: _createCustomWidget,
+                icon: const Icon(Icons.add),
+                label: const Text('Create Widget'),
+              ),
+            ),
+          ],
         ),
       ),
     );

@@ -7,7 +7,8 @@ import 'package:my_project_management_app/generated/app_localizations.dart';
 import 'package:my_project_management_app/core/auth/permissions.dart';
 import 'package:my_project_management_app/core/repository/hive_initializer.dart';
 import 'package:my_project_management_app/core/providers.dart';
-import 'package:my_project_management_app/core/providers/ai/index.dart' show useProjectFilesProvider;
+import 'package:my_project_management_app/core/providers/ai/index.dart'
+    show useProjectFilesProvider;
 import '../../core/providers/auth_providers.dart';
 import '../../core/providers/theme_providers.dart';
 import '../../core/services/project_transfer_service.dart';
@@ -31,29 +32,32 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    final consentEnabled = ref.watch(privacyConsentProvider).maybeWhen(
-      data: (enabled) => enabled,
-      orElse: () => false,
-    );
-    final notificationsEnabled = ref.watch(notificationsProvider).maybeWhen(
-      data: (enabled) => enabled,
-      orElse: () => true,
-    );
+    final consentEnabled = ref
+        .watch(privacyConsentProvider)
+        .maybeWhen(data: (enabled) => enabled, orElse: () => false);
+    final notificationsEnabled = ref
+        .watch(notificationsProvider)
+        .maybeWhen(data: (enabled) => enabled, orElse: () => true);
     final themeModeAsync = ref.watch(themeModeProvider);
+    final colorSchemeSeedAsync = ref.watch(colorSchemeSeedProvider);
     final useProjectFiles = ref.watch(useProjectFilesProvider);
     final localeAsync = ref.watch(localeProvider);
     final settingsAsync = ref.watch(settingsRepositoryProvider);
     final authState = ref.watch(authProvider).value!;
     final usersAsync = ref.watch(authUsersProvider);
-    
-    final canManageUsers =
-      ref.watch(hasPermissionProvider(AppPermissions.manageUsers));
-    final canManageRoles =
-      ref.watch(hasPermissionProvider(AppPermissions.manageRoles));
-    final canExportImport =
-      ref.watch(hasPermissionProvider(AppPermissions.exportImport));
-    final canViewSettings =
-      ref.watch(hasPermissionProvider(AppPermissions.viewSettings));
+
+    final canManageUsers = ref.watch(
+      hasPermissionProvider(AppPermissions.manageUsers),
+    );
+    final canManageRoles = ref.watch(
+      hasPermissionProvider(AppPermissions.manageRoles),
+    );
+    final canExportImport = ref.watch(
+      hasPermissionProvider(AppPermissions.exportImport),
+    );
+    final canViewSettings = ref.watch(
+      hasPermissionProvider(AppPermissions.viewSettings),
+    );
 
     final isDarkMode = themeModeAsync.maybeWhen(
       data: (mode) => mode == ThemeMode.dark,
@@ -72,15 +76,15 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       orElse: () => null,
     );
     final lastBackupLabel =
-      (lastBackupTime == null ? null : _formatBackupTimestamp(lastBackupTime)) ??
+        (lastBackupTime == null
+            ? null
+            : _formatBackupTimestamp(lastBackupTime)) ??
         l10n.backupNeverMessage;
     final lastBackupPathLabel = lastBackupPath ?? l10n.backupNoFileMessage;
 
     if (!canViewSettings) {
       return Scaffold(
-        appBar: AppBar(
-          title: Text(l10n.settingsTitle),
-        ),
+        appBar: AppBar(title: Text(l10n.settingsTitle)),
         body: Center(
           child: Text(
             l10n.accessDeniedMessage,
@@ -91,9 +95,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     }
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(l10n.settingsTitle),
-      ),
+      appBar: AppBar(title: Text(l10n.settingsTitle)),
       body: ListView(
         children: [
           // Theme Section
@@ -135,6 +137,93 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               color: Theme.of(context).colorScheme.secondary,
             ),
           ),
+
+          // Color Scheme Section
+          ListTile(
+            leading: Icon(
+              Icons.color_lens,
+              color: Theme.of(context).colorScheme.primary,
+            ),
+            title: Text(
+              l10n.settingsColorSchemeTitle,
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+            subtitle: Text(l10n.settingsColorSchemeSubtitle),
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+            child: Wrap(
+              spacing: 8.0,
+              runSpacing: 8.0,
+              children: [
+                ChoiceChip(
+                  label: Text(l10n.settingsColorSchemeDefault),
+                  selected: colorSchemeSeedAsync.maybeWhen(
+                    data: (seed) => seed == Colors.green.toARGB32(),
+                    orElse: () => false,
+                  ),
+                  onSelected: (selected) {
+                    if (selected) {
+                      ref.read(colorSchemeSeedProvider.notifier).setColorSchemeSeed(Colors.green.toARGB32());
+                    }
+                  },
+                  avatar: CircleAvatar(
+                    backgroundColor: Colors.green,
+                    radius: 8,
+                  ),
+                ),
+                ChoiceChip(
+                  label: Text(l10n.settingsColorSchemeBlue),
+                  selected: colorSchemeSeedAsync.maybeWhen(
+                    data: (seed) => seed == Colors.blue.toARGB32(),
+                    orElse: () => false,
+                  ),
+                  onSelected: (selected) {
+                    if (selected) {
+                      ref.read(colorSchemeSeedProvider.notifier).setColorSchemeSeed(Colors.blue.toARGB32());
+                    }
+                  },
+                  avatar: CircleAvatar(
+                    backgroundColor: Colors.blue,
+                    radius: 8,
+                  ),
+                ),
+                ChoiceChip(
+                  label: Text(l10n.settingsColorSchemePurple),
+                  selected: colorSchemeSeedAsync.maybeWhen(
+                    data: (seed) => seed == Colors.purple.toARGB32(),
+                    orElse: () => false,
+                  ),
+                  onSelected: (selected) {
+                    if (selected) {
+                      ref.read(colorSchemeSeedProvider.notifier).setColorSchemeSeed(Colors.purple.toARGB32());
+                    }
+                  },
+                  avatar: CircleAvatar(
+                    backgroundColor: Colors.purple,
+                    radius: 8,
+                  ),
+                ),
+                ChoiceChip(
+                  label: Text(l10n.settingsColorSchemeOrange),
+                  selected: colorSchemeSeedAsync.maybeWhen(
+                    data: (seed) => seed == Colors.orange.toARGB32(),
+                    orElse: () => false,
+                  ),
+                  onSelected: (selected) {
+                    if (selected) {
+                      ref.read(colorSchemeSeedProvider.notifier).setColorSchemeSeed(Colors.orange.toARGB32());
+                    }
+                  },
+                  avatar: CircleAvatar(
+                    backgroundColor: Colors.orange,
+                    radius: 8,
+                  ),
+                ),
+              ],
+            ),
+          ),
+
           const Divider(),
 
           // Language Section
@@ -236,9 +325,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           SwitchListTile(
             value: notificationsEnabled,
             onChanged: (value) {
-              ref
-                  .read(notificationsProvider.notifier)
-                  .setEnabled(value);
+              ref.read(notificationsProvider.notifier).setEnabled(value);
             },
             title: Text(l10n.settingsNotificationsTitle),
             subtitle: Text(l10n.settingsNotificationsSubtitle),
@@ -263,9 +350,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           SwitchListTile(
             value: consentEnabled,
             onChanged: (value) {
-              ref
-                  .read(privacyConsentProvider.notifier)
-                  .setEnabled(value);
+              ref.read(privacyConsentProvider.notifier).setEnabled(value);
             },
             title: Text(l10n.settingsLocalFilesConsentTitle),
             subtitle: Text(l10n.settingsLocalFilesConsentSubtitle),
@@ -277,9 +362,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           SwitchListTile(
             value: useProjectFiles,
             onChanged: (value) {
-              ref
-                  .read(useProjectFilesProvider.notifier)
-                  .setEnabled(value);
+              ref.read(useProjectFilesProvider.notifier).setEnabled(value);
             },
             title: Text(l10n.settingsUseProjectFilesTitle),
             subtitle: Text(l10n.settingsUseProjectFilesSubtitle),
@@ -311,7 +394,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               orElse: () => false,
             ),
             onChanged: (value) async {
-              final settings = await ref.read(settingsRepositoryProvider.future);
+              final settings = await ref.read(
+                settingsRepositoryProvider.future,
+              );
               await settings.setAutoLoginEnabled(value);
               setState(() {});
             },
@@ -323,10 +408,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             ),
           ),
           SwitchListTile(
-            value: ref.watch(biometricLoginProvider).maybeWhen(
-              data: (enabled) => enabled,
-              orElse: () => false,
-            ),
+            value: ref
+                .watch(biometricLoginProvider)
+                .maybeWhen(data: (enabled) => enabled, orElse: () => false),
             onChanged: (value) async {
               await ref.read(biometricLoginProvider.notifier).setEnabled(value);
             },
@@ -500,9 +584,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 for (final role in authRepo.getRoles()) role.id: role.name,
               };
               if (users.isEmpty) {
-                return ListTile(
-                  title: Text(l10n.settingsNoUsersFound),
-                );
+                return ListTile(title: Text(l10n.settingsNoUsersFound));
               }
 
               return Column(
@@ -624,9 +706,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     }
     final messenger = ScaffoldMessenger.maybeOf(context);
     if (messenger != null) {
-      messenger.showSnackBar(
-        SnackBar(content: Text(l10n.loggedOutMessage)),
-      );
+      messenger.showSnackBar(SnackBar(content: Text(l10n.loggedOutMessage)));
     }
   }
 
@@ -666,10 +746,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       messenger?.showSnackBar(
         SnackBar(
           content: Text(
-            l10n.exportCompleteMessage(
-              result.projectsPath,
-              result.tasksPath,
-            ),
+            l10n.exportCompleteMessage(result.projectsPath, result.tasksPath),
           ),
         ),
       );
@@ -714,9 +791,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   TextField(
                     controller: passwordController,
                     obscureText: true,
-                    decoration: InputDecoration(
-                      labelText: l10n.passwordLabel,
-                    ),
+                    decoration: InputDecoration(labelText: l10n.passwordLabel),
                   ),
                   const SizedBox(height: 12),
                   TextField(
@@ -738,7 +813,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   onPressed: () {
                     final password = passwordController.text;
                     final repeat = repeatController.text;
-                    if (password.isEmpty || repeat.isEmpty || password != repeat) {
+                    if (password.isEmpty ||
+                        repeat.isEmpty ||
+                        password != repeat) {
                       setDialogState(() {
                         errorText = l10n.exportPasswordMismatch;
                       });
@@ -796,10 +873,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       messenger?.showSnackBar(
         SnackBar(
           content: Text(
-            l10n.importCompleteMessage(
-              result.projectsPath,
-              result.tasksPath,
-            ),
+            l10n.importCompleteMessage(result.projectsPath, result.tasksPath),
           ),
         ),
       );
@@ -972,17 +1046,13 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             children: [
               TextField(
                 controller: usernameController,
-                decoration: InputDecoration(
-                  labelText: l10n.usernameLabel,
-                ),
+                decoration: InputDecoration(labelText: l10n.usernameLabel),
               ),
               const SizedBox(height: 12),
               TextField(
                 controller: passwordController,
                 obscureText: true,
-                decoration: InputDecoration(
-                  labelText: l10n.passwordLabel,
-                ),
+                decoration: InputDecoration(labelText: l10n.passwordLabel),
               ),
             ],
           ),
@@ -1020,9 +1090,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     final messenger = ScaffoldMessenger.maybeOf(context);
     messenger?.showSnackBar(
       SnackBar(
-        content: Text(
-          added ? l10n.userAddedMessage : l10n.invalidUserMessage,
-        ),
+        content: Text(added ? l10n.userAddedMessage : l10n.invalidUserMessage),
       ),
     );
 
@@ -1079,10 +1147,9 @@ class _AiSettingsSection extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final aiConsentEnabled = ref.watch(aiConsentProvider).maybeWhen(
-      data: (enabled) => enabled,
-      orElse: () => false,
-    );
+    final aiConsentEnabled = ref
+        .watch(aiConsentProvider)
+        .maybeWhen(data: (enabled) => enabled, orElse: () => false);
 
     return Column(
       children: [
@@ -1104,7 +1171,9 @@ class _AiSettingsSection extends ConsumerWidget {
             ref.read(aiConsentProvider.notifier).setEnabled(value);
           },
           title: const Text('Enable AI with compliance consent'),
-          subtitle: const Text('Allow AI features while ensuring compliance with privacy laws'),
+          subtitle: const Text(
+            'Allow AI features while ensuring compliance with privacy laws',
+          ),
           secondary: Icon(
             Icons.verified_user,
             color: Theme.of(context).colorScheme.secondary,
@@ -1118,7 +1187,9 @@ class _AiSettingsSection extends ConsumerWidget {
             color: Theme.of(context).colorScheme.surfaceContainerHighest,
             borderRadius: BorderRadius.circular(8),
             border: Border.all(
-              color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.3),
+              color: Theme.of(
+                context,
+              ).colorScheme.outline.withValues(alpha: 0.3),
             ),
           ),
           child: Row(
@@ -1148,10 +1219,12 @@ class _AiSettingsSection extends ConsumerWidget {
           subtitle: const Text('Choose how detailed task help should be'),
           trailing: DropdownButtonHideUnderline(
             child: DropdownButton<String>(
-              value: ref.watch(helpLevelProvider).maybeWhen(
-                data: (level) => level.name,
-                orElse: () => ai_config.HelpLevel.basis.name,
-              ),
+              value: ref
+                  .watch(helpLevelProvider)
+                  .maybeWhen(
+                    data: (level) => level.name,
+                    orElse: () => ai_config.HelpLevel.basis.name,
+                  ),
               onChanged: (value) {
                 if (value != null) {
                   ai_config.HelpLevel level;
@@ -1169,10 +1242,7 @@ class _AiSettingsSection extends ConsumerWidget {
                 }
               },
               items: const [
-                DropdownMenuItem(
-                  value: 'basis',
-                  child: Text('Basis'),
-                ),
+                DropdownMenuItem(value: 'basis', child: Text('Basis')),
                 DropdownMenuItem(
                   value: 'gedetailleerd',
                   child: Text('Gedetailleerd'),
@@ -1242,21 +1312,23 @@ class _AiSettingsSection extends ConsumerWidget {
         return operation.replaceAll('_', ' ').toUpperCase();
     }
   }
+  */
 
+  // NOTE: converted to issue 046
+  /*
   /// Update per-operation limit
   void _updateOperationLimit(WidgetRef ref, String operation, String value, BuildContext context, AppLocalizations l10n) {
     final limit = int.tryParse(value);
     if (limit == null || limit < 1) return;
     
-    final settingsAsync = ref.read(settingsRepositoryProvider);
-    settingsAsync.maybeWhen(
+    ref.read(settingsRepositoryProvider).maybeWhen(
       data: (settings) async {
         final currentConfig = settings.getAiRateLimitsConfig();
         final updatedLimits = Map<String, int>.from(currentConfig.perOperationLimits);
         updatedLimits[operation] = limit;
         
         final updatedConfig = currentConfig.copyWith(perOperationLimits: updatedLimits);
-        await ref.read(settingsRepositoryProvider.notifier).updateAiRateLimitsConfig(updatedConfig);
+        await settings.setAiRateLimitsConfig(updatedConfig);
         
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -1265,16 +1337,6 @@ class _AiSettingsSection extends ConsumerWidget {
         }
       },
       orElse: () {},
-    );
-  }
-
-  /// Reset per-operation limits to defaults
-  void _resetPerOperationLimitsToDefaults(WidgetRef ref, BuildContext context, AppLocalizations l10n) {
-    final defaultConfig = const AiRateLimitsConfig.defaults();
-    ref.read(settingsRepositoryProvider.notifier).updateAiRateLimitsConfig(defaultConfig);
-    
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(l10n.per_op_limit_saved)),
     );
   }
   */

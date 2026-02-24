@@ -1,5 +1,11 @@
 {
   "ar": [
+    "settingsColorSchemeTitle",
+    "settingsColorSchemeSubtitle",
+    "settingsColorSchemeDefault",
+    "settingsColorSchemeBlue",
+    "settingsColorSchemePurple",
+    "settingsColorSchemeOrange",
     "projectsSearchHint",
     "filterByStatus",
     "filterByPriority",
@@ -140,10 +146,20 @@
     "ai_usage_charts",
     "export_csv",
     "average_cost",
-    "peak_times"
+    "peak_times",
+    "dashboard_theme_custom",
+    "select_layout_template",
+    "resize_widget",
+    "create_custom_widget"
   ],
 
   "de": [
+    "settingsColorSchemeTitle",
+    "settingsColorSchemeSubtitle",
+    "settingsColorSchemeDefault",
+    "settingsColorSchemeBlue",
+    "settingsColorSchemePurple",
+    "settingsColorSchemeOrange",
     "projectsSearchHint",
     "filterByStatus",
     "filterByPriority",
@@ -284,10 +300,20 @@
     "ai_usage_charts",
     "export_csv",
     "average_cost",
-    "peak_times"
+    "peak_times",
+    "dashboard_theme_custom",
+    "select_layout_template",
+    "resize_widget",
+    "create_custom_widget"
   ],
 
   "es": [
+    "settingsColorSchemeTitle",
+    "settingsColorSchemeSubtitle",
+    "settingsColorSchemeDefault",
+    "settingsColorSchemeBlue",
+    "settingsColorSchemePurple",
+    "settingsColorSchemeOrange",
     "projectsSearchHint",
     "filterByStatus",
     "filterByPriority",
@@ -428,10 +454,20 @@
     "ai_usage_charts",
     "export_csv",
     "average_cost",
-    "peak_times"
+    "peak_times",
+    "dashboard_theme_custom",
+    "select_layout_template",
+    "resize_widget",
+    "create_custom_widget"
   ],
 
   "fr": [
+    "settingsColorSchemeTitle",
+    "settingsColorSchemeSubtitle",
+    "settingsColorSchemeDefault",
+    "settingsColorSchemeBlue",
+    "settingsColorSchemePurple",
+    "settingsColorSchemeOrange",
     "projectsSearchHint",
     "filterByStatus",
     "filterByPriority",
@@ -572,10 +608,20 @@
     "ai_usage_charts",
     "export_csv",
     "average_cost",
-    "peak_times"
+    "peak_times",
+    "dashboard_theme_custom",
+    "select_layout_template",
+    "resize_widget",
+    "create_custom_widget"
   ],
 
   "hi": [
+    "settingsColorSchemeTitle",
+    "settingsColorSchemeSubtitle",
+    "settingsColorSchemeDefault",
+    "settingsColorSchemeBlue",
+    "settingsColorSchemePurple",
+    "settingsColorSchemeOrange",
     "projectsSearchHint",
     "filterByStatus",
     "filterByPriority",
@@ -716,10 +762,20 @@
     "ai_usage_charts",
     "export_csv",
     "average_cost",
-    "peak_times"
+    "peak_times",
+    "dashboard_theme_custom",
+    "select_layout_template",
+    "resize_widget",
+    "create_custom_widget"
   ],
 
   "it": [
+    "settingsColorSchemeTitle",
+    "settingsColorSchemeSubtitle",
+    "settingsColorSchemeDefault",
+    "settingsColorSchemeBlue",
+    "settingsColorSchemePurple",
+    "settingsColorSchemeOrange",
     "projectsSearchHint",
     "filterByStatus",
     "filterByPriority",
@@ -860,10 +916,20 @@
     "ai_usage_charts",
     "export_csv",
     "average_cost",
-    "peak_times"
+    "peak_times",
+    "dashboard_theme_custom",
+    "select_layout_template",
+    "resize_widget",
+    "create_custom_widget"
   ],
 
   "ja": [
+    "settingsColorSchemeTitle",
+    "settingsColorSchemeSubtitle",
+    "settingsColorSchemeDefault",
+    "settingsColorSchemeBlue",
+    "settingsColorSchemePurple",
+    "settingsColorSchemeOrange",
     "projectsSearchHint",
     "filterByStatus",
     "filterByPriority",
@@ -1004,10 +1070,20 @@
     "ai_usage_charts",
     "export_csv",
     "average_cost",
-    "peak_times"
+    "peak_times",
+    "dashboard_theme_custom",
+    "select_layout_template",
+    "resize_widget",
+    "create_custom_widget"
   ],
 
   "ko": [
+    "settingsColorSchemeTitle",
+    "settingsColorSchemeSubtitle",
+    "settingsColorSchemeDefault",
+    "settingsColorSchemeBlue",
+    "settingsColorSchemePurple",
+    "settingsColorSchemeOrange",
     "projectsSearchHint",
     "filterByStatus",
     "filterByPriority",
@@ -1148,10 +1224,20 @@
     "ai_usage_charts",
     "export_csv",
     "average_cost",
-    "peak_times"
+    "peak_times",
+    "dashboard_theme_custom",
+    "select_layout_template",
+    "resize_widget",
+    "create_custom_widget"
   ],
 
   "nl": [
+    "settingsColorSchemeTitle",
+    "settingsColorSchemeSubtitle",
+    "settingsColorSchemeDefault",
+    "settingsColorSchemeBlue",
+    "settingsColorSchemePurple",
+    "settingsColorSchemeOrange",
     "captchaTitle",
     "captchaMessage",
     "captchaVerifyButton",
@@ -1259,6 +1345,12 @@
   ],
 
   "pt": [
+    "settingsColorSchemeTitle",
+    "settingsColorSchemeSubtitle",
+    "settingsColorSchemeDefault",
+    "settingsColorSchemeBlue",
+    "settingsColorSchemePurple",
+    "settingsColorSchemeOrange",
     "projectsSearchHint",
     "filterByStatus",
     "filterByPriority",
@@ -1399,10 +1491,20 @@
     "ai_usage_charts",
     "export_csv",
     "average_cost",
-    "peak_times"
+    "peak_times",
+    "dashboard_theme_custom",
+    "select_layout_template",
+    "resize_widget",
+    "create_custom_widget"
   ],
 
   "ru": [
+    "settingsColorSchemeTitle",
+    "settingsColorSchemeSubtitle",
+    "settingsColorSchemeDefault",
+    "settingsColorSchemeBlue",
+    "settingsColorSchemePurple",
+    "settingsColorSchemeOrange",
     "projectsSearchHint",
     "filterByStatus",
     "filterByPriority",
@@ -1543,10 +1645,20 @@
     "ai_usage_charts",
     "export_csv",
     "average_cost",
-    "peak_times"
+    "peak_times",
+    "dashboard_theme_custom",
+    "select_layout_template",
+    "resize_widget",
+    "create_custom_widget"
   ],
 
   "zh": [
+    "settingsColorSchemeTitle",
+    "settingsColorSchemeSubtitle",
+    "settingsColorSchemeDefault",
+    "settingsColorSchemeBlue",
+    "settingsColorSchemePurple",
+    "settingsColorSchemeOrange",
     "projectsSearchHint",
     "filterByStatus",
     "filterByPriority",
@@ -1687,6 +1799,10 @@
     "ai_usage_charts",
     "export_csv",
     "average_cost",
-    "peak_times"
+    "peak_times",
+    "dashboard_theme_custom",
+    "select_layout_template",
+    "resize_widget",
+    "create_custom_widget"
   ]
 }

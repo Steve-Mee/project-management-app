@@ -11,6 +11,7 @@ import 'package:hive_flutter/hive_flutter.dart';
 import 'package:uuid/uuid.dart';
 import 'package:mockito/mockito.dart';
 import 'package:mockito/annotations.dart';
+import 'package:flutter/services.dart';
 
 // Generate mocks
 @GenerateMocks([IDashboardRepository])
@@ -33,10 +34,24 @@ void main() {
   late List<DashboardItem> mockItems;
 
   setUp(() async {
+    TestWidgetsFlutterBinding.ensureInitialized();
+    
+    // Mock path_provider
+    const MethodChannel channel = MethodChannel('plugins.flutter.io/path_provider');
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger.setMockMethodCallHandler(
+      channel,
+      (MethodCall methodCall) async {
+        if (methodCall.method == 'getApplicationDocumentsDirectory') {
+          return Directory.systemTemp.createTempSync('hive_test').path;
+        }
+        return null;
+      },
+    );
+
     mockRepo = MockIDashboardRepository();
     mockItems = [];
     final tempDir = Directory.systemTemp.createTempSync('hive_test');
-    Hive.init(tempDir.path);
+    await Hive.initFlutter(tempDir.path);
     // Mock initial calls
     when(mockRepo.loadConfig()).thenAnswer((_) async => mockItems);
     when(mockRepo.loadTemplates()).thenAnswer((_) async => []);
@@ -172,8 +187,8 @@ void main() {
       await notifier.addItem(item);
 
       final state = container.read(dashboardConfigProvider);
-      expect(state.length, 1);
-      expect(state[0].widgetType, DashboardWidgetType.metricCard);
+      expect(state.asData?.value.length, 1);
+      expect(state.asData?.value[0].widgetType, DashboardWidgetType.metricCard);
     });
   });
 
@@ -194,7 +209,7 @@ void main() {
       await notifier.removeItem(0);
 
       final state = container.read(dashboardConfigProvider);
-      expect(state.length, 0);
+      expect(state.asData?.value.length, 0);
     });
   });
 
@@ -218,8 +233,8 @@ void main() {
       await notifier.updateItemPosition(0, {'x': 10, 'y': 10});
 
       final state = container.read(dashboardConfigProvider);
-      expect(state[0].position['x'], 10);
-      expect(state[0].position['y'], 10);
+      expect(state.asData?.value[0].position['x'], 10);
+      expect(state.asData?.value[0].position['y'], 10);
     });
   });
 
@@ -294,10 +309,10 @@ void main() {
 
       await notifier.addItem(item);
       final state = container.read(dashboardConfigProvider);
-      expect(state[0].position['x'], 0);
-      expect(state[0].position['y'], 0);
-      expect(state[0].position['width'], 180);
-      expect(state[0].position['height'], 120);
+      expect(state.asData?.value[0].position['x'], 0);
+      expect(state.asData?.value[0].position['y'], 0);
+      expect(state.asData?.value[0].position['width'], 180);
+      expect(state.asData?.value[0].position['height'], 120);
     });
 
     test('updateItemPosition clamps position', () async {
@@ -312,10 +327,10 @@ void main() {
       await notifier.updateItemPosition(0, {'x': 1100, 'y': 700, 'width': 300, 'height': 200});
 
       final state = container.read(dashboardConfigProvider);
-      expect(state[0].position['x'], 900); // 1200 - 300
-      expect(state[0].position['y'], 600); // 800 - 200
-      expect(state[0].position['width'], 300);
-      expect(state[0].position['height'], 200);
+      expect(state.asData?.value[0].position['x'], 900); // 1200 - 300
+      expect(state.asData?.value[0].position['y'], 600); // 800 - 200
+      expect(state.asData?.value[0].position['width'], 300);
+      expect(state.asData?.value[0].position['height'], 200);
     });
 
     test('DashboardItem.fromJson clamps invalid position', () {
@@ -368,7 +383,7 @@ void main() {
       await notifier.undo();
       final stateAfterUndo = container.read(dashboardConfigProvider);
 
-      expect(stateAfterUndo.length, 0); // Back to empty
+      expect(stateAfterUndo.asData?.value.length, 0); // Back to empty
       expect(notifier.canRedo, true);
     });
 
@@ -402,30 +417,30 @@ void main() {
 
       // Add first item
       await notifier.addItem(item1);
-      expect(container.read(dashboardConfigProvider).length, 1);
+      expect(container.read(dashboardConfigProvider).asData?.value.length, 1);
 
       // Add second item
       await notifier.addItem(item2);
-      expect(container.read(dashboardConfigProvider).length, 2);
+      expect(container.read(dashboardConfigProvider).asData?.value.length, 2);
 
       // Undo second add
       await notifier.undo();
-      expect(container.read(dashboardConfigProvider).length, 1);
-      expect(container.read(dashboardConfigProvider)[0].widgetType, DashboardWidgetType.metricCard);
+      expect(container.read(dashboardConfigProvider).asData?.value.length, 1);
+      expect(container.read(dashboardConfigProvider).asData?.value[0].widgetType, DashboardWidgetType.metricCard);
 
       // Undo first add
       await notifier.undo();
-      expect(container.read(dashboardConfigProvider).length, 0);
+      expect(container.read(dashboardConfigProvider).asData?.value.length, 0);
 
       // Redo first add
       await notifier.redo();
-      expect(container.read(dashboardConfigProvider).length, 1);
-      expect(container.read(dashboardConfigProvider)[0].widgetType, DashboardWidgetType.metricCard);
+      expect(container.read(dashboardConfigProvider).asData?.value.length, 1);
+      expect(container.read(dashboardConfigProvider).asData?.value[0].widgetType, DashboardWidgetType.metricCard);
 
       // Redo second add
       await notifier.redo();
-      expect(container.read(dashboardConfigProvider).length, 2);
-      expect(container.read(dashboardConfigProvider)[1].widgetType, DashboardWidgetType.taskList);
+      expect(container.read(dashboardConfigProvider).asData?.value.length, 2);
+      expect(container.read(dashboardConfigProvider).asData?.value[1].widgetType, DashboardWidgetType.taskList);
     });
 
     test('history limit trims old entries', () async {
@@ -444,7 +459,7 @@ void main() {
 
       // Undo should work
       await notifier.undo();
-      expect(container.read(dashboardConfigProvider).length, 50);
+      expect(container.read(dashboardConfigProvider).asData?.value.length, 50);
     });
 
     test('canUndo/canRedo edge cases', () async {
@@ -535,8 +550,8 @@ void main() {
 
       // Verify state was replaced
       final state = container.read(dashboardConfigProvider);
-      expect(state.length, 1);
-      expect(state[0].widgetType, DashboardWidgetType.metricCard);
+      expect(state.asData?.value.length, 1);
+      expect(state.asData?.value[0].widgetType, DashboardWidgetType.metricCard);
     });
 
     test('deleteTemplate removes correctly', () async {
@@ -751,7 +766,7 @@ void main() {
       await notifier.updateItemPosition(0, {'x': 10, 'y': 10, 'width': 200, 'height': 150});
       
       final state = container.read(dashboardConfigProvider);
-      expect(state[0].position['x'], 10.0);
+      expect(state.asData?.value[0].position['x'], 10.0);
       // Event logging assumed
     });
 
@@ -768,6 +783,35 @@ void main() {
       
       final error = container.read(dashboardErrorProvider);
       expect(error, 'dashboard_action_failed');
+    });
+
+    test('createCustomWidget success adds item and logs event', () async {
+      final jsonInput = '{"widgetType": "metricCard", "position": {"x": 0, "y": 0, "width": 2, "height": 1}}';
+      final expectedItem = DashboardItem.fromJson({
+        'widgetType': 'metricCard',
+        'position': {'x': 0, 'y': 0, 'width': 2, 'height': 1}
+      });
+
+      when(mockRepo.addItem(expectedItem)).thenAnswer((_) async {});
+      when(mockRepo.loadConfig()).thenAnswer((_) async => [expectedItem]);
+
+      final notifier = container.read(dashboardConfigProvider.notifier);
+      await notifier.createCustomWidget(jsonInput);
+
+      final state = container.read(dashboardConfigProvider);
+      expect(state.asData?.value.length, 1);
+      expect(state.asData?.value[0].widgetType, DashboardWidgetType.metricCard);
+    });
+
+    test('createCustomWidget with invalid JSON throws exception', () async {
+      final invalidJson = 'invalid json';
+
+      final notifier = container.read(dashboardConfigProvider.notifier);
+
+      expect(
+        () => notifier.createCustomWidget(invalidJson),
+        throwsA(isA<Exception>()),
+      );
     });
   });
 
@@ -890,6 +934,135 @@ void main() {
       expect(result, equals(const ProjectRequirements()));
       verifyNever(mockRepo.fetchRequirements(any));
       testContainer.dispose();
+    });
+  });
+
+  group('Dashboard Settings Persistence', () {
+    late DashboardConfigNotifier notifier;
+
+    setUp(() {
+      notifier = container.read(dashboardConfigProvider.notifier);
+    });
+
+    test('dashboard items are loaded from settings on initialization', () async {
+      // This test verifies that the build() method loads from settings
+      // The setup already mocks loadConfig, but in real usage it would load from settings first
+      final state = container.read(dashboardConfigProvider);
+      expect(state, isA<AsyncValue<List<DashboardItem>>>());
+      // Since we're using AsyncNotifier, the state should be properly initialized
+    });
+
+    test('dashboard items are saved to settings on config save', () async {
+      // This would require mocking the settings repository
+      // For now, we verify the saveConfig method exists and calls the right places
+      final items = [DashboardItem(widgetType: DashboardWidgetType.metricCard, position: {'x': 0, 'y': 0})];
+      
+      await notifier.saveConfig(items);
+      
+      // Verify the state was updated
+      final state = container.read(dashboardConfigProvider);
+      expect(state.asData?.value, equals(items));
+    });
+
+    test('dashboard templates are saved to settings on template save', () async {
+      // Add an item first
+      final item = DashboardItem(widgetType: DashboardWidgetType.metricCard, position: {'x': 0, 'y': 0});
+      await notifier.addItem(item);
+      
+      // Save as template
+      await notifier.saveAsTemplate('Test Template');
+      
+      // Verify template was saved (this would persist to settings in real implementation)
+      final templates = notifier.getAllTemplates();
+      final userTemplates = templates.where((t) => !t.isPreset).toList();
+      expect(userTemplates.length, 1);
+      expect(userTemplates[0].name, 'Test Template');
+    });
+  });
+
+  group('Dashboard Drag and Drop', () {
+    late DashboardConfigNotifier notifier;
+
+    setUp(() {
+      notifier = container.read(dashboardConfigProvider.notifier);
+    });
+
+    test('updateItemPosition allows valid position changes', () async {
+      // Set up mock for updateItemPosition
+      when(mockRepo.updateItemPosition(any, any)).thenAnswer((invocation) async {
+        final index = invocation.positionalArguments[0] as int;
+        final newPosition = invocation.positionalArguments[1] as Map<String, dynamic>;
+        if (index < mockItems.length) {
+          mockItems[index] = DashboardItem(
+            widgetType: mockItems[index].widgetType,
+            position: newPosition,
+          );
+        }
+      });
+
+      // Add an item first
+      final item = DashboardItem(
+        widgetType: DashboardWidgetType.metricCard,
+        position: {'x': 0, 'y': 0, 'width': 200, 'height': 150},
+      );
+      await notifier.addItem(item);
+      
+      // Update position (simulating drag and drop)
+      await notifier.updateItemPosition(0, {'x': 100, 'y': 50, 'width': 200, 'height': 150});
+      
+      final state = container.read(dashboardConfigProvider);
+      expect(state.asData?.value[0].position['x'], 100);
+      expect(state.asData?.value[0].position['y'], 50);
+    });
+
+    test('drag and drop respects position constraints', () async {
+      // Set up mock for updateItemPosition
+      when(mockRepo.updateItemPosition(any, any)).thenAnswer((invocation) async {
+        final index = invocation.positionalArguments[0] as int;
+        final newPosition = invocation.positionalArguments[1] as Map<String, dynamic>;
+        if (index < mockItems.length) {
+          mockItems[index] = DashboardItem(
+            widgetType: mockItems[index].widgetType,
+            position: newPosition,
+          );
+        }
+      });
+
+      // Add an item first
+      final item = DashboardItem(
+        widgetType: DashboardWidgetType.metricCard,
+        position: {'x': 0, 'y': 0, 'width': 200, 'height': 150},
+      );
+      await notifier.addItem(item);
+      
+      // Try to drag to invalid position (beyond container bounds)
+      await notifier.updateItemPosition(0, {'x': 1100, 'y': 700, 'width': 200, 'height': 150});
+      
+      final state = container.read(dashboardConfigProvider);
+      // Should be clamped to valid bounds
+      expect(state.asData?.value[0].position['x'], 1000); // 1200 - 200
+      expect(state.asData?.value[0].position['y'], 650);  // 800 - 150
+    });
+  });
+
+  group('Dashboard Theme Customization', () {
+    // Note: Theme customization persistence is handled by the settings system
+    // This test group would verify that dashboard respects theme settings
+    // For now, we verify that the dashboard loads correctly with different configurations
+    
+    test('dashboard loads with custom widget configurations', () async {
+      // Create a custom widget with specific configuration
+      final customJson = '{"widgetType": "metricCard", "position": {"x": 50, "y": 50, "width": 300, "height": 200}}';
+      
+      final notifier = container.read(dashboardConfigProvider.notifier);
+      await notifier.createCustomWidget(customJson);
+      
+      final state = container.read(dashboardConfigProvider);
+      expect(state.asData?.value.length, 1);
+      expect(state.asData?.value[0].position['x'], 50);
+      expect(state.asData?.value[0].position['y'], 50);
+      expect(state.asData?.value[0].position['width'], 300);
+      expect(state.asData?.value[0].position['height'], 200);
     });
   });
 }

@@ -54,6 +54,24 @@ class AppLocalizationsHi extends AppLocalizations {
   String get settingsFollowSystemSubtitle => 'डिवाइस थीम का उपयोग करें';
 
   @override
+  String get settingsColorSchemeTitle => 'Color scheme';
+
+  @override
+  String get settingsColorSchemeSubtitle => 'Choose your preferred color theme';
+
+  @override
+  String get settingsColorSchemeDefault => 'Default (Green)';
+
+  @override
+  String get settingsColorSchemeBlue => 'Blue';
+
+  @override
+  String get settingsColorSchemePurple => 'Purple';
+
+  @override
+  String get settingsColorSchemeOrange => 'Orange';
+
+  @override
   String get settingsLanguageTitle => 'भाषा';
 
   @override
@@ -1329,4 +1347,16 @@ class AppLocalizationsHi extends AppLocalizations {
 
   @override
   String get peak_times => 'Peak Times';
+
+  @override
+  String get dashboard_theme_custom => 'Custom Theme';
+
+  @override
+  String get select_layout_template => 'Select Layout Template';
+
+  @override
+  String get resize_widget => 'Resize Widget';
+
+  @override
+  String get create_custom_widget => 'Create Custom Widget';
 }

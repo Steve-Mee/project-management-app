@@ -9,7 +9,6 @@ class AppTheme {
 
   // Color constants
   static const Color _darkBackground = Color(0xFF121212);
-  static const Color _darkSurface = Color(0xFF1E1E1E);
   static const Color _primaryColor = Colors.green;
   static const Color primaryColor = Colors.green;
   static const Color accentColor = Colors.greenAccent;
@@ -57,20 +56,20 @@ class AppTheme {
   );
 
   /// Dark theme configuration with green primary color
-  static ThemeData darkTheme() {
+  static ThemeData darkTheme({int? seedColor}) {
     final baseTheme = ThemeData.dark();
+    final primaryColor = seedColor != null ? Color(seedColor) : _primaryColor;
     return baseTheme.copyWith(
-      primaryColor: _primaryColor,
+      primaryColor: primaryColor,
       scaffoldBackgroundColor: _darkBackground,
       appBarTheme: const AppBarTheme(
         backgroundColor: _darkBackground,
         elevation: 0,
         centerTitle: false,
       ),
-      colorScheme: ColorScheme.dark(
-        primary: _primaryColor,
-        secondary: Colors.greenAccent,
-        surface: _darkSurface,
+      colorScheme: ColorScheme.fromSeed(
+        seedColor: primaryColor,
+        brightness: Brightness.dark,
       ),
       cardTheme: _cardTheme,
       textTheme: _buildTextTheme(baseTheme.textTheme),
@@ -79,20 +78,20 @@ class AppTheme {
   }
 
   /// Light theme configuration with green primary color
-  static ThemeData lightTheme() {
+  static ThemeData lightTheme({int? seedColor}) {
     final baseTheme = ThemeData.light(useMaterial3: true);
+    final themePrimaryColor = seedColor != null ? Color(seedColor) : _primaryColor;
     return baseTheme.copyWith(
-      primaryColor: primaryColor,
+      primaryColor: themePrimaryColor,
       scaffoldBackgroundColor: const Color(0xFFF5F5F5),
       appBarTheme: const AppBarTheme(
         backgroundColor: Colors.white,
         elevation: 1,
         centerTitle: false,
       ),
-      colorScheme: ColorScheme.light(
-        primary: primaryColor,
-        secondary: accentColor,
-        surface: const Color(0xFFFAFAFA),
+      colorScheme: ColorScheme.fromSeed(
+        seedColor: themePrimaryColor,
+        brightness: Brightness.light,
       ),
       cardTheme: _cardTheme,
       textTheme: _buildTextTheme(baseTheme.textTheme, textColor: Colors.black87),

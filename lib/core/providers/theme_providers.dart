@@ -78,4 +78,25 @@ final searchQueryProvider = NotifierProvider<SearchQueryNotifier, String>(
   SearchQueryNotifier.new,
 );
 
+/// Notifier for managing custom color scheme seed
+class ColorSchemeSeedNotifier extends AsyncNotifier<int?> {
+  @override
+  Future<int?> build() async {
+    final settings = await ref.watch(settingsRepositoryProvider.future);
+    return settings.getColorSchemeSeed();
+  }
+
+  Future<void> setColorSchemeSeed(int? seed) async {
+    state = AsyncValue.data(seed);
+    final settings = await ref.read(settingsRepositoryProvider.future);
+    await settings.setColorSchemeSeed(seed);
+  }
+}
+
+/// Provider for managing custom color scheme seed across the application
+/// Returns null for default green theme, or an int color value for custom seed
+final colorSchemeSeedProvider = AsyncNotifierProvider<ColorSchemeSeedNotifier, int?>(
+  ColorSchemeSeedNotifier.new,
+);
+
 

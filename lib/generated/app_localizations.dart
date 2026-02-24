@@ -210,6 +210,42 @@ abstract class AppLocalizations {
   /// **'Use your device theme'**
   String get settingsFollowSystemSubtitle;
 
+  /// Title for the color scheme settings section.
+  ///
+  /// In en, this message translates to:
+  /// **'Color scheme'**
+  String get settingsColorSchemeTitle;
+
+  /// Subtitle for the color scheme settings section.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose your preferred color theme'**
+  String get settingsColorSchemeSubtitle;
+
+  /// Label for the default green color scheme option.
+  ///
+  /// In en, this message translates to:
+  /// **'Default (Green)'**
+  String get settingsColorSchemeDefault;
+
+  /// Label for the blue color scheme option.
+  ///
+  /// In en, this message translates to:
+  /// **'Blue'**
+  String get settingsColorSchemeBlue;
+
+  /// Label for the purple color scheme option.
+  ///
+  /// In en, this message translates to:
+  /// **'Purple'**
+  String get settingsColorSchemePurple;
+
+  /// Label for the orange color scheme option.
+  ///
+  /// In en, this message translates to:
+  /// **'Orange'**
+  String get settingsColorSchemeOrange;
+
   /// Auto-generated description for settingsLanguageTitle.
   ///
   /// In en, this message translates to:
@@ -2550,6 +2586,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Peak Times'**
   String get peak_times;
+
+  /// Label for custom dashboard theme option.
+  ///
+  /// In en, this message translates to:
+  /// **'Custom Theme'**
+  String get dashboard_theme_custom;
+
+  /// Button label for selecting a dashboard layout template.
+  ///
+  /// In en, this message translates to:
+  /// **'Select Layout Template'**
+  String get select_layout_template;
+
+  /// Label for widget resize functionality.
+  ///
+  /// In en, this message translates to:
+  /// **'Resize Widget'**
+  String get resize_widget;
+
+  /// Button label for creating a custom dashboard widget.
+  ///
+  /// In en, this message translates to:
+  /// **'Create Custom Widget'**
+  String get create_custom_widget;
 }
 
 class _AppLocalizationsDelegate

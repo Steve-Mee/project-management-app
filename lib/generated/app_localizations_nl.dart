@@ -54,6 +54,24 @@ class AppLocalizationsNl extends AppLocalizations {
   String get settingsFollowSystemSubtitle => 'Gebruik het thema van je toestel';
 
   @override
+  String get settingsColorSchemeTitle => 'Color scheme';
+
+  @override
+  String get settingsColorSchemeSubtitle => 'Choose your preferred color theme';
+
+  @override
+  String get settingsColorSchemeDefault => 'Default (Green)';
+
+  @override
+  String get settingsColorSchemeBlue => 'Blue';
+
+  @override
+  String get settingsColorSchemePurple => 'Purple';
+
+  @override
+  String get settingsColorSchemeOrange => 'Orange';
+
+  @override
   String get settingsLanguageTitle => 'Taal';
 
   @override
@@ -1334,4 +1352,16 @@ class AppLocalizationsNl extends AppLocalizations {
 
   @override
   String get peak_times => 'Piek Tijden';
+
+  @override
+  String get dashboard_theme_custom => 'Aangepast Thema';
+
+  @override
+  String get select_layout_template => 'Selecteer Layout Sjabloon';
+
+  @override
+  String get resize_widget => 'Widget Formaat Wijzigen';
+
+  @override
+  String get create_custom_widget => 'Aangepaste Widget Maken';
 }

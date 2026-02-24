@@ -7,7 +7,9 @@ import 'package:my_project_management_app/models/project_model.dart';
 import 'package:my_project_management_app/core/repository/i_dashboard_repository.dart';
 import 'package:my_project_management_app/core/repository/hive_dashboard_repository.dart';
 import 'project_providers.dart';
+import 'package:my_project_management_app/core/services/ai_parsers.dart';
 import 'package:my_project_management_app/core/services/app_logger.dart';
+import 'auth_providers.dart';
 import 'package:my_project_management_app/core/models/dashboard_types.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'connectivity_provider.dart';
@@ -36,7 +38,7 @@ DashboardWidgetType validateWidgetType(String value) {
 }
 
 /// Notifier for managing dashboard configuration with persistence, widget type validation, and undo/redo functionality
-class DashboardConfigNotifier extends Notifier<List<DashboardItem>> {
+class DashboardConfigNotifier extends AsyncNotifier<List<DashboardItem>> {
   late final IDashboardRepository _repository;
   late List<DashboardTemplate> _userTemplates;
   String? currentShareId;
@@ -107,12 +109,20 @@ class DashboardConfigNotifier extends Notifier<List<DashboardItem>> {
   bool get isOffline => _isOffline;
 
   @override
-  List<DashboardItem> build() {
+  Future<List<DashboardItem>> build() async {
     _repository = ref.read(dashboardRepositoryProvider);
     _userTemplates = [];
     _history.clear();
     _currentIndex = -1;
+
+    // Load from settings first, then repository
+    final settings = await ref.read(settingsRepositoryProvider.future);
+    final items = settings.getDashboardItems() ?? await _repository.loadConfig();
+    final templates = settings.getDashboardTemplates() ?? await _repository.loadTemplates();
+
+    _userTemplates = templates;
     _repository.preloadCache().then((_) => _pushToHistory());
+
     ref.listen(connectivityProvider, (previous, next) {
       final wasOffline = _isOffline;
       _isOffline = !(next.hasValue && (next.value == ConnectivityResult.wifi || next.value == ConnectivityResult.mobile));
@@ -127,18 +137,19 @@ class DashboardConfigNotifier extends Notifier<List<DashboardItem>> {
         });
       }
     });
-    return [];
+
+    return items;
   }
 
   Future<void> loadConfig() async {
     try {
       final items = await _repository.loadConfig();
-      state = items;
+      state = AsyncValue.data(items);
       _userTemplates = await _repository.loadTemplates();
       _logEvent('config_loaded');
     } catch (e, st) {
       await _logError('load_config', e, st);
-      state = [];
+      state = AsyncValue.error(e, st);
       _userTemplates = [];
       ref.read(dashboardErrorProvider.notifier).state = 'dashboard_load_error';
     }
@@ -147,8 +158,12 @@ class DashboardConfigNotifier extends Notifier<List<DashboardItem>> {
   Future<void> saveConfig(List<DashboardItem> items) async {
     try {
       await _repository.saveConfig(items);
-      state = items;
+      state = AsyncValue.data(items);
       _currentIndex = _history.length - 1;
+
+      // Save to settings for user-specific persistence
+      final settings = await ref.read(settingsRepositoryProvider.future);
+      await settings.setDashboardItems(items);
 
       // If shared, also push to Supabase
       if (currentShareId != null) {
@@ -308,7 +323,8 @@ class DashboardConfigNotifier extends Notifier<List<DashboardItem>> {
 
   /// Pushes current state to history stack and trims if necessary
   void _pushToHistory([List<DashboardItem>? stateToPush]) {
-    _history.add(_deepCopyState(stateToPush ?? state));
+    final currentState = stateToPush ?? state.asData?.value ?? [];
+    _history.add(_deepCopyState(currentState));
     _currentIndex = _history.length - 1;
     _trimHistory();
   }
@@ -328,8 +344,9 @@ class DashboardConfigNotifier extends Notifier<List<DashboardItem>> {
     if (canUndo) {
       int targetIndex = _currentIndex - 1;
       _currentIndex = targetIndex;
-      state = _deepCopyState(_history[_currentIndex]);
-      await saveConfig(state);
+      final newState = _deepCopyState(_history[_currentIndex]);
+      state = AsyncValue.data(newState);
+      await saveConfig(newState);
       _currentIndex = targetIndex;
       AppLogger.instance.d('Undid dashboard change');
     }
@@ -342,8 +359,9 @@ class DashboardConfigNotifier extends Notifier<List<DashboardItem>> {
     if (canRedo) {
       int targetIndex = _currentIndex + 1;
       _currentIndex = targetIndex;
-      state = _deepCopyState(_history[_currentIndex]);
-      await saveConfig(state);
+      final newState = _deepCopyState(_history[_currentIndex]);
+      state = AsyncValue.data(newState);
+      await saveConfig(newState);
       _currentIndex = targetIndex;
       AppLogger.instance.d('Redid dashboard change');
     }
@@ -363,7 +381,7 @@ class DashboardConfigNotifier extends Notifier<List<DashboardItem>> {
     final template = DashboardTemplate(
       id: DateTime.now().millisecondsSinceEpoch.toString(),
       name: name,
-      items: List.from(state),
+      items: List.from(state.asData?.value ?? []),
       isPreset: false,
       createdAt: DateTime.now(),
     );
@@ -371,6 +389,11 @@ class DashboardConfigNotifier extends Notifier<List<DashboardItem>> {
     userTemplates.add(template);
     await _repository.saveTemplates(userTemplates);
     _userTemplates = userTemplates;
+
+    // Save to settings for user-specific persistence
+    final settings = await ref.read(settingsRepositoryProvider.future);
+    await settings.setDashboardTemplates(userTemplates);
+
     AppLogger.instance.i('Saved dashboard as template: $name');
   }
 
@@ -399,6 +422,11 @@ class DashboardConfigNotifier extends Notifier<List<DashboardItem>> {
     userTemplates.removeWhere((t) => t.id == templateId && !t.isPreset);
     await _repository.saveTemplates(userTemplates);
     _userTemplates = userTemplates;
+
+    // Save to settings for user-specific persistence
+    final settings = await ref.read(settingsRepositoryProvider.future);
+    await settings.setDashboardTemplates(userTemplates);
+
     AppLogger.instance.i('Deleted dashboard template: $templateId');
   }
 
@@ -432,7 +460,7 @@ class DashboardConfigNotifier extends Notifier<List<DashboardItem>> {
       id: shareId,
       ownerId: currentUserId,
       title: title,
-      items: List.from(state),
+      items: List.from(state.asData?.value ?? []),
       permissions: {},
       updatedAt: DateTime.now(),
     );
@@ -478,7 +506,7 @@ class DashboardConfigNotifier extends Notifier<List<DashboardItem>> {
     }
 
     if (toUse != null) {
-      state = toUse.items;
+      state = AsyncValue.data(toUse.items);
       currentShareId = shareId;
       // Save the merged version locally
       await _repository.saveLocalSharedDashboard(toUse);
@@ -529,7 +557,7 @@ class DashboardConfigNotifier extends Notifier<List<DashboardItem>> {
         AppLogger.instance.d('Realtime event for shared dashboard $shareId: ${payload.eventType}');
         if (payload.eventType == PostgresChangeEvent.update) {
           final updated = SharedDashboard.fromJson(payload.newRecord);
-          state = updated.items;
+          state = AsyncValue.data(updated.items);
           _pushToHistory();
         }
       },
@@ -547,6 +575,25 @@ class DashboardConfigNotifier extends Notifier<List<DashboardItem>> {
   /// Logs dashboard events with optional parameters
   void _logEvent(String eventName, {Map<String, dynamic>? params}) {
     AppLogger.event('dashboard_$eventName', params: params);
+  }
+
+  /// Creates a custom widget from JSON input and adds it to the dashboard.
+  /// Parses and validates JSON using AiParsers.safeParseJson, creates DashboardItem,
+  /// and adds it via addItem. Logs 'custom_widget_created' event.
+  Future<void> createCustomWidget(String jsonInput) async {
+    try {
+      final parsedJson = AiParsers.safeParseJson(jsonInput);
+      if (parsedJson is! Map<String, dynamic>) {
+        throw Exception('Parsed JSON must be an object with widgetType and position fields');
+      }
+      final item = DashboardItem.fromJson(parsedJson);
+      await addItem(item);
+      AppLogger.event('custom_widget_created');
+    } catch (e, st) {
+      await _logError('create_custom_widget', e, st);
+      ref.read(dashboardErrorProvider.notifier).state = 'dashboard_action_failed';
+      rethrow;
+    }
   }
 }
 
@@ -620,7 +667,7 @@ class DashboardConfigNotifier extends Notifier<List<DashboardItem>> {
 /// See .github/issues/022-dashboard-undo-redo.md for details
 
 /// Provider for dashboard configuration with widget type validation
-final dashboardConfigProvider = NotifierProvider<DashboardConfigNotifier, List<DashboardItem>>(
+final dashboardConfigProvider = AsyncNotifierProvider<DashboardConfigNotifier, List<DashboardItem>>(
   DashboardConfigNotifier.new,
 );
 
@@ -677,6 +724,14 @@ final projectRequirementsProvider = Provider.family<FutureProvider<ProjectRequir
       },
     );
   });
+});
+
+/// Provider for dashboard layout templates (presets and user templates)
+/// Combines built-in presets with user-created templates
+final layoutTemplatesProvider = Provider<List<DashboardTemplate>>((ref) {
+  final dashboardNotifier = ref.watch(dashboardConfigProvider.notifier);
+  // Get all available templates (built-in presets + user templates)
+  return dashboardNotifier.getAllTemplates();
 });
 
 /// Provider for tracking offline sync status

@@ -343,6 +343,11 @@ class _MyAppState extends ConsumerState<MyApp> {
       data: (t) => t,
       orElse: () => ThemeMode.system,
     );
+    final colorSchemeSeedAsync = ref.watch(colorSchemeSeedProvider);
+    final colorSchemeSeed = colorSchemeSeedAsync.maybeWhen(
+      data: (seed) => seed,
+      orElse: () => null,
+    );
     final authState = ref.watch(authProvider).value!;
     final localeAsync = ref.watch(localeProvider);
     final locale = localeAsync.maybeWhen(
@@ -379,8 +384,8 @@ class _MyAppState extends ConsumerState<MyApp> {
               debugShowCheckedModeBanner: false,
               locale: locale,
               themeMode: currentThemeMode,
-              theme: AppTheme.lightTheme(),
-              darkTheme: AppTheme.darkTheme(),
+              theme: AppTheme.lightTheme(seedColor: colorSchemeSeed),
+              darkTheme: AppTheme.darkTheme(seedColor: colorSchemeSeed),
               localizationsDelegates: AppLocalizations.localizationsDelegates,
               supportedLocales: AppLocalizations.supportedLocales,
               home: const LoginScreen(),
@@ -402,10 +407,10 @@ class _MyAppState extends ConsumerState<MyApp> {
             locale: locale,
 
             // Light theme configuration
-            theme: AppTheme.lightTheme(),
+            theme: AppTheme.lightTheme(seedColor: colorSchemeSeed),
 
             // Dark theme configuration
-            darkTheme: AppTheme.darkTheme(),
+            darkTheme: AppTheme.darkTheme(seedColor: colorSchemeSeed),
 
             localizationsDelegates: AppLocalizations.localizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,

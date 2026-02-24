@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import '../models/ai_rate_limits_config.dart';
 import '../services/app_logger.dart';
+import '../repository/i_dashboard_repository.dart';
 
 /// Repository for app settings persisted with Hive.
 class SettingsRepository {
@@ -19,6 +20,9 @@ class SettingsRepository {
   static const String _enableBiometricLoginKey = 'enable_biometric_login';
   static const String _aiRateLimitsKey = 'ai_rate_limits';
   static const String _recaptchaSiteKey = 'recaptcha_site_key';
+  static const String _colorSchemeSeedKey = 'color_scheme_seed';
+  static const String _dashboardItemsKey = 'dashboard_items';
+  static const String _dashboardTemplatesKey = 'dashboard_templates';
 
   Future<void> initialize() async {
     await Hive.initFlutter();
@@ -202,5 +206,67 @@ class SettingsRepository {
 
   Future<void> setRecaptchaSiteKey(String key) async {
     await _box.put(_recaptchaSiteKey, key);
+  }
+
+  int? getColorSchemeSeed() {
+    final value = _box.get(_colorSchemeSeedKey);
+    if (value is int) {
+      return value;
+    }
+    return null;
+  }
+
+  Future<void> setColorSchemeSeed(int? seed) async {
+    if (seed == null) {
+      await _box.delete(_colorSchemeSeedKey);
+      return;
+    }
+    await _box.put(_colorSchemeSeedKey, seed);
+  }
+
+  List<DashboardItem>? getDashboardItems() {
+    final value = _box.get(_dashboardItemsKey);
+    if (value is List) {
+      try {
+        return value.map((item) {
+          if (item is Map<String, dynamic>) {
+            return DashboardItem.fromJson(item);
+          }
+          return null;
+        }).whereType<DashboardItem>().toList();
+      } catch (e) {
+        AppLogger.instance.w('Failed to parse dashboard items from settings', error: e);
+        return null;
+      }
+    }
+    return null;
+  }
+
+  Future<void> setDashboardItems(List<DashboardItem> items) async {
+    final jsonItems = items.map((item) => item.toJson()).toList();
+    await _box.put(_dashboardItemsKey, jsonItems);
+  }
+
+  List<DashboardTemplate>? getDashboardTemplates() {
+    final value = _box.get(_dashboardTemplatesKey);
+    if (value is List) {
+      try {
+        return value.map((template) {
+          if (template is Map<String, dynamic>) {
+            return DashboardTemplate.fromJson(template);
+          }
+          return null;
+        }).whereType<DashboardTemplate>().toList();
+      } catch (e) {
+        AppLogger.instance.w('Failed to parse dashboard templates from settings', error: e);
+        return null;
+      }
+    }
+    return null;
+  }
+
+  Future<void> setDashboardTemplates(List<DashboardTemplate> templates) async {
+    final jsonTemplates = templates.map((template) => template.toJson()).toList();
+    await _box.put(_dashboardTemplatesKey, jsonTemplates);
   }
 }
