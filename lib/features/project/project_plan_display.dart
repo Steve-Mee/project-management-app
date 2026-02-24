@@ -1712,7 +1712,6 @@ Provide a brief summary:
           .maybeSingle();
 
       final level = subData?['subscription_level'] as String? ?? 'free';
-      // final stripeCustomerId = subData?['stripe_customer_id'] as String?; // For future Stripe integration
       final status = subData?['status'] as String? ?? 'inactive';
 
       if (level == 'PremiumPlus' && status == 'active') {

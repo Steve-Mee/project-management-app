@@ -11,6 +11,7 @@ import 'package:my_project_management_app/core/providers/ai/index.dart'
     show useProjectFilesProvider;
 import '../../core/providers/auth_providers.dart';
 import '../../core/providers/theme_providers.dart';
+import '../../core/providers/payment_providers.dart';
 import '../../core/services/project_transfer_service.dart';
 import '../../features/dashboard/customize_dashboard_screen.dart';
 import '../../core/config/ai_config.dart' as ai_config;
@@ -58,6 +59,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     final canViewSettings = ref.watch(
       hasPermissionProvider(AppPermissions.viewSettings),
     );
+
+    final enableRealPaymentBackendAsync = ref.watch(enableRealPaymentBackendProvider);
 
     final isDarkMode = themeModeAsync.maybeWhen(
       data: (mode) => mode == ThemeMode.dark,
@@ -423,6 +426,94 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           ),
           const Divider(),
 
+          // Subscription Section
+          ListTile(
+            leading: Icon(
+              Icons.star,
+              color: Theme.of(context).colorScheme.primary,
+            ),
+            title: const Text(
+              'Subscription',
+              style: TextStyle(fontWeight: FontWeight.w600),
+            ),
+          ),
+          Consumer(
+            builder: (context, ref, child) {
+              final paymentState = ref.watch(paymentProvider);
+              final authState = ref.watch(authProvider).value!;
+
+              return paymentState.when(
+                data: (status) {
+                  final isPremium = authState.subscriptionLevel == 'Premium' || authState.subscriptionLevel == 'PremiumPlus';
+
+                  if (isPremium) {
+                    return ListTile(
+                      leading: Icon(
+                        Icons.check_circle,
+                        color: Colors.green,
+                      ),
+                      title: Text('Premium ${authState.subscriptionLevel}'),
+                      subtitle: const Text('You have an active premium subscription'),
+                    );
+                  }
+
+                  // Show upgrade button or error/retry state
+                  return ListTile(
+                    leading: Icon(
+                      status.status == 'error' ? Icons.error : Icons.upgrade,
+                      color: status.status == 'error' ? Colors.red : Theme.of(context).colorScheme.secondary,
+                    ),
+                    title: Text(status.status == 'error' ? 'Payment Failed' : 'Upgrade to Premium'),
+                    subtitle: Text(status.status == 'error' ? status.message ?? 'Unknown error' : 'Unlock advanced features'),
+                    trailing: status.status == 'processing'
+                        ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : null,
+                    onTap: status.status == 'processing'
+                        ? null
+                        : () async {
+                            if (status.status == 'error') {
+                              // Retry payment
+                              await ref.read(paymentProvider.notifier).retryPayment(
+                                amount: 999, // $9.99
+                                currency: 'usd',
+                                product: 'Premium',
+                              );
+                            } else {
+                              // Start new payment
+                              await ref.read(paymentProvider.notifier).createCheckoutSession(
+                                amount: 999, // $9.99
+                                currency: 'usd',
+                                product: 'Premium',
+                              );
+                            }
+                          },
+                  );
+                },
+                loading: () => const ListTile(
+                  leading: SizedBox(
+                    width: 24,
+                    height: 24,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  ),
+                  title: Text('Loading...'),
+                ),
+                error: (error, stack) => ListTile(
+                  leading: Icon(
+                    Icons.error,
+                    color: Colors.red,
+                  ),
+                  title: const Text('Error loading payment status'),
+                  subtitle: Text(error.toString()),
+                ),
+              );
+            },
+          ),
+          const Divider(),
+
           // Projects Section
           ListTile(
             leading: Icon(
@@ -646,6 +737,27 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               title: Text(l10n.adminPanelTitle),
               subtitle: Text(l10n.adminPanelSubtitle),
               onTap: () => _openAdminPanel(context),
+            ),
+          if (canManageRoles)
+            SwitchListTile(
+              value: enableRealPaymentBackendAsync.maybeWhen(
+                data: (enabled) => enabled,
+                orElse: () => false,
+              ),
+              onChanged: (value) {
+                ref
+                    .read(enableRealPaymentBackendProvider.notifier)
+                    .setEnableRealPaymentBackend(value);
+              },
+              title: Text(l10n.enable_real_payment_backend),
+              subtitle: enableRealPaymentBackendAsync.maybeWhen(
+                data: (enabled) => enabled ? Text(l10n.real_backend_warning) : null,
+                orElse: () => null,
+              ),
+              secondary: Icon(
+                Icons.payment,
+                color: Theme.of(context).colorScheme.secondary,
+              ),
             ),
           const Divider(),
 
@@ -1211,6 +1323,129 @@ class _AiSettingsSection extends ConsumerWidget {
               ),
             ],
           ),
+        ),
+        // Subscription Section
+        ListTile(
+          leading: Icon(
+            Icons.star,
+            color: Theme.of(context).colorScheme.primary,
+          ),
+          title: Text(
+            'Subscription',
+            style: Theme.of(context).textTheme.titleMedium,
+          ),
+        ),
+        Consumer(
+          builder: (context, ref, child) {
+            final paymentState = ref.watch(paymentProvider);
+            return ListTile(
+              leading: const Icon(Icons.upgrade),
+              title: const Text('Upgrade Subscription'),
+              subtitle: const Text('Get premium features and higher limits'),
+              trailing: paymentState.maybeWhen(
+                data: (status) {
+                  switch (status.status) {
+                    case 'processing':
+                      return const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      );
+                    case 'success':
+                      return Icon(
+                        Icons.check_circle,
+                        color: Theme.of(context).colorScheme.primary,
+                      );
+                    case 'error':
+                      return Icon(
+                        Icons.error,
+                        color: Theme.of(context).colorScheme.error,
+                      );
+                    default:
+                      return const Icon(Icons.arrow_forward_ios);
+                  }
+                },
+                loading: () => const SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+                error: (error, stack) => Icon(
+                  Icons.error,
+                  color: Theme.of(context).colorScheme.error,
+                ),
+                orElse: () => const Icon(Icons.arrow_forward_ios),
+              ),
+              onTap: paymentState.maybeWhen(
+                data: (status) {
+                  if (status.status == 'processing') return null;
+                  
+                  // If there's an error, show retry option
+                  if (status.status == 'error') {
+                    return () async {
+                      try {
+                        await ref.read(paymentProvider.notifier).retryPayment(
+                          amount: 999,
+                          currency: 'usd',
+                          product: 'Premium Subscription',
+                        );
+                      } catch (e) {
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('Retry failed: $e')),
+                          );
+                        }
+                      }
+                    };
+                  }
+                  
+                  // Normal upgrade flow
+                  return () async {
+                    try {
+                      final sessionId = await ref.read(paymentProvider.notifier).createCheckoutSession(
+                        amount: 999, // $9.99
+                        currency: 'usd',
+                        product: 'Premium Subscription',
+                      );
+                      if (context.mounted) {
+                        // Show success dialog with session info
+                        showDialog(
+                          context: context,
+                          builder: (context) => AlertDialog(
+                            title: const Text('Checkout Created'),
+                            content: Text('Session ID: $sessionId\n\nIn production, this would open Stripe Checkout.'),
+                            actions: [
+                              TextButton(
+                                onPressed: () => Navigator.of(context).pop(),
+                                child: const Text('OK'),
+                              ),
+                            ],
+                          ),
+                        );
+                      }
+                    } catch (e) {
+                      if (context.mounted) {
+                        showDialog(
+                          context: context,
+                          builder: (context) => AlertDialog(
+                            title: const Text('Error'),
+                            content: Text('Failed to create checkout: $e'),
+                            actions: [
+                              TextButton(
+                                onPressed: () => Navigator.of(context).pop(),
+                                child: const Text('OK'),
+                              ),
+                            ],
+                          ),
+                        );
+                      }
+                    }
+                  };
+                },
+                orElse: () => null,
+              ),
+            );
+          },
         ),
         // Help Level Dropdown
         ListTile(

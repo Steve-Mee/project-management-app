@@ -89,6 +89,7 @@ dependencies:
 
   intl: any
   flutter_gcaptcha_v3: ^2.1.1
+  flutter_stripe: ^12.3.0
 dev_dependencies:
   flutter_test:
     sdk: flutter

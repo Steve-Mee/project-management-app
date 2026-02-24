@@ -150,7 +150,13 @@
     "dashboard_theme_custom",
     "select_layout_template",
     "resize_widget",
-    "create_custom_widget"
+    "create_custom_widget",
+    "upgrade_subscription",
+    "payment_processing",
+    "payment_success",
+    "payment_failed",
+    "enable_real_payment_backend",
+    "real_backend_warning"
   ],
 
   "de": [
@@ -304,7 +310,13 @@
     "dashboard_theme_custom",
     "select_layout_template",
     "resize_widget",
-    "create_custom_widget"
+    "create_custom_widget",
+    "upgrade_subscription",
+    "payment_processing",
+    "payment_success",
+    "payment_failed",
+    "enable_real_payment_backend",
+    "real_backend_warning"
   ],
 
   "es": [
@@ -458,7 +470,13 @@
     "dashboard_theme_custom",
     "select_layout_template",
     "resize_widget",
-    "create_custom_widget"
+    "create_custom_widget",
+    "upgrade_subscription",
+    "payment_processing",
+    "payment_success",
+    "payment_failed",
+    "enable_real_payment_backend",
+    "real_backend_warning"
   ],
 
   "fr": [
@@ -612,7 +630,13 @@
     "dashboard_theme_custom",
     "select_layout_template",
     "resize_widget",
-    "create_custom_widget"
+    "create_custom_widget",
+    "upgrade_subscription",
+    "payment_processing",
+    "payment_success",
+    "payment_failed",
+    "enable_real_payment_backend",
+    "real_backend_warning"
   ],
 
   "hi": [
@@ -766,7 +790,13 @@
     "dashboard_theme_custom",
     "select_layout_template",
     "resize_widget",
-    "create_custom_widget"
+    "create_custom_widget",
+    "upgrade_subscription",
+    "payment_processing",
+    "payment_success",
+    "payment_failed",
+    "enable_real_payment_backend",
+    "real_backend_warning"
   ],
 
   "it": [
@@ -920,7 +950,13 @@
     "dashboard_theme_custom",
     "select_layout_template",
     "resize_widget",
-    "create_custom_widget"
+    "create_custom_widget",
+    "upgrade_subscription",
+    "payment_processing",
+    "payment_success",
+    "payment_failed",
+    "enable_real_payment_backend",
+    "real_backend_warning"
   ],
 
   "ja": [
@@ -1074,7 +1110,13 @@
     "dashboard_theme_custom",
     "select_layout_template",
     "resize_widget",
-    "create_custom_widget"
+    "create_custom_widget",
+    "upgrade_subscription",
+    "payment_processing",
+    "payment_success",
+    "payment_failed",
+    "enable_real_payment_backend",
+    "real_backend_warning"
   ],
 
   "ko": [
@@ -1228,7 +1270,13 @@
     "dashboard_theme_custom",
     "select_layout_template",
     "resize_widget",
-    "create_custom_widget"
+    "create_custom_widget",
+    "upgrade_subscription",
+    "payment_processing",
+    "payment_success",
+    "payment_failed",
+    "enable_real_payment_backend",
+    "real_backend_warning"
   ],
 
   "nl": [
@@ -1495,7 +1543,13 @@
     "dashboard_theme_custom",
     "select_layout_template",
     "resize_widget",
-    "create_custom_widget"
+    "create_custom_widget",
+    "upgrade_subscription",
+    "payment_processing",
+    "payment_success",
+    "payment_failed",
+    "enable_real_payment_backend",
+    "real_backend_warning"
   ],
 
   "ru": [
@@ -1649,7 +1703,13 @@
     "dashboard_theme_custom",
     "select_layout_template",
     "resize_widget",
-    "create_custom_widget"
+    "create_custom_widget",
+    "upgrade_subscription",
+    "payment_processing",
+    "payment_success",
+    "payment_failed",
+    "enable_real_payment_backend",
+    "real_backend_warning"
   ],
 
   "zh": [
@@ -1803,6 +1863,12 @@
     "dashboard_theme_custom",
     "select_layout_template",
     "resize_widget",
-    "create_custom_widget"
+    "create_custom_widget",
+    "upgrade_subscription",
+    "payment_processing",
+    "payment_success",
+    "payment_failed",
+    "enable_real_payment_backend",
+    "real_backend_warning"
   ]
 }

@@ -1364,4 +1364,24 @@ class AppLocalizationsNl extends AppLocalizations {
 
   @override
   String get create_custom_widget => 'Aangepaste Widget Maken';
+
+  @override
+  String get upgrade_subscription => 'Upgraden naar Premium';
+
+  @override
+  String get payment_processing => 'Betaling verwerken...';
+
+  @override
+  String get payment_success => 'Betaling geslaagd!';
+
+  @override
+  String get payment_failed => 'Betaling mislukt';
+
+  @override
+  String get enable_real_payment_backend =>
+      'Ware betalingsbackend inschakelen (alleen productie)';
+
+  @override
+  String get real_backend_warning =>
+      '⚠️ WAARSCHUWING: Dit schakelt echte Stripe-betalingen in. Alleen inschakelen in productie met juiste backend-configuratie.';
 }

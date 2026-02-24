@@ -1325,5 +1325,29 @@
   "create_custom_widget": "Aangepaste Widget Maken",
   "@create_custom_widget": {
     "description": "Button label for creating a custom dashboard widget."
+  },
+  "upgrade_subscription": "Upgraden naar Premium",
+  "@upgrade_subscription": {
+    "description": "Button label for upgrading to premium subscription."
+  },
+  "payment_processing": "Betaling verwerken...",
+  "@payment_processing": {
+    "description": "Message shown while payment is being processed."
+  },
+  "payment_success": "Betaling geslaagd!",
+  "@payment_success": {
+    "description": "Message shown when payment succeeds."
+  },
+  "payment_failed": "Betaling mislukt",
+  "@payment_failed": {
+    "description": "Message shown when payment fails."
+  },
+  "enable_real_payment_backend": "Ware betalingsbackend inschakelen (alleen productie)",
+  "@enable_real_payment_backend": {
+    "description": "Label for the switch to enable real payment backend."
+  },
+  "real_backend_warning": "⚠️ WAARSCHUWING: Dit schakelt echte Stripe-betalingen in. Alleen inschakelen in productie met juiste backend-configuratie.",
+  "@real_backend_warning": {
+    "description": "Warning text shown when real payment backend is enabled."
   }
 }

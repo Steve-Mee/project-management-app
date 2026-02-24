@@ -1840,5 +1840,29 @@
   "create_custom_widget": "Create Custom Widget",
   "@create_custom_widget": {
     "description": "Button label for creating a custom dashboard widget."
+  },
+  "upgrade_subscription": "Upgrade to Premium",
+  "@upgrade_subscription": {
+    "description": "Button label for upgrading to premium subscription."
+  },
+  "payment_processing": "Processing payment...",
+  "@payment_processing": {
+    "description": "Message shown while payment is being processed."
+  },
+  "payment_success": "Payment successful!",
+  "@payment_success": {
+    "description": "Message shown when payment succeeds."
+  },
+  "payment_failed": "Payment failed",
+  "@payment_failed": {
+    "description": "Message shown when payment fails."
+  },
+  "enable_real_payment_backend": "Enable Real Payment Backend (Production Only)",
+  "@enable_real_payment_backend": {
+    "description": "Label for the switch to enable real payment backend."
+  },
+  "real_backend_warning": "⚠️ WARNING: This enables real Stripe payments. Only enable in production with proper backend configuration.",
+  "@real_backend_warning": {
+    "description": "Warning text shown when real payment backend is enabled."
   }
 }

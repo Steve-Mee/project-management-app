@@ -8,6 +8,7 @@ import '../../services/app_logger.dart';
 import '../../models/ai_usage_record.dart';
 import '../../repository/i_ai_usage_repository.dart';
 import '../../repository/ai_usage_repository.dart';
+import '../auth_providers.dart';
 
 /// Model for AI usage data
 class AiUsage {
@@ -60,6 +61,17 @@ final aiUsageProvider = FutureProvider<AiUsage>((ref) async {
   }
 
   try {
+    // Get subscription level from settings
+    final settings = await ref.watch(settingsRepositoryProvider.future);
+    final subscriptionLevel = settings.getSubscriptionLevel();
+    
+    // Calculate monthly limit based on subscription
+    final monthlyLimit = switch (subscriptionLevel) {
+      'premium' => 10000,
+      'premium_plus' => 100000,
+      _ => 1000, // free tier
+    };
+
     // Fetch AI usage data from 'ai_usage' table
     final response = await supabase
         .from('ai_usage')
@@ -68,12 +80,16 @@ final aiUsageProvider = FutureProvider<AiUsage>((ref) async {
         .maybeSingle();
 
     if (response == null) {
-      // No usage data found, return defaults
-      return AiUsage.defaultUsage();
+      // No usage data found, return defaults with subscription-based limit
+      return AiUsage(tokensUsed: 0, monthlyLimit: monthlyLimit);
     }
 
-    // Parse the response data
-    return AiUsage.fromJson(response);
+    // Parse the response data but override limit with subscription-based limit
+    final usage = AiUsage.fromJson(response);
+    return AiUsage(
+      tokensUsed: usage.tokensUsed,
+      monthlyLimit: monthlyLimit,
+    );
   } catch (e) {
     // Log error but return default usage to prevent app crashes
     // In production, you might want to use a logging service here

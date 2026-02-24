@@ -15,6 +15,7 @@ import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:window_manager/window_manager.dart';
 import 'package:app_links/app_links.dart';
+import 'package:flutter_stripe/flutter_stripe.dart';
 import 'package:my_project_management_app/generated/app_localizations.dart';
 import 'core/theme.dart';
 import 'package:my_project_management_app/core/providers.dart';
@@ -98,6 +99,10 @@ void main() async {
     url: env['url']!,
     anonKey: env['anonKey']!,
   );
+  // Initialize Stripe
+  Stripe.publishableKey = dotenv.env['STRIPE_PUBLISHABLE_KEY'] ?? '';
+  Stripe.merchantIdentifier = 'merchant.com.example';
+  Stripe.urlScheme = 'flutterstripe';
   Hive.registerAdapter(ProjectModelAdapter());
   Hive.registerAdapter(TaskStatusAdapter());
   Hive.registerAdapter(TaskAdapter());

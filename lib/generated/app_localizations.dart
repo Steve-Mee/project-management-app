@@ -2610,6 +2610,42 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Create Custom Widget'**
   String get create_custom_widget;
+
+  /// Button label for upgrading to premium subscription.
+  ///
+  /// In en, this message translates to:
+  /// **'Upgrade to Premium'**
+  String get upgrade_subscription;
+
+  /// Message shown while payment is being processed.
+  ///
+  /// In en, this message translates to:
+  /// **'Processing payment...'**
+  String get payment_processing;
+
+  /// Message shown when payment succeeds.
+  ///
+  /// In en, this message translates to:
+  /// **'Payment successful!'**
+  String get payment_success;
+
+  /// Message shown when payment fails.
+  ///
+  /// In en, this message translates to:
+  /// **'Payment failed'**
+  String get payment_failed;
+
+  /// Label for the switch to enable real payment backend.
+  ///
+  /// In en, this message translates to:
+  /// **'Enable Real Payment Backend (Production Only)'**
+  String get enable_real_payment_backend;
+
+  /// Warning text shown when real payment backend is enabled.
+  ///
+  /// In en, this message translates to:
+  /// **'⚠️ WARNING: This enables real Stripe payments. Only enable in production with proper backend configuration.'**
+  String get real_backend_warning;
 }
 
 class _AppLocalizationsDelegate

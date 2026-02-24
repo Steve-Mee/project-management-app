@@ -87,13 +87,46 @@ class AiChatNotifier extends AsyncNotifier<AiChatState> {
   // Maximum queue size to prevent unbounded growth
   static const int _maxQueueSize = 100;
 
+  /// Get rate limits based on subscription level
+  AiRateLimitsConfig _getSubscriptionBasedRateLimits(AiRateLimitsConfig baseConfig, String? subscriptionLevel) {
+    final level = subscriptionLevel ?? 'free';
+    
+    // Apply subscription multipliers
+    final multiplier = switch (level) {
+      'premium' => 2.0,      // 2x limits for Premium
+      'premium_plus' => 5.0, // 5x limits for Premium Plus
+      _ => 1.0,              // 1x limits for free/basic
+    };
+
+    final scaledConfig = AiRateLimitsConfig(
+      maxRequestsPerMinute: (baseConfig.maxRequestsPerMinute * multiplier).round(),
+      maxRequestsPerHour: (baseConfig.maxRequestsPerHour * multiplier).round(),
+      maxRequestsPerDay: (baseConfig.maxRequestsPerDay * multiplier).round(),
+      maxTokensPerRequest: (baseConfig.maxTokensPerRequest * multiplier).round(),
+      maxTotalTokensPerDay: (baseConfig.maxTotalTokensPerDay * multiplier).round(),
+      maxRequestsPerWindow: (baseConfig.maxRequestsPerWindow * multiplier).round(),
+      timeWindowDuration: baseConfig.timeWindowDuration,
+      backoffBaseDelay: baseConfig.backoffBaseDelay,
+      backoffMaxDelay: baseConfig.backoffMaxDelay,
+      maxRetryAttempts: baseConfig.maxRetryAttempts,
+      perOperationLimits: baseConfig.perOperationLimits.map(
+        (operation, limit) => MapEntry(operation, (limit * multiplier).round()),
+      ),
+    );
+
+    // Validate the scaled config
+    return AiRateLimitsConfig.validateAiRateLimits(scaledConfig);
+  }
+
   @override
   Future<AiChatState> build() async {
     try {
       final settings = await ref.watch(settingsRepositoryProvider.future);
-      _rateLimitsConfig = settings.getAiRateLimitsConfig();
-      // Validate the config to ensure safe values
-      _rateLimitsConfig = AiRateLimitsConfig.validateAiRateLimits(_rateLimitsConfig!);
+      final baseConfig = settings.getAiRateLimitsConfig();
+      final subscriptionLevel = settings.getSubscriptionLevel();
+      
+      // Apply subscription-based rate limits
+      _rateLimitsConfig = _getSubscriptionBasedRateLimits(baseConfig, subscriptionLevel);
       
       // Restore persisted queue from previous app sessions
       await restoreQueue();

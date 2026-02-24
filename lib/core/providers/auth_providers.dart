@@ -73,6 +73,7 @@ class AuthState {
   final String? username;
   final String? roleId;
   final String? roleName;
+  final String? subscriptionLevel;
   final String? error;
 
   const AuthState({
@@ -80,6 +81,7 @@ class AuthState {
     this.username,
     this.roleId,
     this.roleName,
+    this.subscriptionLevel,
     this.error,
   });
 
@@ -88,6 +90,7 @@ class AuthState {
     String? username,
     String? roleId,
     String? roleName,
+    String? subscriptionLevel,
     String? error,
   }) {
     return AuthState(
@@ -95,6 +98,7 @@ class AuthState {
       username: username ?? this.username,
       roleId: roleId ?? this.roleId,
       roleName: roleName ?? this.roleName,
+      subscriptionLevel: subscriptionLevel ?? this.subscriptionLevel,
       error: error,
     );
   }
@@ -168,7 +172,7 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
   Future<AuthState> _checkInitialAuthState() async {
     final current = Supabase.instance.client.auth.currentUser;
     if (current != null) {
-      return _createAuthenticatedState(current);
+      return await _createAuthenticatedState(current);
     }
 
     // Add async settings check for auto-login
@@ -182,24 +186,46 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
     return const AuthState(isAuthenticated: false);
   }
 
-  AuthState _createAuthenticatedState(dynamic user) {
+  Future<AuthState> _createAuthenticatedState(dynamic user) async {
     final email = user.email ?? user.id;
     final IAuthRepository repo = ref.read(authRepositoryProvider);
     final localUser = repo.getUserByUsername(email);
     final role = localUser != null ? repo.getRoleById(localUser.roleId) : null;
+
+    // Fetch subscription level from database
+    String? subscriptionLevel;
+    try {
+      final supabase = Supabase.instance.client;
+      final subscriptionData = await supabase
+          .from('subscriptions')
+          .select('level')
+          .eq('user_id', user.id)
+          .eq('status', 'active')
+          .single();
+
+      subscriptionLevel = subscriptionData['level'] as String?;
+    } catch (e) {
+      // If no subscription found or error, user is free tier
+      AppLogger.debug('No active subscription found for user', params: {'userId': user.id});
+    }
+
+    // Persist subscription level in settings for offline access
+    final settings = await ref.read(settingsRepositoryProvider.future);
+    await settings.setSubscriptionLevel(subscriptionLevel ?? 'free');
 
     return AuthState(
       isAuthenticated: true,
       username: email,
       roleId: role?.id ?? repo.defaultUserRoleId,
       roleName: role?.name ?? 'Member',
+      subscriptionLevel: subscriptionLevel,
     );
   }
 
   Future<void> _handleAuthStateChange(dynamic event) async {
     final user = event.session?.user;
     if (user != null) {
-      state = AsyncValue.data(_createAuthenticatedState(user));
+      state = AsyncValue.data(await _createAuthenticatedState(user));
     } else {
       state = AsyncValue.data(const AuthState(isAuthenticated: false));
     }
@@ -258,12 +284,7 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
         final localUser = repo.getUserByUsername(userEmail);
         final role = localUser != null ? repo.getRoleById(localUser.roleId) : null;
 
-        state = AsyncValue.data(AuthState(
-          isAuthenticated: true,
-          username: userEmail,
-          roleId: role?.id ?? repo.defaultUserRoleId,
-          roleName: role?.name ?? 'Member',
-        ));
+        state = AsyncValue.data(await _createAuthenticatedState(user));
 
         await _abTesting.initialize();
         await _abTesting.assignGroupForUser(userEmail);
@@ -410,6 +431,15 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
       }
     } catch (e) {
       state = AsyncValue.error('Failed to delete user: $e', StackTrace.current);
+    }
+  }
+
+  /// Refresh user state (useful after subscription changes)
+  Future<void> refreshUserState() async {
+    final current = Supabase.instance.client.auth.currentUser;
+    if (current != null) {
+      state = AsyncValue.data(await _createAuthenticatedState(current));
+      AppLogger.event('User state refreshed after subscription update');
     }
   }
 

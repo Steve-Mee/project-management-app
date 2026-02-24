@@ -23,6 +23,10 @@ class SettingsRepository {
   static const String _colorSchemeSeedKey = 'color_scheme_seed';
   static const String _dashboardItemsKey = 'dashboard_items';
   static const String _dashboardTemplatesKey = 'dashboard_templates';
+  static const String _stripePublishableKey = 'stripe_publishable_key';
+  static const String _stripeSecretKey = 'stripe_secret_key';
+  static const String _subscriptionLevelKey = 'subscription_level';
+  static const String _enableRealPaymentBackendKey = 'enable_real_payment_backend';
 
   Future<void> initialize() async {
     await Hive.initFlutter();
@@ -268,5 +272,50 @@ class SettingsRepository {
   Future<void> setDashboardTemplates(List<DashboardTemplate> templates) async {
     final jsonTemplates = templates.map((template) => template.toJson()).toList();
     await _box.put(_dashboardTemplatesKey, jsonTemplates);
+  }
+
+  String? getStripePublishableKey() {
+    final value = _box.get(_stripePublishableKey);
+    return value is String ? value : null;
+  }
+
+  Future<void> setStripePublishableKey(String? key) async {
+    if (key == null || key.isEmpty) {
+      await _box.delete(_stripePublishableKey);
+      return;
+    }
+    await _box.put(_stripePublishableKey, key);
+  }
+
+  String? getStripeSecretKey() {
+    final value = _box.get(_stripeSecretKey);
+    return value is String ? value : null;
+  }
+
+  Future<void> setStripeSecretKey(String? key) async {
+    if (key == null || key.isEmpty) {
+      await _box.delete(_stripeSecretKey);
+      return;
+    }
+    await _box.put(_stripeSecretKey, key);
+  }
+
+  String? getSubscriptionLevel() {
+    final value = _box.get(_subscriptionLevelKey);
+    return value is String ? value : 'free';
+  }
+
+  Future<void> setSubscriptionLevel(String level) async {
+    await _box.put(_subscriptionLevelKey, level);
+  }
+
+  bool getEnableRealPaymentBackend() {
+    final value = _box.get(_enableRealPaymentBackendKey, defaultValue: false);
+    AppLogger.debug('payment_backend_flag_loaded', params: {'enabled': value});
+    return value;
+  }
+
+  Future<void> setEnableRealPaymentBackend(bool enabled) async {
+    await _box.put(_enableRealPaymentBackendKey, enabled);
   }
 }

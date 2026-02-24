@@ -23,3 +23,4 @@ export 'providers/sync_providers.dart';
 export 'providers/analytics_providers.dart';
 export 'providers/active_viewers_provider.dart';
 export 'providers/connectivity_provider.dart';
+export 'providers/settings_providers.dart';

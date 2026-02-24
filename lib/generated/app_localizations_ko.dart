@@ -1352,4 +1352,24 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get create_custom_widget => 'Create Custom Widget';
+
+  @override
+  String get upgrade_subscription => 'Upgrade to Premium';
+
+  @override
+  String get payment_processing => 'Processing payment...';
+
+  @override
+  String get payment_success => 'Payment successful!';
+
+  @override
+  String get payment_failed => 'Payment failed';
+
+  @override
+  String get enable_real_payment_backend =>
+      'Enable Real Payment Backend (Production Only)';
+
+  @override
+  String get real_backend_warning =>
+      '⚠️ WARNING: This enables real Stripe payments. Only enable in production with proper backend configuration.';
 }
