@@ -1384,4 +1384,14 @@ class AppLocalizationsNl extends AppLocalizations {
   @override
   String get real_backend_warning =>
       '⚠️ WAARSCHUWING: Dit schakelt echte Stripe-betalingen in. Alleen inschakelen in productie met juiste backend-configuratie.';
+
+  @override
+  String get mention_user => 'Gebruiker vermelden';
+
+  @override
+  String get no_users_found_for_mention =>
+      'Geen gebruikers gevonden voor vermelding';
+
+  @override
+  String get typing_to_mention => 'Typ @ om een gebruiker te vermelden';
 }

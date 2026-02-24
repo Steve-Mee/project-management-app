@@ -1382,4 +1382,13 @@ class AppLocalizationsPt extends AppLocalizations {
   @override
   String get real_backend_warning =>
       '⚠️ WARNING: This enables real Stripe payments. Only enable in production with proper backend configuration.';
+
+  @override
+  String get mention_user => 'Mention user';
+
+  @override
+  String get no_users_found_for_mention => 'No users found for mention';
+
+  @override
+  String get typing_to_mention => 'Type @ to mention a user';
 }

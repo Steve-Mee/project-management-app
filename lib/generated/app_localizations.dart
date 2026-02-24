@@ -2646,6 +2646,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'⚠️ WARNING: This enables real Stripe payments. Only enable in production with proper backend configuration.'**
   String get real_backend_warning;
+
+  /// Label for mentioning a user in autocomplete.
+  ///
+  /// In en, this message translates to:
+  /// **'Mention user'**
+  String get mention_user;
+
+  /// Message when no users match the mention query.
+  ///
+  /// In en, this message translates to:
+  /// **'No users found for mention'**
+  String get no_users_found_for_mention;
+
+  /// Hint text for typing @ to start mentioning users.
+  ///
+  /// In en, this message translates to:
+  /// **'Type @ to mention a user'**
+  String get typing_to_mention;
 }
 
 class _AppLocalizationsDelegate

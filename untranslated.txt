@@ -156,7 +156,10 @@
     "payment_success",
     "payment_failed",
     "enable_real_payment_backend",
-    "real_backend_warning"
+    "real_backend_warning",
+    "mention_user",
+    "no_users_found_for_mention",
+    "typing_to_mention"
   ],
 
   "de": [
@@ -316,7 +319,10 @@
     "payment_success",
     "payment_failed",
     "enable_real_payment_backend",
-    "real_backend_warning"
+    "real_backend_warning",
+    "mention_user",
+    "no_users_found_for_mention",
+    "typing_to_mention"
   ],
 
   "es": [
@@ -476,7 +482,10 @@
     "payment_success",
     "payment_failed",
     "enable_real_payment_backend",
-    "real_backend_warning"
+    "real_backend_warning",
+    "mention_user",
+    "no_users_found_for_mention",
+    "typing_to_mention"
   ],
 
   "fr": [
@@ -636,7 +645,10 @@
     "payment_success",
     "payment_failed",
     "enable_real_payment_backend",
-    "real_backend_warning"
+    "real_backend_warning",
+    "mention_user",
+    "no_users_found_for_mention",
+    "typing_to_mention"
   ],
 
   "hi": [
@@ -796,7 +808,10 @@
     "payment_success",
     "payment_failed",
     "enable_real_payment_backend",
-    "real_backend_warning"
+    "real_backend_warning",
+    "mention_user",
+    "no_users_found_for_mention",
+    "typing_to_mention"
   ],
 
   "it": [
@@ -956,7 +971,10 @@
     "payment_success",
     "payment_failed",
     "enable_real_payment_backend",
-    "real_backend_warning"
+    "real_backend_warning",
+    "mention_user",
+    "no_users_found_for_mention",
+    "typing_to_mention"
   ],
 
   "ja": [
@@ -1116,7 +1134,10 @@
     "payment_success",
     "payment_failed",
     "enable_real_payment_backend",
-    "real_backend_warning"
+    "real_backend_warning",
+    "mention_user",
+    "no_users_found_for_mention",
+    "typing_to_mention"
   ],
 
   "ko": [
@@ -1276,7 +1297,10 @@
     "payment_success",
     "payment_failed",
     "enable_real_payment_backend",
-    "real_backend_warning"
+    "real_backend_warning",
+    "mention_user",
+    "no_users_found_for_mention",
+    "typing_to_mention"
   ],
 
   "nl": [
@@ -1549,7 +1573,10 @@
     "payment_success",
     "payment_failed",
     "enable_real_payment_backend",
-    "real_backend_warning"
+    "real_backend_warning",
+    "mention_user",
+    "no_users_found_for_mention",
+    "typing_to_mention"
   ],
 
   "ru": [
@@ -1709,7 +1736,10 @@
     "payment_success",
     "payment_failed",
     "enable_real_payment_backend",
-    "real_backend_warning"
+    "real_backend_warning",
+    "mention_user",
+    "no_users_found_for_mention",
+    "typing_to_mention"
   ],
 
   "zh": [
@@ -1869,6 +1899,9 @@
     "payment_success",
     "payment_failed",
     "enable_real_payment_backend",
-    "real_backend_warning"
+    "real_backend_warning",
+    "mention_user",
+    "no_users_found_for_mention",
+    "typing_to_mention"
   ]
 }

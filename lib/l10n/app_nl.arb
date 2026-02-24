@@ -1349,5 +1349,17 @@
   "real_backend_warning": "⚠️ WAARSCHUWING: Dit schakelt echte Stripe-betalingen in. Alleen inschakelen in productie met juiste backend-configuratie.",
   "@real_backend_warning": {
     "description": "Warning text shown when real payment backend is enabled."
+  },
+  "mention_user": "Gebruiker vermelden",
+  "@mention_user": {
+    "description": "Label for mentioning a user in autocomplete."
+  },
+  "no_users_found_for_mention": "Geen gebruikers gevonden voor vermelding",
+  "@no_users_found_for_mention": {
+    "description": "Message when no users match the mention query."
+  },
+  "typing_to_mention": "Typ @ om een gebruiker te vermelden",
+  "@typing_to_mention": {
+    "description": "Hint text for typing @ to start mentioning users."
   }
 }

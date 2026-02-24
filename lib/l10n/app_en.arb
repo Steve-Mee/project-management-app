@@ -1864,5 +1864,17 @@
   "real_backend_warning": "⚠️ WARNING: This enables real Stripe payments. Only enable in production with proper backend configuration.",
   "@real_backend_warning": {
     "description": "Warning text shown when real payment backend is enabled."
+  },
+  "mention_user": "Mention user",
+  "@mention_user": {
+    "description": "Label for mentioning a user in autocomplete."
+  },
+  "no_users_found_for_mention": "No users found for mention",
+  "@no_users_found_for_mention": {
+    "description": "Message when no users match the mention query."
+  },
+  "typing_to_mention": "Type @ to mention a user",
+  "@typing_to_mention": {
+    "description": "Hint text for typing @ to start mentioning users."
   }
 }
