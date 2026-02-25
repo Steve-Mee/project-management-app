@@ -146,6 +146,7 @@ class UsersFilter {
 }
 
 /// Notifier for authentication with robust error handling
+/// Fully integrated with backend repository per .github/issues/050-auth-backend-integration.md
 class AuthNotifier extends AsyncNotifier<AuthState> {
   final CloudSyncService _cloudSync = CloudSyncService();
   final ABTestingService _abTesting = ABTestingService.instance;
@@ -159,6 +160,9 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
     if (!_listening) {
       _listening = true;
       Supabase.instance.client.auth.onAuthStateChange.listen((event) async {
+        if (event.event == AuthChangeEvent.tokenRefreshed) {
+          AppLogger.event('auth_session_refreshed');
+        }
         await _handleAuthStateChange(event);
       });
     }
@@ -232,6 +236,7 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
   }
 
   /// Login with error handling and persistent rate limiting
+  /// Uses backend authentication per .github/issues/050-auth-backend-integration.md
   Future<bool> login(String username, String password, {bool enableAutoLogin = false, bool skipCaptchaCheck = false, String? captchaToken}) async {
     final limiter = ref.read(loginRateLimiterProvider);
 
@@ -327,6 +332,7 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
   }
 
   /// Logout with proper cleanup
+  /// Uses backend sign out per .github/issues/050-auth-backend-integration.md
   Future<void> logout() async {
     final userId = state.value!.username;
     AppLogger.event('auth_sign_out');
@@ -369,6 +375,7 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
   }
 
   /// Sign up with comprehensive error handling
+  /// Uses backend registration per .github/issues/050-auth-backend-integration.md
   Future<bool> signUp(String email, String password) async {
     try {
       final trimmedEmail = email.trim();

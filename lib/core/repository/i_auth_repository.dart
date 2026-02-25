@@ -94,6 +94,15 @@ abstract class IAuthRepository {
   /// Reset login attempts for email
   Future<void> resetLoginAttempts(String email);
 
+  /// Get current session
+  dynamic getCurrentSession();
+
+  /// Stream of auth state changes
+  Stream<dynamic> get onAuthStateChange;
+
+  /// Recover session
+  Future<void> recoverSession();
+
   /// Admin role ID
   String get adminRoleId;
 

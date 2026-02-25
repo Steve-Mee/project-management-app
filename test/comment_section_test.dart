@@ -118,6 +118,15 @@ class FakeAuthRepository implements IAuthRepository {
 
   @override
   String get viewerRoleId => 'role_viewer';
+
+  @override
+  dynamic getCurrentSession() => null;
+
+  @override
+  Future<void> recoverSession() async {}
+
+  @override
+  Stream<dynamic> get onAuthStateChange => const Stream.empty();
 }
 
 // Fake settings repository

@@ -1968,5 +1968,13 @@
   "per_op_limit_saved": "Per-operation limit saved",
   "@per_op_limit_saved": {
     "description": "Success message when per-operation rate limit is saved."
+  },
+  "auth_backend_error": "Authentication backend error",
+  "@auth_backend_error": {
+    "description": "Error message for authentication backend failures."
+  },
+  "session_refresh_failed": "Session refresh failed",
+  "@session_refresh_failed": {
+    "description": "Error message when session refresh fails."
   }
 }

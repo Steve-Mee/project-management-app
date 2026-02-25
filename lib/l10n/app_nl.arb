@@ -1393,5 +1393,13 @@
         "type": "String"
       }
     }
+  },
+  "auth_backend_error": "Authenticatie backend fout",
+  "@auth_backend_error": {
+    "description": "Foutmelding voor authenticatie backend fouten."
+  },
+  "session_refresh_failed": "Sessie vernieuwen mislukt",
+  "@session_refresh_failed": {
+    "description": "Foutmelding wanneer sessie vernieuwen mislukt."
   }
 }
