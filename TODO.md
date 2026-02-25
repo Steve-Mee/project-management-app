@@ -84,3 +84,10 @@ Doe hetzelfde voor models en repositories
 Vervang alle GetWidget, GetMaterialApp, GetBuilder etc. door pure MaterialApp + Riverpod + custom widgets
 Update main.dart, themes en alle screens
 Verwijder get: ^4.x uit pubspec
+
+- [ ] 057. AiService abstractie maken (1.5 uur)
+
+Maak lib/core/services/ai/ai_service.dart (abstract class met Future<String> generate(...))
+Implementeer OpenAiLangchainService erin
+Update alle calls in AI chat, task suggestions, etc.
+Maak makkelijk om later Gemini/Claude toe te voegen via feature flag
