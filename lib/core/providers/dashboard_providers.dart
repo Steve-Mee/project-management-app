@@ -582,7 +582,7 @@ class DashboardConfigNotifier extends AsyncNotifier<List<DashboardItem>> {
   /// and adds it via addItem. Logs 'custom_widget_created' event.
   Future<void> createCustomWidget(String jsonInput) async {
     try {
-      final parsedJson = AiParsers.safeParseJson(jsonInput);
+      final parsedJson = AiParsers.parseAIResponse(jsonInput, 'json');
       if (parsedJson is! Map<String, dynamic>) {
         throw Exception('Parsed JSON must be an object with widgetType and position fields');
       }

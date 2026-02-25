@@ -1945,6 +1945,26 @@
   "@limit_for_parse_filter": {
     "description": "Label for parse filter operation rate limit setting."
   },
+  "parsing_format_xml": "XML",
+  "@parsing_format_xml": {
+    "description": "Label for XML parsing format."
+  },
+  "parsing_format_yaml": "YAML",
+  "@parsing_format_yaml": {
+    "description": "Label for YAML parsing format."
+  },
+  "parsing_error_unsupported_format": "Unsupported format: {format}. Supported formats: {supported}",
+  "@parsing_error_unsupported_format": {
+    "description": "Error message when an unsupported parsing format is requested.",
+    "placeholders": {
+      "format": {
+        "type": "String"
+      },
+      "supported": {
+        "type": "String"
+      }
+    }
+  },
   "per_op_limit_saved": "Per-operation limit saved",
   "@per_op_limit_saved": {
     "description": "Success message when per-operation rate limit is saved."

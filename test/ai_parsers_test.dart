@@ -31,11 +31,9 @@ void main() {
       expect((result as Map)['name'], {'#text': 'Extracted'});
     });
 
-    test('should return raw string for malformed XML', () {
+    test('should throw exception for malformed XML', () {
       const malformed = '<user><name>John</name><age>30</user>';
-      final result = AiParsers.safeParseXml(malformed);
-      expect(result, isA<String>());
-      expect(result, malformed);
+      expect(() => AiParsers.safeParseXml(malformed), throwsException);
     });
 
     test('should throw exception for empty response', () {
@@ -43,11 +41,9 @@ void main() {
       expect(() => AiParsers.safeParseXml('   '), throwsException);
     });
 
-    test('should return raw string on total parsing failure', () {
+    test('should throw exception on total parsing failure', () {
       const invalid = 'This is not XML at all, no tags here.';
-      final result = AiParsers.safeParseXml(invalid);
-      expect(result, isA<String>());
-      expect(result, invalid.trim());
+      expect(() => AiParsers.safeParseXml(invalid), throwsException);
     });
   });
 
@@ -89,11 +85,9 @@ users:
       expect((result)['age'], 25);
     });
 
-    test('should return raw string for malformed YAML', () {
+    test('should throw exception for malformed YAML', () {
       const malformed = 'name: John\n- invalid structure';
-      final result = AiParsers.safeParseYaml(malformed);
-      expect(result, isA<String>());
-      expect(result, malformed);
+      expect(() => AiParsers.safeParseYaml(malformed), throwsException);
     });
 
     test('should throw exception for empty response', () {
@@ -101,11 +95,112 @@ users:
       expect(() => AiParsers.safeParseYaml('   '), throwsException);
     });
 
-    test('should return raw string on total parsing failure', () {
+    test('should throw exception on total parsing failure', () {
       const invalid = 'This is not YAML at all, no structure here.';
-      final result = AiParsers.safeParseYaml(invalid);
-      expect(result, isA<String>());
-      expect(result, invalid.trim());
+      expect(() => AiParsers.safeParseYaml(invalid), throwsException);
     });
   });
+
+  group('ParserRegistry', () {
+    test('should register and retrieve parsers correctly', () {
+      // Create a mock parser
+      final mockParser = MockAiParser();
+      
+      // Register the parser
+      ParserRegistry.registerParser('test', mockParser);
+      
+      // Retrieve and verify
+      final retrieved = ParserRegistry.getParser('test');
+      expect(retrieved, equals(mockParser));
+      
+      // Check supported formats
+      final formats = ParserRegistry.getSupportedFormats();
+      expect(formats, contains('test'));
+    });
+
+    test('should return null for unregistered format', () {
+      final parser = ParserRegistry.getParser('nonexistent');
+      expect(parser, isNull);
+    });
+  });
+
+  group('Extension system integration', () {
+    test('XML parsing works via extension system', () {
+      const xml = '<user><name>John</name><age>30</age></user>';
+      final result = AiParsers.parseAIResponse(xml, 'xml');
+      expect(result, isA<Map<String, dynamic>>());
+      expect((result as Map)['name'], {'#text': 'John'});
+    });
+
+    test('YAML parsing works via extension system', () {
+      const yaml = 'name: John\nage: 30';
+      final result = AiParsers.parseAIResponse(yaml, 'yaml');
+      expect(result, isA<Map<String, dynamic>>());
+      expect((result as Map)['name'], 'John');
+    });
+
+    test('JSON parsing works via extension system', () {
+      const json = '{"name": "John", "age": 30}';
+      final result = AiParsers.parseAIResponse(json, 'json');
+      expect(result, isA<Map<String, dynamic>>());
+      expect((result as Map)['name'], 'John');
+    });
+  });
+
+  group('Unified parseAIResponse', () {
+    test('should auto-detect JSON format', () {
+      const json = '{"name": "John", "age": 30}';
+      final result = AiParsers.parseAIResponse(json, null);
+      expect(result, isA<Map<String, dynamic>>());
+      expect((result as Map)['name'], 'John');
+    });
+
+    test('should auto-detect XML format', () {
+      const xml = '<user><name>John</name></user>';
+      final result = AiParsers.parseAIResponse(xml, null);
+      expect(result, isA<Map<String, dynamic>>());
+      expect((result as Map)['name'], {'#text': 'John'});
+    });
+
+    test('should auto-detect YAML format', () {
+      const yaml = 'name: John\nage: 30';
+      final result = AiParsers.parseAIResponse(yaml, null);
+      expect(result, isA<Map<String, dynamic>>());
+      expect((result as Map)['name'], 'John');
+    });
+
+    test('should detect format hints in response text', () {
+      const hintedXml = 'Here is the data in XML format: <user><name>John</name></user>';
+      final result = AiParsers.parseAIResponse(hintedXml, null);
+      expect(result, isA<Map<String, dynamic>>());
+      expect((result as Map)['name'], {'#text': 'John'});
+    });
+
+    test('should throw exception for unsupported format', () {
+      expect(() => AiParsers.parseAIResponse('data', 'unsupported'), throwsException);
+    });
+  });
+
+  group('Adding new formats without code changes', () {
+    test('should allow registering and using custom parser', () {
+      // Create a simple custom parser that returns the input as-is
+      final customParser = TestParser();
+      ParserRegistry.registerParser('test', customParser);
+      
+      const testData = 'custom format data';
+      final result = AiParsers.parseAIResponse(testData, 'test');
+      expect(result, equals('PARSED: $testData'));
+    });
+  });
+}
+
+// Mock classes for testing
+class MockAiParser implements AiParser {
+  @override
+  dynamic parse(String input) => 'mocked';
+}
+
+class TestParser implements AiParser {
+  @override
+  dynamic parse(String input) => 'PARSED: $input';
 }

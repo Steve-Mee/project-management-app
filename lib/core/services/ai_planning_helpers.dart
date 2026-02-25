@@ -48,7 +48,7 @@ class AiPlanningHelpers {
     final prompt = _buildQuestionPrompt(anonymizedData, level);
     final result = await _callGrokApi(prompt);
 
-    final parsed = AiParsers.safeParseJson(result.content);
+    final parsed = AiParsers.parseAIResponse(result.content, 'json');
 
     if (parsed is List) {
       return AiApiResult(
@@ -84,7 +84,7 @@ class AiPlanningHelpers {
     final prompt = _buildProposalPrompt(anonymizedData, level, answers);
     final result = await _callGrokApi(prompt);
 
-    final parsed = AiParsers.safeParseJson(result.content);
+    final parsed = AiParsers.parseAIResponse(result.content, 'json');
 
     if (parsed is List) {
       return AiApiResult(
@@ -118,7 +118,7 @@ class AiPlanningHelpers {
     final prompt = _buildPlanPrompt(anonymizedData);
     final result = await _callGrokApi(prompt);
 
-    final parsed = AiParsers.safeParseJson(result.content);
+    final parsed = AiParsers.parseAIResponse(result.content, 'json');
 
     if (parsed is Map<String, dynamic>) {
       try {
@@ -411,7 +411,7 @@ User request: "$anonymizedRequest"
     final result = await _callGrokApi(prompt);
 
     try {
-      final parsed = AiParsers.safeParseJson(result.content);
+      final parsed = AiParsers.parseAIResponse(result.content, 'json');
       if (parsed is Map<String, dynamic>) {
         // Validate and create ProjectFilter
         final filter = ProjectFilter(

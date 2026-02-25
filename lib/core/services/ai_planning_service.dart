@@ -41,7 +41,7 @@ Ensure all suggestions comply with local laws and regulations in the user's regi
 ''';
 
     final response = await _callGrokApi(prompt);
-    final parsed = AiParsers.safeParseJson(response);
+    final parsed = AiParsers.parseAIResponse(response, 'json');
 
     if (parsed is List) {
       return parsed.map((q) => q.toString()).toList();
@@ -85,7 +85,7 @@ Ensure all suggestions comply with local laws and regulations in the user's regi
 ''';
 
     final response = await _callGrokApi(prompt);
-    final parsed = AiParsers.safeParseJson(response);
+    final parsed = AiParsers.parseAIResponse(response, 'json');
 
     if (parsed is List) {
       return parsed.map((p) => p.toString()).toList();
@@ -137,7 +137,7 @@ Focus on practical, actionable tasks that can be tracked and completed.
 ''';
 
     final response = await _callGrokApi(prompt);
-    final parsed = AiParsers.safeParseJson(response);
+    final parsed = AiParsers.parseAIResponse(response, 'json');
 
     if (parsed is Map<String, dynamic>) {
       try {

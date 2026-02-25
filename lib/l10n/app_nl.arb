@@ -1373,5 +1373,25 @@
   "typing_to_mention": "Typ @ om een gebruiker te vermelden",
   "@typing_to_mention": {
     "description": "Hint text for typing @ to start mentioning users."
+  },
+  "parsing_format_xml": "XML",
+  "@parsing_format_xml": {
+    "description": "Label for XML parsing format."
+  },
+  "parsing_format_yaml": "YAML",
+  "@parsing_format_yaml": {
+    "description": "Label for YAML parsing format."
+  },
+  "parsing_error_unsupported_format": "Niet-ondersteunde indeling: {format}. Ondersteunde indelingen: {supported}",
+  "@parsing_error_unsupported_format": {
+    "description": "Error message when an unsupported parsing format is requested.",
+    "placeholders": {
+      "format": {
+        "type": "String"
+      },
+      "supported": {
+        "type": "String"
+      }
+    }
   }
 }
