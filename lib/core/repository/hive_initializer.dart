@@ -276,11 +276,21 @@ class ProjectsInitializer extends ConsumerStatefulWidget {
 class _ProjectsInitializerState extends ConsumerState<ProjectsInitializer> {
   bool _initialized = false;
   String? _error;
+  bool _hasInitialized = false;
 
   @override
   void initState() {
     super.initState();
-    _initializeProjects();
+    // Initialization moved to didChangeDependencies
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_hasInitialized) {
+      _hasInitialized = true;
+      _initializeProjects();
+    }
   }
 
   Future<void> _initializeProjects() async {
