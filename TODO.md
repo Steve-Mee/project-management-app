@@ -122,3 +122,8 @@ Gebruik encrypt package + key uit FlutterSecureStorage
 Maak EncryptedHiveBox wrapper
 Encrypt: auth, settings, AI usage history, local tokens
 Update HiveInitializer
+
+- [ ] 063. supabase_setup.md + RLS policies documenteren (1 uur)
+
+Maak nieuw MD-bestand met alle SQL, RLS policies, storage buckets, Edge Functions
+Inclusief "hoe nieuwe policy toevoegen" instructies
