@@ -6,10 +6,10 @@ import 'package:supabase_flutter/supabase_flutter.dart' hide AuthUser;
 import 'package:local_auth/local_auth.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:hive_flutter/hive_flutter.dart';
-import 'package:my_project_management_app/core/repository/auth_repository.dart';
+import 'package:my_project_management_app/core/repository/impl/hive_auth_repository.dart';
 import 'package:my_project_management_app/core/repository/i_auth_repository.dart';
 import 'package:my_project_management_app/core/auth/auth_user.dart';
-import 'package:my_project_management_app/core/repository/settings_repository.dart';
+import 'package:my_project_management_app/core/repository/impl/hive_settings_repository.dart';
 import 'package:my_project_management_app/core/services/cloud_sync_service.dart';
 import 'package:my_project_management_app/core/services/ab_testing_service.dart';
 import 'package:my_project_management_app/core/services/app_logger.dart';
@@ -44,13 +44,13 @@ class CaptchaRequiredException implements Exception {
 
 /// Provider for auth repository (exposed via interface to allow swapping)
 final authRepositoryProvider = Provider<IAuthRepository>((ref) {
-  return AuthRepository();
+  return HiveAuthRepository();
 });
 
 /// Provider for SettingsRepository
 /// Initializes the repository on first access
-final settingsRepositoryProvider = FutureProvider<SettingsRepository>((ref) async {
-  final repository = SettingsRepository();
+final settingsRepositoryProvider = FutureProvider<HiveSettingsRepository>((ref) async {
+  final repository = HiveSettingsRepository();
   await repository.initialize();
   return repository;
 });
@@ -62,7 +62,7 @@ final loginRateLimiterProvider = Provider<LoginRateLimiter>((ref) => LoginRateLi
 final recaptchaServiceProvider = Provider<RecaptchaService>((ref) {
   final settings = ref.watch(settingsRepositoryProvider).maybeWhen(
     data: (settings) => settings,
-    orElse: () => SettingsRepository(), // Fallback if not initialized
+    orElse: () => HiveSettingsRepository(), // Fallback if not initialized
   );
   return RecaptchaService(settings);
 });

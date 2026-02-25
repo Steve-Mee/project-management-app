@@ -1,12 +1,12 @@
 import 'dart:convert';
 import 'package:my_project_management_app/core/services/app_logger.dart';
 import 'package:my_project_management_app/models/project_model.dart';
-import 'package:my_project_management_app/core/repository/project_repository.dart';
+import 'package:my_project_management_app/core/repository/impl/hive_project_repository.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 /// Stub for future cloud sync (Supabase/Firestore/etc.).
 class CloudSyncService {
-  final ProjectRepository? repository;
+  final HiveProjectRepository? repository;
 
   CloudSyncService({this.repository});
 

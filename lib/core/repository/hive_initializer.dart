@@ -9,7 +9,7 @@ import 'package:my_project_management_app/core/providers/notification_providers.
 import 'package:my_project_management_app/core/providers/task_providers.dart';
 import 'package:my_project_management_app/core/services/app_logger.dart';
 import 'package:my_project_management_app/models/task_model.dart';
-import 'package:my_project_management_app/core/repository/settings_repository.dart';
+import 'package:my_project_management_app/core/repository/impl/hive_settings_repository.dart';
 
 /// Helper class for initializing Hive and projects on app startup
 /// 
@@ -85,11 +85,11 @@ class HiveInitializer {
     await file.writeAsString(jsonEncode(data));
     final settingsBox = await _openGenericBox('settings');
     await settingsBox.put(
-      SettingsRepository.lastBackupKey,
+      HiveSettingsRepository.lastBackupKey,
       DateTime.now().toIso8601String(),
     );
     await settingsBox.put(
-      SettingsRepository.lastBackupPathKey,
+      HiveSettingsRepository.lastBackupPathKey,
       file.path,
     );
     return file;

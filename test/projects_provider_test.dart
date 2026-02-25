@@ -3,7 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:my_project_management_app/core/providers/project_providers.dart';
 import 'package:my_project_management_app/core/providers/auth_providers.dart';
-import 'package:my_project_management_app/core/repository/project_repository.dart';
+import 'package:my_project_management_app/core/repository/i_project_repository.dart';
+import 'package:my_project_management_app/core/repository/models/project_models.dart';
 import 'package:my_project_management_app/models/project_model.dart';
 import 'package:my_project_management_app/models/project_filter.dart' as models;
 
@@ -14,22 +15,16 @@ class FakeAuthNotifier extends AuthNotifier {
   }
 }
 
-class FakeProjectRepository extends ProjectRepository {
+class FakeProjectRepository implements IProjectRepository {
   final Map<String, ProjectModel> _store = {};
 
-  FakeProjectRepository({List<ProjectModel>? seed}) : super() {
+  FakeProjectRepository({List<ProjectModel>? seed}) {
     if (seed != null) {
       for (final project in seed) {
         _store[project.id] = project;
       }
     }
   }
-
-  @override
-  Future<void> initialize({String? testPath}) async {}
-
-  @override
-  bool get isInitialized => true;
 
   @override
   Future<void> addProject(
@@ -130,6 +125,83 @@ class FakeProjectRepository extends ProjectRepository {
     Map<String, Object?>? metadata,
   }) async {
     _store.remove(projectId);
+  }
+
+  // Stub implementations for remaining interface methods
+  @override
+  Future<void> updateProject(String projectId, ProjectModel updatedProject, {String? userId, String? changeDescription, Map<String, Object?>? metadata}) async {
+    _store[projectId] = updatedProject;
+  }
+
+  @override
+  Future<void> updatePlanJson(String projectId, String? planJson, {String? userId, Map<String, Object?>? metadata}) async {
+    // Stub implementation
+  }
+
+  @override
+  Future<void> close() async {
+    // Stub implementation
+  }
+
+  @override
+  Future<void> addSharedUser(String projectId, String username, {String? userId, Map<String, Object?>? metadata}) async {
+    // Stub implementation
+  }
+
+  @override
+  Future<void> removeSharedUser(String projectId, String username, {String? userId, Map<String, Object?>? metadata}) async {
+    // Stub implementation
+  }
+
+  @override
+  Future<void> addSharedGroup(String projectId, String groupId, {String? userId, Map<String, Object?>? metadata}) async {
+    // Stub implementation
+  }
+
+  @override
+  Future<void> removeSharedGroup(String projectId, String groupId, {String? userId, Map<String, Object?>? metadata}) async {
+    // Stub implementation
+  }
+
+  @override
+  Future<List<ProjectModel>> getProjectsPaginated({int page = 1, int limit = 20, models.ProjectFilter? filter}) async {
+    return _store.values.toList();
+  }
+
+  @override
+  Future<List<ProjectModel>> getProjectsByStatus(String status) async {
+    return _store.values.where((p) => p.status == status).toList();
+  }
+
+  @override
+  Future<List<ProjectModel>> getFilteredProjects(models.ProjectFilter filter, {List<ProjectFilterConditions> extraConditions = const []}) async {
+    return _store.values.toList();
+  }
+
+  @override
+  Future<void> syncProject(String projectId) async {
+    // Stub implementation
+  }
+
+  @override
+  Future<void> syncAllProjects() async {
+    // Stub implementation
+  }
+
+  @override
+  Future<void> bidirectionalSyncProject(String projectId) async {
+    // Stub implementation
+  }
+
+  @override
+  Stream<List<ProjectModel>> watchProjectChanges(String projectId) {
+    // Stub implementation
+    return Stream.value([]);
+  }
+
+  @override
+  Future<void> resolveConflict(ProjectModel local, ProjectModel remote) async {
+    // Stub implementation
   }
 }
 

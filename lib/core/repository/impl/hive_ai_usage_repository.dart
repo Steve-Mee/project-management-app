@@ -5,7 +5,8 @@ import 'package:my_project_management_app/core/services/app_logger.dart';
 
 /// Concrete implementation of IAiUsageRepository using Hive for local persistence
 /// Implements caching for usage totals as per .github/issues/027-dashboard-cache-requirements.md pattern
-class AiUsageRepository implements IAiUsageRepository {
+/// Refactored per .github/issues/049-repository-refactoring.md
+class HiveAiUsageRepository implements IAiUsageRepository {
   static const String _usageBoxName = 'ai_usage';
   static const String _totalsCacheKey = 'totals_cache';
 

@@ -3,7 +3,6 @@ import 'dart:convert';
 import 'package:crypto/crypto.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:my_project_management_app/core/services/app_logger.dart';
 import 'package:my_project_management_app/core/auth/permissions.dart';
 import 'package:my_project_management_app/core/auth/role_models.dart';
 import 'package:my_project_management_app/core/services/login_rate_limiter.dart';
@@ -37,16 +36,22 @@ class RemoteAuthService {
   }
 }
 
-class AuthRepository implements IAuthRepository {
+
+/// Concrete implementation of IAuthRepository using Hive for local persistence
+/// and Supabase for remote authentication
+/// Refactored per .github/issues/049-repository-refactoring.md
+class HiveAuthRepository implements IAuthRepository {
   static const String _boxName = 'auth';
-  static const String _usersKey = 'users';
-  static const String _currentUserKey = 'current_user';
-  static const String _rolesKey = 'roles';
-  static const String _groupsKey = 'groups';
 
   final RemoteAuthService _remote;
 
-  AuthRepository({RemoteAuthService? remote})
+  /// Helper class for data mapping operations
+  final _AuthDataMapper _dataMapper = _AuthDataMapper();
+
+  /// Helper class for authentication operations
+  final _AuthOperations _authOperations = _AuthOperations();
+
+  HiveAuthRepository({RemoteAuthService? remote})
       : _remote = remote ?? RemoteAuthService();
 
   @override
@@ -72,270 +77,97 @@ class AuthRepository implements IAuthRepository {
 
   @override
   List<AppUser> getUsers() {
-    final raw = _box.get(_usersKey);
-    if (raw is List) {
-      return raw
-          .whereType<Map>()
-          .map((entry) => AppUser.fromMap(Map<String, dynamic>.from(entry)))
-          .where((user) => user.username.isNotEmpty)
-          .toList();
-    }
-    return [];
+    return _dataMapper.getUsers();
   }
 
   @override
   AppUser? getUserByUsername(String username) {
-    final trimmed = username.trim().toLowerCase();
-    if (trimmed.isEmpty) {
-      return null;
-    }
-
-    for (final user in getUsers()) {
-      if (user.username.toLowerCase() == trimmed) {
-        return user;
-      }
-    }
-    return null;
+    return _dataMapper.getUserByUsername(username);
   }
 
   @override
   List<RoleDefinition> getRoles() {
-    final raw = _box.get(_rolesKey);
-    if (raw is List) {
-      return raw
-          .whereType<Map>()
-          .map((entry) => RoleDefinition.fromMap(Map<String, dynamic>.from(entry)))
-          .where((role) => role.id.isNotEmpty)
-          .toList();
-    }
-    return [];
+    return _dataMapper.getRoles();
   }
 
   @override
   RoleDefinition? getRoleById(String roleId) {
-    for (final role in getRoles()) {
-      if (role.id == roleId) {
-        return role;
-      }
-    }
-    return null;
+    return _dataMapper.getRoleById(roleId);
   }
 
   @override
   Future<void> upsertRole(RoleDefinition role) async {
-    final roles = getRoles();
-    roles.removeWhere((item) => item.id == role.id);
-    roles.add(role);
-    await _box.put(
-      _rolesKey,
-      roles.map((entry) => entry.toMap()).toList(),
-    );
+    return _dataMapper.upsertRole(role);
   }
 
   @override
   Future<void> deleteRole(String roleId) async {
-    if (roleId == adminRoleId || roleId == defaultUserRoleId) {
-      return;
-    }
-    final roles = getRoles()..removeWhere((item) => item.id == roleId);
-    await _box.put(
-      _rolesKey,
-      roles.map((entry) => entry.toMap()).toList(),
-    );
+    return _dataMapper.deleteRole(roleId);
   }
 
   @override
   List<GroupDefinition> getGroups() {
-    final raw = _box.get(_groupsKey);
-    if (raw is List) {
-      return raw
-          .whereType<Map>()
-          .map((entry) => GroupDefinition.fromMap(Map<String, dynamic>.from(entry)))
-          .where((group) => group.id.isNotEmpty)
-          .toList();
-    }
-    return [];
+    return _dataMapper.getGroups();
   }
 
   @override
   GroupDefinition? getGroupById(String groupId) {
-    for (final group in getGroups()) {
-      if (group.id == groupId) {
-        return group;
-      }
-    }
-    return null;
+    return _dataMapper.getGroupById(groupId);
   }
 
   @override
   List<GroupDefinition> getGroupsForUser(String username) {
-    final trimmed = username.trim().toLowerCase();
-    if (trimmed.isEmpty) {
-      return [];
-    }
-    return getGroups()
-        .where(
-          (group) => group.members
-              .any((member) => member.toLowerCase() == trimmed),
-        )
-        .toList();
+    return _dataMapper.getGroupsForUser(username);
   }
 
   @override
   Future<void> upsertGroup(GroupDefinition group) async {
-    final groups = getGroups();
-    groups.removeWhere((item) => item.id == group.id);
-    groups.add(group);
-    await _box.put(
-      _groupsKey,
-      groups.map((entry) => entry.toMap()).toList(),
-    );
+    return _dataMapper.upsertGroup(group);
   }
 
   @override
   Future<void> deleteGroup(String groupId) async {
-    final groups = getGroups()..removeWhere((item) => item.id == groupId);
-    await _box.put(
-      _groupsKey,
-      groups.map((entry) => entry.toMap()).toList(),
-    );
+    return _dataMapper.deleteGroup(groupId);
   }
 
   @override
   Future<void> addUserToGroup(String groupId, String username) async {
-    final group = getGroupById(groupId);
-    if (group == null) {
-      return;
-    }
-    final trimmed = username.trim();
-    if (trimmed.isEmpty) {
-      return;
-    }
-    if (group.members.any((member) => member.toLowerCase() == trimmed.toLowerCase())) {
-      return;
-    }
-
-    await upsertGroup(
-      group.copyWith(members: [...group.members, trimmed]),
-    );
+    return _dataMapper.addUserToGroup(groupId, username);
   }
 
   @override
   Future<void> removeUserFromGroup(String groupId, String username) async {
-    final group = getGroupById(groupId);
-    if (group == null) {
-      return;
-    }
-    final trimmed = username.trim();
-    if (trimmed.isEmpty) {
-      return;
-    }
-
-    await upsertGroup(
-      group.copyWith(
-        members: group.members
-            .where((member) => member.toLowerCase() != trimmed.toLowerCase())
-            .toList(),
-      ),
-    );
+    return _dataMapper.removeUserFromGroup(groupId, username);
   }
 
   @override
   Future<void> updateUserRole(String username, String roleId) async {
-    final users = getUsers();
-    final updated = users.map((user) {
-      if (user.username.toLowerCase() == username.toLowerCase()) {
-        return AppUser(
-          username: user.username,
-          password: user.password,
-          roleId: roleId,
-        );
-      }
-      return user;
-    }).toList();
-
-    await _box.put(
-      _usersKey,
-      updated.map((entry) => entry.toMap()).toList(),
-    );
+    return _dataMapper.updateUserRole(username, roleId);
   }
 
   @override
   Future<void> addUser(AppUser user) async {
-    // NOTE: Integreer Firebase Auth later; if (useRemote) { ... } else { local add }.
-    final users = getUsers();
-    final hashedPassword = _hashPassword(user.password);
-    users.removeWhere(
-      (existing) => existing.username.toLowerCase() == user.username.toLowerCase(),
-    );
-    users.add(
-      AppUser(
-        username: user.username,
-        password: hashedPassword,
-        roleId: user.roleId,
-      ),
-    );
-    await _box.put(
-      _usersKey,
-      users.map((entry) => entry.toMap()).toList(),
-    );
-    // NOTE: Integreer Firebase Auth later; register remote user when online.
+    return _dataMapper.addUser(user);
   }
 
   @override
   Future<void> deleteUser(String username) async {
-    final users = getUsers();
-    users.removeWhere(
-      (existing) => existing.username.toLowerCase() == username.toLowerCase(),
-    );
-    await _box.put(
-      _usersKey,
-      users.map((entry) => entry.toMap()).toList(),
-    );
-
-    final current = getCurrentUser();
-    if (current != null && current.toLowerCase() == username.toLowerCase()) {
-      await setCurrentUser(null);
-    }
+    return _dataMapper.deleteUser(username);
   }
 
   @override
   AppUser? validateUser(String username, String password) {
-    // NOTE: Integreer Firebase Auth later; if (useRemote) { ... } else { local validate }.
-    final users = getUsers();
-    final hashedPassword = _hashPassword(password);
-    for (final user in users) {
-      if (user.username == username && user.password == hashedPassword) {
-        return user;
-      }
-      if (user.username == username && user.password == password) {
-        _upgradeLegacyPassword(username, hashedPassword, users);
-        return AppUser(
-          username: user.username,
-          password: hashedPassword,
-          roleId: user.roleId,
-        );
-      }
-    }
-    return null;
+    return _authOperations.validateUser(username, password);
   }
 
   @override
   String? getCurrentUser() {
-    final value = _box.get(_currentUserKey);
-    if (value is String && value.isNotEmpty) {
-      return value;
-    }
-    return null;
+    return _dataMapper.getCurrentUser();
   }
 
   @override
   Future<void> setCurrentUser(String? username) async {
-    if (username == null || username.isEmpty) {
-      await _box.delete(_currentUserKey);
-      return;
-    }
-    await _box.put(_currentUserKey, username);
+    return _dataMapper.setCurrentUser(username);
   }
 
   @override
@@ -354,33 +186,23 @@ class AuthRepository implements IAuthRepository {
   }
 
   @override
-  Future<void> logout() async {
-    await _remote.signOut();
-    await setCurrentUser(null);
-  }
-
-  // Implement IAuthRepository's small wrappers
-  @override
   Future<bool> login(String email, String password) async {
-    try {
-      await _remote.signIn(email, password);
-      await setCurrentUser(email.trim());
-      return true;
-    } catch (e) {
-      AppLogger.instance.w('Supabase login failed', error: e);
-      await recordFailedLoginAttempt(email.trim().toLowerCase());
-      return false;
-    }
+    return _authOperations.login(email, password, _remote);
   }
 
   @override
   Future<void> register(String email, String password) async {
-    await _remote.registerUser(email, password);
+    return _authOperations.register(email, password, _remote);
   }
 
   @override
   Future<bool> isLoggedIn() async {
-    return Supabase.instance.client.auth.currentSession != null;
+    return _authOperations.isLoggedIn();
+  }
+
+  @override
+  Future<void> logout() async {
+    return _authOperations.logout(_remote);
   }
 
   // Simple in-memory rate limiter stored per-repository instance
@@ -407,7 +229,7 @@ class AuthRepository implements IAuthRepository {
     }
 
     await _box.put(
-      _usersKey,
+      _AuthDataMapper._usersKey,
       [
         {
           'username': 'admin',
@@ -430,7 +252,7 @@ class AuthRepository implements IAuthRepository {
     }
 
     await _box.put(
-      _rolesKey,
+      _AuthDataMapper._rolesKey,
       [
         RoleDefinition(
           id: adminRoleId,
@@ -464,6 +286,319 @@ class AuthRepository implements IAuthRepository {
     final bytes = utf8.encode(password);
     return sha256.convert(bytes).toString();
   }
+}
+
+/// Helper class for data mapping operations
+class _AuthDataMapper {
+  static const String _boxName = 'auth';
+  static const String _usersKey = 'users';
+  static const String _currentUserKey = 'current_user';
+  static const String _rolesKey = 'roles';
+  static const String _groupsKey = 'groups';
+
+  Box get _box => Hive.box(_boxName);
+
+  List<AppUser> getUsers() {
+    final raw = _box.get(_usersKey);
+    if (raw is List) {
+      return raw
+          .whereType<Map>()
+          .map((entry) => AppUser.fromMap(Map<String, dynamic>.from(entry)))
+          .where((user) => user.username.isNotEmpty)
+          .toList();
+    }
+    return [];
+  }
+
+  AppUser? getUserByUsername(String username) {
+    final trimmed = username.trim().toLowerCase();
+    if (trimmed.isEmpty) {
+      return null;
+    }
+
+    for (final user in getUsers()) {
+      if (user.username.toLowerCase() == trimmed) {
+        return user;
+      }
+    }
+    return null;
+  }
+
+  List<RoleDefinition> getRoles() {
+    final raw = _box.get(_rolesKey);
+    if (raw is List) {
+      return raw
+          .whereType<Map>()
+          .map((entry) => RoleDefinition.fromMap(Map<String, dynamic>.from(entry)))
+          .where((role) => role.id.isNotEmpty)
+          .toList();
+    }
+    return [];
+  }
+
+  RoleDefinition? getRoleById(String roleId) {
+    for (final role in getRoles()) {
+      if (role.id == roleId) {
+        return role;
+      }
+    }
+    return null;
+  }
+
+  Future<void> upsertRole(RoleDefinition role) async {
+    final roles = getRoles();
+    roles.removeWhere((item) => item.id == role.id);
+    roles.add(role);
+    await _box.put(
+      _rolesKey,
+      roles.map((entry) => entry.toMap()).toList(),
+    );
+  }
+
+  Future<void> deleteRole(String roleId) async {
+    if (roleId == 'role_admin' || roleId == 'role_member') {
+      return;
+    }
+    final roles = getRoles()..removeWhere((item) => item.id == roleId);
+    await _box.put(
+      _rolesKey,
+      roles.map((entry) => entry.toMap()).toList(),
+    );
+  }
+
+  List<GroupDefinition> getGroups() {
+    final raw = _box.get(_groupsKey);
+    if (raw is List) {
+      return raw
+          .whereType<Map>()
+          .map((entry) => GroupDefinition.fromMap(Map<String, dynamic>.from(entry)))
+          .where((group) => group.id.isNotEmpty)
+          .toList();
+    }
+    return [];
+  }
+
+  GroupDefinition? getGroupById(String groupId) {
+    for (final group in getGroups()) {
+      if (group.id == groupId) {
+        return group;
+      }
+    }
+    return null;
+  }
+
+  List<GroupDefinition> getGroupsForUser(String username) {
+    final trimmed = username.trim().toLowerCase();
+    if (trimmed.isEmpty) {
+      return [];
+    }
+    return getGroups()
+        .where(
+          (group) => group.members
+              .any((member) => member.toLowerCase() == trimmed),
+        )
+        .toList();
+  }
+
+  Future<void> upsertGroup(GroupDefinition group) async {
+    final groups = getGroups();
+    groups.removeWhere((item) => item.id == group.id);
+    groups.add(group);
+    await _box.put(
+      _groupsKey,
+      groups.map((entry) => entry.toMap()).toList(),
+    );
+  }
+
+  Future<void> deleteGroup(String groupId) async {
+    final groups = getGroups()..removeWhere((item) => item.id == groupId);
+    await _box.put(
+      _groupsKey,
+      groups.map((entry) => entry.toMap()).toList(),
+    );
+  }
+
+  Future<void> addUserToGroup(String groupId, String username) async {
+    final group = getGroupById(groupId);
+    if (group == null) {
+      return;
+    }
+    final trimmed = username.trim();
+    if (trimmed.isEmpty) {
+      return;
+    }
+    if (group.members.any((member) => member.toLowerCase() == trimmed.toLowerCase())) {
+      return;
+    }
+
+    await upsertGroup(
+      group.copyWith(members: [...group.members, trimmed]),
+    );
+  }
+
+  Future<void> removeUserFromGroup(String groupId, String username) async {
+    final group = getGroupById(groupId);
+    if (group == null) {
+      return;
+    }
+    final trimmed = username.trim();
+    if (trimmed.isEmpty) {
+      return;
+    }
+
+    await upsertGroup(
+      group.copyWith(
+        members: group.members
+            .where((member) => member.toLowerCase() != trimmed.toLowerCase())
+            .toList(),
+      ),
+    );
+  }
+
+  Future<void> updateUserRole(String username, String roleId) async {
+    final users = getUsers();
+    final updated = users.map((user) {
+      if (user.username.toLowerCase() == username.toLowerCase()) {
+        return AppUser(
+          username: user.username,
+          password: user.password,
+          roleId: roleId,
+        );
+      }
+      return user;
+    }).toList();
+
+    await _box.put(
+      _usersKey,
+      updated.map((entry) => entry.toMap()).toList(),
+    );
+  }
+
+  Future<void> addUser(AppUser user) async {
+    final users = getUsers();
+    final hashedPassword = _hashPassword(user.password);
+    users.removeWhere(
+      (existing) => existing.username.toLowerCase() == user.username.toLowerCase(),
+    );
+    users.add(
+      AppUser(
+        username: user.username,
+        password: hashedPassword,
+        roleId: user.roleId,
+      ),
+    );
+    await _box.put(
+      _usersKey,
+      users.map((entry) => entry.toMap()).toList(),
+    );
+  }
+
+  Future<void> deleteUser(String username) async {
+    final users = getUsers();
+    users.removeWhere(
+      (existing) => existing.username.toLowerCase() == username.toLowerCase(),
+    );
+    await _box.put(
+      _usersKey,
+      users.map((entry) => entry.toMap()).toList(),
+    );
+
+    final current = getCurrentUser();
+    if (current != null && current.toLowerCase() == username.toLowerCase()) {
+      await setCurrentUser(null);
+    }
+  }
+
+  String? getCurrentUser() {
+    final value = _box.get(_currentUserKey);
+    if (value is String && value.isNotEmpty) {
+      return value;
+    }
+    return null;
+  }
+
+  Future<void> setCurrentUser(String? username) async {
+    if (username == null || username.isEmpty) {
+      await _box.delete(_currentUserKey);
+      return;
+    }
+    await _box.put(_currentUserKey, username);
+  }
+
+  String _hashPassword(String password) {
+    final bytes = utf8.encode(password);
+    return sha256.convert(bytes).toString();
+  }
+}
+
+/// Helper class for authentication operations
+class _AuthOperations {
+  // Simple in-memory rate limiter stored per-repository instance
+  final Map<String, List<DateTime>> _failedAttempts = {};
+
+  AppUser? validateUser(String username, String password) {
+    final dataMapper = _AuthDataMapper();
+    final users = dataMapper.getUsers();
+    final hashedPassword = _hashPassword(password);
+    for (final user in users) {
+      if (user.username == username && user.password == hashedPassword) {
+        return user;
+      }
+      if (user.username == username && user.password == password) {
+        _upgradeLegacyPassword(username, hashedPassword, users);
+        return AppUser(
+          username: user.username,
+          password: hashedPassword,
+          roleId: user.roleId,
+        );
+      }
+    }
+    return null;
+  }
+
+  Future<bool> login(String email, String password, RemoteAuthService remote) async {
+    try {
+      await remote.signIn(email, password);
+      final dataMapper = _AuthDataMapper();
+      await dataMapper.setCurrentUser(email.trim());
+      return true;
+    } catch (e) {
+      await recordFailedLoginAttempt(email.trim().toLowerCase());
+      return false;
+    }
+  }
+
+  Future<void> register(String email, String password, RemoteAuthService remote) async {
+    await remote.registerUser(email, password);
+  }
+
+  Future<bool> isLoggedIn() async {
+    return Supabase.instance.client.auth.currentSession != null;
+  }
+
+  Future<void> logout(RemoteAuthService remote) async {
+    await remote.signOut();
+    final dataMapper = _AuthDataMapper();
+    await dataMapper.setCurrentUser(null);
+  }
+
+  Future<bool> canAttemptLogin(String identifier) async {
+    final now = DateTime.now();
+    final list = _failedAttempts.putIfAbsent(identifier, () => []);
+    list.retainWhere((t) => now.difference(t) <= const Duration(minutes: 1));
+    return list.length < 5;
+  }
+
+  Future<void> recordFailedLoginAttempt(String identifier) async {
+    final now = DateTime.now();
+    final list = _failedAttempts.putIfAbsent(identifier, () => []);
+    list.add(now);
+  }
+
+  String _hashPassword(String password) {
+    final bytes = utf8.encode(password);
+    return sha256.convert(bytes).toString();
+  }
 
   void _upgradeLegacyPassword(
     String username,
@@ -484,8 +619,9 @@ class AuthRepository implements IAuthRepository {
         updated.add(user);
       }
     }
-    _box.put(
-      _usersKey,
+    final dataMapper = _AuthDataMapper();
+    dataMapper._box.put(
+      '_users',
       updated.map((entry) => entry.toMap()).toList(),
     );
   }

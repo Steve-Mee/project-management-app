@@ -1,12 +1,10 @@
 ﻿import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:my_project_management_app/core/repository/auth_repository.dart';
-import 'package:my_project_management_app/core/repository/i_auth_repository.dart';
+import 'package:my_project_management_app/core/repository/repository.dart';
 import 'package:my_project_management_app/core/auth/auth_user.dart';
 import 'package:my_project_management_app/core/auth/role_models.dart';
 import 'package:my_project_management_app/core/providers/auth_providers.dart';
-import 'package:my_project_management_app/core/repository/settings_repository.dart';
 import 'package:my_project_management_app/core/services/recaptcha_service.dart';
 import 'package:my_project_management_app/core/config/ai_config.dart' as ai_config;
 
@@ -712,7 +710,7 @@ void main() {
       
       // Create a repo with a custom RemoteAuthService to avoid initialization issues
       final customRemote = RemoteAuthService();
-      final repo = AuthRepository(remote: customRemote);
+      final repo = HiveAuthRepository(remote: customRemote);
       
       // Verify that RemoteAuthService methods are implemented (not throwing "not configured" errors)
       // In a real test environment, these would be mocked, but for this verification
@@ -728,7 +726,7 @@ void main() {
       // This test verifies that the concept of checking Supabase session is implemented
       // We can't test the actual Supabase call without mocking, but we verify the method exists
       final customRemote = RemoteAuthService();
-      final repo = AuthRepository(remote: customRemote);
+      final repo = HiveAuthRepository(remote: customRemote);
       
       // This verifies that isLoggedIn() is designed to use Supabase.instance.client.auth.currentSession
       // instead of local getCurrentUser() check

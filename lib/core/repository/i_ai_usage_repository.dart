@@ -1,7 +1,10 @@
-import 'package:my_project_management_app/core/models/ai_usage_record.dart';
-
 /// Abstract interface for AI usage repository
 /// Allows easy swapping of implementations (Hive, Supabase, mock for tests, etc.)
+library;
+import 'package:my_project_management_app/core/models/ai_usage_record.dart';
+
+/// Define abstract class `IAiUsageRepository`.
+/// Keep method signatures narrow and backend-agnostic to allow swapping.
 abstract class IAiUsageRepository {
   /// Logs an AI usage record to storage
   Future<void> logUsage(AiUsageRecord record);

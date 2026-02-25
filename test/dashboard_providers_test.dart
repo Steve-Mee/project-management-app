@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:my_project_management_app/core/providers/dashboard_providers.dart';
 import 'package:my_project_management_app/core/providers/project_providers.dart';
 import 'package:my_project_management_app/core/repository/i_dashboard_repository.dart';
+import 'package:my_project_management_app/core/repository/models/dashboard_models.dart';
 import 'package:my_project_management_app/core/models/dashboard_types.dart';
 import 'package:my_project_management_app/models/project_model.dart';
 import 'package:my_project_management_app/models/project_requirements.dart';

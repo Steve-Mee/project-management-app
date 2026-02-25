@@ -12,7 +12,7 @@ import 'package:my_project_management_app/core/models/dashboard_types.dart';
 import 'package:my_project_management_app/models/project_sort.dart';
 import 'package:my_project_management_app/core/providers/dashboard_providers.dart';
 import 'package:my_project_management_app/core/providers/project_providers.dart';
-import 'package:my_project_management_app/core/repository/i_dashboard_repository.dart';
+import 'package:my_project_management_app/core/repository/models/dashboard_models.dart';
 import 'package:my_project_management_app/core/services/app_logger.dart';
 
 class CustomizeDashboardScreen extends ConsumerStatefulWidget {

@@ -7,13 +7,13 @@ import 'package:my_project_management_app/core/providers/project_providers.dart'
 import 'package:my_project_management_app/core/providers/notification_providers.dart';
 import '../../core/services/app_logger.dart';
 import '../../models/task_model.dart';
-import 'package:my_project_management_app/core/repository/task_repository.dart';
-import 'package:my_project_management_app/core/repository/sub_task_repository.dart';
+import 'package:my_project_management_app/core/repository/impl/hive_task_repository.dart';
+import 'package:my_project_management_app/core/repository/impl/sub_task_repository.dart';
 import 'package:my_project_management_app/models/sub_task_model.dart';
 
 /// Repository provider for tasks
-final taskRepositoryProvider = FutureProvider<TaskRepository>((ref) async {
-  final repository = TaskRepository();
+final taskRepositoryProvider = FutureProvider<HiveTaskRepository>((ref) async {
+  final repository = HiveTaskRepository();
   await repository.initialize();
   return repository;
 });

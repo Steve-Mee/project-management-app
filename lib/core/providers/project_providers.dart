@@ -2,11 +2,12 @@ import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive/hive.dart';
 import 'package:my_project_management_app/models/project_model.dart';
-import 'package:my_project_management_app/core/repository/project_repository.dart';
+import 'package:my_project_management_app/core/repository/impl/hive_project_repository.dart';
 import 'package:my_project_management_app/core/repository/i_project_repository.dart' as repo;
+import 'package:my_project_management_app/core/repository/models/project_models.dart';
 import 'package:my_project_management_app/core/services/app_logger.dart';
 import 'auth_providers.dart'; // Import for auth provider access
-import 'package:my_project_management_app/core/repository/project_meta_repository.dart';
+import 'package:my_project_management_app/core/repository/impl/project_meta_repository.dart';
 import 'package:my_project_management_app/models/project_meta.dart';
 import 'package:my_project_management_app/core/auth/permissions.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -21,7 +22,7 @@ class ProjectFilterParams {
   final String? priority;
   final String? ownerId;
   final List<String>? tags;
-  final List<repo.ProjectFilterConditions>? extraConditions;
+  final List<ProjectFilterConditions>? extraConditions;
 
   const ProjectFilterParams({
     this.status,
@@ -42,7 +43,7 @@ class ProjectFilterParams {
     String? priority,
     String? ownerId,
     List<String>? tags,
-    List<repo.ProjectFilterConditions>? extraConditions,
+    List<ProjectFilterConditions>? extraConditions,
   }) {
     return ProjectFilterParams(
       status: status ?? this.status,
@@ -84,7 +85,7 @@ final projectCacheProvider = StateProvider.family<ProjectModel?, String>((ref, i
 /// Provider for project repository with abstract interface
 /// Easy to swap implementations for testing or different backends
 final projectRepositoryProvider = Provider<repo.IProjectRepository>((ref) {
-  return ProjectRepository();
+  return HiveProjectRepository();
 });
 
 /// @deprecated Use projectsPaginatedProvider instead for better performance
@@ -209,13 +210,12 @@ final filteredProjectsPaginatedProvider = FutureProvider.autoDispose.family<List
 
   // First get all filtered projects
   final allFiltered = await repository.getFilteredProjects(
-    repo.ProjectFilter(
+    models.ProjectFilter(
       status: params.filter.status,
       searchQuery: params.filter.searchQuery,
       startDate: params.filter.startDate,
       endDate: params.filter.endDate,
       priority: params.filter.priority,
-      ownerId: params.filter.ownerId,
       tags: params.filter.tags,
     ),
     extraConditions: params.filter.extraConditions ?? [],
@@ -254,7 +254,7 @@ class ProjectFilter {
   final DateTime? dueDateEnd;
   final List<String>? tags;
   final List<String>? requiredTags;
-  final List<repo.ProjectFilterConditions>? extraConditions;
+  final List<ProjectFilterConditions>? extraConditions;
   final String? sortBy; // values: "name", "priority", "startDate", "dueDate", "createdAt", "status"
   final bool sortAscending;
   final String? viewName;
@@ -301,7 +301,7 @@ class ProjectFilter {
     DateTime? dueDateEnd,
     List<String>? tags,
     List<String>? requiredTags,
-    List<repo.ProjectFilterConditions>? extraConditions,
+    List<ProjectFilterConditions>? extraConditions,
     String? sortBy,
     bool? sortAscending,
     String? viewName,
@@ -717,7 +717,7 @@ final projectsCombinedProvider = FutureProvider.autoDispose.family<List<ProjectM
     final repository = ref.watch(projectRepositoryProvider);
 
     // build a repo filter from provider params
-    final repoFilter = repo.ProjectFilter(
+    final repoFilter = models.ProjectFilter(
       status: params.filter.status,
       searchQuery: params.filter.searchQuery,
     );

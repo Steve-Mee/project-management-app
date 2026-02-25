@@ -7,10 +7,12 @@ import 'dart:async' as _i4;
 
 import 'package:mockito/mockito.dart' as _i1;
 import 'package:my_project_management_app/core/models/dashboard_types.dart'
-    as _i5;
-import 'package:my_project_management_app/core/models/requirements.dart' as _i6;
+    as _i6;
+import 'package:my_project_management_app/core/models/requirements.dart' as _i7;
 import 'package:my_project_management_app/core/repository/i_dashboard_repository.dart'
     as _i3;
+import 'package:my_project_management_app/core/repository/models/dashboard_models.dart'
+    as _i5;
 import 'package:my_project_management_app/models/project_requirements.dart'
     as _i2;
 
@@ -45,17 +47,17 @@ class MockIDashboardRepository extends _i1.Mock
   }
 
   @override
-  _i4.Future<List<_i3.DashboardItem>> loadConfig() =>
+  _i4.Future<List<_i5.DashboardItem>> loadConfig() =>
       (super.noSuchMethod(
             Invocation.method(#loadConfig, []),
-            returnValue: _i4.Future<List<_i3.DashboardItem>>.value(
-              <_i3.DashboardItem>[],
+            returnValue: _i4.Future<List<_i5.DashboardItem>>.value(
+              <_i5.DashboardItem>[],
             ),
           )
-          as _i4.Future<List<_i3.DashboardItem>>);
+          as _i4.Future<List<_i5.DashboardItem>>);
 
   @override
-  _i4.Future<void> saveConfig(List<_i3.DashboardItem>? items) =>
+  _i4.Future<void> saveConfig(List<_i5.DashboardItem>? items) =>
       (super.noSuchMethod(
             Invocation.method(#saveConfig, [items]),
             returnValue: _i4.Future<void>.value(),
@@ -64,7 +66,7 @@ class MockIDashboardRepository extends _i1.Mock
           as _i4.Future<void>);
 
   @override
-  _i4.Future<void> addItem(_i3.DashboardItem? item) =>
+  _i4.Future<void> addItem(_i5.DashboardItem? item) =>
       (super.noSuchMethod(
             Invocation.method(#addItem, [item]),
             returnValue: _i4.Future<void>.value(),
@@ -94,17 +96,17 @@ class MockIDashboardRepository extends _i1.Mock
           as _i4.Future<void>);
 
   @override
-  _i4.Future<List<_i3.DashboardTemplate>> loadTemplates() =>
+  _i4.Future<List<_i5.DashboardTemplate>> loadTemplates() =>
       (super.noSuchMethod(
             Invocation.method(#loadTemplates, []),
-            returnValue: _i4.Future<List<_i3.DashboardTemplate>>.value(
-              <_i3.DashboardTemplate>[],
+            returnValue: _i4.Future<List<_i5.DashboardTemplate>>.value(
+              <_i5.DashboardTemplate>[],
             ),
           )
-          as _i4.Future<List<_i3.DashboardTemplate>>);
+          as _i4.Future<List<_i5.DashboardTemplate>>);
 
   @override
-  _i4.Future<void> saveTemplates(List<_i3.DashboardTemplate>? templates) =>
+  _i4.Future<void> saveTemplates(List<_i5.DashboardTemplate>? templates) =>
       (super.noSuchMethod(
             Invocation.method(#saveTemplates, [templates]),
             returnValue: _i4.Future<void>.value(),
@@ -113,15 +115,15 @@ class MockIDashboardRepository extends _i1.Mock
           as _i4.Future<void>);
 
   @override
-  _i4.Future<_i5.SharedDashboard?> fetchSharedDashboard(String? shareId) =>
+  _i4.Future<_i6.SharedDashboard?> fetchSharedDashboard(String? shareId) =>
       (super.noSuchMethod(
             Invocation.method(#fetchSharedDashboard, [shareId]),
-            returnValue: _i4.Future<_i5.SharedDashboard?>.value(),
+            returnValue: _i4.Future<_i6.SharedDashboard?>.value(),
           )
-          as _i4.Future<_i5.SharedDashboard?>);
+          as _i4.Future<_i6.SharedDashboard?>);
 
   @override
-  _i4.Future<void> saveSharedDashboard(_i5.SharedDashboard? dashboard) =>
+  _i4.Future<void> saveSharedDashboard(_i6.SharedDashboard? dashboard) =>
       (super.noSuchMethod(
             Invocation.method(#saveSharedDashboard, [dashboard]),
             returnValue: _i4.Future<void>.value(),
@@ -142,15 +144,15 @@ class MockIDashboardRepository extends _i1.Mock
           as _i4.Future<void>);
 
   @override
-  _i4.Future<_i5.SharedDashboard?> loadLocalSharedDashboard(String? shareId) =>
+  _i4.Future<_i6.SharedDashboard?> loadLocalSharedDashboard(String? shareId) =>
       (super.noSuchMethod(
             Invocation.method(#loadLocalSharedDashboard, [shareId]),
-            returnValue: _i4.Future<_i5.SharedDashboard?>.value(),
+            returnValue: _i4.Future<_i6.SharedDashboard?>.value(),
           )
-          as _i4.Future<_i5.SharedDashboard?>);
+          as _i4.Future<_i6.SharedDashboard?>);
 
   @override
-  _i4.Future<void> saveLocalSharedDashboard(_i5.SharedDashboard? dashboard) =>
+  _i4.Future<void> saveLocalSharedDashboard(_i6.SharedDashboard? dashboard) =>
       (super.noSuchMethod(
             Invocation.method(#saveLocalSharedDashboard, [dashboard]),
             returnValue: _i4.Future<void>.value(),
@@ -185,17 +187,17 @@ class MockIDashboardRepository extends _i1.Mock
           as _i2.ProjectRequirements);
 
   @override
-  _i4.Future<List<_i6.Requirement>> loadRequirements() =>
+  _i4.Future<List<_i7.Requirement>> loadRequirements() =>
       (super.noSuchMethod(
             Invocation.method(#loadRequirements, []),
-            returnValue: _i4.Future<List<_i6.Requirement>>.value(
-              <_i6.Requirement>[],
+            returnValue: _i4.Future<List<_i7.Requirement>>.value(
+              <_i7.Requirement>[],
             ),
           )
-          as _i4.Future<List<_i6.Requirement>>);
+          as _i4.Future<List<_i7.Requirement>>);
 
   @override
-  _i4.Future<void> saveRequirement(_i6.Requirement? req) =>
+  _i4.Future<void> saveRequirement(_i7.Requirement? req) =>
       (super.noSuchMethod(
             Invocation.method(#saveRequirement, [req]),
             returnValue: _i4.Future<void>.value(),

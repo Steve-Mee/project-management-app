@@ -8,7 +8,7 @@ import 'package:my_project_management_app/generated/app_localizations.dart';
 import 'package:my_project_management_app/models/project_meta.dart';
 import 'package:my_project_management_app/models/project_model.dart';
 import 'package:my_project_management_app/models/task_model.dart';
-import 'package:my_project_management_app/core/repository/task_repository.dart';
+import 'package:my_project_management_app/core/repository/impl/hive_task_repository.dart';
 
 class FakeProjectsNotifier extends ProjectsNotifier {
   final List<ProjectModel> projects;
@@ -21,7 +21,7 @@ class FakeProjectsNotifier extends ProjectsNotifier {
   }
 }
 
-class FakeTaskRepository extends TaskRepository {
+class FakeTaskRepository extends HiveTaskRepository {
   final List<Task> tasks;
 
   FakeTaskRepository(this.tasks);

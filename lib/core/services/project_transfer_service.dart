@@ -6,7 +6,7 @@ import 'package:crypto/crypto.dart';
 import 'package:encrypt/encrypt.dart';
 import 'package:file_picker/file_picker.dart';
 import '../repository/i_project_repository.dart';
-import 'package:my_project_management_app/core/repository/task_repository.dart';
+import 'package:my_project_management_app/core/repository/impl/hive_task_repository.dart';
 import 'package:my_project_management_app/models/project_model.dart';
 import 'package:my_project_management_app/models/task_model.dart';
 
@@ -23,7 +23,7 @@ class ProjectTransferResult {
 class ProjectTransferService {
   Future<ProjectTransferResult?> exportData({
     required IProjectRepository projectRepository,
-    required TaskRepository taskRepository,
+    required HiveTaskRepository taskRepository,
     required String password,
   }) async {
     final directory = await FilePicker.platform.getDirectoryPath();
@@ -59,7 +59,7 @@ class ProjectTransferService {
 
   Future<ProjectTransferResult?> importData({
     required IProjectRepository projectRepository,
-    required TaskRepository taskRepository,
+    required HiveTaskRepository taskRepository,
   }) async {
     final originalProjectsById = <String, ProjectModel?>{};
     final originalTasksById = <String, Task?>{};
@@ -149,7 +149,7 @@ class ProjectTransferService {
 
   Future<void> _rollbackImport({
     required IProjectRepository projectRepository,
-    required TaskRepository taskRepository,
+    required HiveTaskRepository taskRepository,
     required Map<String, ProjectModel?> originalProjectsById,
     required Map<String, Task?> originalTasksById,
     required List<String> importedProjectIds,

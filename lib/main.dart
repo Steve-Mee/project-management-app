@@ -20,7 +20,7 @@ import 'package:my_project_management_app/generated/app_localizations.dart';
 import 'core/theme.dart';
 import 'package:my_project_management_app/core/providers.dart';
 import 'package:my_project_management_app/core/services/cloud_sync_service.dart';
-import 'package:my_project_management_app/core/repository/project_repository.dart';
+import 'package:my_project_management_app/core/repository/impl/hive_project_repository.dart';
 import 'package:my_project_management_app/core/providers/ai/index.dart' show aiChatProvider;
 import 'core/providers/auth_providers.dart';
 import 'core/providers/theme_providers.dart';
@@ -159,7 +159,7 @@ class _AppLifecycleHandler extends WidgetsBindingObserver {
   Timer? _backupTimer;
 
   _AppLifecycleHandler(this._container) {
-    final repository = _container.read(projectRepositoryProvider) as ProjectRepository;
+    final repository = _container.read(projectRepositoryProvider) as HiveProjectRepository;
     _cloudSync = CloudSyncService(repository: repository);
   }
 

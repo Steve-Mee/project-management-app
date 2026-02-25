@@ -11,7 +11,7 @@ import 'package:intl/intl.dart';
 import 'package:my_project_management_app/generated/app_localizations.dart';
 import 'package:my_project_management_app/core/auth/permissions.dart';
 import 'package:my_project_management_app/core/providers/project_providers.dart';
-import 'package:my_project_management_app/core/repository/i_project_repository.dart' as repo;
+import 'package:my_project_management_app/core/repository/models/project_models.dart';
 import '../../core/providers/auth_providers.dart';
 import '../../core/theme.dart';
 import '../../models/project_meta.dart';
@@ -705,25 +705,25 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   }
 
   void _applyAdvancedFilters() {
-    final conditions = <repo.ProjectFilterConditions>[];
+    final conditions = <ProjectFilterConditions>[];
 
     // Progress range condition
     if (_progressRange.start > 0 || _progressRange.end < 100) {
-      conditions.add(repo.ProjectFilterConditions(
+      conditions.add(ProjectFilterConditions(
         (project) => project.progress >= _progressRange.start && project.progress <= _progressRange.end,
       ));
     }
 
     // Complexity conditions (using complexity as priority)
     if (_selectedPriorities.isNotEmpty) {
-      conditions.add(repo.ProjectFilterConditions(
+      conditions.add(ProjectFilterConditions(
         (project) => _selectedPriorities.contains(project.complexity.name),
       ));
     }
 
     // Category conditions (using category as tags)
     if (_selectedTags.isNotEmpty) {
-      conditions.add(repo.ProjectFilterConditions(
+      conditions.add(ProjectFilterConditions(
         (project) => project.category != null && _selectedTags.contains(project.category!),
       ));
     }
@@ -734,7 +734,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
         case 'progress_gt':
           final value = double.tryParse(_customConditionValue!);
           if (value != null) {
-            conditions.add(repo.ProjectFilterConditions(
+            conditions.add(ProjectFilterConditions(
               (project) => project.progress > value,
             ));
           }
@@ -742,18 +742,18 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
         case 'progress_lt':
           final value = double.tryParse(_customConditionValue!);
           if (value != null) {
-            conditions.add(repo.ProjectFilterConditions(
+            conditions.add(ProjectFilterConditions(
               (project) => project.progress < value,
             ));
           }
           break;
         case 'name_contains':
-          conditions.add(repo.ProjectFilterConditions(
+          conditions.add(ProjectFilterConditions(
             (project) => project.name.toLowerCase().contains(_customConditionValue!.toLowerCase()),
           ));
           break;
         case 'description_contains':
-          conditions.add(repo.ProjectFilterConditions(
+          conditions.add(ProjectFilterConditions(
             (project) => (project.description ?? '').toLowerCase().contains(_customConditionValue!.toLowerCase()),
           ));
           break;

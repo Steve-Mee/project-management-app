@@ -3,7 +3,8 @@ import 'package:my_project_management_app/models/task_model.dart';
 import 'package:my_project_management_app/core/services/app_logger.dart';
 
 /// Repository for managing task persistence using Hive
-class TaskRepository {
+/// Refactored per .github/issues/049-repository-refactoring.md
+class HiveTaskRepository {
   static const String _boxName = 'tasks';
   late Box<Task> _tasksBox;
   final Map<String, List<Task>> _tasksByProjectCache = {};

@@ -1,9 +1,9 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
-import '../repository/i_project_repository.dart';
+import 'package:my_project_management_app/core/repository/i_project_repository.dart';
 import '../services/cloud_sync_service.dart';
 import 'connectivity_provider.dart';
-import '../repository/i_dashboard_repository.dart';
+import 'package:my_project_management_app/core/repository/i_dashboard_repository.dart';
 import '../services/app_logger.dart';
 import '../../models/project_model.dart';
 import 'project_providers.dart';
