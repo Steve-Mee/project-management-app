@@ -166,3 +166,8 @@ Zorg voor dark mode support en touch gestures
 Maak packages/pma_core met alle core providers, services, models, utils
 Features blijven in main app maar importeren pma_core
 Update go_router met deferred loading waar mogelijk
+
+- [ ] 071. Feature flags via Supabase (2 uur)
+
+Maak FeatureFlagProvider die supabase.from('feature_flags').select() leest + cache
+Gebruik in AI, Gantt, onboarding etc.
