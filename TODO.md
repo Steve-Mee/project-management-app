@@ -96,3 +96,10 @@ Maak makkelijk om later Gemini/Claude toe te voegen via feature flag
 
 Maak supabase_fcm_setup.md met exacte Edge Function + Supabase → FCM flow
 Verwijder onnodige Firebase deps indien mogelijk (of laat staan als push-notificaties werken)
+
+- [ ] 059. Test coverage + badge toevoegen (1 dag)
+
+Voeg flutter test --coverage toe aan CI
+Upload naar Codecov of Coveralls
+Voeg badge toe in README
+Streef naar >85% coverage op core + repositories
