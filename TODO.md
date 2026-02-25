@@ -115,3 +115,10 @@ Voeg flutter_test golden configuratie toe
 .github/workflows/flutter_desktop.yml (Windows/macOS/Linux build)
 .github/workflows/semantic_pr.yml + release.yml (conventional commits)
 Trigger op pull_request en push main
+
+- [ ] 062. Hive encryptie implementeren voor gevoelige boxes (3 uur)
+
+Gebruik encrypt package + key uit FlutterSecureStorage
+Maak EncryptedHiveBox wrapper
+Encrypt: auth, settings, AI usage history, local tokens
+Update HiveInitializer
