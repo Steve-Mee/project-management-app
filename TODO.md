@@ -155,3 +155,8 @@ Gebruik shared_preferences + Riverpod flag
 Voeg Semantics labels toe op alle buttons, icons, lists
 Verhoog contrast dark mode (controleer met Flutter Accessibility Inspector)
 Test met TalkBack (Android) & VoiceOver (iOS) + web
+
+- [ ] 069. Gantt chart upgraden of fork moderniseren (2-3 dagen)
+
+Vervang legacy_gantt_chart door gantt_chart of syncfusion_flutter_gantt (of fork + Material 3 update)
+Zorg voor dark mode support en touch gestures
