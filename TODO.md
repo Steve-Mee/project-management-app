@@ -176,3 +176,8 @@ Gebruik in AI, Gantt, onboarding etc.
 
 ErrorBoundary wrapper rond hele app
 Log alle errors + user actions als breadcrumbs
+
+- [ ] 073. Analytics toevoegen (Supabase of Firebase) (3 uur)
+
+Track belangrijke events: project_created, task_completed, ai_used, invite_sent
+Maak AnalyticsService abstract
