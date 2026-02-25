@@ -127,3 +127,8 @@ Update HiveInitializer
 
 Maak nieuw MD-bestand met alle SQL, RLS policies, storage buckets, Edge Functions
 Inclusief "hoe nieuwe policy toevoegen" instructies
+
+- [ ] 064. Infinite scroll toevoegen in ProjectsList & TasksList (4 uur)
+
+Gebruik Riverpod AsyncNotifier met pagination + scrollController
+Voeg loading indicator + "einde bereikt" toe
