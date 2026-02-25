@@ -59,9 +59,22 @@ Flutter-based Project Management App for tracking projects, tasks, and sub-tasks
    flutter pub get
    ```
 
+### Configuration
+
 3. Set up environment variables:
-   - Copy `.env.example` to `.env`
-   - Fill in your Supabase URL, anon key, and OpenAI API key
+   - Copy `.env.example` to `.env` in the project root
+   - Fill in the required values (see `.env.example` for details)
+   
+   **Required:**
+   - `SUPABASE_URL` - Your Supabase project URL
+   - `SUPABASE_ANON_KEY` - Your Supabase anonymous key
+   
+   **Optional:**
+   - `OPENAI_API_KEY` - For AI chat features
+   - `STRIPE_PUBLISHABLE_KEY` & `STRIPE_SECRET_KEY` - For payment features
+   - `SENTRY_DSN` - For error reporting
+   - `LOG_LEVEL` - Application logging level
+   - `FIREBASE_API_KEY` - For Firebase services
 
 4. Run the app:
    ```bash

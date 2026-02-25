@@ -36,6 +36,7 @@ import 'features/auth/login_screen.dart';
 import 'models/project_model.dart';
 import 'models/task_model.dart';
 import 'models/comment_model.dart';
+import 'core/config/app_config.dart';
 
 /// Initializes environment variables from .env file
 /// Loads dotenv for development. In production, uses secure storage if available
@@ -86,21 +87,18 @@ Future<Map<String, String>> initEnv() async {
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
-  // Initialize environment variables
-  final env = await initEnv();
-  
-  // NOTE: converted to issue 048
-  // String openaiKey = env['openaiKey']!;
+  // Initialize application configuration
+  await AppConfig.initialize();
   
   if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
     await windowManager.ensureInitialized();
   }
   await Supabase.initialize(
-    url: env['url']!,
-    anonKey: env['anonKey']!,
+    url: AppConfig.supabaseUrl!,
+    anonKey: AppConfig.supabaseAnonKey!,
   );
   // Initialize Stripe
-  Stripe.publishableKey = dotenv.env['STRIPE_PUBLISHABLE_KEY'] ?? '';
+  Stripe.publishableKey = AppConfig.stripePublishableKey ?? '';
   Stripe.merchantIdentifier = 'merchant.com.example';
   Stripe.urlScheme = 'flutterstripe';
   Hive.registerAdapter(ProjectModelAdapter());

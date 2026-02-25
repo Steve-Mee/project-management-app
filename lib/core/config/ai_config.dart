@@ -1,5 +1,7 @@
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
+import 'app_config.dart';
+
 /// Enum for different levels of help provided by the AI
 enum HelpLevel {
   /// Basic help - high-level overview
@@ -32,9 +34,9 @@ class AiConfig {
   /// Private constructor to prevent instantiation
   AiConfig._();
 
-  /// Gets the Grok API key from environment variables
+  /// Gets the OpenAI API key from AppConfig
   /// Returns null if not set, allowing for graceful error handling
-  static String? get apiKey => dotenv.env['GROK_API_KEY'];
+  static String? get apiKey => AppConfig.openaiApiKey;
 
   /// Gets the default AI model to use
   /// Currently set to Grok's fast reasoning model
