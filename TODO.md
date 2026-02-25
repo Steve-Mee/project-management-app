@@ -57,3 +57,9 @@ Voeg sectie Architecture toe met Mermaid-diagram (core → features → provider
 Maak table met alle documentatie-bestanden (00_START_HERE.md, DASHBOARD_GUIDE.md, IMPLEMENTATION_SUMMARY.md, etc.)
 Update Features-lijst met alle huidige enterprise features
 Voeg "Contributing" en "Roadmap" sectie toe
+
+- [ ] 053. analysis_options.yaml strenger maken (20 min)
+
+Voeg include: package:flutter_lints/flutter.yaml of package:very_good_analysis toe
+Activeer regels: prefer_const_constructors, prefer_const_declarations, avoid_print: false, use_key_in_widget_constructors: false
+Run flutter analyze --no-fatal-infos en fix alle nieuwe warnings
