@@ -48,3 +48,12 @@ Voeg toe:YAMLhomepage: https://github.com/Steve-Mee/project-management-app
 repository: "https://github.com/Steve-Mee/project-management-app"
 Verwijder ongebruikte deps indien aanwezig (controleer met flutter pub deps --style=compact)
 Run flutter pub get + commit
+
+- [ ] 052. README.md volledig upgraden (1-1.5 uur)
+
+Voeg badges toe bovenaan: Flutter, Riverpod 2, Supabase, Sentry, MIT License, CI status (later)
+Maak nieuwe sectie Screenshots met 8 afbeeldingen (dashboard light/dark, AI chat, Gantt, offline mode, mobile + desktop, deep link invite, export PDF/CSV)
+Voeg sectie Architecture toe met Mermaid-diagram (core → features → providers → repositories → Supabase/Hive)
+Maak table met alle documentatie-bestanden (00_START_HERE.md, DASHBOARD_GUIDE.md, IMPLEMENTATION_SUMMARY.md, etc.)
+Update Features-lijst met alle huidige enterprise features
+Voeg "Contributing" en "Roadmap" sectie toe
