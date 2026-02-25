@@ -181,3 +181,8 @@ Log alle errors + user actions als breadcrumbs
 
 Track belangrijke events: project_created, task_completed, ai_used, invite_sent
 Maak AnalyticsService abstract
+
+- [ ] 074. PWA support voor web (1 dag)
+
+Voeg web/manifest.json + service worker toe
+Test offline mode in Chrome
