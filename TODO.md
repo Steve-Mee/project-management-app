@@ -160,3 +160,9 @@ Test met TalkBack (Android) & VoiceOver (iOS) + web
 
 Vervang legacy_gantt_chart door gantt_chart of syncfusion_flutter_gantt (of fork + Material 3 update)
 Zorg voor dark mode support en touch gestures
+
+- [ ] 070. Modularisatie: core als apart package (3-4 dagen)
+
+Maak packages/pma_core met alle core providers, services, models, utils
+Features blijven in main app maar importeren pma_core
+Update go_router met deferred loading waar mogelijk
