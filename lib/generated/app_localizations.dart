@@ -2476,13 +2476,13 @@ abstract class AppLocalizations {
   /// Label for chat operation rate limit setting.
   ///
   /// In en, this message translates to:
-  /// **'Chat limit'**
+  /// **'Limit for chat'**
   String get limit_for_chat;
 
   /// Label for summarize operation rate limit setting.
   ///
   /// In en, this message translates to:
-  /// **'Summarize limit'**
+  /// **'Limit for summarize'**
   String get limit_for_summarize;
 
   /// Label for generate tasks operation rate limit setting.
@@ -2494,32 +2494,74 @@ abstract class AppLocalizations {
   /// Label for generate questions operation rate limit setting.
   ///
   /// In en, this message translates to:
-  /// **'Generate questions limit'**
+  /// **'Limit for generate questions'**
   String get limit_for_generate_questions;
 
   /// Label for generate proposals operation rate limit setting.
   ///
   /// In en, this message translates to:
-  /// **'Generate proposals limit'**
+  /// **'Limit for generate proposals'**
   String get limit_for_generate_proposals;
 
   /// Label for generate plan operation rate limit setting.
   ///
   /// In en, this message translates to:
-  /// **'Generate plan limit'**
+  /// **'Limit for generate plan'**
   String get limit_for_generate_plan;
 
   /// Label for parse filter operation rate limit setting.
   ///
   /// In en, this message translates to:
-  /// **'Parse filter limit'**
+  /// **'Limit for parse filter'**
   String get limit_for_parse_filter;
 
-  /// Confirmation message when per-operation rate limits are saved.
+  /// Section title for AI exponential backoff configuration.
   ///
   /// In en, this message translates to:
-  /// **'Per-operation limits saved'**
+  /// **'AI Backoff Settings'**
+  String get ai_backoff_settings;
+
+  /// Label for exponential backoff base delay setting.
+  ///
+  /// In en, this message translates to:
+  /// **'Base Delay'**
+  String get backoff_base_delay;
+
+  /// Label for exponential backoff maximum delay setting.
+  ///
+  /// In en, this message translates to:
+  /// **'Max Delay'**
+  String get backoff_max_delay;
+
+  /// Label for maximum retry attempts setting.
+  ///
+  /// In en, this message translates to:
+  /// **'Max Retries'**
+  String get max_retry_attempts;
+
+  /// Success message when per-operation rate limit is saved.
+  ///
+  /// In en, this message translates to:
+  /// **'Per-operation limit saved'**
   String get per_op_limit_saved;
+
+  /// Label for maximum requests per operation setting.
+  ///
+  /// In en, this message translates to:
+  /// **'Max requests per operation'**
+  String get max_requests_per_operation;
+
+  /// Section title for exponential backoff configuration.
+  ///
+  /// In en, this message translates to:
+  /// **'Backoff Settings'**
+  String get backoff_settings;
+
+  /// Label for request queuing enable/disable toggle.
+  ///
+  /// In en, this message translates to:
+  /// **'Request queuing enabled'**
+  String get request_queue_enabled;
 
   /// Tooltip for the undo button in the dashboard toolbar.
   ///
@@ -2688,6 +2730,36 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Type @ to mention a user'**
   String get typing_to_mention;
+
+  /// Label for XML parsing format.
+  ///
+  /// In en, this message translates to:
+  /// **'XML'**
+  String get parsing_format_xml;
+
+  /// Label for YAML parsing format.
+  ///
+  /// In en, this message translates to:
+  /// **'YAML'**
+  String get parsing_format_yaml;
+
+  /// Error message when an unsupported parsing format is requested.
+  ///
+  /// In en, this message translates to:
+  /// **'Unsupported format: {format}. Supported formats: {supported}'**
+  String parsing_error_unsupported_format(String format, String supported);
+
+  /// Error message for authentication backend failures.
+  ///
+  /// In en, this message translates to:
+  /// **'Authentication backend error'**
+  String get auth_backend_error;
+
+  /// Error message when session refresh fails.
+  ///
+  /// In en, this message translates to:
+  /// **'Session refresh failed'**
+  String get session_refresh_failed;
 }
 
 class _AppLocalizationsDelegate

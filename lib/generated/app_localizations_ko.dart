@@ -1285,28 +1285,49 @@ class AppLocalizationsKo extends AppLocalizations {
   String get ai_per_operation_limits => 'Per-Operation Rate Limits';
 
   @override
-  String get limit_for_chat => 'Chat limit';
+  String get limit_for_chat => 'Limit for chat';
 
   @override
-  String get limit_for_summarize => 'Summarize limit';
+  String get limit_for_summarize => 'Limit for summarize';
 
   @override
   String get limit_for_generate_tasks => 'Generate tasks limit';
 
   @override
-  String get limit_for_generate_questions => 'Generate questions limit';
+  String get limit_for_generate_questions => 'Limit for generate questions';
 
   @override
-  String get limit_for_generate_proposals => 'Generate proposals limit';
+  String get limit_for_generate_proposals => 'Limit for generate proposals';
 
   @override
-  String get limit_for_generate_plan => 'Generate plan limit';
+  String get limit_for_generate_plan => 'Limit for generate plan';
 
   @override
-  String get limit_for_parse_filter => 'Parse filter limit';
+  String get limit_for_parse_filter => 'Limit for parse filter';
 
   @override
-  String get per_op_limit_saved => 'Per-operation limits saved';
+  String get ai_backoff_settings => 'AI Backoff Settings';
+
+  @override
+  String get backoff_base_delay => 'Base Delay';
+
+  @override
+  String get backoff_max_delay => 'Max Delay';
+
+  @override
+  String get max_retry_attempts => 'Max Retries';
+
+  @override
+  String get per_op_limit_saved => 'Per-operation limit saved';
+
+  @override
+  String get max_requests_per_operation => 'Max requests per operation';
+
+  @override
+  String get backoff_settings => 'Backoff Settings';
+
+  @override
+  String get request_queue_enabled => 'Request queuing enabled';
 
   @override
   String get undoTooltip => 'Undo last dashboard change';
@@ -1393,4 +1414,21 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get typing_to_mention => 'Type @ to mention a user';
+
+  @override
+  String get parsing_format_xml => 'XML';
+
+  @override
+  String get parsing_format_yaml => 'YAML';
+
+  @override
+  String parsing_error_unsupported_format(String format, String supported) {
+    return 'Unsupported format: $format. Supported formats: $supported';
+  }
+
+  @override
+  String get auth_backend_error => 'Authentication backend error';
+
+  @override
+  String get session_refresh_failed => 'Session refresh failed';
 }
