@@ -78,3 +78,9 @@ Maak lib/core/providers/index.dart met alle exports
 Maak per feature lib/features/xxx/providers/index.dart
 Vervang alle lange imports door import 'package:.../providers.dart';
 Doe hetzelfde voor models en repositories
+
+- [ ] 056. GetWidget volledig verwijderen (2 uur)
+
+Vervang alle GetWidget, GetMaterialApp, GetBuilder etc. door pure MaterialApp + Riverpod + custom widgets
+Update main.dart, themes en alle screens
+Verwijder get: ^4.x uit pubspec
