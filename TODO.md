@@ -171,3 +171,8 @@ Update go_router met deferred loading waar mogelijk
 
 Maak FeatureFlagProvider die supabase.from('feature_flags').select() leest + cache
 Gebruik in AI, Gantt, onboarding etc.
+
+- [ ] 072. Globale ErrorBoundary widget + Sentry breadcrumbs (2 uur)
+
+ErrorBoundary wrapper rond hele app
+Log alle errors + user actions als breadcrumbs
