@@ -71,3 +71,10 @@ Vervang alle handmatige fromJson/toJson + Equatable door @freezed classes
 Update Hive adapters (of migreer naar freezed + Hive generator)
 Update alle repositories, providers en tests
 Verwijder oude model-bestanden na validatie
+
+- [ ] 055. Barrel files aanmaken voor providers (1 uur)
+
+Maak lib/core/providers/index.dart met alle exports
+Maak per feature lib/features/xxx/providers/index.dart
+Vervang alle lange imports door import 'package:.../providers.dart';
+Doe hetzelfde voor models en repositories
