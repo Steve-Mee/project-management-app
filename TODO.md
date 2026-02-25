@@ -149,3 +149,9 @@ Tap → toont laatste sync tijd + manual sync button
 
 Eerste launch: wizard (welcome → create first project → AI intro → invite team)
 Gebruik shared_preferences + Riverpod flag
+
+- [ ] 068. Toegankelijkheid (Accessibility) verbeteren (1 dag)
+
+Voeg Semantics labels toe op alle buttons, icons, lists
+Verhoog contrast dark mode (controleer met Flutter Accessibility Inspector)
+Test met TalkBack (Android) & VoiceOver (iOS) + web
