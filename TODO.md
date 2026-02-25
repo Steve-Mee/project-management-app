@@ -108,3 +108,10 @@ Streef naar >85% coverage op core + repositories
 
 Golden tests voor: DashboardCard, AiChatBubble, GanttChart, TaskListItem, Theme switcher
 Voeg flutter_test golden configuratie toe
+
+- [ ] 061. Volledige GitHub Actions CI/CD workflows (2 dagen)
+
+.github/workflows/flutter_test.yml (analyze, test, coverage, web build)
+.github/workflows/flutter_desktop.yml (Windows/macOS/Linux build)
+.github/workflows/semantic_pr.yml + release.yml (conventional commits)
+Trigger op pull_request en push main
