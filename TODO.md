@@ -63,3 +63,11 @@ Voeg "Contributing" en "Roadmap" sectie toe
 Voeg include: package:flutter_lints/flutter.yaml of package:very_good_analysis toe
 Activeer regels: prefer_const_constructors, prefer_const_declarations, avoid_print: false, use_key_in_widget_constructors: false
 Run flutter analyze --no-fatal-infos en fix alle nieuwe warnings
+
+- [ ] 054. Alle models migreren naar freezed + json_serializable (2-3 dagen)
+
+Voeg deps toe: freezed: ^2.5.0, freezed_annotation: ^2.4.0, json_annotation: ^4.9.0, build_runner: ^2.4.0
+Vervang alle handmatige fromJson/toJson + Equatable door @freezed classes
+Update Hive adapters (of migreer naar freezed + Hive generator)
+Update alle repositories, providers en tests
+Verwijder oude model-bestanden na validatie
