@@ -1258,6 +1258,18 @@
   "@per_op_limit_saved": {
     "description": "Confirmation message when per-operation rate limits are saved."
   },
+  "max_requests_per_operation": "Max verzoeken per operatie",
+  "@max_requests_per_operation": {
+    "description": "Label for maximum requests per operation setting."
+  },
+  "backoff_settings": "Backoff Instellingen",
+  "@backoff_settings": {
+    "description": "Section title for exponential backoff configuration."
+  },
+  "request_queue_enabled": "Verzoek queuing ingeschakeld",
+  "@request_queue_enabled": {
+    "description": "Label for request queuing enable/disable toggle."
+  },
   "offline_mode": "Offline Modus",
   "@offline_mode": {
     "description": "Indicator text when the app is in offline mode."

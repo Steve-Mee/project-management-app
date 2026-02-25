@@ -2491,6 +2491,30 @@ abstract class AppLocalizations {
   /// **'Generate tasks limit'**
   String get limit_for_generate_tasks;
 
+  /// Label for generate questions operation rate limit setting.
+  ///
+  /// In en, this message translates to:
+  /// **'Generate questions limit'**
+  String get limit_for_generate_questions;
+
+  /// Label for generate proposals operation rate limit setting.
+  ///
+  /// In en, this message translates to:
+  /// **'Generate proposals limit'**
+  String get limit_for_generate_proposals;
+
+  /// Label for generate plan operation rate limit setting.
+  ///
+  /// In en, this message translates to:
+  /// **'Generate plan limit'**
+  String get limit_for_generate_plan;
+
+  /// Label for parse filter operation rate limit setting.
+  ///
+  /// In en, this message translates to:
+  /// **'Parse filter limit'**
+  String get limit_for_parse_filter;
+
   /// Confirmation message when per-operation rate limits are saved.
   ///
   /// In en, this message translates to:

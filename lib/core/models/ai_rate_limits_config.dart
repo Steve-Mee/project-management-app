@@ -16,6 +16,7 @@ class AiRateLimitsConfig {
   final Duration backoffBaseDelay;
   final Duration backoffMaxDelay;
   final int maxRetryAttempts;
+  final bool queueEnabled;
   final Map<String, int> perOperationLimits;
 
   /// Validates and clamps AI rate limits configuration to safe ranges.
@@ -81,6 +82,7 @@ class AiRateLimitsConfig {
     required this.backoffBaseDelay,
     required this.backoffMaxDelay,
     required this.maxRetryAttempts,
+    this.queueEnabled = true,
     this.perOperationLimits = const {
       'chat': 15,
       'generate_questions': 8,
@@ -102,6 +104,7 @@ class AiRateLimitsConfig {
         backoffBaseDelay = const Duration(milliseconds: 500),
         backoffMaxDelay = const Duration(seconds: 30),
         maxRetryAttempts = 3,
+        queueEnabled = true,
         perOperationLimits = const {
           'chat': 15,
           'generate_questions': 8,
@@ -122,6 +125,7 @@ class AiRateLimitsConfig {
     Duration? backoffBaseDelay,
     Duration? backoffMaxDelay,
     int? maxRetryAttempts,
+    bool? queueEnabled,
     Map<String, int>? perOperationLimits,
   }) {
     return AiRateLimitsConfig(
@@ -135,6 +139,7 @@ class AiRateLimitsConfig {
       backoffBaseDelay: backoffBaseDelay ?? this.backoffBaseDelay,
       backoffMaxDelay: backoffMaxDelay ?? this.backoffMaxDelay,
       maxRetryAttempts: maxRetryAttempts ?? this.maxRetryAttempts,
+      queueEnabled: queueEnabled ?? this.queueEnabled,
       perOperationLimits: perOperationLimits ?? this.perOperationLimits,
     );
   }
@@ -151,6 +156,7 @@ class AiRateLimitsConfig {
       backoffBaseDelay: Duration(milliseconds: json['backoffBaseDelayMs'] as int? ?? 500),
       backoffMaxDelay: Duration(seconds: json['backoffMaxDelaySeconds'] as int? ?? 30),
       maxRetryAttempts: json['maxRetryAttempts'] as int? ?? 3,
+      queueEnabled: json['queueEnabled'] as bool? ?? true,
       perOperationLimits: (json['perOperationLimits'] as Map<String, dynamic>?)?.map(
             (key, value) => MapEntry(key, value as int),
           ) ??
@@ -177,13 +183,14 @@ class AiRateLimitsConfig {
       'backoffBaseDelayMs': backoffBaseDelay.inMilliseconds,
       'backoffMaxDelaySeconds': backoffMaxDelay.inSeconds,
       'maxRetryAttempts': maxRetryAttempts,
+      'queueEnabled': queueEnabled,
       'perOperationLimits': perOperationLimits,
     };
   }
 
   @override
   String toString() {
-    return 'AiRateLimitsConfig(maxRequestsPerMinute: $maxRequestsPerMinute, maxRequestsPerHour: $maxRequestsPerHour, maxRequestsPerDay: $maxRequestsPerDay, maxTokensPerRequest: $maxTokensPerRequest, maxTotalTokensPerDay: $maxTotalTokensPerDay, maxRequestsPerWindow: $maxRequestsPerWindow, timeWindowDuration: $timeWindowDuration, backoffBaseDelay: $backoffBaseDelay, backoffMaxDelay: $backoffMaxDelay, maxRetryAttempts: $maxRetryAttempts, perOperationLimits: $perOperationLimits)';
+    return 'AiRateLimitsConfig(maxRequestsPerMinute: $maxRequestsPerMinute, maxRequestsPerHour: $maxRequestsPerHour, maxRequestsPerDay: $maxRequestsPerDay, maxTokensPerRequest: $maxTokensPerRequest, maxTotalTokensPerDay: $maxTotalTokensPerDay, maxRequestsPerWindow: $maxRequestsPerWindow, timeWindowDuration: $timeWindowDuration, backoffBaseDelay: $backoffBaseDelay, backoffMaxDelay: $backoffMaxDelay, maxRetryAttempts: $maxRetryAttempts, queueEnabled: $queueEnabled, perOperationLimits: $perOperationLimits)';
   }
 
   @override
@@ -200,6 +207,7 @@ class AiRateLimitsConfig {
         other.backoffBaseDelay == backoffBaseDelay &&
         other.backoffMaxDelay == backoffMaxDelay &&
         other.maxRetryAttempts == maxRetryAttempts &&
+        other.queueEnabled == queueEnabled &&
         other.perOperationLimits == perOperationLimits;
   }
 
@@ -215,6 +223,7 @@ class AiRateLimitsConfig {
         backoffBaseDelay.hashCode ^
         backoffMaxDelay.hashCode ^
         maxRetryAttempts.hashCode ^
+        queueEnabled.hashCode ^
         perOperationLimits.hashCode;
   }
 }

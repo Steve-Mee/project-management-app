@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'auth_providers.dart';
 import '../services/payment_backend_service.dart';
+import '../models/ai_rate_limits_config.dart';
 
 /// Notifier for managing real payment backend toggle
 class EnableRealPaymentBackendNotifier extends AsyncNotifier<bool> {
@@ -32,3 +33,24 @@ final paymentBackendServiceProvider = Provider<PaymentBackendService>((ref) {
   );
   return PaymentBackendService(useRealBackend: useRealBackend);
 });
+
+/// Notifier for managing AI rate limits configuration
+class AiRateLimitsConfigNotifier extends AsyncNotifier<AiRateLimitsConfig> {
+  @override
+  Future<AiRateLimitsConfig> build() async {
+    final settings = await ref.watch(settingsRepositoryProvider.future);
+    return settings.getAiRateLimitsConfig();
+  }
+
+  Future<void> setAiRateLimitsConfig(AiRateLimitsConfig config) async {
+    state = AsyncValue.data(config);
+    final settings = await ref.read(settingsRepositoryProvider.future);
+    await settings.setAiRateLimitsConfig(config);
+  }
+}
+
+/// Provider for AI rate limits configuration
+/// Manages per-operation rate limits for AI features
+final aiRateLimitsConfigProvider = AsyncNotifierProvider<AiRateLimitsConfigNotifier, AiRateLimitsConfig>(
+  AiRateLimitsConfigNotifier.new,
+);

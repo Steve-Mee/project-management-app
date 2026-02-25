@@ -1312,6 +1312,18 @@ class AppLocalizationsDe extends AppLocalizations {
   String get limit_for_generate_tasks => 'Generate tasks limit';
 
   @override
+  String get limit_for_generate_questions => 'Generate questions limit';
+
+  @override
+  String get limit_for_generate_proposals => 'Generate proposals limit';
+
+  @override
+  String get limit_for_generate_plan => 'Generate plan limit';
+
+  @override
+  String get limit_for_parse_filter => 'Parse filter limit';
+
+  @override
   String get per_op_limit_saved => 'Per-operation limits saved';
 
   @override

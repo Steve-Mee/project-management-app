@@ -665,6 +665,16 @@ class AiChatNotifier extends AsyncNotifier<AiChatState> {
     return exponentialDelay + jitter;
   }
 
+  /// Clear all pending requests from the queue
+  ///
+  /// Removes all queued requests and cancels their pending futures.
+  /// Useful for cleanup or when user wants to cancel all pending operations.
+  /// See .github/issues/033-ai-request-queue.md for queue management.
+  void clearQueue() {
+    _requestQueue.clear();
+    _updateQueueMetrics(); // Update UI with cleared queue
+    AppLogger.event('ai_queue_cleared', params: {'wasCleared': true});
+  }
 }
 
 /// Provider for AI chat state

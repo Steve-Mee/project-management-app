@@ -8,13 +8,14 @@ import 'package:my_project_management_app/core/auth/permissions.dart';
 import 'package:my_project_management_app/core/repository/hive_initializer.dart';
 import 'package:my_project_management_app/core/providers.dart';
 import 'package:my_project_management_app/core/providers/ai/index.dart'
-    show useProjectFilesProvider;
+    show useProjectFilesProvider, aiChatProvider;
 import '../../core/providers/auth_providers.dart';
 import '../../core/providers/theme_providers.dart';
 import '../../core/providers/payment_providers.dart';
 import '../../core/services/project_transfer_service.dart';
 import '../../features/dashboard/customize_dashboard_screen.dart';
 import '../../core/config/ai_config.dart' as ai_config;
+import '../../core/models/ai_rate_limits_config.dart';
 
 /// Settings screen - placeholder for application settings
 class SettingsScreen extends ConsumerStatefulWidget {
@@ -44,7 +45,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     final useProjectFiles = ref.watch(useProjectFilesProvider);
     final localeAsync = ref.watch(localeProvider);
     final settingsAsync = ref.watch(settingsRepositoryProvider);
-    final authState = ref.watch(authProvider).value!;
+    final authState = ref.watch(authProvider).maybeWhen(
+      data: (auth) => auth,
+      orElse: () => const AuthState(isAuthenticated: false),
+    );
     final usersAsync = ref.watch(authUsersProvider);
 
     final canManageUsers = ref.watch(
@@ -440,7 +444,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           Consumer(
             builder: (context, ref, child) {
               final paymentState = ref.watch(paymentProvider);
-              final authState = ref.watch(authProvider).value!;
+              final authState = ref.watch(authProvider).maybeWhen(
+                data: (auth) => auth,
+                orElse: () => const AuthState(isAuthenticated: false),
+              );
 
               return paymentState.when(
                 data: (status) {
@@ -1490,41 +1497,73 @@ class _AiSettingsSection extends ConsumerWidget {
             ),
           ),
         ),
+        // AI Per-Operation Rate Limits Section
+        ListTile(
+          leading: Icon(
+            Icons.speed,
+            color: Theme.of(context).colorScheme.primary,
+          ),
+          title: Text(
+            'AI Per-Operation Rate Limits',
+            style: Theme.of(context).textTheme.titleMedium,
+          ),
+        ),
+        ..._buildPerOperationLimitControls(context, ref),
+        // AI Backoff Settings Section
+        ListTile(
+          leading: Icon(
+            Icons.timer,
+            color: Theme.of(context).colorScheme.primary,
+          ),
+          title: Text(
+            'AI Backoff Settings',
+            style: Theme.of(context).textTheme.titleMedium,
+          ),
+        ),
+        ..._buildBackoffSettingsControls(context, ref),
       ],
     );
   }
 
-  // NOTE: converted to issue 046
-  /*
   /// Build dynamic list of operation-specific rate limit controls
-  List<Widget> _buildPerOperationLimitControls(BuildContext context, WidgetRef ref, AppLocalizations l10n) {
-    final rateLimitsAsync = ref.watch(settingsRepositoryProvider);
+  List<Widget> _buildPerOperationLimitControls(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
+    final rateLimitsAsync = ref.watch(aiRateLimitsConfigProvider);
     
     return rateLimitsAsync.maybeWhen(
-      data: (settings) {
-        final config = settings.getAiRateLimitsConfig();
+      data: (config) {
         final operations = config.perOperationLimits.keys.toList()..sort();
         
         return operations.map((operation) {
           final currentLimit = config.perOperationLimits[operation] ?? config.maxRequestsPerWindow;
           final displayName = _getOperationDisplayName(operation, l10n);
           
-          return ListTile(
-            title: Text(displayName),
-            subtitle: Text('Current limit: $currentLimit requests per window'),
-            trailing: SizedBox(
-              width: 120,
-              child: TextFormField(
-                initialValue: currentLimit.toString(),
-                keyboardType: TextInputType.number,
-                textAlign: TextAlign.center,
-                decoration: const InputDecoration(
-                  border: OutlineInputBorder(),
-                  contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+          return Consumer(
+            builder: (context, ref, child) {
+              final liveConfig = ref.watch(aiRateLimitsConfigProvider).maybeWhen(
+                data: (config) => config,
+                orElse: () => AiRateLimitsConfig.defaults(),
+              );
+              final liveLimit = liveConfig.perOperationLimits[operation] ?? liveConfig.maxRequestsPerWindow;
+              
+              return ListTile(
+                title: Text(displayName),
+                subtitle: Text('Current limit: $liveLimit requests per window'),
+                trailing: SizedBox(
+                  width: 120,
+                  child: TextFormField(
+                    initialValue: currentLimit.toString(),
+                    keyboardType: TextInputType.number,
+                    textAlign: TextAlign.center,
+                    decoration: const InputDecoration(
+                      border: OutlineInputBorder(),
+                      contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                    ),
+                    onChanged: (value) => _updateOperationLimit(ref, operation, value, context, l10n),
+                  ),
                 ),
-                onChanged: (value) => _updateOperationLimit(ref, operation, value, context, l10n),
-              ),
-            ),
+              );
+            },
           );
         }).toList();
       },
@@ -1540,39 +1579,315 @@ class _AiSettingsSection extends ConsumerWidget {
       case 'summarize':
         return l10n.limit_for_summarize;
       case 'generate_questions':
+        return l10n.limit_for_generate_questions;
       case 'generate_proposals':
+        return l10n.limit_for_generate_proposals;
       case 'generate_plan':
-        return l10n.limit_for_generate_tasks;
+        return l10n.limit_for_generate_plan;
+      case 'parse_filter':
+        return l10n.limit_for_parse_filter;
       default:
         return operation.replaceAll('_', ' ').toUpperCase();
     }
   }
-  */
 
-  // NOTE: converted to issue 046
-  /*
   /// Update per-operation limit
   void _updateOperationLimit(WidgetRef ref, String operation, String value, BuildContext context, AppLocalizations l10n) {
     final limit = int.tryParse(value);
     if (limit == null || limit < 1) return;
     
-    ref.read(settingsRepositoryProvider).maybeWhen(
-      data: (settings) async {
-        final currentConfig = settings.getAiRateLimitsConfig();
-        final updatedLimits = Map<String, int>.from(currentConfig.perOperationLimits);
-        updatedLimits[operation] = limit;
-        
-        final updatedConfig = currentConfig.copyWith(perOperationLimits: updatedLimits);
-        await settings.setAiRateLimitsConfig(updatedConfig);
-        
-        if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(l10n.per_op_limit_saved)),
-          );
-        }
+    ref.read(aiRateLimitsConfigProvider.notifier).setAiRateLimitsConfig(
+      ref.read(aiRateLimitsConfigProvider).maybeWhen(
+        data: (currentConfig) {
+          final updatedLimits = Map<String, int>.from(currentConfig.perOperationLimits);
+          updatedLimits[operation] = limit;
+          return currentConfig.copyWith(perOperationLimits: updatedLimits);
+        },
+        orElse: () => AiRateLimitsConfig.defaults(),
+      ),
+    ).then((_) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(l10n.per_op_limit_saved)),
+        );
+      }
+    }).catchError((error) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to save limit: $error')),
+        );
+      }
+    });
+  }
+
+  /// Build backoff settings controls
+  List<Widget> _buildBackoffSettingsControls(BuildContext context, WidgetRef ref) {
+    final rateLimitsAsync = ref.watch(aiRateLimitsConfigProvider);
+    
+    return rateLimitsAsync.maybeWhen(
+      data: (config) {
+        return [
+          // Base Delay Slider
+          Consumer(
+            builder: (context, ref, child) {
+              final liveConfig = ref.watch(aiRateLimitsConfigProvider).maybeWhen(
+                data: (config) => config,
+                orElse: () => AiRateLimitsConfig.defaults(),
+              );
+              final currentValue = liveConfig.backoffBaseDelay.inMilliseconds.toDouble();
+              
+              return ListTile(
+                title: Text('Base Delay'),
+                subtitle: Text('${currentValue.toInt()}ms'),
+                trailing: SizedBox(
+                  width: 150,
+                  child: Slider(
+                    value: currentValue,
+                    min: 100,
+                    max: 10000,
+                    divisions: 99,
+                    onChanged: (value) => _updateBackoffBaseDelay(ref, value.toInt(), context),
+                  ),
+                ),
+              );
+            },
+          ),
+          // Max Delay Slider
+          Consumer(
+            builder: (context, ref, child) {
+              final liveConfig = ref.watch(aiRateLimitsConfigProvider).maybeWhen(
+                data: (config) => config,
+                orElse: () => AiRateLimitsConfig.defaults(),
+              );
+              final currentValue = liveConfig.backoffMaxDelay.inSeconds.toDouble();
+              
+              return ListTile(
+                title: Text('Max Delay'),
+                subtitle: Text('${currentValue.toInt()}s'),
+                trailing: SizedBox(
+                  width: 150,
+                  child: Slider(
+                    value: currentValue,
+                    min: 5,
+                    max: 300,
+                    divisions: 59,
+                    onChanged: (value) => _updateBackoffMaxDelay(ref, value.toInt(), context),
+                  ),
+                ),
+              );
+            },
+          ),
+          // Max Retry Attempts Slider
+          Consumer(
+            builder: (context, ref, child) {
+              final liveConfig = ref.watch(aiRateLimitsConfigProvider).maybeWhen(
+                data: (config) => config,
+                orElse: () => AiRateLimitsConfig.defaults(),
+              );
+              final currentValue = liveConfig.maxRetryAttempts.toDouble();
+              
+              return ListTile(
+                title: Text('Max Retries'),
+                subtitle: Text('${currentValue.toInt()} attempts'),
+                trailing: SizedBox(
+                  width: 150,
+                  child: Slider(
+                    value: currentValue,
+                    min: 0,
+                    max: 10,
+                    divisions: 10,
+                    onChanged: (value) => _updateMaxRetryAttempts(ref, value.toInt(), context),
+                  ),
+                ),
+              );
+            },
+          ),
+          // Queue Status Display
+          Consumer(
+            builder: (context, ref, child) {
+              final chatStateAsync = ref.watch(aiChatProvider);
+              return chatStateAsync.maybeWhen(
+                data: (chatState) {
+                  return ListTile(
+                    title: Text('Queued requests'),
+                    subtitle: Text('${chatState.queueLength} pending'),
+                    leading: Icon(
+                      Icons.queue,
+                      color: Theme.of(context).colorScheme.secondary,
+                    ),
+                  );
+                },
+                orElse: () => ListTile(
+                  title: Text('Queued requests'),
+                  subtitle: Text('Loading...'),
+                  leading: Icon(
+                    Icons.queue,
+                    color: Theme.of(context).colorScheme.secondary,
+                  ),
+                ),
+              );
+            },
+          ),
+          // Queue Enabled Toggle
+          Consumer(
+            builder: (context, ref, child) {
+              final liveConfig = ref.watch(aiRateLimitsConfigProvider).maybeWhen(
+                data: (config) => config,
+                orElse: () => AiRateLimitsConfig.defaults(),
+              );
+              
+              return SwitchListTile(
+                value: liveConfig.queueEnabled,
+                onChanged: (value) => _updateQueueEnabled(ref, value, context),
+                title: Text('Enable Request Queuing'),
+                subtitle: Text('Queue requests when rate limits are exceeded'),
+                secondary: Icon(
+                  Icons.queue_play_next,
+                  color: Theme.of(context).colorScheme.secondary,
+                ),
+              );
+            },
+          ),
+          // Clear Queue Button
+          Consumer(
+            builder: (context, ref, child) {
+              final chatStateAsync = ref.watch(aiChatProvider);
+              final queueLength = chatStateAsync.maybeWhen(
+                data: (chatState) => chatState.queueLength,
+                orElse: () => 0,
+              );
+              
+              return ListTile(
+                title: Text('Clear Queue'),
+                subtitle: Text('Cancel all queued requests'),
+                leading: Icon(
+                  Icons.clear_all,
+                  color: Theme.of(context).colorScheme.secondary,
+                ),
+                trailing: ElevatedButton(
+                  onPressed: queueLength > 0 ? () => _clearQueue(ref, context) : null,
+                  child: Text('Clear'),
+                ),
+              );
+            },
+          ),
+        ];
       },
-      orElse: () {},
+      orElse: () => [const SizedBox.shrink()],
     );
   }
-  */
+
+  /// Update backoff base delay
+  void _updateBackoffBaseDelay(WidgetRef ref, int milliseconds, BuildContext context) {
+    ref.read(aiRateLimitsConfigProvider.notifier).setAiRateLimitsConfig(
+      ref.read(aiRateLimitsConfigProvider).maybeWhen(
+        data: (currentConfig) {
+          return currentConfig.copyWith(
+            backoffBaseDelay: Duration(milliseconds: milliseconds),
+          );
+        },
+        orElse: () => AiRateLimitsConfig.defaults(),
+      ),
+    ).then((_) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Base delay updated')),
+        );
+      }
+    }).catchError((error) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to save backoff settings: $error')),
+        );
+      }
+    });
+  }
+
+  /// Update backoff max delay
+  void _updateBackoffMaxDelay(WidgetRef ref, int seconds, BuildContext context) {
+    ref.read(aiRateLimitsConfigProvider.notifier).setAiRateLimitsConfig(
+      ref.read(aiRateLimitsConfigProvider).maybeWhen(
+        data: (currentConfig) {
+          return currentConfig.copyWith(
+            backoffMaxDelay: Duration(seconds: seconds),
+          );
+        },
+        orElse: () => AiRateLimitsConfig.defaults(),
+      ),
+    ).then((_) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Max delay updated')),
+        );
+      }
+    }).catchError((error) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to save backoff settings: $error')),
+        );
+      }
+    });
+  }
+
+  /// Update max retry attempts
+  void _updateMaxRetryAttempts(WidgetRef ref, int attempts, BuildContext context) {
+    ref.read(aiRateLimitsConfigProvider.notifier).setAiRateLimitsConfig(
+      ref.read(aiRateLimitsConfigProvider).maybeWhen(
+        data: (currentConfig) {
+          return currentConfig.copyWith(
+            maxRetryAttempts: attempts,
+          );
+        },
+        orElse: () => AiRateLimitsConfig.defaults(),
+      ),
+    ).then((_) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Max retry attempts updated')),
+        );
+      }
+    }).catchError((error) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to save backoff settings: $error')),
+        );
+      }
+    });
+  }
+
+  /// Update queue enabled setting
+  void _updateQueueEnabled(WidgetRef ref, bool enabled, BuildContext context) {
+    ref.read(aiRateLimitsConfigProvider.notifier).setAiRateLimitsConfig(
+      ref.read(aiRateLimitsConfigProvider).maybeWhen(
+        data: (currentConfig) {
+          return currentConfig.copyWith(
+            queueEnabled: enabled,
+          );
+        },
+        orElse: () => AiRateLimitsConfig.defaults(),
+      ),
+    ).then((_) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Queue ${enabled ? 'enabled' : 'disabled'}')),
+        );
+      }
+    }).catchError((error) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to update queue setting: $error')),
+        );
+      }
+    });
+  }
+
+  /// Clear the AI request queue
+  void _clearQueue(WidgetRef ref, BuildContext context) {
+    ref.read(aiChatProvider.notifier).clearQueue();
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Queue cleared')),
+      );
+    }
+  }
 }

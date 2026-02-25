@@ -340,9 +340,12 @@ class AiChatNotifier extends AsyncNotifier<AiChatState> {
 
     final currentState = state.value!;
 
-    // Check rate limit - if exceeded, enqueue anyway (queue will wait)
+    // Check rate limit - if exceeded, enqueue if queue is enabled, otherwise throw error
     final isCurrentlyLimited = currentState.isOperationRateLimited('chat');
     if (isCurrentlyLimited) {
+      if (!currentState.rateLimits.queueEnabled) {
+        throw Exception('Rate limit exceeded and queuing is disabled');
+      }
       final remainingTime = currentState.timeUntilReset;
       final limit = _getLimitForOperation('chat');
       final chatCount = currentState.requestCountInWindow['chat'] ?? 0;
@@ -688,8 +691,11 @@ class AiChatNotifier extends AsyncNotifier<AiChatState> {
   ) async {
     final currentState = state.value!;
 
-    // Log if currently rate limited (queue will handle waiting)
+    // Check rate limit - if exceeded, enqueue if queue is enabled, otherwise throw error
     if (currentState.isOperationRateLimited('generate_questions')) {
+      if (!currentState.rateLimits.queueEnabled) {
+        throw Exception('Rate limit exceeded and queuing is disabled');
+      }
       final remainingTime = currentState.timeUntilReset;
       final limit = _getLimitForOperation('generate_questions');
       final questionCount = currentState.requestCountInWindow['generate_questions'] ?? 0;
@@ -754,8 +760,11 @@ class AiChatNotifier extends AsyncNotifier<AiChatState> {
   }) async {
     final currentState = state.value!;
 
-    // Log if currently rate limited (queue will handle waiting)
+    // Check rate limit - if exceeded, enqueue if queue is enabled, otherwise throw error
     if (currentState.isOperationRateLimited('generate_proposals')) {
+      if (!currentState.rateLimits.queueEnabled) {
+        throw Exception('Rate limit exceeded and queuing is disabled');
+      }
       final remainingTime = currentState.timeUntilReset;
       final limit = _getLimitForOperation('generate_proposals');
       final proposalCount = currentState.requestCountInWindow['generate_proposals'] ?? 0;
@@ -816,8 +825,11 @@ class AiChatNotifier extends AsyncNotifier<AiChatState> {
   Future<ProjectPlan> generateFinalPlan(Map<String, dynamic> projectData) async {
     final currentState = state.value!;
 
-    // Log if currently rate limited (queue will handle waiting)
+    // Check rate limit - if exceeded, enqueue if queue is enabled, otherwise throw error
     if (currentState.isOperationRateLimited('generate_plan')) {
+      if (!currentState.rateLimits.queueEnabled) {
+        throw Exception('Rate limit exceeded and queuing is disabled');
+      }
       final remainingTime = currentState.timeUntilReset;
       final limit = _getLimitForOperation('generate_plan');
       final planCount = currentState.requestCountInWindow['generate_plan'] ?? 0;

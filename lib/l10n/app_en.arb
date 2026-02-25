@@ -1761,9 +1761,53 @@
   "@limit_for_generate_tasks": {
     "description": "Label for generate tasks operation rate limit setting."
   },
+  "limit_for_generate_questions": "Generate questions limit",
+  "@limit_for_generate_questions": {
+    "description": "Label for generate questions operation rate limit setting."
+  },
+  "limit_for_generate_proposals": "Generate proposals limit",
+  "@limit_for_generate_proposals": {
+    "description": "Label for generate proposals operation rate limit setting."
+  },
+  "limit_for_generate_plan": "Generate plan limit",
+  "@limit_for_generate_plan": {
+    "description": "Label for generate plan operation rate limit setting."
+  },
+  "limit_for_parse_filter": "Parse filter limit",
+  "@limit_for_parse_filter": {
+    "description": "Label for parse filter operation rate limit setting."
+  },
+  "ai_backoff_settings": "AI Backoff Settings",
+  "@ai_backoff_settings": {
+    "description": "Section title for AI exponential backoff configuration."
+  },
+  "backoff_base_delay": "Base Delay",
+  "@backoff_base_delay": {
+    "description": "Label for exponential backoff base delay setting."
+  },
+  "backoff_max_delay": "Max Delay",
+  "@backoff_max_delay": {
+    "description": "Label for exponential backoff maximum delay setting."
+  },
+  "max_retry_attempts": "Max Retries",
+  "@max_retry_attempts": {
+    "description": "Label for maximum retry attempts setting."
+  },
   "per_op_limit_saved": "Per-operation limits saved",
   "@per_op_limit_saved": {
     "description": "Confirmation message when per-operation rate limits are saved."
+  },
+  "max_requests_per_operation": "Max requests per operation",
+  "@max_requests_per_operation": {
+    "description": "Label for maximum requests per operation setting."
+  },
+  "backoff_settings": "Backoff Settings",
+  "@backoff_settings": {
+    "description": "Section title for exponential backoff configuration."
+  },
+  "request_queue_enabled": "Request queuing enabled",
+  "@request_queue_enabled": {
+    "description": "Label for request queuing enable/disable toggle."
   },
   "undoTooltip": "Undo last dashboard change",
   "@undoTooltip": {
@@ -1876,5 +1920,33 @@
   "typing_to_mention": "Type @ to mention a user",
   "@typing_to_mention": {
     "description": "Hint text for typing @ to start mentioning users."
+  },
+  "limit_for_chat": "Limit for chat",
+  "@limit_for_chat": {
+    "description": "Label for chat operation rate limit setting."
+  },
+  "limit_for_summarize": "Limit for summarize",
+  "@limit_for_summarize": {
+    "description": "Label for summarize operation rate limit setting."
+  },
+  "limit_for_generate_questions": "Limit for generate questions",
+  "@limit_for_generate_questions": {
+    "description": "Label for generate questions operation rate limit setting."
+  },
+  "limit_for_generate_proposals": "Limit for generate proposals",
+  "@limit_for_generate_proposals": {
+    "description": "Label for generate proposals operation rate limit setting."
+  },
+  "limit_for_generate_plan": "Limit for generate plan",
+  "@limit_for_generate_plan": {
+    "description": "Label for generate plan operation rate limit setting."
+  },
+  "limit_for_parse_filter": "Limit for parse filter",
+  "@limit_for_parse_filter": {
+    "description": "Label for parse filter operation rate limit setting."
+  },
+  "per_op_limit_saved": "Per-operation limit saved",
+  "@per_op_limit_saved": {
+    "description": "Success message when per-operation rate limit is saved."
   }
 }
