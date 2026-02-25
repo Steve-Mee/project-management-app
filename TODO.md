@@ -103,3 +103,8 @@ Voeg flutter test --coverage toe aan CI
 Upload naar Codecov of Coveralls
 Voeg badge toe in README
 Streef naar >85% coverage op core + repositories
+
+- [ ] 060. Golden tests voor kritieke UI (1-2 dagen)
+
+Golden tests voor: DashboardCard, AiChatBubble, GanttChart, TaskListItem, Theme switcher
+Voeg flutter_test golden configuratie toe
