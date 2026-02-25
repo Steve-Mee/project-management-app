@@ -132,3 +132,9 @@ Inclusief "hoe nieuwe policy toevoegen" instructies
 
 Gebruik Riverpod AsyncNotifier met pagination + scrollController
 Voeg loading indicator + "einde bereikt" toe
+
+- [ ] 065. App size analyse & optimalisatie (1 uur)
+
+Run flutter build apk --analyze-size --split-per-abi
+Verwijder onnodige fonts/icons/assets
+Documenteer resultaat in README
