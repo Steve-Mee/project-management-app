@@ -38,3 +38,13 @@ Last full scan: February 22, 2026 – All previous TODOs (015-038) completed. Ne
 - [x] DONE: 048 - Application configuration expansions
 - [x] DONE: 049 - Repository refactoring
 - [x] DONE: 050 - Auth backend integration
+
+- [ ] 051. pubspec.yaml metadata & dependencies updaten (30 min)
+
+Verander name: my_project_management_app → project_management_app
+Vervang de placeholder description: "A new Flutter project." door de volledige beschrijving uit README.md
+Verander intl: any → intl: ^0.19.0 (of exacte versie uit l10n.yaml)
+Voeg toe:YAMLhomepage: https://github.com/Steve-Mee/project-management-app
+repository: "https://github.com/Steve-Mee/project-management-app"
+Verwijder ongebruikte deps indien aanwezig (controleer met flutter pub deps --style=compact)
+Run flutter pub get + commit
