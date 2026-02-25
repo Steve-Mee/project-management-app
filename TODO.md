@@ -186,3 +186,9 @@ Maak AnalyticsService abstract
 
 Voeg web/manifest.json + service worker toe
 Test offline mode in Chrome
+
+- [ ] 075. Release pipeline voorbereiden (2 dagen)
+
+GitHub Releases + changelog (semantic-release)
+Fastlane voor iOS/Android + desktop builds
+Interne TestFlight / Play Store internal testing setup
