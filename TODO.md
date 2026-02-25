@@ -138,3 +138,9 @@ Voeg loading indicator + "einde bereikt" toe
 Run flutter build apk --analyze-size --split-per-abi
 Verwijder onnodige fonts/icons/assets
 Documenteer resultaat in README
+
+- [ ] 066. Offline indicator + sync status badge (2 uur)
+
+Globale widget boven AppBar (Connectivity + SyncService status)
+Kleur: groen (synced), oranje (syncing), rood (offline)
+Tap → toont laatste sync tijd + manual sync button
