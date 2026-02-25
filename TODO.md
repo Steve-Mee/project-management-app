@@ -91,3 +91,8 @@ Maak lib/core/services/ai/ai_service.dart (abstract class met Future<String> gen
 Implementeer OpenAiLangchainService erin
 Update alle calls in AI chat, task suggestions, etc.
 Maak makkelijk om later Gemini/Claude toe te voegen via feature flag
+
+- [ ] 058. Firebase alleen voor FCM houden & documenteren (1 uur)
+
+Maak supabase_fcm_setup.md met exacte Edge Function + Supabase → FCM flow
+Verwijder onnodige Firebase deps indien mogelijk (of laat staan als push-notificaties werken)
