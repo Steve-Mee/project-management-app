@@ -144,3 +144,8 @@ Documenteer resultaat in README
 Globale widget boven AppBar (Connectivity + SyncService status)
 Kleur: groen (synced), oranje (syncing), rood (offline)
 Tap → toont laatste sync tijd + manual sync button
+
+- [ ] 067. Onboarding flow voor nieuwe users (1 dag)
+
+Eerste launch: wizard (welcome → create first project → AI intro → invite team)
+Gebruik shared_preferences + Riverpod flag
