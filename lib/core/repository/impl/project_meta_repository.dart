@@ -1,5 +1,5 @@
 import 'package:hive_flutter/hive_flutter.dart';
-import 'package:my_project_management_app/models/project_meta.dart';
+import 'package:project_management_app/models/project_meta.dart';
 
 /// Repository for project metadata such as urgency and tracked time.
 class ProjectMetaRepository {

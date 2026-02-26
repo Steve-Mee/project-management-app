@@ -74,7 +74,7 @@ import 'app_localizations_zh.dart';
 /// property.
 abstract class AppLocalizations {
   AppLocalizations(String locale)
-    : localeName = intl.Intl.canonicalizedLocale(locale.toString());
+      : localeName = intl.Intl.canonicalizedLocale(locale.toString());
 
   final String localeName;
 
@@ -97,11 +97,11 @@ abstract class AppLocalizations {
   /// of delegates is preferred or required.
   static const List<LocalizationsDelegate<dynamic>> localizationsDelegates =
       <LocalizationsDelegate<dynamic>>[
-        delegate,
-        GlobalMaterialLocalizations.delegate,
-        GlobalCupertinoLocalizations.delegate,
-        GlobalWidgetsLocalizations.delegate,
-      ];
+    delegate,
+    GlobalMaterialLocalizations.delegate,
+    GlobalCupertinoLocalizations.delegate,
+    GlobalWidgetsLocalizations.delegate,
+  ];
 
   /// A list of this localizations delegate's supported locales.
   static const List<Locale> supportedLocales = <Locale>[
@@ -117,7 +117,7 @@ abstract class AppLocalizations {
     Locale('nl'),
     Locale('pt'),
     Locale('ru'),
-    Locale('zh'),
+    Locale('zh')
   ];
 
   /// Auto-generated description for appTitle.
@@ -1102,12 +1102,8 @@ abstract class AppLocalizations {
   ///
   /// In en, this message translates to:
   /// **'Project {projectName}, task {taskTitle}, status {statusLabel}, {timeLabel}'**
-  String projectTaskStatusSemantics(
-    Object projectName,
-    Object taskTitle,
-    Object statusLabel,
-    Object timeLabel,
-  );
+  String projectTaskStatusSemantics(Object projectName, Object taskTitle,
+      Object statusLabel, Object timeLabel);
 
   /// Auto-generated description for taskStatusSemantics.
   ///
@@ -1156,10 +1152,7 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Project progress chart for {projectName}. Completed {completedPercent} percent, pending {pendingPercent} percent.'**
   String projectProgressChartSemantics(
-    Object projectName,
-    Object completedPercent,
-    Object pendingPercent,
-  );
+      Object projectName, Object completedPercent, Object pendingPercent);
 
   /// Label for the progress column in tables.
   ///
@@ -1220,10 +1213,7 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Burndown chart for {projectName}. Actual points: {actualPoints}. Ideal points: {idealPoints}.'**
   String burndownChartSemantics(
-    Object projectName,
-    Object actualPoints,
-    Object idealPoints,
-  );
+      Object projectName, Object actualPoints, Object idealPoints);
 
   /// Auto-generated description for aiChatSemanticsLabel.
   ///
@@ -2773,20 +2763,20 @@ class _AppLocalizationsDelegate
 
   @override
   bool isSupported(Locale locale) => <String>[
-    'ar',
-    'de',
-    'en',
-    'es',
-    'fr',
-    'hi',
-    'it',
-    'ja',
-    'ko',
-    'nl',
-    'pt',
-    'ru',
-    'zh',
-  ].contains(locale.languageCode);
+        'ar',
+        'de',
+        'en',
+        'es',
+        'fr',
+        'hi',
+        'it',
+        'ja',
+        'ko',
+        'nl',
+        'pt',
+        'ru',
+        'zh'
+      ].contains(locale.languageCode);
 
   @override
   bool shouldReload(_AppLocalizationsDelegate old) => false;
@@ -2824,9 +2814,8 @@ AppLocalizations lookupAppLocalizations(Locale locale) {
   }
 
   throw FlutterError(
-    'AppLocalizations.delegate failed to load unsupported locale "$locale". This is likely '
-    'an issue with the localizations generation tool. Please file an issue '
-    'on GitHub with a reproducible sample app and the gen-l10n configuration '
-    'that was used.',
-  );
+      'AppLocalizations.delegate failed to load unsupported locale "$locale". This is likely '
+      'an issue with the localizations generation tool. Please file an issue '
+      'on GitHub with a reproducible sample app and the gen-l10n configuration '
+      'that was used.');
 }

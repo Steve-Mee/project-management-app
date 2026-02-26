@@ -1,12 +1,12 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:my_project_management_app/core/repository/repository.dart';
-import 'package:my_project_management_app/core/auth/auth_user.dart';
-import 'package:my_project_management_app/core/auth/role_models.dart';
-import 'package:my_project_management_app/core/providers/auth_providers.dart';
-import 'package:my_project_management_app/core/services/recaptcha_service.dart';
-import 'package:my_project_management_app/core/config/ai_config.dart' as ai_config;
+import 'package:project_management_app/core/repository/repository.dart';
+import 'package:project_management_app/core/auth/auth_user.dart';
+import 'package:project_management_app/core/auth/role_models.dart';
+import 'package:project_management_app/core/providers/auth_providers.dart';
+import 'package:project_management_app/core/services/recaptcha_service.dart';
+import 'package:project_management_app/core/config/ai_config.dart' as ai_config;
 
 // Fake box for testing
 class FakeBox {

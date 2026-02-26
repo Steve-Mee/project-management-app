@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:my_project_management_app/models/project_model.dart';
-import 'package:my_project_management_app/generated/app_localizations.dart';
+import 'package:project_management_app/models/project_model.dart';
+import 'package:project_management_app/generated/app_localizations.dart';
 import 'package:intl/intl.dart';
 import 'package:go_router/go_router.dart';
 

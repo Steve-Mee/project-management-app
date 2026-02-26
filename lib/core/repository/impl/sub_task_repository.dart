@@ -1,5 +1,5 @@
 import 'package:hive/hive.dart';
-import 'package:my_project_management_app/models/sub_task_model.dart';
+import 'package:project_management_app/models/sub_task_model.dart';
 import 'package:uuid/uuid.dart';
 
 /// Repository for managing sub-tasks using Hive

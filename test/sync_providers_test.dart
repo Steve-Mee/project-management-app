@@ -3,13 +3,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mockito/mockito.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
-import 'package:my_project_management_app/core/providers/sync_providers.dart';
-import 'package:my_project_management_app/core/providers/project_providers.dart';
-import 'package:my_project_management_app/core/providers/dashboard_providers.dart';
-import 'package:my_project_management_app/core/repository/i_project_repository.dart';
-import 'package:my_project_management_app/core/repository/i_dashboard_repository.dart';
-import 'package:my_project_management_app/core/services/cloud_sync_service.dart';
-import 'package:my_project_management_app/models/project_model.dart';
+import 'package:project_management_app/core/providers/sync_providers.dart';
+import 'package:project_management_app/core/providers/project_providers.dart';
+import 'package:project_management_app/core/providers/dashboard_providers.dart';
+import 'package:project_management_app/core/repository/i_project_repository.dart';
+import 'package:project_management_app/core/repository/i_dashboard_repository.dart';
+import 'package:project_management_app/core/services/cloud_sync_service.dart';
+import 'package:project_management_app/models/project_model.dart';
 
 // Mock classes
 class MockProjectRepository extends Mock implements IProjectRepository {}

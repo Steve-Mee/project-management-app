@@ -1,5 +1,5 @@
 import 'package:flutter_driver/driver_extension.dart';
-import 'package:my_project_management_app/main.dart' as app;
+import 'package:project_management_app/main.dart' as app;
 
 void main() {
   enableFlutterDriverExtension();

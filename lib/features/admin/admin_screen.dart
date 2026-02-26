@@ -1,11 +1,11 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:my_project_management_app/core/auth/permissions.dart';
-import 'package:my_project_management_app/core/auth/role_models.dart';
-import 'package:my_project_management_app/core/providers/auth_providers.dart';
-import 'package:my_project_management_app/core/providers/ai/ai_usage_provider.dart';
-import 'package:my_project_management_app/core/auth/auth_user.dart';
-import 'package:my_project_management_app/generated/app_localizations.dart';
+import 'package:project_management_app/core/auth/permissions.dart';
+import 'package:project_management_app/core/auth/role_models.dart';
+import 'package:project_management_app/core/providers/auth_providers.dart';
+import 'package:project_management_app/core/providers/ai/ai_usage_provider.dart';
+import 'package:project_management_app/core/auth/auth_user.dart';
+import 'package:project_management_app/generated/app_localizations.dart';
 class AdminScreen extends ConsumerStatefulWidget {
   const AdminScreen({super.key});
   @override

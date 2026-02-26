@@ -1,4 +1,4 @@
-import 'package:my_project_management_app/models/project_model.dart';
+import 'package:project_management_app/models/project_model.dart';
 
 /// Advanced filter conditions for projects
 class ProjectFilterConditions {

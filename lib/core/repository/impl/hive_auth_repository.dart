@@ -3,11 +3,11 @@ import 'dart:convert';
 import 'package:crypto/crypto.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:my_project_management_app/core/auth/permissions.dart';
-import 'package:my_project_management_app/core/auth/role_models.dart';
-import 'package:my_project_management_app/core/services/login_rate_limiter.dart';
-import 'package:my_project_management_app/core/auth/auth_user.dart';
-import 'package:my_project_management_app/core/repository/i_auth_repository.dart';
+import 'package:project_management_app/core/auth/permissions.dart';
+import 'package:project_management_app/core/auth/role_models.dart';
+import 'package:project_management_app/core/services/login_rate_limiter.dart';
+import 'package:project_management_app/core/auth/auth_user.dart';
+import 'package:project_management_app/core/repository/i_auth_repository.dart';
 
 enum Role {
   admin,

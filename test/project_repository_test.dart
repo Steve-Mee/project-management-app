@@ -2,11 +2,11 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hive/hive.dart';
-import 'package:my_project_management_app/core/repository/impl/hive_project_repository.dart';
+import 'package:project_management_app/core/repository/impl/hive_project_repository.dart';
 
-import 'package:my_project_management_app/core/repository/models/project_models.dart';
-import 'package:my_project_management_app/models/project_model.dart';
-import 'package:my_project_management_app/models/project_filter.dart';
+import 'package:project_management_app/core/repository/models/project_models.dart';
+import 'package:project_management_app/models/project_model.dart';
+import 'package:project_management_app/models/project_filter.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();

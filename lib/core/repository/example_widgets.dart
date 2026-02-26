@@ -2,8 +2,8 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:my_project_management_app/core/providers/project_providers.dart';
-import 'package:my_project_management_app/models/project_model.dart';
+import 'package:project_management_app/core/providers/project_providers.dart';
+import 'package:project_management_app/models/project_model.dart';
 
 // ============================================================================
 // 1. PROJECT LIST WIDGET

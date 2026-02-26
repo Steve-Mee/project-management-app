@@ -2,12 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:my_project_management_app/core/providers/ai/index.dart' show aiChatProvider, AiChatState, AiChatNotifier;
-import 'package:my_project_management_app/core/providers.dart';
-import 'package:my_project_management_app/features/ai_chat/ai_chat_modal.dart';
-import 'package:my_project_management_app/generated/app_localizations.dart';
-import 'package:my_project_management_app/models/chat_message_model.dart';
-import 'package:my_project_management_app/models/task_model.dart';
+import 'package:project_management_app/core/providers/ai/index.dart' show aiChatProvider, AiChatState, AiChatNotifier;
+import 'package:project_management_app/core/providers.dart';
+import 'package:project_management_app/features/ai_chat/ai_chat_modal.dart';
+import 'package:project_management_app/generated/app_localizations.dart';
+import 'package:project_management_app/models/chat_message_model.dart';
+import 'package:project_management_app/models/task_model.dart';
 
 class FakeTaskNotifier extends TaskNotifier {
   final List<Task> _tasks = [];

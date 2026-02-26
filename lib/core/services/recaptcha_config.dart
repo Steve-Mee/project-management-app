@@ -1,5 +1,5 @@
 import 'package:flutter_gcaptcha_v3/recaptca_config.dart';
-import 'package:my_project_management_app/core/repository/settings_repository.dart';
+import 'package:project_management_app/core/repository/settings_repository.dart';
 
 /// reCAPTCHA configuration for issue 040-authentication-security-enhancements
 /// Centralizes reCAPTCHA site key management and initialization

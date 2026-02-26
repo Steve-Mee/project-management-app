@@ -8,8 +8,8 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:my_project_management_app/main.dart';
-import 'package:my_project_management_app/features/auth/login_screen.dart';
+import 'package:project_management_app/main.dart';
+import 'package:project_management_app/features/auth/login_screen.dart';
 
 void main() {
   testWidgets('App shows login screen by default', (WidgetTester tester) async {

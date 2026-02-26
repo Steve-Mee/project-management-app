@@ -1,9 +1,9 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hive_flutter/hive_flutter.dart';
-import 'package:my_project_management_app/core/repository/impl/hive_dashboard_repository.dart';
-import 'package:my_project_management_app/core/repository/models/dashboard_models.dart';
-import 'package:my_project_management_app/core/models/dashboard_types.dart';
-import 'package:my_project_management_app/core/models/requirements.dart';
+import 'package:project_management_app/core/repository/impl/hive_dashboard_repository.dart';
+import 'package:project_management_app/core/repository/models/dashboard_models.dart';
+import 'package:project_management_app/core/models/dashboard_types.dart';
+import 'package:project_management_app/core/models/requirements.dart';
 import 'dart:io';
 
 void main() {

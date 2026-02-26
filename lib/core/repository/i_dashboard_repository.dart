@@ -1,9 +1,9 @@
 /// Abstract interface for dashboard repository
 /// Allows easy swapping of implementations (Hive, Supabase, mock for tests, etc.)
 library;
-import 'package:my_project_management_app/models/project_requirements.dart';
-import 'package:my_project_management_app/core/models/dashboard_types.dart';
-import 'package:my_project_management_app/core/models/requirements.dart';
+import 'package:project_management_app/models/project_requirements.dart';
+import 'package:project_management_app/core/models/dashboard_types.dart';
+import 'package:project_management_app/core/models/requirements.dart';
 import 'models/dashboard_models.dart';
 
 /// Define abstract class `IDashboardRepository`.

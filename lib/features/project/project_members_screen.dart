@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:my_project_management_app/core/services/project_members_service.dart';
-import 'package:my_project_management_app/core/services/project_invitation_service.dart';
-import 'package:my_project_management_app/core/services/app_logger.dart';
+import 'package:project_management_app/core/services/project_members_service.dart';
+import 'package:project_management_app/core/services/project_invitation_service.dart';
+import 'package:project_management_app/core/services/app_logger.dart';
 
 class ProjectMembersScreen extends ConsumerStatefulWidget {
   final String projectId;

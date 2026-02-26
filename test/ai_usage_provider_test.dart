@@ -3,9 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:csv/csv.dart';
 import 'dart:convert';
-import 'package:my_project_management_app/core/models/ai_usage_record.dart';
-import 'package:my_project_management_app/core/providers/ai/ai_usage_provider.dart';
-import 'package:my_project_management_app/core/repository/i_ai_usage_repository.dart';
+import 'package:project_management_app/core/models/ai_usage_record.dart';
+import 'package:project_management_app/core/providers/ai/ai_usage_provider.dart';
+import 'package:project_management_app/core/repository/i_ai_usage_repository.dart';
 
 class FakeAiUsageRepository implements IAiUsageRepository {
   final List<AiUsageRecord> _records = [];

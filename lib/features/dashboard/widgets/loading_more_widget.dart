@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:animate_do/animate_do.dart';
-import 'package:my_project_management_app/generated/app_localizations.dart';
+import 'package:project_management_app/generated/app_localizations.dart';
 
 class LoadingMoreWidget extends StatelessWidget {
   const LoadingMoreWidget({super.key});

@@ -1,7 +1,7 @@
 import 'package:flutter_gcaptcha_v3/recaptca_config.dart';
-import 'package:my_project_management_app/core/services/app_logger.dart';
-import 'package:my_project_management_app/core/repository/settings_repository.dart';
-import 'package:my_project_management_app/core/services/recaptcha_config.dart';
+import 'package:project_management_app/core/services/app_logger.dart';
+import 'package:project_management_app/core/repository/settings_repository.dart';
+import 'package:project_management_app/core/services/recaptcha_config.dart';
 
 /// Service for handling reCAPTCHA verification
 class RecaptchaService {

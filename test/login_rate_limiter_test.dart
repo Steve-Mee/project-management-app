@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hive_flutter/hive_flutter.dart';
-import 'package:my_project_management_app/core/services/login_rate_limiter.dart';
+import 'package:project_management_app/core/services/login_rate_limiter.dart';
 
 void main() {
   setUpAll(() async {

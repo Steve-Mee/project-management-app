@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import 'package:my_project_management_app/core/services/app_logger.dart';
-import 'package:my_project_management_app/models/project_requirements.dart';
+import 'package:project_management_app/core/services/app_logger.dart';
+import 'package:project_management_app/models/project_requirements.dart';
 
 /// Service for fetching project requirements from external APIs
 class RequirementsService {

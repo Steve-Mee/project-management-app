@@ -2,15 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'dart:convert';
 import 'dart:async';
-import 'package:my_project_management_app/models/project_plan.dart';
-import 'package:my_project_management_app/core/providers/project_providers.dart';
-import 'package:my_project_management_app/core/providers/auth_providers.dart';
+import 'package:project_management_app/models/project_plan.dart';
+import 'package:project_management_app/core/providers/project_providers.dart';
+import 'package:project_management_app/core/providers/auth_providers.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:mailer/mailer.dart';
 import 'package:mailer/smtp_server.dart';
-import 'package:my_project_management_app/core/services/payment_service.dart';
+import 'package:project_management_app/core/services/payment_service.dart';
 
 enum HelpLevel { basis, gedetailleerd, stapVoorStap }
 enum Complexity { simpel, middel, complex }

@@ -1,17 +1,17 @@
 import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive/hive.dart';
-import 'package:my_project_management_app/models/project_model.dart';
-import 'package:my_project_management_app/core/repository/impl/hive_project_repository.dart';
-import 'package:my_project_management_app/core/repository/i_project_repository.dart' as repo;
-import 'package:my_project_management_app/core/repository/models/project_models.dart';
-import 'package:my_project_management_app/core/services/app_logger.dart';
+import 'package:project_management_app/models/project_model.dart';
+import 'package:project_management_app/core/repository/impl/hive_project_repository.dart';
+import 'package:project_management_app/core/repository/i_project_repository.dart' as repo;
+import 'package:project_management_app/core/repository/models/project_models.dart';
+import 'package:project_management_app/core/services/app_logger.dart';
 import 'auth_providers.dart'; // Import for auth provider access
-import 'package:my_project_management_app/core/repository/impl/project_meta_repository.dart';
-import 'package:my_project_management_app/models/project_meta.dart';
-import 'package:my_project_management_app/core/auth/permissions.dart';
+import 'package:project_management_app/core/repository/impl/project_meta_repository.dart';
+import 'package:project_management_app/models/project_meta.dart';
+import 'package:project_management_app/core/auth/permissions.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:my_project_management_app/models/project_filter.dart' as models;
+import 'package:project_management_app/models/project_filter.dart' as models;
 
 /// Parameters for the filtered projects family provider
 class ProjectFilterParams {

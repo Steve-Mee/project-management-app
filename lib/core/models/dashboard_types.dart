@@ -1,4 +1,4 @@
-import 'package:my_project_management_app/core/repository/models/dashboard_models.dart';
+import 'package:project_management_app/core/repository/models/dashboard_models.dart';
 
 enum DashboardWidgetType {
   metricCard,

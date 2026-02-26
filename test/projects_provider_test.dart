@@ -1,12 +1,12 @@
 import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:my_project_management_app/core/providers/project_providers.dart';
-import 'package:my_project_management_app/core/providers/auth_providers.dart';
-import 'package:my_project_management_app/core/repository/i_project_repository.dart';
-import 'package:my_project_management_app/core/repository/models/project_models.dart';
-import 'package:my_project_management_app/models/project_model.dart';
-import 'package:my_project_management_app/models/project_filter.dart' as models;
+import 'package:project_management_app/core/providers/project_providers.dart';
+import 'package:project_management_app/core/providers/auth_providers.dart';
+import 'package:project_management_app/core/repository/i_project_repository.dart';
+import 'package:project_management_app/core/repository/models/project_models.dart';
+import 'package:project_management_app/models/project_model.dart';
+import 'package:project_management_app/models/project_filter.dart' as models;
 
 class FakeAuthNotifier extends AuthNotifier {
   @override

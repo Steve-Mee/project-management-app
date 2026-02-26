@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
-import 'package:my_project_management_app/core/providers/connectivity_provider.dart';
-import 'package:my_project_management_app/generated/app_localizations.dart';
+import 'package:project_management_app/core/providers/connectivity_provider.dart';
+import 'package:project_management_app/generated/app_localizations.dart';
 
 /// Offline Banner Widget
 ///
@@ -63,7 +63,7 @@ class OfflineBanner extends ConsumerWidget {
         );
       },
       loading: () => const SizedBox.shrink(),
-      error: (_, _) => const SizedBox.shrink(),
+      error: (_, __) => const SizedBox.shrink(),
     );
   }
 }

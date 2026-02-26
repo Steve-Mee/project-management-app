@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:my_project_management_app/core/providers/auth_providers.dart';
-import 'package:my_project_management_app/core/repository/settings_repository.dart';
-import 'package:my_project_management_app/core/repository/i_auth_repository.dart';
-import 'package:my_project_management_app/core/auth/auth_user.dart';
-import 'package:my_project_management_app/core/auth/role_models.dart';
+import 'package:project_management_app/core/providers/auth_providers.dart';
+import 'package:project_management_app/core/repository/settings_repository.dart';
+import 'package:project_management_app/core/repository/i_auth_repository.dart';
+import 'package:project_management_app/core/auth/auth_user.dart';
+import 'package:project_management_app/core/auth/role_models.dart';
 
 // Fake auth repository for testing user filtering
 class FakeAuthRepository implements IAuthRepository {

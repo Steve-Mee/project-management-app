@@ -1,8 +1,8 @@
 /// Abstract interface for auth repository
 /// Allows easy swapping of implementations (Hive, Supabase, mock for tests, etc.)
 library;
-import 'package:my_project_management_app/core/auth/auth_user.dart';
-import 'package:my_project_management_app/core/auth/role_models.dart';
+import 'package:project_management_app/core/auth/auth_user.dart';
+import 'package:project_management_app/core/auth/role_models.dart';
 
 /// Define abstract class `IAuthRepository`.
 /// Keep method signatures narrow and backend-agnostic to allow swapping.

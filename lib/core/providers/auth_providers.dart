@@ -6,17 +6,17 @@ import 'package:supabase_flutter/supabase_flutter.dart' hide AuthUser;
 import 'package:local_auth/local_auth.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:hive_flutter/hive_flutter.dart';
-import 'package:my_project_management_app/core/repository/impl/hive_auth_repository.dart';
-import 'package:my_project_management_app/core/repository/i_auth_repository.dart';
-import 'package:my_project_management_app/core/auth/auth_user.dart';
-import 'package:my_project_management_app/core/repository/impl/hive_settings_repository.dart';
-import 'package:my_project_management_app/core/services/cloud_sync_service.dart';
-import 'package:my_project_management_app/core/services/ab_testing_service.dart';
-import 'package:my_project_management_app/core/services/app_logger.dart';
-import 'package:my_project_management_app/core/services/login_rate_limiter.dart';
-import 'package:my_project_management_app/core/services/recaptcha_service.dart';
-import 'package:my_project_management_app/core/auth/permissions.dart';
-import 'package:my_project_management_app/core/config/ai_config.dart' as ai_config;
+import 'package:project_management_app/core/repository/impl/hive_auth_repository.dart';
+import 'package:project_management_app/core/repository/i_auth_repository.dart';
+import 'package:project_management_app/core/auth/auth_user.dart';
+import 'package:project_management_app/core/repository/impl/hive_settings_repository.dart';
+import 'package:project_management_app/core/services/cloud_sync_service.dart';
+import 'package:project_management_app/core/services/ab_testing_service.dart';
+import 'package:project_management_app/core/services/app_logger.dart';
+import 'package:project_management_app/core/services/login_rate_limiter.dart';
+import 'package:project_management_app/core/services/recaptcha_service.dart';
+import 'package:project_management_app/core/auth/permissions.dart';
+import 'package:project_management_app/core/config/ai_config.dart' as ai_config;
 
 // Recommended async settings access pattern (see 018-auth-settings-repo-access.md):
 // final settings = await ref.read(settingsRepositoryProvider.future);

@@ -2,16 +2,16 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:my_project_management_app/models/project_model.dart';
-import 'package:my_project_management_app/core/providers/ai/ai_chat_provider.dart' show aiChatProvider, aiHelpLevelProvider;
-import 'package:my_project_management_app/core/providers/project_providers.dart';
-import 'package:my_project_management_app/core/services/ai_planning_service.dart';
-import 'package:my_project_management_app/core/config/ai_config.dart' as ai_config;
-import 'package:my_project_management_app/features/project/question_selection_dialog.dart';
-import 'package:my_project_management_app/features/project/question_answer_dialog.dart';
-import 'package:my_project_management_app/features/project/proposal_selection_dialog.dart';
-import 'package:my_project_management_app/features/project/ai_consent_dialog.dart';
-import 'package:my_project_management_app/features/project/project_plan_display.dart';
+import 'package:project_management_app/models/project_model.dart';
+import 'package:project_management_app/core/providers/ai/ai_chat_provider.dart' show aiChatProvider, aiHelpLevelProvider;
+import 'package:project_management_app/core/providers/project_providers.dart';
+import 'package:project_management_app/core/services/ai_planning_service.dart';
+import 'package:project_management_app/core/config/ai_config.dart' as ai_config;
+import 'package:project_management_app/features/project/question_selection_dialog.dart';
+import 'package:project_management_app/features/project/question_answer_dialog.dart';
+import 'package:project_management_app/features/project/proposal_selection_dialog.dart';
+import 'package:project_management_app/features/project/ai_consent_dialog.dart';
+import 'package:project_management_app/features/project/project_plan_display.dart';
 
 /// Data model for new project form
 class NewProjectData {

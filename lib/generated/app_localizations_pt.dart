@@ -534,12 +534,8 @@ class AppLocalizationsPt extends AppLocalizations {
   String get unknownProject => 'Projeto desconhecido';
 
   @override
-  String projectTaskStatusSemantics(
-    Object projectName,
-    Object taskTitle,
-    Object statusLabel,
-    Object timeLabel,
-  ) {
+  String projectTaskStatusSemantics(Object projectName, Object taskTitle,
+      Object statusLabel, Object timeLabel) {
     return 'Projeto $projectName, tarefa $taskTitle, status $statusLabel, $timeLabel';
   }
 
@@ -578,10 +574,7 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String projectProgressChartSemantics(
-    Object projectName,
-    Object completedPercent,
-    Object pendingPercent,
-  ) {
+      Object projectName, Object completedPercent, Object pendingPercent) {
     return 'Grafico de progresso do projeto para $projectName. Concluido $completedPercent por cento, pendente $pendingPercent por cento.';
   }
 
@@ -618,10 +611,7 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String burndownChartSemantics(
-    Object projectName,
-    Object actualPoints,
-    Object idealPoints,
-  ) {
+      Object projectName, Object actualPoints, Object idealPoints) {
     return 'Grafico burndown para $projectName. Pontos reais: $actualPoints. Pontos ideais: $idealPoints.';
   }
 

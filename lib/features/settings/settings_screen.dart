@@ -3,11 +3,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'dart:io';
 import 'package:file_picker/file_picker.dart';
 import 'package:go_router/go_router.dart';
-import 'package:my_project_management_app/generated/app_localizations.dart';
-import 'package:my_project_management_app/core/auth/permissions.dart';
-import 'package:my_project_management_app/core/repository/hive_initializer.dart';
-import 'package:my_project_management_app/core/providers.dart';
-import 'package:my_project_management_app/core/providers/ai/index.dart'
+import 'package:project_management_app/generated/app_localizations.dart';
+import 'package:project_management_app/core/auth/permissions.dart';
+import 'package:project_management_app/core/repository/hive_initializer.dart';
+import 'package:project_management_app/core/providers.dart';
+import 'package:project_management_app/core/providers/ai/index.dart'
     show useProjectFilesProvider, aiChatProvider;
 import '../../core/providers/auth_providers.dart';
 import '../../core/providers/theme_providers.dart';

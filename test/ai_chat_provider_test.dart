@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:my_project_management_app/core/models/ai_rate_limits_config.dart';
-import 'package:my_project_management_app/core/providers/ai_chat_provider.dart' as ai_provider;
-import 'package:my_project_management_app/core/repository/settings_repository.dart';
+import 'package:project_management_app/core/models/ai_rate_limits_config.dart';
+import 'package:project_management_app/core/providers/ai_chat_provider.dart' as ai_provider;
+import 'package:project_management_app/core/repository/settings_repository.dart';
 
 class FakeSettingsRepository extends SettingsRepository {
   AiRateLimitsConfig? _aiRateLimitsConfig;

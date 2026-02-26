@@ -5,7 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:window_manager/window_manager.dart';
 import 'package:animate_do/animate_do.dart';
-import 'package:my_project_management_app/generated/app_localizations.dart';
+import 'package:project_management_app/generated/app_localizations.dart';
 import '../../core/providers/auth_providers.dart';
 import '../../core/providers/theme_providers.dart';
 

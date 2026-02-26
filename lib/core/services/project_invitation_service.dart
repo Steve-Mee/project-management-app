@@ -1,5 +1,5 @@
-import 'package:my_project_management_app/models/project_invitation.dart';
-import 'package:my_project_management_app/core/services/app_logger.dart';
+import 'package:project_management_app/models/project_invitation.dart';
+import 'package:project_management_app/core/services/app_logger.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:uuid/uuid.dart';
 

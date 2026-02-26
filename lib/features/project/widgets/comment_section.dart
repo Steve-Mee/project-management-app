@@ -2,12 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:my_project_management_app/models/comment_model.dart';
-import 'package:my_project_management_app/core/providers/comment_providers.dart';
-import 'package:my_project_management_app/core/providers/auth_providers.dart';
-import 'package:my_project_management_app/core/auth/auth_user.dart';
-import 'package:my_project_management_app/core/services/app_logger.dart';
-import 'package:my_project_management_app/generated/app_localizations.dart';
+import 'package:project_management_app/models/comment_model.dart';
+import 'package:project_management_app/core/providers/comment_providers.dart';
+import 'package:project_management_app/core/providers/auth_providers.dart';
+import 'package:project_management_app/core/auth/auth_user.dart';
+import 'package:project_management_app/core/services/app_logger.dart';
+import 'package:project_management_app/generated/app_localizations.dart';
 
 /// Widget for displaying and adding comments with @mention support
 /// Implements issue 045: UI enhancements - mention autocomplete

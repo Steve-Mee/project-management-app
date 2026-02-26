@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:my_project_management_app/core/providers/project_providers.dart';
-import 'package:my_project_management_app/generated/app_localizations.dart';
+import 'package:project_management_app/core/providers/project_providers.dart';
+import 'package:project_management_app/generated/app_localizations.dart';
 
 /// Widget that shows a dropdown menu with recent filter history
 class RecentFiltersMenu extends ConsumerWidget {

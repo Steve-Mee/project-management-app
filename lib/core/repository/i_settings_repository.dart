@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:my_project_management_app/core/models/ai_rate_limits_config.dart';
-import 'package:my_project_management_app/core/repository/models/dashboard_models.dart';
+import 'package:project_management_app/core/models/ai_rate_limits_config.dart';
+import 'package:project_management_app/core/repository/models/dashboard_models.dart';
 
 /// Interface for settings repository operations
 abstract class ISettingsRepository {

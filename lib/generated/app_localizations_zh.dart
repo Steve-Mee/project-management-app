@@ -528,12 +528,8 @@ class AppLocalizationsZh extends AppLocalizations {
   String get unknownProject => '未知项目';
 
   @override
-  String projectTaskStatusSemantics(
-    Object projectName,
-    Object taskTitle,
-    Object statusLabel,
-    Object timeLabel,
-  ) {
+  String projectTaskStatusSemantics(Object projectName, Object taskTitle,
+      Object statusLabel, Object timeLabel) {
     return '项目 $projectName，任务 $taskTitle，状态 $statusLabel，$timeLabel';
   }
 
@@ -572,10 +568,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String projectProgressChartSemantics(
-    Object projectName,
-    Object completedPercent,
-    Object pendingPercent,
-  ) {
+      Object projectName, Object completedPercent, Object pendingPercent) {
     return '项目 $projectName 的进度图。完成 $completedPercent% ，待处理 $pendingPercent% 。';
   }
 
@@ -612,10 +605,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String burndownChartSemantics(
-    Object projectName,
-    Object actualPoints,
-    Object idealPoints,
-  ) {
+      Object projectName, Object actualPoints, Object idealPoints) {
     return '项目 $projectName 的燃尽图。实际点: $actualPoints。理想点: $idealPoints。';
   }
 

@@ -3,13 +3,13 @@
 library;
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:my_project_management_app/core/providers/project_providers.dart' show projectRepositoryProvider, projectByIdProvider;
-import 'package:my_project_management_app/core/providers/notification_providers.dart';
+import 'package:project_management_app/core/providers/project_providers.dart' show projectRepositoryProvider, projectByIdProvider;
+import 'package:project_management_app/core/providers/notification_providers.dart';
 import '../../core/services/app_logger.dart';
 import '../../models/task_model.dart';
-import 'package:my_project_management_app/core/repository/impl/hive_task_repository.dart';
-import 'package:my_project_management_app/core/repository/impl/sub_task_repository.dart';
-import 'package:my_project_management_app/models/sub_task_model.dart';
+import 'package:project_management_app/core/repository/impl/hive_task_repository.dart';
+import 'package:project_management_app/core/repository/impl/sub_task_repository.dart';
+import 'package:project_management_app/models/sub_task_model.dart';
 
 /// Repository provider for tasks
 final taskRepositoryProvider = FutureProvider<HiveTaskRepository>((ref) async {

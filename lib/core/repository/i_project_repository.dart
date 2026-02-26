@@ -1,8 +1,8 @@
 /// Abstract interface for project repository
 /// Allows easy swapping of implementations (Hive, Supabase, mock for tests, etc.)
 library;
-import 'package:my_project_management_app/models/project_model.dart';
-import 'package:my_project_management_app/models/project_filter.dart';
+import 'package:project_management_app/models/project_model.dart';
+import 'package:project_management_app/models/project_filter.dart';
 import 'models/project_models.dart';
 
 /// Define abstract class `IProjectRepository`.

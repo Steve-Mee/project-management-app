@@ -1,12 +1,12 @@
 import 'package:hive_flutter/hive_flutter.dart';
-import 'package:my_project_management_app/models/project_model.dart';
-import 'package:my_project_management_app/models/project_filter.dart' as models;
-import 'package:my_project_management_app/core/services/cloud_sync_service.dart';
-import 'package:my_project_management_app/core/services/project_members_service.dart';
-import 'package:my_project_management_app/core/services/app_logger.dart';
+import 'package:project_management_app/models/project_model.dart';
+import 'package:project_management_app/models/project_filter.dart' as models;
+import 'package:project_management_app/core/services/cloud_sync_service.dart';
+import 'package:project_management_app/core/services/project_members_service.dart';
+import 'package:project_management_app/core/services/app_logger.dart';
 import 'package:uuid/uuid.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:my_project_management_app/core/repository/i_project_repository.dart';
+import 'package:project_management_app/core/repository/i_project_repository.dart';
 import '../models/project_models.dart';
 
 /// Repository for managing project persistence using Hive

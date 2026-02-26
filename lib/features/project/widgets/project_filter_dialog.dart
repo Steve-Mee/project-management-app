@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:my_project_management_app/core/providers/project_providers.dart';
-import 'package:my_project_management_app/generated/app_localizations.dart';
-import 'package:my_project_management_app/models/project_model.dart';
-import 'package:my_project_management_app/features/project/pdf_export.dart';
-import 'package:my_project_management_app/core/services/ai_planning_helpers.dart';
+import 'package:project_management_app/core/providers/project_providers.dart';
+import 'package:project_management_app/generated/app_localizations.dart';
+import 'package:project_management_app/models/project_model.dart';
+import 'package:project_management_app/features/project/pdf_export.dart';
+import 'package:project_management_app/core/services/ai_planning_helpers.dart';
 import 'package:csv/csv.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:path_provider/path_provider.dart';

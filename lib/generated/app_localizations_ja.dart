@@ -529,12 +529,8 @@ class AppLocalizationsJa extends AppLocalizations {
   String get unknownProject => '不明なプロジェクト';
 
   @override
-  String projectTaskStatusSemantics(
-    Object projectName,
-    Object taskTitle,
-    Object statusLabel,
-    Object timeLabel,
-  ) {
+  String projectTaskStatusSemantics(Object projectName, Object taskTitle,
+      Object statusLabel, Object timeLabel) {
     return 'プロジェクト $projectName、タスク $taskTitle、ステータス $statusLabel、$timeLabel';
   }
 
@@ -573,10 +569,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String projectProgressChartSemantics(
-    Object projectName,
-    Object completedPercent,
-    Object pendingPercent,
-  ) {
+      Object projectName, Object completedPercent, Object pendingPercent) {
     return '$projectName の進捗チャート。完了 $completedPercent パーセント、保留 $pendingPercent パーセント。';
   }
 
@@ -613,10 +606,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String burndownChartSemantics(
-    Object projectName,
-    Object actualPoints,
-    Object idealPoints,
-  ) {
+      Object projectName, Object actualPoints, Object idealPoints) {
     return '$projectName のバーンダウンチャート。実測点: $actualPoints。理想点: $idealPoints。';
   }
 

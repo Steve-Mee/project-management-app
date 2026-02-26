@@ -2,19 +2,19 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:uuid/uuid.dart';
 import 'package:collection/collection.dart';
-import 'package:my_project_management_app/models/project_requirements.dart';
-import 'package:my_project_management_app/models/project_model.dart';
-import 'package:my_project_management_app/core/repository/i_dashboard_repository.dart';
-import 'package:my_project_management_app/core/repository/impl/hive_dashboard_repository.dart';
-import 'package:my_project_management_app/core/repository/models/dashboard_models.dart';
+import 'package:project_management_app/models/project_requirements.dart';
+import 'package:project_management_app/models/project_model.dart';
+import 'package:project_management_app/core/repository/i_dashboard_repository.dart';
+import 'package:project_management_app/core/repository/impl/hive_dashboard_repository.dart';
+import 'package:project_management_app/core/repository/models/dashboard_models.dart';
 import 'project_providers.dart';
-import 'package:my_project_management_app/core/services/ai_parsers.dart';
-import 'package:my_project_management_app/core/services/app_logger.dart';
+import 'package:project_management_app/core/services/ai_parsers.dart';
+import 'package:project_management_app/core/services/app_logger.dart';
 import 'auth_providers.dart';
-import 'package:my_project_management_app/core/models/dashboard_types.dart';
+import 'package:project_management_app/core/models/dashboard_types.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'connectivity_provider.dart';
-import 'package:my_project_management_app/core/models/requirements.dart';
+import 'package:project_management_app/core/models/requirements.dart';
 
 /// DashboardItem
 /// 

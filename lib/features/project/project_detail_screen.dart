@@ -5,21 +5,21 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:getwidget/getwidget.dart';
-import 'package:my_project_management_app/generated/app_localizations.dart';
-import 'package:my_project_management_app/core/auth/permissions.dart';
-import 'package:my_project_management_app/core/providers/project_providers.dart';
-import 'package:my_project_management_app/core/providers/task_providers.dart';
-import 'package:my_project_management_app/core/providers/dashboard_providers.dart';
+import 'package:project_management_app/generated/app_localizations.dart';
+import 'package:project_management_app/core/auth/permissions.dart';
+import 'package:project_management_app/core/providers/project_providers.dart';
+import 'package:project_management_app/core/providers/task_providers.dart';
+import 'package:project_management_app/core/providers/dashboard_providers.dart';
 import '../../core/providers/auth_providers.dart';
 import '../../core/services/project_file_service.dart';
 import '../../models/project_meta.dart';
 import '../../models/project_model.dart';
 import '../../models/task_model.dart';
-import 'package:my_project_management_app/features/project/ai_chat_bottom_sheet.dart';
-import 'package:my_project_management_app/features/project/expandable_task_card.dart';
-import 'package:my_project_management_app/features/project/project_chat.dart';
-import 'package:my_project_management_app/features/project/task_help_dialog.dart';
-import 'package:my_project_management_app/features/project/requirements_icon_list_view.dart';
+import 'package:project_management_app/features/project/ai_chat_bottom_sheet.dart';
+import 'package:project_management_app/features/project/expandable_task_card.dart';
+import 'package:project_management_app/features/project/project_chat.dart';
+import 'package:project_management_app/features/project/task_help_dialog.dart';
+import 'package:project_management_app/features/project/requirements_icon_list_view.dart';
 
 // Caching integrated – projectByIdProvider now uses 5-minute TTL cache (issue 006 part 5/5)
 

@@ -240,9 +240,9 @@ import 'package:flutter/material.dart';
 import '../services/app_logger.dart';
 import '../services/app_logger.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:my_project_management_app/core/models/ai_rate_limits_config.dart';
-import 'package:my_project_management_app/core/providers/auth_providers.dart';
-import 'package:my_project_management_app/l10n/app_localizations.dart';
+import 'package:project_management_app/core/models/ai_rate_limits_config.dart';
+import 'package:project_management_app/core/providers/auth_providers.dart';
+import 'package:project_management_app/l10n/app_localizations.dart';
 
 Example implementation:
 

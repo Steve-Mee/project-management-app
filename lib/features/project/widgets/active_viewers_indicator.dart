@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:my_project_management_app/core/providers/active_viewers_provider.dart';
+import 'package:project_management_app/core/providers/active_viewers_provider.dart';
 
 /// Widget that displays active viewers in the projects list
 class ActiveViewersIndicator extends ConsumerWidget {

@@ -2,13 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:my_project_management_app/features/project/widgets/comment_section.dart';
-import 'package:my_project_management_app/core/providers/auth_providers.dart';
-import 'package:my_project_management_app/core/repository/i_auth_repository.dart';
-import 'package:my_project_management_app/core/auth/auth_user.dart';
-import 'package:my_project_management_app/core/auth/role_models.dart';
-import 'package:my_project_management_app/core/repository/settings_repository.dart';
-import 'package:my_project_management_app/generated/app_localizations.dart';
+import 'package:project_management_app/features/project/widgets/comment_section.dart';
+import 'package:project_management_app/core/providers/auth_providers.dart';
+import 'package:project_management_app/core/repository/i_auth_repository.dart';
+import 'package:project_management_app/core/auth/auth_user.dart';
+import 'package:project_management_app/core/auth/role_models.dart';
+import 'package:project_management_app/core/repository/settings_repository.dart';
+import 'package:project_management_app/generated/app_localizations.dart';
 
 // Fake auth repository for testing
 class FakeAuthRepository implements IAuthRepository {

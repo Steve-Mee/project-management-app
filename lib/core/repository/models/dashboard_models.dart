@@ -1,4 +1,4 @@
-import 'package:my_project_management_app/core/models/dashboard_types.dart';
+import 'package:project_management_app/core/models/dashboard_types.dart';
 
 /// Dashboard item configuration for project management dashboard widgets.
 ///

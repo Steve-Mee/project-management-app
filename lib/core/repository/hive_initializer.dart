@@ -5,11 +5,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:my_project_management_app/core/providers/notification_providers.dart';
-import 'package:my_project_management_app/core/providers/task_providers.dart';
-import 'package:my_project_management_app/core/services/app_logger.dart';
-import 'package:my_project_management_app/models/task_model.dart';
-import 'package:my_project_management_app/core/repository/impl/hive_settings_repository.dart';
+import 'package:project_management_app/core/providers/notification_providers.dart';
+import 'package:project_management_app/core/providers/task_providers.dart';
+import 'package:project_management_app/core/services/app_logger.dart';
+import 'package:project_management_app/models/task_model.dart';
+import 'package:project_management_app/core/repository/impl/hive_settings_repository.dart';
 
 /// Helper class for initializing Hive and projects on app startup
 /// 

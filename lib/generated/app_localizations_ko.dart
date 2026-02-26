@@ -529,12 +529,8 @@ class AppLocalizationsKo extends AppLocalizations {
   String get unknownProject => '알 수 없는 프로젝트';
 
   @override
-  String projectTaskStatusSemantics(
-    Object projectName,
-    Object taskTitle,
-    Object statusLabel,
-    Object timeLabel,
-  ) {
+  String projectTaskStatusSemantics(Object projectName, Object taskTitle,
+      Object statusLabel, Object timeLabel) {
     return '프로젝트 $projectName, 작업 $taskTitle, 상태 $statusLabel, $timeLabel';
   }
 
@@ -573,10 +569,7 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String projectProgressChartSemantics(
-    Object projectName,
-    Object completedPercent,
-    Object pendingPercent,
-  ) {
+      Object projectName, Object completedPercent, Object pendingPercent) {
     return '$projectName 프로젝트 진행 차트. 완료 $completedPercent 퍼센트, 대기 $pendingPercent 퍼센트.';
   }
 
@@ -613,10 +606,7 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String burndownChartSemantics(
-    Object projectName,
-    Object actualPoints,
-    Object idealPoints,
-  ) {
+      Object projectName, Object actualPoints, Object idealPoints) {
     return '$projectName의 번다운 차트. 실제 포인트: $actualPoints. 이상적인 포인트: $idealPoints.';
   }
 

@@ -1,7 +1,7 @@
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:my_project_management_app/core/config/app_config.dart';
+import 'package:project_management_app/core/config/app_config.dart';
 
 void main() {
   group('AppConfig', () {

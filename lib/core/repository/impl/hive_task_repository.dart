@@ -1,6 +1,6 @@
 import 'package:hive_flutter/hive_flutter.dart';
-import 'package:my_project_management_app/models/task_model.dart';
-import 'package:my_project_management_app/core/services/app_logger.dart';
+import 'package:project_management_app/models/task_model.dart';
+import 'package:project_management_app/core/services/app_logger.dart';
 
 /// Repository for managing task persistence using Hive
 /// Refactored per .github/issues/049-repository-refactoring.md

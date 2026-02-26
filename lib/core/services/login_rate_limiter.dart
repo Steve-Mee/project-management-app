@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'package:crypto/crypto.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:flutter/foundation.dart';
-import 'package:my_project_management_app/core/services/app_logger.dart';
+import 'package:project_management_app/core/services/app_logger.dart';
 
 /// Service for managing login rate limiting with persistent storage.
 /// Implements sliding-window rate limiting with progressive backoff to protect against brute-force attacks.
