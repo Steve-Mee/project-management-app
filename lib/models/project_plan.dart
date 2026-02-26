@@ -1,104 +1,43 @@
+import 'package:freezed_annotation/freezed_annotation.dart';
+
+part 'project_plan.freezed.dart';
+part 'project_plan.g.dart';
+
 /// Model for project plan tasks
-class PlanTask {
-  final String description;
-  final String status; // 'pending', 'in_progress', 'completed'
-  final String? assignedUserId;
-  final String? assignedUserName;
-
-  const PlanTask({
-    required this.description,
-    this.status = 'pending',
-    this.assignedUserId,
-    this.assignedUserName,
-  });
-
-  PlanTask copyWith({
-    String? description,
-    String? status,
+@freezed
+abstract class PlanTask with _$PlanTask {
+  const factory PlanTask({
+    required String description,
+    @Default('pending') String status,
     String? assignedUserId,
     String? assignedUserName,
-  }) {
-    return PlanTask(
-      description: description ?? this.description,
-      status: status ?? this.status,
-      assignedUserId: assignedUserId ?? this.assignedUserId,
-      assignedUserName: assignedUserName ?? this.assignedUserName,
-    );
-  }
+  }) = _PlanTask;
 
-  Map<String, dynamic> toJson() {
-    return {
-      'description': description,
-      'status': status,
-      'assignedUserId': assignedUserId,
-      'assignedUserName': assignedUserName,
-    };
-  }
-
-  factory PlanTask.fromJson(Map<String, dynamic> json) {
-    return PlanTask(
-      description: json['description'] as String,
-      status: json['status'] as String? ?? 'pending',
-      assignedUserId: json['assignedUserId'] as String?,
-      assignedUserName: json['assignedUserName'] as String?,
-    );
-  }
+  factory PlanTask.fromJson(Map<String, dynamic> json) =>
+      _$PlanTaskFromJson(json);
 }
 
 /// Model for project plan chapters
-class PlanChapter {
-  final String title;
-  final String overview;
-  final List<PlanTask> tasks;
+@freezed
+abstract class PlanChapter with _$PlanChapter {
+  const factory PlanChapter({
+    required String title,
+    required String overview,
+    @Default(<PlanTask>[]) List<PlanTask> tasks,
+  }) = _PlanChapter;
 
-  const PlanChapter({
-    required this.title,
-    required this.overview,
-    required this.tasks,
-  });
-
-  Map<String, dynamic> toJson() {
-    return {
-      'title': title,
-      'overview': overview,
-      'tasks': tasks.map((t) => t.toJson()).toList(),
-    };
-  }
-
-  factory PlanChapter.fromJson(Map<String, dynamic> json) {
-    return PlanChapter(
-      title: json['title'] as String,
-      overview: json['overview'] as String,
-      tasks: (json['tasks'] as List<dynamic>?)
-          ?.map((t) => PlanTask.fromJson(t as Map<String, dynamic>))
-          .toList() ?? [],
-    );
-  }
+  factory PlanChapter.fromJson(Map<String, dynamic> json) =>
+      _$PlanChapterFromJson(json);
 }
 
 /// Model for complete project plan
-class ProjectPlan {
-  final String overview;
-  final List<PlanChapter> chapters;
+@freezed
+abstract class ProjectPlan with _$ProjectPlan {
+  const factory ProjectPlan({
+    required String overview,
+    @Default(<PlanChapter>[]) List<PlanChapter> chapters,
+  }) = _ProjectPlan;
 
-  const ProjectPlan({
-    required this.overview,
-    required this.chapters,
-  });
-
-  Map<String, dynamic> toJson() {
-    return {
-      'overview': overview,
-      'chapters': chapters.map((c) => c.toJson()).toList(),
-    };
-  }
-
-  factory ProjectPlan.fromJson(Map<String, dynamic> json) {
-    return ProjectPlan(
-      overview: json['overview'] as String,
-      chapters: (json['chapters'] as List<dynamic>?)
-          ?.map((c) => PlanChapter.fromJson(c as Map<String, dynamic>))
-          .toList() ?? [],
-    );
-  }
+  factory ProjectPlan.fromJson(Map<String, dynamic> json) =>
+      _$ProjectPlanFromJson(json);
 }

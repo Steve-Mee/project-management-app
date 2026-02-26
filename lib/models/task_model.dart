@@ -1,6 +1,10 @@
+// ignore_for_file: invalid_annotation_target
+
+import 'package:freezed_annotation/freezed_annotation.dart';
 import 'package:hive/hive.dart';
 import 'comment_model.dart';
 
+part 'task_model.freezed.dart';
 part 'task_model.g.dart';
 
 /// Task status enum
@@ -17,84 +21,37 @@ enum TaskStatus {
 }
 
 /// Task model for project tasks
+@freezed
 @HiveType(typeId: 2)
-class Task {
-  @HiveField(0)
-  final String id;
-  @HiveField(1)
-  final String projectId;
-  @HiveField(2)
-  final String title;
-  @HiveField(3)
-  final String description;
-  @HiveField(4)
-  final TaskStatus status;
-  @HiveField(5)
-  final String assignee;
-  @HiveField(6)
-  final DateTime createdAt;
-  @HiveField(7)
-  final DateTime? dueDate;
-  @HiveField(8)
-  final double priority; // 0.0 to 1.0
-  @HiveField(9)
-  final List<String> attachments;
-  @HiveField(10)
-  final List<String> subTaskIds; // IDs of sub-tasks
-  @HiveField(11)
-  final String? userId; // Creator/owner of the task
+abstract class Task with _$Task {
+  const Task._();
 
-  @HiveField(12)
-  final List<CommentModel> comments;
-
-  const Task({
-    required this.id,
-    required this.projectId,
-    required this.title,
-    required this.description,
-    required this.status,
-    required this.assignee,
-    required this.createdAt,
-    this.dueDate,
-    this.priority = 0.5,
-    this.attachments = const [],
-    this.subTaskIds = const [],
-    this.userId,
-    this.comments = const [],
-  });
-
-  /// Create a copy with modified fields
-  Task copyWith({
-    String? id,
-    String? projectId,
-    String? title,
-    String? description,
-    TaskStatus? status,
-    String? assignee,
-    DateTime? createdAt,
-    DateTime? dueDate,
-    double? priority,
-    List<String>? attachments,
-    List<String>? subTaskIds,
-    String? userId,
-    List<CommentModel>? comments,
-  }) {
-    return Task(
-      id: id ?? this.id,
-      projectId: projectId ?? this.projectId,
-      title: title ?? this.title,
-      description: description ?? this.description,
-      status: status ?? this.status,
-      assignee: assignee ?? this.assignee,
-      createdAt: createdAt ?? this.createdAt,
-      dueDate: dueDate ?? this.dueDate,
-      priority: priority ?? this.priority,
-      attachments: attachments ?? this.attachments,
-      subTaskIds: subTaskIds ?? this.subTaskIds,
-      userId: userId ?? this.userId,
-      comments: comments ?? this.comments,
-    );
-  }
+  @JsonSerializable(explicitToJson: true)
+  const factory Task({
+    @HiveField(0) @Default('') String id,
+    @HiveField(1) @Default('') String projectId,
+    @HiveField(2) @Default('') String title,
+    @HiveField(3) @Default('') String description,
+    @HiveField(4)
+    @JsonKey(fromJson: _taskStatusFromJson, toJson: _taskStatusToJson)
+    @Default(TaskStatus.todo)
+    TaskStatus status,
+    @HiveField(5) @Default('') String assignee,
+    @HiveField(6) @JsonKey(fromJson: _createdAtFromJson) required DateTime createdAt,
+    @HiveField(7) @JsonKey(fromJson: _dueDateFromJson) DateTime? dueDate,
+    @HiveField(8) @Default(0.5) double priority,
+    @HiveField(9)
+    @JsonKey(
+      readValue: _readAttachments,
+      fromJson: _attachmentsFromJson,
+      toJson: _attachmentsToJson,
+    )
+    @Default(<String>[])
+    List<String> attachments,
+    @HiveField(10) @Default(<String>[]) List<String> subTaskIds,
+    @HiveField(11) @JsonKey(includeFromJson: false, includeToJson: false) String? userId,
+    @HiveField(12) @Default(<CommentModel>[]) List<CommentModel> comments,
+  }) = _Task;
 
   /// Convert status to display string
   String get statusLabel {
@@ -110,53 +67,42 @@ class Task {
     }
   }
 
-  Map<String, dynamic> toJson() {
-    return {
-      'id': id,
-      'projectId': projectId,
-      'title': title,
-      'description': description,
-      'status': status.name,
-      'assignee': assignee,
-      'createdAt': createdAt.toIso8601String(),
-      'dueDate': dueDate?.toIso8601String(),
-      'priority': priority,
-      'attachments': attachments,
-      'subTaskIds': subTaskIds,
-      'comments': comments.map((c) => c.toJson()).toList(),
-    };
-  }
-
-  factory Task.fromJson(Map<String, dynamic> json) {
-    final statusValue = json['status'] as String? ?? 'todo';
-    final attachments = _parseAttachments(json);
-    return Task(
-      id: json['id'] as String? ?? '',
-      projectId: json['projectId'] as String? ?? '',
-      title: json['title'] as String? ?? '',
-      description: json['description'] as String? ?? '',
-      status: TaskStatus.values.firstWhere(
-        (item) => item.name == statusValue,
-        orElse: () => TaskStatus.todo,
-      ),
-      assignee: json['assignee'] as String? ?? '',
-      createdAt: DateTime.tryParse(json['createdAt'] as String? ?? '') ??
-          DateTime.now(),
-      dueDate: json['dueDate'] != null
-          ? DateTime.tryParse(json['dueDate'] as String)
-          : null,
-      priority: (json['priority'] as num?)?.toDouble() ?? 0.5,
-      attachments: attachments,
-      subTaskIds: (json['subTaskIds'] as List<dynamic>?)?.cast<String>() ?? const [],
-      comments: (json['comments'] as List<dynamic>?)?.map((c) => CommentModel.fromJson(c as Map<String, dynamic>)).toList() ?? const [],
-    );
-  }
-
-  static List<String> _parseAttachments(Map<String, dynamic> json) {
-    final raw = json['attachments'] ?? json['filePaths'];
-    if (raw is List) {
-      return raw.whereType<String>().toList();
-    }
-    return const [];
-  }
+  factory Task.fromJson(Map<String, dynamic> json) => _$TaskFromJson(json);
 }
+
+TaskStatus _taskStatusFromJson(Object? value) {
+  final statusValue = value as String? ?? 'todo';
+  return TaskStatus.values.firstWhere(
+    (item) => item.name == statusValue,
+    orElse: () => TaskStatus.todo,
+  );
+}
+
+String _taskStatusToJson(TaskStatus value) => value.name;
+
+DateTime _createdAtFromJson(Object? value) {
+  if (value is String) {
+    return DateTime.tryParse(value) ?? DateTime.now();
+  }
+  return DateTime.now();
+}
+
+DateTime? _dueDateFromJson(Object? value) {
+  if (value is String) {
+    return DateTime.tryParse(value);
+  }
+  return null;
+}
+
+Object? _readAttachments(Map json, String _) =>
+    json['attachments'] ?? json['filePaths'];
+
+List<String> _attachmentsFromJson(Object? rawValue) {
+  final raw = rawValue;
+  if (raw is List) {
+    return raw.whereType<String>().toList();
+  }
+  return const [];
+}
+
+List<String> _attachmentsToJson(List<String> attachments) => attachments;

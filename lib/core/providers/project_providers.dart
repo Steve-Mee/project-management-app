@@ -1,6 +1,7 @@
 // ignore_for_file: prefer_const_constructors
 import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:freezed_annotation/freezed_annotation.dart';
 import 'package:hive/hive.dart';
 import 'package:project_management_app/models/project_model.dart';
 import 'package:project_management_app/core/repository/impl/hive_project_repository.dart';
@@ -15,29 +16,12 @@ import 'package:project_management_app/core/auth/permissions.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:project_management_app/models/project_filter.dart' as models;
 
+part 'project_providers.freezed.dart';
+
 /// Parameters for the filtered projects family provider
-class ProjectFilterParams {
-  final String? status;
-  final String? searchQuery;
-  final DateTime? startDate;
-  final DateTime? endDate;
-  final String? priority;
-  final String? ownerId;
-  final List<String>? tags;
-  final List<ProjectFilterConditions>? extraConditions;
-
-  const ProjectFilterParams({
-    this.status,
-    this.searchQuery,
-    this.startDate,
-    this.endDate,
-    this.priority,
-    this.ownerId,
-    this.tags,
-    this.extraConditions,
-  });
-
-  ProjectFilterParams copyWith({
+@freezed
+abstract class ProjectFilterParams with _$ProjectFilterParams {
+  const factory ProjectFilterParams({
     String? status,
     String? searchQuery,
     DateTime? startDate,
@@ -46,18 +30,7 @@ class ProjectFilterParams {
     String? ownerId,
     List<String>? tags,
     List<ProjectFilterConditions>? extraConditions,
-  }) {
-    return ProjectFilterParams(
-      status: status ?? this.status,
-      searchQuery: searchQuery ?? this.searchQuery,
-      startDate: startDate ?? this.startDate,
-      endDate: endDate ?? this.endDate,
-      priority: priority ?? this.priority,
-      ownerId: ownerId ?? this.ownerId,
-      tags: tags ?? this.tags,
-      extraConditions: extraConditions ?? this.extraConditions,
-    );
-  }
+  }) = _ProjectFilterParams;
 }
 
 /// Cache entry with TTL for project data
@@ -193,16 +166,13 @@ List<ProjectModel> _filterProjects(List<ProjectModel> projects, models.ProjectFi
 // Ready for UI integration
 
 /// Combined parameters for filtered pagination
-class FilteredPaginationParams {
-  final ProjectFilter filter;
-  final int page;
-  final int limit;
-
-  const FilteredPaginationParams({
-    required this.filter,
-    required this.page,
-    required this.limit,
-  });
+@freezed
+abstract class FilteredPaginationParams with _$FilteredPaginationParams {
+  const factory FilteredPaginationParams({
+    required ProjectFilter filter,
+    required int page,
+    required int limit,
+  }) = _FilteredPaginationParams;
 }
 
 /// Provider for filtered and paginated projects
@@ -245,24 +215,9 @@ final projectsPaginatedProvider = FutureProvider.autoDispose.family<List<Project
 
 /// Filter class for project queries
 /// Extensible for future filter parameters
-class ProjectFilter {
-  final String? status;
-  final String? ownerId;
-  final String? searchQuery;
-  final String? priority;
-  final DateTime? startDate;
-  final DateTime? endDate;
-  final DateTime? dueDateStart;
-  final DateTime? dueDateEnd;
-  final List<String>? tags;
-  final List<String>? requiredTags;
-  final List<ProjectFilterConditions>? extraConditions;
-  final String? sortBy; // values: "name", "priority", "startDate", "dueDate", "createdAt", "status"
-  final bool sortAscending;
-  final String? viewName;
-  final bool isSaved;
-  final String viewMode; // 'list', 'kanban', 'table', 'gantt'
-  final bool addToDashboard;
+@Freezed(fromJson: false, toJson: false)
+abstract class ProjectFilter with _$ProjectFilter {
+  const ProjectFilter._();
 
   static const List<String> sortOptions = [
     'name',
@@ -272,27 +227,7 @@ class ProjectFilter {
     'status',
   ];
 
-  const ProjectFilter({
-    this.status,
-    this.ownerId,
-    this.searchQuery,
-    this.priority,
-    this.startDate,
-    this.endDate,
-    this.dueDateStart,
-    this.dueDateEnd,
-    this.tags,
-    this.requiredTags,
-    this.extraConditions,
-    this.sortBy,
-    this.sortAscending = true,
-    this.viewName,
-    this.isSaved = false,
-    this.viewMode = 'list',
-    this.addToDashboard = false,
-  });
-
-  ProjectFilter copyWith({
+  const factory ProjectFilter({
     String? status,
     String? ownerId,
     String? searchQuery,
@@ -305,32 +240,12 @@ class ProjectFilter {
     List<String>? requiredTags,
     List<ProjectFilterConditions>? extraConditions,
     String? sortBy,
-    bool? sortAscending,
+    @Default(true) bool sortAscending,
     String? viewName,
-    bool? isSaved,
-    String? viewMode,
-    bool? addToDashboard,
-  }) {
-    return ProjectFilter(
-      status: status ?? this.status,
-      ownerId: ownerId ?? this.ownerId,
-      searchQuery: searchQuery ?? this.searchQuery,
-      priority: priority ?? this.priority,
-      startDate: startDate ?? this.startDate,
-      endDate: endDate ?? this.endDate,
-      dueDateStart: dueDateStart ?? this.dueDateStart,
-      dueDateEnd: dueDateEnd ?? this.dueDateEnd,
-      tags: tags ?? this.tags,
-      requiredTags: requiredTags ?? this.requiredTags,
-      extraConditions: extraConditions ?? this.extraConditions,
-      sortBy: sortBy ?? this.sortBy,
-      sortAscending: sortAscending ?? this.sortAscending,
-      viewName: viewName ?? this.viewName,
-      isSaved: isSaved ?? this.isSaved,
-      viewMode: viewMode ?? this.viewMode,
-      addToDashboard: addToDashboard ?? this.addToDashboard,
-    );
-  }
+    @Default(false) bool isSaved,
+    @Default('list') String viewMode,
+    @Default(false) bool addToDashboard,
+  }) = _ProjectFilter;
 
   Map<String, dynamic> toJson() {
     return {
@@ -370,48 +285,6 @@ class ProjectFilter {
       isSaved: json['isSaved'] as bool? ?? false,
       viewMode: json['viewMode'] as String? ?? 'list',
       addToDashboard: json['addToDashboard'] as bool? ?? false,
-    );
-  }
-
-  @override
-  bool operator ==(Object other) {
-    if (identical(this, other)) return true;
-    return other is ProjectFilter &&
-        other.status == status &&
-        other.ownerId == ownerId &&
-        other.searchQuery == searchQuery &&
-        other.priority == priority &&
-        other.startDate == startDate &&
-        other.endDate == endDate &&
-        other.dueDateStart == dueDateStart &&
-        other.dueDateEnd == dueDateEnd &&
-        other.sortBy == sortBy &&
-        other.sortAscending == sortAscending &&
-        other.tags == tags &&
-        other.extraConditions == extraConditions &&
-        other.viewName == viewName &&
-        other.isSaved == isSaved &&
-        other.viewMode == viewMode;
-  }
-
-  @override
-  int get hashCode {
-    return Object.hash(
-      status,
-      ownerId,
-      searchQuery,
-      priority,
-      startDate,
-      endDate,
-      dueDateStart,
-      dueDateEnd,
-      sortBy,
-      sortAscending,
-      tags,
-      extraConditions,
-      viewName,
-      isSaved,
-      viewMode,
     );
   }
 }

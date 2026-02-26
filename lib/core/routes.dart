@@ -1,6 +1,7 @@
 // ignore_for_file: prefer_const_constructors
 import 'dart:io';
 
+import 'package:freezed_annotation/freezed_annotation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -18,6 +19,8 @@ import '../features/ai_usage/ai_usage_screen.dart';
 import 'providers/auth_providers.dart';
 import 'providers/theme_providers.dart';
 import 'auth/permissions.dart';
+
+part 'routes.freezed.dart';
 
 /// Navigation route definitions for the application
 /// Uses go_router for declarative routing with named routes
@@ -127,18 +130,14 @@ class AppRoutes {
 
 /// Navigation item model for modular navigation
 /// Easily extend by adding new items to the navigation list
-class NavigationItem {
-  final String label;
-  final IconData icon;
-  final String routeName;
-  final String? routePath;
-
-  const NavigationItem({
-    required this.label,
-    required this.icon,
-    required this.routeName,
-    this.routePath,
-  });
+@Freezed(fromJson: false, toJson: false)
+abstract class NavigationItem with _$NavigationItem {
+  const factory NavigationItem({
+    required String label,
+    required IconData icon,
+    required String routeName,
+    String? routePath,
+  }) = _NavigationItem;
 }
 
 /// Navigation items configuration

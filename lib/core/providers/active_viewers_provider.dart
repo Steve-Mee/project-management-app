@@ -1,58 +1,24 @@
 import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:freezed_annotation/freezed_annotation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+part 'active_viewers_provider.freezed.dart';
+part 'active_viewers_provider.g.dart';
+
 /// Represents an active viewer in the projects list
-class ActiveViewer {
-  final String userId;
-  final String? displayName;
-  final String? avatarUrl;
-  final DateTime lastSeen;
-  final Map<String, dynamic>? currentFilter;
-
-  const ActiveViewer({
-    required this.userId,
-    required this.displayName,
-    required this.avatarUrl,
-    required this.lastSeen,
-    this.currentFilter,
-  });
-
-  factory ActiveViewer.fromJson(Map<String, dynamic> json) {
-    return ActiveViewer(
-      userId: json['userId'] as String,
-      displayName: json['displayName'] as String?,
-      avatarUrl: json['avatarUrl'] as String?,
-      lastSeen: DateTime.parse(json['lastSeen'] as String),
-      currentFilter: json['currentFilter'] as Map<String, dynamic>?,
-    );
-  }
-
-  Map<String, dynamic> toJson() {
-    return {
-      'userId': userId,
-      'displayName': displayName,
-      'avatarUrl': avatarUrl,
-      'lastSeen': lastSeen.toIso8601String(),
-      'currentFilter': currentFilter,
-    };
-  }
-
-  ActiveViewer copyWith({
-    String? userId,
+@freezed
+abstract class ActiveViewer with _$ActiveViewer {
+  const factory ActiveViewer({
+    required String userId,
     String? displayName,
     String? avatarUrl,
-    DateTime? lastSeen,
+    required DateTime lastSeen,
     Map<String, dynamic>? currentFilter,
-  }) {
-    return ActiveViewer(
-      userId: userId ?? this.userId,
-      displayName: displayName ?? this.displayName,
-      avatarUrl: avatarUrl ?? this.avatarUrl,
-      lastSeen: lastSeen ?? this.lastSeen,
-      currentFilter: currentFilter ?? this.currentFilter,
-    );
-  }
+  }) = _ActiveViewer;
+
+  factory ActiveViewer.fromJson(Map<String, dynamic> json) =>
+      _$ActiveViewerFromJson(json);
 }
 
 /// Provider for managing active viewers using Supabase presence

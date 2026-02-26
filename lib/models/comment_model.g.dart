@@ -63,3 +63,38 @@ class CommentModelAdapter extends TypeAdapter<CommentModel> {
           runtimeType == other.runtimeType &&
           typeId == other.typeId;
 }
+
+// **************************************************************************
+// JsonSerializableGenerator
+// **************************************************************************
+
+_CommentModel _$CommentModelFromJson(Map<String, dynamic> json) =>
+    _CommentModel(
+      id: json['id'] as String,
+      userId: json['user_id'] as String,
+      projectId: json['project_id'] as String?,
+      taskId: json['task_id'] as String?,
+      text: json['text'] as String,
+      createdAt: DateTime.parse(json['created_at'] as String),
+      mentionedUsers: (json['mentioned_users'] as List<dynamic>?)
+              ?.map((e) => e as String)
+              .toList() ??
+          const <String>[],
+      isEdited: json['is_edited'] as bool? ?? false,
+      editedAt: json['edited_at'] == null
+          ? null
+          : DateTime.parse(json['edited_at'] as String),
+    );
+
+Map<String, dynamic> _$CommentModelToJson(_CommentModel instance) =>
+    <String, dynamic>{
+      'id': instance.id,
+      'user_id': instance.userId,
+      'project_id': instance.projectId,
+      'task_id': instance.taskId,
+      'text': instance.text,
+      'created_at': instance.createdAt.toIso8601String(),
+      'mentioned_users': instance.mentionedUsers,
+      'is_edited': instance.isEdited,
+      'edited_at': instance.editedAt?.toIso8601String(),
+    };

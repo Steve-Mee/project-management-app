@@ -33,10 +33,12 @@ import 'core/services/ab_testing_service.dart';
 import 'core/services/login_rate_limiter.dart';
 import 'core/services/recaptcha_config.dart';
 import 'core/services/project_invitation_service.dart';
+import 'core/services/supabase_connection_diagnostics.dart';
 import 'features/auth/login_screen.dart';
 import 'models/project_model.dart';
 import 'models/task_model.dart';
 import 'models/comment_model.dart';
+import 'core/models/adapters/migrated_model_adapters.dart';
 import 'core/config/app_config.dart';
 
 /// Initializes environment variables from .env file
@@ -94,6 +96,16 @@ void main() async {
   if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
     await windowManager.ensureInitialized();
   }
+  await SupabaseConnectionDiagnostics.logConfigurationSnapshot(
+    url: AppConfig.supabaseUrl,
+    anonKey: AppConfig.supabaseAnonKey,
+    context: 'startup_before_supabase_initialize',
+  );
+  await SupabaseConnectionDiagnostics.logNetworkDiagnostics(
+    url: AppConfig.supabaseUrl,
+    context: 'startup_before_supabase_initialize',
+    force: true,
+  );
   await Supabase.initialize(
     url: AppConfig.supabaseUrl!,
     anonKey: AppConfig.supabaseAnonKey!,
@@ -106,6 +118,7 @@ void main() async {
   Hive.registerAdapter(TaskStatusAdapter());
   Hive.registerAdapter(TaskAdapter());
   Hive.registerAdapter(CommentModelAdapter());
+  registerSafeMigratedModelAdapters();
   await Hive.initFlutter();
   await Hive.openBox('settings');
   await Hive.openBox('auth');

@@ -2,7 +2,10 @@ import 'dart:io';
 import 'dart:isolate';
 
 import 'package:file_picker/file_picker.dart';
+import 'package:freezed_annotation/freezed_annotation.dart';
 import 'package:permission_handler/permission_handler.dart';
+
+part 'project_file_service.freezed.dart';
 
 /// Service for selecting a project directory and reading text files within it.
 class ProjectFileService {
@@ -149,22 +152,18 @@ class ProjectFileService {
 }
 
 /// File content wrapper for prompts and previews.
-class ProjectFileContent {
-  final String name;
-  final String content;
-
-  const ProjectFileContent({
-    required this.name,
-    required this.content,
-  });
+@Freezed(fromJson: false, toJson: false)
+abstract class ProjectFileContent with _$ProjectFileContent {
+  const factory ProjectFileContent({
+    required String name,
+    required String content,
+  }) = _ProjectFileContent;
 }
 
-class _CachedFile {
-  final String content;
-  final DateTime lastModified;
-
-  const _CachedFile({
-    required this.content,
-    required this.lastModified,
-  });
+@Freezed(fromJson: false, toJson: false)
+abstract class _CachedFile with _$CachedFile {
+  const factory _CachedFile({
+    required String content,
+    required DateTime lastModified,
+  }) = __CachedFile;
 }

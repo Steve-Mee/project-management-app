@@ -1543,7 +1543,7 @@ class _AiSettingsSection extends ConsumerWidget {
             builder: (context, ref, child) {
               final liveConfig = ref.watch(aiRateLimitsConfigProvider).maybeWhen(
                 data: (config) => config,
-                orElse: () => const AiRateLimitsConfig.defaults(),
+                orElse: () => const AiRateLimitsConfig(),
               );
               final liveLimit = liveConfig.perOperationLimits[operation] ?? liveConfig.maxRequestsPerWindow;
               
@@ -1604,7 +1604,7 @@ class _AiSettingsSection extends ConsumerWidget {
           updatedLimits[operation] = limit;
           return currentConfig.copyWith(perOperationLimits: updatedLimits);
         },
-        orElse: () => const AiRateLimitsConfig.defaults(),
+        orElse: () => const AiRateLimitsConfig(),
       ),
     ).then((_) {
       if (context.mounted) {
@@ -1633,7 +1633,7 @@ class _AiSettingsSection extends ConsumerWidget {
             builder: (context, ref, child) {
               final liveConfig = ref.watch(aiRateLimitsConfigProvider).maybeWhen(
                 data: (config) => config,
-                orElse: () => const AiRateLimitsConfig.defaults(),
+                orElse: () => const AiRateLimitsConfig(),
               );
               final currentValue = liveConfig.backoffBaseDelay.inMilliseconds.toDouble();
               
@@ -1658,7 +1658,7 @@ class _AiSettingsSection extends ConsumerWidget {
             builder: (context, ref, child) {
               final liveConfig = ref.watch(aiRateLimitsConfigProvider).maybeWhen(
                 data: (config) => config,
-                orElse: () => const AiRateLimitsConfig.defaults(),
+                orElse: () => const AiRateLimitsConfig(),
               );
               final currentValue = liveConfig.backoffMaxDelay.inSeconds.toDouble();
               
@@ -1683,7 +1683,7 @@ class _AiSettingsSection extends ConsumerWidget {
             builder: (context, ref, child) {
               final liveConfig = ref.watch(aiRateLimitsConfigProvider).maybeWhen(
                 data: (config) => config,
-                orElse: () => const AiRateLimitsConfig.defaults(),
+                orElse: () => const AiRateLimitsConfig(),
               );
               final currentValue = liveConfig.maxRetryAttempts.toDouble();
               
@@ -1734,7 +1734,7 @@ class _AiSettingsSection extends ConsumerWidget {
             builder: (context, ref, child) {
               final liveConfig = ref.watch(aiRateLimitsConfigProvider).maybeWhen(
                 data: (config) => config,
-                orElse: () => const AiRateLimitsConfig.defaults(),
+                orElse: () => const AiRateLimitsConfig(),
               );
               
               return SwitchListTile(
@@ -1787,7 +1787,7 @@ class _AiSettingsSection extends ConsumerWidget {
             backoffBaseDelay: Duration(milliseconds: milliseconds),
           );
         },
-        orElse: () => const AiRateLimitsConfig.defaults(),
+        orElse: () => const AiRateLimitsConfig(),
       ),
     ).then((_) {
       if (context.mounted) {
@@ -1813,7 +1813,7 @@ class _AiSettingsSection extends ConsumerWidget {
             backoffMaxDelay: Duration(seconds: seconds),
           );
         },
-        orElse: () => const AiRateLimitsConfig.defaults(),
+        orElse: () => const AiRateLimitsConfig(),
       ),
     ).then((_) {
       if (context.mounted) {
@@ -1839,7 +1839,7 @@ class _AiSettingsSection extends ConsumerWidget {
             maxRetryAttempts: attempts,
           );
         },
-        orElse: () => const AiRateLimitsConfig.defaults(),
+        orElse: () => const AiRateLimitsConfig(),
       ),
     ).then((_) {
       if (context.mounted) {
@@ -1865,7 +1865,7 @@ class _AiSettingsSection extends ConsumerWidget {
             queueEnabled: enabled,
           );
         },
-        orElse: () => const AiRateLimitsConfig.defaults(),
+        orElse: () => const AiRateLimitsConfig(),
       ),
     ).then((_) {
       if (context.mounted) {

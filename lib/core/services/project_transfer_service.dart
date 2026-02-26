@@ -5,19 +5,20 @@ import 'dart:typed_data';
 import 'package:crypto/crypto.dart';
 import 'package:encrypt/encrypt.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:freezed_annotation/freezed_annotation.dart';
 import '../repository/i_project_repository.dart';
 import 'package:project_management_app/core/repository/impl/hive_task_repository.dart';
 import 'package:project_management_app/models/project_model.dart';
 import 'package:project_management_app/models/task_model.dart';
 
-class ProjectTransferResult {
-  final String projectsPath;
-  final String tasksPath;
+part 'project_transfer_service.freezed.dart';
 
-  const ProjectTransferResult({
-    required this.projectsPath,
-    required this.tasksPath,
-  });
+@Freezed(fromJson: false, toJson: false)
+abstract class ProjectTransferResult with _$ProjectTransferResult {
+  const factory ProjectTransferResult({
+    required String projectsPath,
+    required String tasksPath,
+  }) = _ProjectTransferResult;
 }
 
 class ProjectTransferService {

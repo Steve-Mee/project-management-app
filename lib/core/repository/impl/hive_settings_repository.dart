@@ -205,11 +205,11 @@ class HiveSettingsRepository implements ISettingsRepository {
         return validatedConfig;
       } catch (e) {
         AppLogger.event('Invalid AI rate limits config in settings, using defaults', params: {'error': e.toString()});
-        return const AiRateLimitsConfig.defaults();
+        return const AiRateLimitsConfig();
       }
     }
     // Migration: return defaults for existing users (includes perOperationLimits defaults)
-    return const AiRateLimitsConfig.defaults();
+    return const AiRateLimitsConfig();
   }
 
   @override

@@ -124,3 +124,47 @@ class TaskStatusAdapter extends TypeAdapter<TaskStatus> {
           runtimeType == other.runtimeType &&
           typeId == other.typeId;
 }
+
+// **************************************************************************
+// JsonSerializableGenerator
+// **************************************************************************
+
+_Task _$TaskFromJson(Map<String, dynamic> json) => _Task(
+      id: json['id'] as String? ?? '',
+      projectId: json['projectId'] as String? ?? '',
+      title: json['title'] as String? ?? '',
+      description: json['description'] as String? ?? '',
+      status: json['status'] == null
+          ? TaskStatus.todo
+          : _taskStatusFromJson(json['status']),
+      assignee: json['assignee'] as String? ?? '',
+      createdAt: _createdAtFromJson(json['createdAt']),
+      dueDate: _dueDateFromJson(json['dueDate']),
+      priority: (json['priority'] as num?)?.toDouble() ?? 0.5,
+      attachments: _readAttachments(json, 'attachments') == null
+          ? const <String>[]
+          : _attachmentsFromJson(_readAttachments(json, 'attachments')),
+      subTaskIds: (json['subTaskIds'] as List<dynamic>?)
+              ?.map((e) => e as String)
+              .toList() ??
+          const <String>[],
+      comments: (json['comments'] as List<dynamic>?)
+              ?.map((e) => CommentModel.fromJson(e as Map<String, dynamic>))
+              .toList() ??
+          const <CommentModel>[],
+    );
+
+Map<String, dynamic> _$TaskToJson(_Task instance) => <String, dynamic>{
+      'id': instance.id,
+      'projectId': instance.projectId,
+      'title': instance.title,
+      'description': instance.description,
+      'status': _taskStatusToJson(instance.status),
+      'assignee': instance.assignee,
+      'createdAt': instance.createdAt.toIso8601String(),
+      'dueDate': instance.dueDate?.toIso8601String(),
+      'priority': instance.priority,
+      'attachments': _attachmentsToJson(instance.attachments),
+      'subTaskIds': instance.subTaskIds,
+      'comments': instance.comments.map((e) => e.toJson()).toList(),
+    };

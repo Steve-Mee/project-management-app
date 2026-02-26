@@ -1,13 +1,20 @@
-class AppUser {
-  final String username;
-  final String password;
-  final String roleId;
+import 'package:freezed_annotation/freezed_annotation.dart';
 
-  const AppUser({
-    required this.username,
-    required this.password,
-    this.roleId = 'role_member',
-  });
+part 'auth_user.freezed.dart';
+part 'auth_user.g.dart';
+
+@freezed
+abstract class AppUser with _$AppUser {
+  const AppUser._();
+
+  const factory AppUser({
+    required String username,
+    required String password,
+    @Default('role_member') String roleId,
+  }) = _AppUser;
+
+  factory AppUser.fromJson(Map<String, dynamic> json) =>
+      _$AppUserFromJson(json);
 
   Map<String, String> toMap() {
     return {
@@ -18,10 +25,6 @@ class AppUser {
   }
 
   static AppUser fromMap(Map<String, dynamic> map) {
-    return AppUser(
-      username: map['username'] as String? ?? '',
-      password: map['password'] as String? ?? '',
-      roleId: map['roleId'] as String? ?? 'role_member',
-    );
+    return AppUser.fromJson(map);
   }
 }

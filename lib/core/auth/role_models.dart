@@ -1,86 +1,49 @@
-class RoleDefinition {
-  final String id;
-  final String name;
-  final List<String> permissions;
+import 'package:freezed_annotation/freezed_annotation.dart';
 
-  const RoleDefinition({
-    required this.id,
-    required this.name,
-    required this.permissions,
-  });
+part 'role_models.freezed.dart';
+part 'role_models.g.dart';
 
-  RoleDefinition copyWith({
-    String? id,
-    String? name,
-    List<String>? permissions,
-  }) {
-    return RoleDefinition(
-      id: id ?? this.id,
-      name: name ?? this.name,
-      permissions: permissions ?? this.permissions,
-    );
-  }
+@freezed
+abstract class RoleDefinition with _$RoleDefinition {
+  const RoleDefinition._();
+
+  const factory RoleDefinition({
+    @Default('') String id,
+    @Default('') String name,
+    @Default(<String>[]) List<String> permissions,
+  }) = _RoleDefinition;
+
+  factory RoleDefinition.fromJson(Map<String, dynamic> json) =>
+      _$RoleDefinitionFromJson(json);
 
   Map<String, dynamic> toMap() {
-    return {
-      'id': id,
-      'name': name,
-      'permissions': permissions,
-    };
+    return toJson();
   }
 
   static RoleDefinition fromMap(Map<String, dynamic> map) {
-    return RoleDefinition(
-      id: map['id'] as String? ?? '',
-      name: map['name'] as String? ?? '',
-      permissions:
-          (map['permissions'] as List<dynamic>?)?.cast<String>() ?? const [],
-    );
+    return RoleDefinition.fromJson(map);
   }
 }
 
-class GroupDefinition {
-  final String id;
-  final String name;
-  final String roleId;
-  final List<String> members;
+@freezed
+abstract class GroupDefinition with _$GroupDefinition {
+  const GroupDefinition._();
 
-  const GroupDefinition({
-    required this.id,
-    required this.name,
-    required this.roleId,
-    required this.members,
-  });
+  const factory GroupDefinition({
+    @Default('') String id,
+    @Default('') String name,
+    @Default('') String roleId,
+    @Default(<String>[]) List<String> members,
+  }) = _GroupDefinition;
 
-  GroupDefinition copyWith({
-    String? id,
-    String? name,
-    String? roleId,
-    List<String>? members,
-  }) {
-    return GroupDefinition(
-      id: id ?? this.id,
-      name: name ?? this.name,
-      roleId: roleId ?? this.roleId,
-      members: members ?? this.members,
-    );
-  }
+  factory GroupDefinition.fromJson(Map<String, dynamic> json) =>
+      _$GroupDefinitionFromJson(json);
 
   Map<String, dynamic> toMap() {
-    return {
-      'id': id,
-      'name': name,
-      'roleId': roleId,
-      'members': members,
-    };
+    return toJson();
   }
 
   static GroupDefinition fromMap(Map<String, dynamic> map) {
-    return GroupDefinition(
-      id: map['id'] as String? ?? '',
-      name: map['name'] as String? ?? '',
-      roleId: map['roleId'] as String? ?? '',
-      members: (map['members'] as List<dynamic>?)?.cast<String>() ?? const [],
-    );
+    return GroupDefinition.fromJson(map);
   }
 }

@@ -1,23 +1,48 @@
+// ignore_for_file: invalid_annotation_target
+
 // Configuration for AI rate limits
 //
 // This model defines configurable rate limits for AI operations.
 // See .github/issues/030-ai-configurable-rate-limits.md for requirements.
 // See .github/issues/034-ai-per-operation-rate-limits.md for per-operation limits.
+import 'package:freezed_annotation/freezed_annotation.dart';
+
 import '../services/app_logger.dart';
 
-class AiRateLimitsConfig {
-  final int maxRequestsPerMinute;
-  final int maxRequestsPerHour;
-  final int maxRequestsPerDay;
-  final int maxTokensPerRequest;
-  final int maxTotalTokensPerDay;
-  final int maxRequestsPerWindow;
-  final Duration timeWindowDuration;
-  final Duration backoffBaseDelay;
-  final Duration backoffMaxDelay;
-  final int maxRetryAttempts;
-  final bool queueEnabled;
-  final Map<String, int> perOperationLimits;
+part 'ai_rate_limits_config.freezed.dart';
+part 'ai_rate_limits_config.g.dart';
+
+@freezed
+abstract class AiRateLimitsConfig with _$AiRateLimitsConfig {
+  const factory AiRateLimitsConfig({
+    @Default(10) int maxRequestsPerMinute,
+    @Default(100) int maxRequestsPerHour,
+    @Default(500) int maxRequestsPerDay,
+    @Default(4000) int maxTokensPerRequest,
+    @Default(100000) int maxTotalTokensPerDay,
+    @Default(10) int maxRequestsPerWindow,
+    @JsonKey(name: 'timeWindowDurationSeconds', fromJson: _durationSecondsFromJson, toJson: _durationSecondsToJson)
+    @Default(Duration(minutes: 1)) Duration timeWindowDuration,
+    @JsonKey(name: 'backoffBaseDelayMs', fromJson: _durationMsFromJson, toJson: _durationMsToJson)
+    @Default(Duration(milliseconds: 500)) Duration backoffBaseDelay,
+    @JsonKey(name: 'backoffMaxDelaySeconds', fromJson: _durationSecondsFromJson, toJson: _durationSecondsToJson)
+    @Default(Duration(seconds: 30)) Duration backoffMaxDelay,
+    @Default(3) int maxRetryAttempts,
+    @Default(true) bool queueEnabled,
+    @JsonKey(fromJson: _perOperationLimitsFromJson, toJson: _perOperationLimitsToJson)
+    @Default(<String, int>{
+      'chat': 15,
+      'generate_questions': 8,
+      'generate_proposals': 6,
+      'generate_plan': 4,
+      'parse_filter': 10,
+      'summarize': 5,
+    })
+    Map<String, int> perOperationLimits,
+  }) = _AiRateLimitsConfig;
+
+  factory AiRateLimitsConfig.fromJson(Map<String, dynamic> json) =>
+      _$AiRateLimitsConfigFromJson(json);
 
   /// Validates and clamps AI rate limits configuration to safe ranges.
   ///
@@ -71,162 +96,33 @@ class AiRateLimitsConfig {
     );
   }
 
-  const AiRateLimitsConfig({
-    required this.maxRequestsPerMinute,
-    required this.maxRequestsPerHour,
-    required this.maxRequestsPerDay,
-    required this.maxTokensPerRequest,
-    required this.maxTotalTokensPerDay,
-    required this.maxRequestsPerWindow,
-    required this.timeWindowDuration,
-    required this.backoffBaseDelay,
-    required this.backoffMaxDelay,
-    required this.maxRetryAttempts,
-    this.queueEnabled = true,
-    this.perOperationLimits = const {
-      'chat': 15,
-      'generate_questions': 8,
-      'generate_proposals': 6,
-      'generate_plan': 4,
-      'parse_filter': 10,
-      'summarize': 5,
-    },
-  });
-
-  const AiRateLimitsConfig.defaults()
-      : maxRequestsPerMinute = 10,
-        maxRequestsPerHour = 100,
-        maxRequestsPerDay = 500,
-        maxTokensPerRequest = 4000,
-        maxTotalTokensPerDay = 100000,
-        maxRequestsPerWindow = 10,
-        timeWindowDuration = const Duration(minutes: 1),
-        backoffBaseDelay = const Duration(milliseconds: 500),
-        backoffMaxDelay = const Duration(seconds: 30),
-        maxRetryAttempts = 3,
-        queueEnabled = true,
-        perOperationLimits = const {
-          'chat': 15,
-          'generate_questions': 8,
-          'generate_proposals': 6,
-          'generate_plan': 4,
-          'parse_filter': 10,
-          'summarize': 5,
-        };
-
-  AiRateLimitsConfig copyWith({
-    int? maxRequestsPerMinute,
-    int? maxRequestsPerHour,
-    int? maxRequestsPerDay,
-    int? maxTokensPerRequest,
-    int? maxTotalTokensPerDay,
-    int? maxRequestsPerWindow,
-    Duration? timeWindowDuration,
-    Duration? backoffBaseDelay,
-    Duration? backoffMaxDelay,
-    int? maxRetryAttempts,
-    bool? queueEnabled,
-    Map<String, int>? perOperationLimits,
-  }) {
-    return AiRateLimitsConfig(
-      maxRequestsPerMinute: maxRequestsPerMinute ?? this.maxRequestsPerMinute,
-      maxRequestsPerHour: maxRequestsPerHour ?? this.maxRequestsPerHour,
-      maxRequestsPerDay: maxRequestsPerDay ?? this.maxRequestsPerDay,
-      maxTokensPerRequest: maxTokensPerRequest ?? this.maxTokensPerRequest,
-      maxTotalTokensPerDay: maxTotalTokensPerDay ?? this.maxTotalTokensPerDay,
-      maxRequestsPerWindow: maxRequestsPerWindow ?? this.maxRequestsPerWindow,
-      timeWindowDuration: timeWindowDuration ?? this.timeWindowDuration,
-      backoffBaseDelay: backoffBaseDelay ?? this.backoffBaseDelay,
-      backoffMaxDelay: backoffMaxDelay ?? this.backoffMaxDelay,
-      maxRetryAttempts: maxRetryAttempts ?? this.maxRetryAttempts,
-      queueEnabled: queueEnabled ?? this.queueEnabled,
-      perOperationLimits: perOperationLimits ?? this.perOperationLimits,
-    );
-  }
-
-  factory AiRateLimitsConfig.fromJson(Map<String, dynamic> json) {
-    return AiRateLimitsConfig(
-      maxRequestsPerMinute: json['maxRequestsPerMinute'] as int? ?? 10,
-      maxRequestsPerHour: json['maxRequestsPerHour'] as int? ?? 100,
-      maxRequestsPerDay: json['maxRequestsPerDay'] as int? ?? 500,
-      maxTokensPerRequest: json['maxTokensPerRequest'] as int? ?? 4000,
-      maxTotalTokensPerDay: json['maxTotalTokensPerDay'] as int? ?? 100000,
-      maxRequestsPerWindow: json['maxRequestsPerWindow'] as int? ?? 10,
-      timeWindowDuration: Duration(seconds: json['timeWindowDurationSeconds'] as int? ?? 60),
-      backoffBaseDelay: Duration(milliseconds: json['backoffBaseDelayMs'] as int? ?? 500),
-      backoffMaxDelay: Duration(seconds: json['backoffMaxDelaySeconds'] as int? ?? 30),
-      maxRetryAttempts: json['maxRetryAttempts'] as int? ?? 3,
-      queueEnabled: json['queueEnabled'] as bool? ?? true,
-      perOperationLimits: (json['perOperationLimits'] as Map<String, dynamic>?)?.map(
-            (key, value) => MapEntry(key, value as int),
-          ) ??
-          const {
-            'chat': 15,
-            'generate_questions': 8,
-            'generate_proposals': 6,
-            'generate_plan': 4,
-            'parse_filter': 10,
-            'summarize': 5,
-          },
-    );
-  }
-
-  Map<String, dynamic> toJson() {
-    return {
-      'maxRequestsPerMinute': maxRequestsPerMinute,
-      'maxRequestsPerHour': maxRequestsPerHour,
-      'maxRequestsPerDay': maxRequestsPerDay,
-      'maxTokensPerRequest': maxTokensPerRequest,
-      'maxTotalTokensPerDay': maxTotalTokensPerDay,
-      'maxRequestsPerWindow': maxRequestsPerWindow,
-      'timeWindowDurationSeconds': timeWindowDuration.inSeconds,
-      'backoffBaseDelayMs': backoffBaseDelay.inMilliseconds,
-      'backoffMaxDelaySeconds': backoffMaxDelay.inSeconds,
-      'maxRetryAttempts': maxRetryAttempts,
-      'queueEnabled': queueEnabled,
-      'perOperationLimits': perOperationLimits,
-    };
-  }
-
-  @override
-  String toString() {
-    return 'AiRateLimitsConfig(maxRequestsPerMinute: $maxRequestsPerMinute, maxRequestsPerHour: $maxRequestsPerHour, maxRequestsPerDay: $maxRequestsPerDay, maxTokensPerRequest: $maxTokensPerRequest, maxTotalTokensPerDay: $maxTotalTokensPerDay, maxRequestsPerWindow: $maxRequestsPerWindow, timeWindowDuration: $timeWindowDuration, backoffBaseDelay: $backoffBaseDelay, backoffMaxDelay: $backoffMaxDelay, maxRetryAttempts: $maxRetryAttempts, queueEnabled: $queueEnabled, perOperationLimits: $perOperationLimits)';
-  }
-
-  @override
-  bool operator ==(Object other) {
-    if (identical(this, other)) return true;
-    return other is AiRateLimitsConfig &&
-        other.maxRequestsPerMinute == maxRequestsPerMinute &&
-        other.maxRequestsPerHour == maxRequestsPerHour &&
-        other.maxRequestsPerDay == maxRequestsPerDay &&
-        other.maxTokensPerRequest == maxTokensPerRequest &&
-        other.maxTotalTokensPerDay == maxTotalTokensPerDay &&
-        other.maxRequestsPerWindow == maxRequestsPerWindow &&
-        other.timeWindowDuration == timeWindowDuration &&
-        other.backoffBaseDelay == backoffBaseDelay &&
-        other.backoffMaxDelay == backoffMaxDelay &&
-        other.maxRetryAttempts == maxRetryAttempts &&
-        other.queueEnabled == queueEnabled &&
-        other.perOperationLimits == perOperationLimits;
-  }
-
-  @override
-  int get hashCode {
-    return maxRequestsPerMinute.hashCode ^
-        maxRequestsPerHour.hashCode ^
-        maxRequestsPerDay.hashCode ^
-        maxTokensPerRequest.hashCode ^
-        maxTotalTokensPerDay.hashCode ^
-        maxRequestsPerWindow.hashCode ^
-        timeWindowDuration.hashCode ^
-        backoffBaseDelay.hashCode ^
-        backoffMaxDelay.hashCode ^
-        maxRetryAttempts.hashCode ^
-        queueEnabled.hashCode ^
-        perOperationLimits.hashCode;
-  }
 }
+
+Duration _durationSecondsFromJson(Object? value) =>
+    Duration(seconds: (value as int?) ?? 60);
+
+int _durationSecondsToJson(Duration value) => value.inSeconds;
+
+Duration _durationMsFromJson(Object? value) =>
+  Duration(milliseconds: (value as int?) ?? 500);
+
+int _durationMsToJson(Duration value) => value.inMilliseconds;
+
+Map<String, int> _perOperationLimitsFromJson(Object? value) {
+  if (value is Map<String, dynamic>) {
+    return value.map((key, dynamic val) => MapEntry(key, val as int));
+  }
+  return const {
+    'chat': 15,
+    'generate_questions': 8,
+    'generate_proposals': 6,
+    'generate_plan': 4,
+    'parse_filter': 10,
+    'summarize': 5,
+  };
+}
+
+Map<String, int> _perOperationLimitsToJson(Map<String, int> value) => value;
 
 /*
 UI Example Code for Settings Screen

@@ -6,15 +6,13 @@
 import 'dart:async' as _i4;
 
 import 'package:mockito/mockito.dart' as _i1;
-import 'package:project_management_app/core/models/dashboard_types.dart'
-    as _i6;
+import 'package:project_management_app/core/models/dashboard_types.dart' as _i6;
 import 'package:project_management_app/core/models/requirements.dart' as _i7;
 import 'package:project_management_app/core/repository/i_dashboard_repository.dart'
     as _i3;
 import 'package:project_management_app/core/repository/models/dashboard_models.dart'
     as _i5;
-import 'package:project_management_app/models/project_requirements.dart'
-    as _i2;
+import 'package:project_management_app/models/project_requirements.dart' as _i2;
 
 // ignore_for_file: type=lint
 // ignore_for_file: avoid_redundant_argument_values
@@ -33,8 +31,13 @@ import 'package:project_management_app/models/project_requirements.dart'
 
 class _FakeProjectRequirements_0 extends _i1.SmartFake
     implements _i2.ProjectRequirements {
-  _FakeProjectRequirements_0(Object parent, Invocation parentInvocation)
-    : super(parent, parentInvocation);
+  _FakeProjectRequirements_0(
+    Object parent,
+    Invocation parentInvocation,
+  ) : super(
+          parent,
+          parentInvocation,
+        );
 }
 
 /// A class which mocks [IDashboardRepository].
@@ -47,41 +50,45 @@ class MockIDashboardRepository extends _i1.Mock
   }
 
   @override
-  _i4.Future<List<_i5.DashboardItem>> loadConfig() =>
-      (super.noSuchMethod(
-            Invocation.method(#loadConfig, []),
-            returnValue: _i4.Future<List<_i5.DashboardItem>>.value(
-              <_i5.DashboardItem>[],
-            ),
-          )
-          as _i4.Future<List<_i5.DashboardItem>>);
+  _i4.Future<List<_i5.DashboardItem>> loadConfig() => (super.noSuchMethod(
+        Invocation.method(
+          #loadConfig,
+          [],
+        ),
+        returnValue:
+            _i4.Future<List<_i5.DashboardItem>>.value(<_i5.DashboardItem>[]),
+      ) as _i4.Future<List<_i5.DashboardItem>>);
 
   @override
   _i4.Future<void> saveConfig(List<_i5.DashboardItem>? items) =>
       (super.noSuchMethod(
-            Invocation.method(#saveConfig, [items]),
-            returnValue: _i4.Future<void>.value(),
-            returnValueForMissingStub: _i4.Future<void>.value(),
-          )
-          as _i4.Future<void>);
+        Invocation.method(
+          #saveConfig,
+          [items],
+        ),
+        returnValue: _i4.Future<void>.value(),
+        returnValueForMissingStub: _i4.Future<void>.value(),
+      ) as _i4.Future<void>);
 
   @override
-  _i4.Future<void> addItem(_i5.DashboardItem? item) =>
-      (super.noSuchMethod(
-            Invocation.method(#addItem, [item]),
-            returnValue: _i4.Future<void>.value(),
-            returnValueForMissingStub: _i4.Future<void>.value(),
-          )
-          as _i4.Future<void>);
+  _i4.Future<void> addItem(_i5.DashboardItem? item) => (super.noSuchMethod(
+        Invocation.method(
+          #addItem,
+          [item],
+        ),
+        returnValue: _i4.Future<void>.value(),
+        returnValueForMissingStub: _i4.Future<void>.value(),
+      ) as _i4.Future<void>);
 
   @override
-  _i4.Future<void> removeItem(int? index) =>
-      (super.noSuchMethod(
-            Invocation.method(#removeItem, [index]),
-            returnValue: _i4.Future<void>.value(),
-            returnValueForMissingStub: _i4.Future<void>.value(),
-          )
-          as _i4.Future<void>);
+  _i4.Future<void> removeItem(int? index) => (super.noSuchMethod(
+        Invocation.method(
+          #removeItem,
+          [index],
+        ),
+        returnValue: _i4.Future<void>.value(),
+        returnValueForMissingStub: _i4.Future<void>.value(),
+      ) as _i4.Future<void>);
 
   @override
   _i4.Future<void> updateItemPosition(
@@ -89,47 +96,59 @@ class MockIDashboardRepository extends _i1.Mock
     Map<String, dynamic>? position,
   ) =>
       (super.noSuchMethod(
-            Invocation.method(#updateItemPosition, [index, position]),
-            returnValue: _i4.Future<void>.value(),
-            returnValueForMissingStub: _i4.Future<void>.value(),
-          )
-          as _i4.Future<void>);
+        Invocation.method(
+          #updateItemPosition,
+          [
+            index,
+            position,
+          ],
+        ),
+        returnValue: _i4.Future<void>.value(),
+        returnValueForMissingStub: _i4.Future<void>.value(),
+      ) as _i4.Future<void>);
 
   @override
   _i4.Future<List<_i5.DashboardTemplate>> loadTemplates() =>
       (super.noSuchMethod(
-            Invocation.method(#loadTemplates, []),
-            returnValue: _i4.Future<List<_i5.DashboardTemplate>>.value(
-              <_i5.DashboardTemplate>[],
-            ),
-          )
-          as _i4.Future<List<_i5.DashboardTemplate>>);
+        Invocation.method(
+          #loadTemplates,
+          [],
+        ),
+        returnValue: _i4.Future<List<_i5.DashboardTemplate>>.value(
+            <_i5.DashboardTemplate>[]),
+      ) as _i4.Future<List<_i5.DashboardTemplate>>);
 
   @override
   _i4.Future<void> saveTemplates(List<_i5.DashboardTemplate>? templates) =>
       (super.noSuchMethod(
-            Invocation.method(#saveTemplates, [templates]),
-            returnValue: _i4.Future<void>.value(),
-            returnValueForMissingStub: _i4.Future<void>.value(),
-          )
-          as _i4.Future<void>);
+        Invocation.method(
+          #saveTemplates,
+          [templates],
+        ),
+        returnValue: _i4.Future<void>.value(),
+        returnValueForMissingStub: _i4.Future<void>.value(),
+      ) as _i4.Future<void>);
 
   @override
   _i4.Future<_i6.SharedDashboard?> fetchSharedDashboard(String? shareId) =>
       (super.noSuchMethod(
-            Invocation.method(#fetchSharedDashboard, [shareId]),
-            returnValue: _i4.Future<_i6.SharedDashboard?>.value(),
-          )
-          as _i4.Future<_i6.SharedDashboard?>);
+        Invocation.method(
+          #fetchSharedDashboard,
+          [shareId],
+        ),
+        returnValue: _i4.Future<_i6.SharedDashboard?>.value(),
+      ) as _i4.Future<_i6.SharedDashboard?>);
 
   @override
   _i4.Future<void> saveSharedDashboard(_i6.SharedDashboard? dashboard) =>
       (super.noSuchMethod(
-            Invocation.method(#saveSharedDashboard, [dashboard]),
-            returnValue: _i4.Future<void>.value(),
-            returnValueForMissingStub: _i4.Future<void>.value(),
-          )
-          as _i4.Future<void>);
+        Invocation.method(
+          #saveSharedDashboard,
+          [dashboard],
+        ),
+        returnValue: _i4.Future<void>.value(),
+        returnValueForMissingStub: _i4.Future<void>.value(),
+      ) as _i4.Future<void>);
 
   @override
   _i4.Future<void> updateSharedPermissions(
@@ -137,116 +156,140 @@ class MockIDashboardRepository extends _i1.Mock
     Map<String, String>? permissions,
   ) =>
       (super.noSuchMethod(
-            Invocation.method(#updateSharedPermissions, [shareId, permissions]),
-            returnValue: _i4.Future<void>.value(),
-            returnValueForMissingStub: _i4.Future<void>.value(),
-          )
-          as _i4.Future<void>);
+        Invocation.method(
+          #updateSharedPermissions,
+          [
+            shareId,
+            permissions,
+          ],
+        ),
+        returnValue: _i4.Future<void>.value(),
+        returnValueForMissingStub: _i4.Future<void>.value(),
+      ) as _i4.Future<void>);
 
   @override
   _i4.Future<_i6.SharedDashboard?> loadLocalSharedDashboard(String? shareId) =>
       (super.noSuchMethod(
-            Invocation.method(#loadLocalSharedDashboard, [shareId]),
-            returnValue: _i4.Future<_i6.SharedDashboard?>.value(),
-          )
-          as _i4.Future<_i6.SharedDashboard?>);
+        Invocation.method(
+          #loadLocalSharedDashboard,
+          [shareId],
+        ),
+        returnValue: _i4.Future<_i6.SharedDashboard?>.value(),
+      ) as _i4.Future<_i6.SharedDashboard?>);
 
   @override
   _i4.Future<void> saveLocalSharedDashboard(_i6.SharedDashboard? dashboard) =>
       (super.noSuchMethod(
-            Invocation.method(#saveLocalSharedDashboard, [dashboard]),
-            returnValue: _i4.Future<void>.value(),
-            returnValueForMissingStub: _i4.Future<void>.value(),
-          )
-          as _i4.Future<void>);
+        Invocation.method(
+          #saveLocalSharedDashboard,
+          [dashboard],
+        ),
+        returnValue: _i4.Future<void>.value(),
+        returnValueForMissingStub: _i4.Future<void>.value(),
+      ) as _i4.Future<void>);
 
   @override
   _i4.Future<_i2.ProjectRequirements> fetchRequirements(
-    String? projectCategory,
-  ) =>
+          String? projectCategory) =>
       (super.noSuchMethod(
-            Invocation.method(#fetchRequirements, [projectCategory]),
-            returnValue: _i4.Future<_i2.ProjectRequirements>.value(
-              _FakeProjectRequirements_0(
-                this,
-                Invocation.method(#fetchRequirements, [projectCategory]),
-              ),
-            ),
-          )
-          as _i4.Future<_i2.ProjectRequirements>);
+        Invocation.method(
+          #fetchRequirements,
+          [projectCategory],
+        ),
+        returnValue: _i4.Future<_i2.ProjectRequirements>.value(
+            _FakeProjectRequirements_0(
+          this,
+          Invocation.method(
+            #fetchRequirements,
+            [projectCategory],
+          ),
+        )),
+      ) as _i4.Future<_i2.ProjectRequirements>);
 
   @override
   _i2.ProjectRequirements parseRequirementsString(String? requirementsString) =>
       (super.noSuchMethod(
-            Invocation.method(#parseRequirementsString, [requirementsString]),
-            returnValue: _FakeProjectRequirements_0(
-              this,
-              Invocation.method(#parseRequirementsString, [requirementsString]),
-            ),
-          )
-          as _i2.ProjectRequirements);
+        Invocation.method(
+          #parseRequirementsString,
+          [requirementsString],
+        ),
+        returnValue: _FakeProjectRequirements_0(
+          this,
+          Invocation.method(
+            #parseRequirementsString,
+            [requirementsString],
+          ),
+        ),
+      ) as _i2.ProjectRequirements);
 
   @override
-  _i4.Future<List<_i7.Requirement>> loadRequirements() =>
-      (super.noSuchMethod(
-            Invocation.method(#loadRequirements, []),
-            returnValue: _i4.Future<List<_i7.Requirement>>.value(
-              <_i7.Requirement>[],
-            ),
-          )
-          as _i4.Future<List<_i7.Requirement>>);
+  _i4.Future<List<_i7.Requirement>> loadRequirements() => (super.noSuchMethod(
+        Invocation.method(
+          #loadRequirements,
+          [],
+        ),
+        returnValue:
+            _i4.Future<List<_i7.Requirement>>.value(<_i7.Requirement>[]),
+      ) as _i4.Future<List<_i7.Requirement>>);
 
   @override
-  _i4.Future<void> saveRequirement(_i7.Requirement? req) =>
-      (super.noSuchMethod(
-            Invocation.method(#saveRequirement, [req]),
-            returnValue: _i4.Future<void>.value(),
-            returnValueForMissingStub: _i4.Future<void>.value(),
-          )
-          as _i4.Future<void>);
+  _i4.Future<void> saveRequirement(_i7.Requirement? req) => (super.noSuchMethod(
+        Invocation.method(
+          #saveRequirement,
+          [req],
+        ),
+        returnValue: _i4.Future<void>.value(),
+        returnValueForMissingStub: _i4.Future<void>.value(),
+      ) as _i4.Future<void>);
 
   @override
   _i4.Future<void> queuePendingChange(Map<String, dynamic>? change) =>
       (super.noSuchMethod(
-            Invocation.method(#queuePendingChange, [change]),
-            returnValue: _i4.Future<void>.value(),
-            returnValueForMissingStub: _i4.Future<void>.value(),
-          )
-          as _i4.Future<void>);
+        Invocation.method(
+          #queuePendingChange,
+          [change],
+        ),
+        returnValue: _i4.Future<void>.value(),
+        returnValueForMissingStub: _i4.Future<void>.value(),
+      ) as _i4.Future<void>);
 
   @override
-  _i4.Future<void> processPendingSync() =>
-      (super.noSuchMethod(
-            Invocation.method(#processPendingSync, []),
-            returnValue: _i4.Future<void>.value(),
-            returnValueForMissingStub: _i4.Future<void>.value(),
-          )
-          as _i4.Future<void>);
+  _i4.Future<void> processPendingSync() => (super.noSuchMethod(
+        Invocation.method(
+          #processPendingSync,
+          [],
+        ),
+        returnValue: _i4.Future<void>.value(),
+        returnValueForMissingStub: _i4.Future<void>.value(),
+      ) as _i4.Future<void>);
 
   @override
-  _i4.Future<void> preloadCache() =>
-      (super.noSuchMethod(
-            Invocation.method(#preloadCache, []),
-            returnValue: _i4.Future<void>.value(),
-            returnValueForMissingStub: _i4.Future<void>.value(),
-          )
-          as _i4.Future<void>);
+  _i4.Future<void> preloadCache() => (super.noSuchMethod(
+        Invocation.method(
+          #preloadCache,
+          [],
+        ),
+        returnValue: _i4.Future<void>.value(),
+        returnValueForMissingStub: _i4.Future<void>.value(),
+      ) as _i4.Future<void>);
 
   @override
-  _i4.Future<void> clearCache() =>
-      (super.noSuchMethod(
-            Invocation.method(#clearCache, []),
-            returnValue: _i4.Future<void>.value(),
-            returnValueForMissingStub: _i4.Future<void>.value(),
-          )
-          as _i4.Future<void>);
+  _i4.Future<void> clearCache() => (super.noSuchMethod(
+        Invocation.method(
+          #clearCache,
+          [],
+        ),
+        returnValue: _i4.Future<void>.value(),
+        returnValueForMissingStub: _i4.Future<void>.value(),
+      ) as _i4.Future<void>);
 
   @override
-  _i4.Future<void> close() =>
-      (super.noSuchMethod(
-            Invocation.method(#close, []),
-            returnValue: _i4.Future<void>.value(),
-            returnValueForMissingStub: _i4.Future<void>.value(),
-          )
-          as _i4.Future<void>);
+  _i4.Future<void> close() => (super.noSuchMethod(
+        Invocation.method(
+          #close,
+          [],
+        ),
+        returnValue: _i4.Future<void>.value(),
+        returnValueForMissingStub: _i4.Future<void>.value(),
+      ) as _i4.Future<void>);
 }

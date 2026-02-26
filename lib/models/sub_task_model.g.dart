@@ -57,3 +57,27 @@ class SubTaskAdapter extends TypeAdapter<SubTask> {
           runtimeType == other.runtimeType &&
           typeId == other.typeId;
 }
+
+// **************************************************************************
+// JsonSerializableGenerator
+// **************************************************************************
+
+_SubTask _$SubTaskFromJson(Map<String, dynamic> json) => _SubTask(
+      id: json['id'] as String,
+      taskId: json['taskId'] as String,
+      title: json['title'] as String,
+      description: json['description'] as String,
+      isCompleted: json['isCompleted'] as bool? ?? false,
+      assignedTo: json['assignedTo'] as String?,
+      createdAt: DateTime.parse(json['createdAt'] as String),
+    );
+
+Map<String, dynamic> _$SubTaskToJson(_SubTask instance) => <String, dynamic>{
+      'id': instance.id,
+      'taskId': instance.taskId,
+      'title': instance.title,
+      'description': instance.description,
+      'isCompleted': instance.isCompleted,
+      'assignedTo': instance.assignedTo,
+      'createdAt': instance.createdAt.toIso8601String(),
+    };

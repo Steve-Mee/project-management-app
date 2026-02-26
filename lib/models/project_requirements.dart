@@ -1,26 +1,20 @@
+import 'package:freezed_annotation/freezed_annotation.dart';
+
+part 'project_requirements.freezed.dart';
+part 'project_requirements.g.dart';
+
 /// Model for project requirements
-class ProjectRequirements {
-  final List<String> software;
-  final List<String> hardware;
+@freezed
+abstract class ProjectRequirements with _$ProjectRequirements {
+  const ProjectRequirements._();
 
-  const ProjectRequirements({
-    this.software = const [],
-    this.hardware = const [],
-  });
+  const factory ProjectRequirements({
+    @Default(<String>[]) List<String> software,
+    @Default(<String>[]) List<String> hardware,
+  }) = _ProjectRequirements;
 
-  factory ProjectRequirements.fromJson(Map<String, dynamic> json) {
-    return ProjectRequirements(
-      software: (json['software'] as List<dynamic>?)?.cast<String>() ?? const [],
-      hardware: (json['hardware'] as List<dynamic>?)?.cast<String>() ?? const [],
-    );
-  }
-
-  Map<String, dynamic> toJson() {
-    return {
-      'software': software,
-      'hardware': hardware,
-    };
-  }
+  factory ProjectRequirements.fromJson(Map<String, dynamic> json) =>
+      _$ProjectRequirementsFromJson(json);
 
   bool get isEmpty => software.isEmpty && hardware.isEmpty;
   bool get isNotEmpty => !isEmpty;

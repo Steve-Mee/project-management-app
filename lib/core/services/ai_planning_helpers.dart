@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:freezed_annotation/freezed_annotation.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../config/ai_config.dart';
@@ -6,17 +7,16 @@ import '../services/ai_parsers.dart';
 import '../../models/project_plan.dart';
 import '../../core/providers/project_providers.dart';
 
-/// Result class for AI API calls with token usage information
-class AiApiResult<T> {
-  final T content;
-  final int tokensUsed;
-  final Map<String, dynamic> metadata;
+part 'ai_planning_helpers.freezed.dart';
 
-  const AiApiResult({
-    required this.content,
-    required this.tokensUsed,
-    this.metadata = const {},
-  });
+/// Result class for AI API calls with token usage information
+@Freezed(fromJson: false, toJson: false)
+abstract class AiApiResult<T> with _$AiApiResult<T> {
+  const factory AiApiResult({
+    required T content,
+    required int tokensUsed,
+    @Default(<String, dynamic>{}) Map<String, dynamic> metadata,
+  }) = _AiApiResult<T>;
 }
 
 /// Service for AI-powered project planning functions

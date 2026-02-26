@@ -161,7 +161,7 @@ class AiChatNotifier extends AsyncNotifier<AiChatState> {
     } catch (e) {
       // Fallback to defaults if settings fail to load
       AppLogger.event('Failed to load AI rate limits from settings, using defaults', params: {'error': e.toString()});
-      state = const AiChatState(rateLimits: AiRateLimitsConfig.defaults());
+      state = const AiChatState(rateLimits: AiRateLimitsConfig());
     }
 
     // Load persisted queue from previous app sessions

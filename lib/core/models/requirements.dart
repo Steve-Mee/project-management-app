@@ -1,3 +1,10 @@
+// ignore_for_file: invalid_annotation_target
+
+import 'package:freezed_annotation/freezed_annotation.dart';
+
+part 'requirements.freezed.dart';
+part 'requirements.g.dart';
+
 enum RequirementStatus {
   pending,
   inProgress,
@@ -56,32 +63,29 @@ enum RequirementPriority {
   }
 }
 
-class Requirement {
-  final String id;
-  final String title;
-  final RequirementStatus status;
-  final RequirementPriority priority;
+@freezed
+abstract class Requirement with _$Requirement {
+  const factory Requirement({
+    required String id,
+    required String title,
+    @JsonKey(fromJson: _requirementStatusFromJson, toJson: _requirementStatusToJson)
+    @Default(RequirementStatus.pending)
+    RequirementStatus status,
+    @JsonKey(fromJson: _requirementPriorityFromJson, toJson: _requirementPriorityToJson)
+    @Default(RequirementPriority.medium)
+    RequirementPriority priority,
+  }) = _Requirement;
 
-  const Requirement({
-    required this.id,
-    required this.title,
-    this.status = RequirementStatus.pending,
-    this.priority = RequirementPriority.medium,
-  });
-
-  Map<String, dynamic> toJson() => {
-        'id': id,
-        'title': title,
-        'status': status.name,
-        'priority': priority.name,
-      };
-
-  factory Requirement.fromJson(Map<String, dynamic> json) {
-    return Requirement(
-      id: json['id'] as String,
-      title: json['title'] as String,
-      status: RequirementStatus.fromString(json['status'] as String? ?? 'pending'),
-      priority: RequirementPriority.fromString(json['priority'] as String? ?? 'medium'),
-    );
-  }
+  factory Requirement.fromJson(Map<String, dynamic> json) =>
+      _$RequirementFromJson(json);
 }
+
+RequirementStatus _requirementStatusFromJson(String? value) =>
+    RequirementStatus.fromString(value ?? 'pending');
+
+String _requirementStatusToJson(RequirementStatus value) => value.name;
+
+RequirementPriority _requirementPriorityFromJson(String? value) =>
+    RequirementPriority.fromString(value ?? 'medium');
+
+String _requirementPriorityToJson(RequirementPriority value) => value.name;

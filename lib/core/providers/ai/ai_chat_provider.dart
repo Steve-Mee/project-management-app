@@ -37,7 +37,7 @@ class AiChatState {
     this.error,
     this.isRateLimited = false,
     this.rateLimitResetTime,
-    this.rateLimitsConfig = const AiRateLimitsConfig.defaults(),
+    this.rateLimitsConfig = const AiRateLimitsConfig(),
     this.queueLength = 0,
     this.processedToday = 0,
     this.droppedCount = 0,
@@ -148,7 +148,7 @@ class AiChatNotifier extends AsyncNotifier<AiChatState> {
     } catch (e) {
       AppLogger.instance.e('Failed to load AI rate limits config: $e');
       // Fallback to defaults if settings fail
-      _rateLimitsConfig = const AiRateLimitsConfig.defaults();
+      _rateLimitsConfig = const AiRateLimitsConfig();
       
       // Restore persisted queue even with defaults
       await restoreQueue();

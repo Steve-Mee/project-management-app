@@ -1,4 +1,11 @@
+// ignore_for_file: invalid_annotation_target
+
 import 'dart:async';
+
+import 'package:freezed_annotation/freezed_annotation.dart';
+
+part 'ai_request_queue.freezed.dart';
+part 'ai_request_queue.g.dart';
 
 /// AI Request Queue Model for handling burst requests
 ///
@@ -8,41 +15,18 @@ import 'dart:async';
 ///
 /// This model provides in-memory queuing with optional Hive persistence support.
 /// Requests are processed in priority order (higher priority first) then FIFO.
-class AiRequest {
-  final String id;
-  final String action; // "chat", "summarize", "generate_questions", etc.
-  final Map<String, dynamic> payload;
-  final DateTime timestamp;
-  final int priority; // 0=low, 1=normal, 2=high
-  final Completer<dynamic> completer; // Completes when worker processes request
+@Freezed(fromJson: false, toJson: false)
+abstract class AiRequest with _$AiRequest {
+  const AiRequest._();
 
-  const AiRequest({
-    required this.id,
-    required this.action,
-    required this.payload,
-    required this.timestamp,
-    this.priority = 1,
-    required this.completer,
-  });
-
-  /// Create copy with modified fields
-  AiRequest copyWith({
-    String? id,
-    String? action,
-    Map<String, dynamic>? payload,
-    DateTime? timestamp,
-    int? priority,
-    Completer<dynamic>? completer,
-  }) {
-    return AiRequest(
-      id: id ?? this.id,
-      action: action ?? this.action,
-      payload: payload ?? this.payload,
-      timestamp: timestamp ?? this.timestamp,
-      priority: priority ?? this.priority,
-      completer: completer ?? this.completer,
-    );
-  }
+  const factory AiRequest({
+    required String id,
+    required String action,
+    required Map<String, dynamic> payload,
+    required DateTime timestamp,
+    @Default(1) int priority,
+    required Completer<dynamic> completer,
+  }) = _AiRequest;
 
   /// Serialize to JSON for persistence (excludes completer)
   Map<String, dynamic> toJson() {
@@ -63,23 +47,9 @@ class AiRequest {
       payload: json['payload'] as Map<String, dynamic>,
       timestamp: DateTime.parse(json['timestamp'] as String),
       priority: json['priority'] as int? ?? 1,
-      completer: Completer<dynamic>(), // New completer for restored requests
+      completer: Completer<dynamic>(),
     );
   }
-
-  @override
-  String toString() {
-    return 'AiRequest(id: $id, action: $action, priority: $priority, timestamp: $timestamp)';
-  }
-
-  @override
-  bool operator ==(Object other) {
-    if (identical(this, other)) return true;
-    return other is AiRequest && other.id == id;
-  }
-
-  @override
-  int get hashCode => id.hashCode;
 }
 
 /// AI Request Queue for managing pending requests
@@ -158,21 +128,15 @@ class AiRequestQueue {
 }
 
 /// Metrics for queue monitoring
-class QueueMetrics {
-  final int queueLength;
-  final int processedCount;
-  final int failedCount;
-  final Duration averageProcessingTime;
+@freezed
+abstract class QueueMetrics with _$QueueMetrics {
+  const factory QueueMetrics({
+    required int queueLength,
+    required int processedCount,
+    @Default(0) int failedCount,
+    @Default(Duration.zero) Duration averageProcessingTime,
+  }) = _QueueMetrics;
 
-  const QueueMetrics({
-    required this.queueLength,
-    required this.processedCount,
-    this.failedCount = 0,
-    this.averageProcessingTime = Duration.zero,
-  });
-
-  @override
-  String toString() {
-    return 'QueueMetrics(length: $queueLength, processed: $processedCount, failed: $failedCount, avgTime: ${averageProcessingTime.inSeconds}s)';
-  }
+  factory QueueMetrics.fromJson(Map<String, dynamic> json) =>
+      _$QueueMetricsFromJson(json);
 }

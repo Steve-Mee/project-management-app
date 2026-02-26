@@ -1,3 +1,8 @@
+import 'package:freezed_annotation/freezed_annotation.dart';
+
+part 'project_meta.freezed.dart';
+part 'project_meta.g.dart';
+
 enum UrgencyLevel {
   low,
   medium,
@@ -28,16 +33,18 @@ extension UrgencyLevelX on UrgencyLevel {
   }
 }
 
-class ProjectMeta {
-  final String projectId;
-  final UrgencyLevel urgency;
-  final int trackedSeconds;
+@freezed
+abstract class ProjectMeta with _$ProjectMeta {
+  const ProjectMeta._();
 
-  const ProjectMeta({
-    required this.projectId,
-    required this.urgency,
-    required this.trackedSeconds,
-  });
+  const factory ProjectMeta({
+    required String projectId,
+    required UrgencyLevel urgency,
+    required int trackedSeconds,
+  }) = _ProjectMeta;
+
+  factory ProjectMeta.fromJson(Map<String, dynamic> json) =>
+      _$ProjectMetaFromJson(json);
 
   factory ProjectMeta.fromMap(String projectId, Map<String, dynamic> map) {
     final urgencyValue = map['urgency'] as String?;
@@ -58,17 +65,6 @@ class ProjectMeta {
       'urgency': urgency.name,
       'trackedSeconds': trackedSeconds,
     };
-  }
-
-  ProjectMeta copyWith({
-    UrgencyLevel? urgency,
-    int? trackedSeconds,
-  }) {
-    return ProjectMeta(
-      projectId: projectId,
-      urgency: urgency ?? this.urgency,
-      trackedSeconds: trackedSeconds ?? this.trackedSeconds,
-    );
   }
 
   static ProjectMeta defaultFor(String projectId) {

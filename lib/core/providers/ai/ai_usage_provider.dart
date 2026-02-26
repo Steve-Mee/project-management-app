@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
+import 'package:freezed_annotation/freezed_annotation.dart';
 import 'dart:convert';
 import 'package:csv/csv.dart';
 import '../../services/app_logger.dart';
@@ -10,12 +11,17 @@ import '../../repository/i_ai_usage_repository.dart';
 import '../../repository/impl/hive_ai_usage_repository.dart';
 import '../auth_providers.dart';
 
-/// Model for AI usage data
-class AiUsage {
-  final int tokensUsed;
-  final int monthlyLimit;
+part 'ai_usage_provider.freezed.dart';
 
-  const AiUsage({required this.tokensUsed, required this.monthlyLimit});
+/// Model for AI usage data
+@Freezed(fromJson: false, toJson: false)
+abstract class AiUsage with _$AiUsage {
+  const AiUsage._();
+
+  const factory AiUsage({
+    @Default(0) int tokensUsed,
+    @Default(100000) int monthlyLimit,
+  }) = _AiUsage;
 
   /// Creates AiUsage from Supabase query result
   factory AiUsage.fromJson(Map<String, dynamic> json) {
@@ -25,22 +31,19 @@ class AiUsage {
     );
   }
 
-  /// Default AI usage when no data is available
-  factory AiUsage.defaultUsage() {
-    return const AiUsage(tokensUsed: 0, monthlyLimit: 100000);
+  Map<String, dynamic> toJson() {
+    return {
+      'tokens_used': tokensUsed,
+      'monthly_limit': monthlyLimit,
+    };
   }
 
-  Map<String, dynamic> toJson() {
-    return {'tokens_used': tokensUsed, 'monthly_limit': monthlyLimit};
-  }
+  /// Default AI usage when no data is available
+  factory AiUsage.defaultUsage() => const AiUsage();
 
   /// Creates a new AiUsage with updated token count
-  AiUsage withTokens(int additionalTokens) {
-    return AiUsage(
-      tokensUsed: tokensUsed + additionalTokens,
-      monthlyLimit: monthlyLimit,
-    );
-  }
+  AiUsage withTokens(int additionalTokens) =>
+      copyWith(tokensUsed: tokensUsed + additionalTokens);
 }
 
 /// Provider for fetching AI usage data from Supabase
@@ -335,26 +338,31 @@ class AiUsageNotifier extends StateNotifier<AsyncValue<List<AiUsageRecord>>> {
   final IAiUsageRepository _repository;
 
   AiUsageNotifier(this._repository) : super(const AsyncValue.data([])) {
-    // Subscribe to real-time AI usage updates
-    final channel = Supabase.instance.client.channel('ai_usage_realtime');
-    channel.onPostgresChanges(
-      event: PostgresChangeEvent.insert,
-      schema: 'public',
-      table: 'ai_usage',
-      callback: (payload) {
-        try {
-          final newRecord = AiUsageRecord.fromJson(payload.newRecord);
-          state = state.maybeWhen(
-            data: (records) => AsyncValue.data([...records, newRecord]),
-            orElse: () => state,
-          );
-          AppLogger.event('ai_usage_realtime_update');
-        } catch (e) {
-          AppLogger.error('Failed to process AI usage realtime update: $e');
-        }
-      },
-    );
-    channel.subscribe();
+    // Subscribe to real-time AI usage updates.
+    // In unit tests Supabase may be intentionally uninitialized.
+    try {
+      final channel = Supabase.instance.client.channel('ai_usage_realtime');
+      channel.onPostgresChanges(
+        event: PostgresChangeEvent.insert,
+        schema: 'public',
+        table: 'ai_usage',
+        callback: (payload) {
+          try {
+            final newRecord = AiUsageRecord.fromJson(payload.newRecord);
+            state = state.maybeWhen(
+              data: (records) => AsyncValue.data([...records, newRecord]),
+              orElse: () => state,
+            );
+            AppLogger.event('ai_usage_realtime_update');
+          } catch (e) {
+            AppLogger.error('Failed to process AI usage realtime update: $e');
+          }
+        },
+      );
+      channel.subscribe();
+    } on AssertionError {
+      AppLogger.instance.w('Supabase not initialized; skipping ai_usage realtime subscription');
+    }
   }
 
   /// Logs a new usage record and updates the state

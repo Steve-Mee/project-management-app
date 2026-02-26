@@ -6,18 +6,24 @@
 library;
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:freezed_annotation/freezed_annotation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../services/app_logger.dart';
 import '../models/ai_usage_record.dart';
 import '../repository/i_ai_usage_repository.dart';
 import 'package:project_management_app/core/repository/impl/hive_ai_usage_repository.dart';
 
-/// Model for AI usage data
-class AiUsage {
-  final int tokensUsed;
-  final int monthlyLimit;
+part 'analytics_providers.freezed.dart';
 
-  const AiUsage({required this.tokensUsed, required this.monthlyLimit});
+/// Model for AI usage data
+@Freezed(fromJson: false, toJson: false)
+abstract class AiUsage with _$AiUsage {
+  const AiUsage._();
+
+  const factory AiUsage({
+    @Default(0) int tokensUsed,
+    @Default(100000) int monthlyLimit,
+  }) = _AiUsage;
 
   /// Creates AiUsage from Supabase query result
   factory AiUsage.fromJson(Map<String, dynamic> json) {
@@ -27,22 +33,19 @@ class AiUsage {
     );
   }
 
-  /// Default AI usage when no data is available
-  factory AiUsage.defaultUsage() {
-    return const AiUsage(tokensUsed: 0, monthlyLimit: 100000);
+  Map<String, dynamic> toJson() {
+    return {
+      'tokens_used': tokensUsed,
+      'monthly_limit': monthlyLimit,
+    };
   }
 
-  Map<String, dynamic> toJson() {
-    return {'tokens_used': tokensUsed, 'monthly_limit': monthlyLimit};
-  }
+  /// Default AI usage when no data is available
+  factory AiUsage.defaultUsage() => const AiUsage();
 
   /// Creates a new AiUsage with updated token count
-  AiUsage withTokens(int additionalTokens) {
-    return AiUsage(
-      tokensUsed: tokensUsed + additionalTokens,
-      monthlyLimit: monthlyLimit,
-    );
-  }
+  AiUsage withTokens(int additionalTokens) =>
+      copyWith(tokensUsed: tokensUsed + additionalTokens);
 }
 
 /// Provider for fetching AI usage data from Supabase

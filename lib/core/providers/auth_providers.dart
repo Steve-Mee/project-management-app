@@ -17,6 +17,8 @@ import 'package:project_management_app/core/services/login_rate_limiter.dart';
 import 'package:project_management_app/core/services/recaptcha_service.dart';
 import 'package:project_management_app/core/auth/permissions.dart';
 import 'package:project_management_app/core/config/ai_config.dart' as ai_config;
+import 'package:project_management_app/core/config/app_config.dart';
+import 'package:project_management_app/core/services/supabase_connection_diagnostics.dart';
 
 // Recommended async settings access pattern (see 018-auth-settings-repo-access.md):
 // final settings = await ref.read(settingsRepositoryProvider.future);
@@ -323,6 +325,11 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
       }
     } catch (e) {
       AppLogger.instance.w('Supabase login failed', error: e);
+      await SupabaseConnectionDiagnostics.logNetworkDiagnostics(
+        url: AppConfig.supabaseUrl,
+        context: 'auth_login',
+        error: e,
+      );
       // Record failed attempt for rate limiting
       await limiter.recordAttempt(username);
     }
@@ -410,9 +417,20 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
       }
     } on AuthException catch (e) {
       AppLogger.instance.w('Supabase sign-up failed', error: e);
+      await SupabaseConnectionDiagnostics.logNetworkDiagnostics(
+        url: AppConfig.supabaseUrl,
+        context: 'auth_signup_auth_exception',
+        error: e,
+      );
       state = AsyncValue.data(state.value!.copyWith(error: 'Registration failed: ${e.message} (${e.code ?? 'no code'})'));
     } catch (e, stack) {
       AppLogger.instance.e('Unexpected signup error', error: e, stackTrace: stack);
+      await SupabaseConnectionDiagnostics.logNetworkDiagnostics(
+        url: AppConfig.supabaseUrl,
+        context: 'auth_signup_unexpected_exception',
+        error: e,
+        stackTrace: stack,
+      );
       state = AsyncValue.data(state.value!.copyWith(error: 'Unexpected error during registration'));
     }
     return false;

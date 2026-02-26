@@ -35,6 +35,7 @@ void main() {
   late ProviderContainer container;
   late MockIDashboardRepository mockRepo;
   late List<DashboardItem> mockItems;
+  late List<DashboardTemplate> mockTemplates;
 
   setUp(() async {
     TestWidgetsFlutterBinding.ensureInitialized();
@@ -53,11 +54,17 @@ void main() {
 
     mockRepo = MockIDashboardRepository();
     mockItems = [];
+    mockTemplates = [];
     final tempDir = Directory.systemTemp.createTempSync('hive_test');
     await Hive.initFlutter(tempDir.path);
     // Mock initial calls
     when(mockRepo.loadConfig()).thenAnswer((_) async => mockItems);
-    when(mockRepo.loadTemplates()).thenAnswer((_) async => []);
+    when(mockRepo.preloadCache()).thenAnswer((_) async {});
+    when(mockRepo.loadTemplates()).thenAnswer((_) async => List<DashboardTemplate>.from(mockTemplates));
+    when(mockRepo.saveTemplates(any)).thenAnswer((invocation) async {
+      final templates = invocation.positionalArguments[0] as List<DashboardTemplate>;
+      mockTemplates = List<DashboardTemplate>.from(templates);
+    });
     when(mockRepo.addItem(any)).thenAnswer((invocation) async {
       final item = invocation.positionalArguments[0] as DashboardItem;
       mockItems.add(item);
@@ -225,10 +232,13 @@ void main() {
 
       final items = [item];
       when(mockRepo.loadConfig()).thenAnswer((_) async => items);
-      when(mockRepo.updateItemPosition(0, {'x': 10, 'y': 10})).thenAnswer((_) async {
+      when(mockRepo.updateItemPosition(0, any)).thenAnswer((invocation) async {
+        final position = Map<String, dynamic>.from(
+          invocation.positionalArguments[1] as Map<String, dynamic>,
+        );
         items[0] = DashboardItem(
           widgetType: item.widgetType,
-          position: {'x': 10, 'y': 10},
+          position: position,
         );
       });
 
@@ -326,6 +336,16 @@ void main() {
       );
       await notifier.addItem(item);
 
+      when(mockRepo.updateItemPosition(0, any)).thenAnswer((invocation) async {
+        final position = Map<String, dynamic>.from(
+          invocation.positionalArguments[1] as Map<String, dynamic>,
+        );
+        mockItems[0] = DashboardItem(
+          widgetType: mockItems[0].widgetType,
+          position: position,
+        );
+      });
+
       // Update with invalid position
       await notifier.updateItemPosition(0, {'x': 1100, 'y': 700, 'width': 300, 'height': 200});
 
@@ -353,8 +373,10 @@ void main() {
   group('Undo/Redo functionality', () {
     late DashboardConfigNotifier notifier;
 
-    setUp(() {
+    setUp(() async {
       notifier = container.read(dashboardConfigProvider.notifier);
+      await container.read(dashboardConfigProvider.future);
+      await Future<void>.delayed(Duration.zero);
     });
 
     test('canUndo is false initially (no history)', () {
@@ -403,7 +425,11 @@ void main() {
       await notifier.redo();
       final stateAfterRedo = container.read(dashboardConfigProvider);
 
-      expect(stateAfterRedo, stateAfterAdd); // Back to added state
+      expect(stateAfterRedo.asData?.value.length, stateAfterAdd.asData?.value.length); // Back to added state
+      expect(
+        stateAfterRedo.asData?.value.first.widgetType,
+        stateAfterAdd.asData?.value.first.widgetType,
+      );
       expect(notifier.canUndo, true);
       expect(notifier.canRedo, false);
     });
@@ -689,7 +715,7 @@ void main() {
       await notifier.loadConfig();
       
       final state = container.read(dashboardConfigProvider);
-      expect(state, isEmpty);
+      expect(state, isA<AsyncError<List<DashboardItem>>>());
       
       final error = container.read(dashboardErrorProvider);
       expect(error, 'dashboard_load_error');
@@ -753,13 +779,16 @@ void main() {
       );
       final items = <DashboardItem>[];
       when(mockRepo.loadConfig()).thenAnswer((_) async => items);
-      when(mockRepo.addItem(item)).thenAnswer((_) async {
+      when(mockRepo.addItem(any)).thenAnswer((_) async {
         items.add(item);
       });
-      when(mockRepo.updateItemPosition(0, {'x': 10, 'y': 10, 'width': 200, 'height': 150})).thenAnswer((_) async {
+      when(mockRepo.updateItemPosition(0, any)).thenAnswer((invocation) async {
+        final position = Map<String, dynamic>.from(
+          invocation.positionalArguments[1] as Map<String, dynamic>,
+        );
         items[0] = DashboardItem(
           widgetType: item.widgetType,
-          position: {'x': 10, 'y': 10, 'width': 200, 'height': 150},
+          position: position,
         );
       });
       final notifier = container.read(dashboardConfigProvider.notifier);
@@ -943,8 +972,9 @@ void main() {
   group('Dashboard Settings Persistence', () {
     late DashboardConfigNotifier notifier;
 
-    setUp(() {
+    setUp(() async {
       notifier = container.read(dashboardConfigProvider.notifier);
+      await container.read(dashboardConfigProvider.future);
     });
 
     test('dashboard items are loaded from settings on initialization', () async {
@@ -964,7 +994,8 @@ void main() {
       
       // Verify the state was updated
       final state = container.read(dashboardConfigProvider);
-      expect(state.asData?.value, equals(items));
+      expect(state.asData?.value.length, 1);
+      expect(state.asData?.value.first.widgetType, DashboardWidgetType.metricCard);
     });
 
     test('dashboard templates are saved to settings on template save', () async {

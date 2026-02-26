@@ -1,31 +1,28 @@
-// ignore_for_file: prefer_const_constructors
+// ignore_for_file: prefer_const_constructors, invalid_annotation_target
+import 'package:freezed_annotation/freezed_annotation.dart';
 import 'package:uuid/uuid.dart';
 
+part 'project_invitation.freezed.dart';
+part 'project_invitation.g.dart';
+
 /// Model for project invitations
-class ProjectInvitation {
+@freezed
+abstract class ProjectInvitation with _$ProjectInvitation {
+  const ProjectInvitation._();
+
   static const Uuid _uuid = Uuid();
 
-  final String id;
-  final String email;
-  final String projectId;
-  final String role;
-  final String invitedBy;
-  final String status; // 'pending', 'accepted', 'rejected'
-  final String? token; // Token for accepting invitation
-  final DateTime createdAt;
-  final DateTime? updatedAt;
-
-  ProjectInvitation({
-    required this.id,
-    required this.email,
-    required this.projectId,
-    required this.role,
-    required this.invitedBy,
-    required this.status,
-    this.token,
-    required this.createdAt,
-    this.updatedAt,
-  });
+  const factory ProjectInvitation({
+    required String id,
+    required String email,
+    @JsonKey(name: 'project_id') required String projectId,
+    required String role,
+    @JsonKey(name: 'invited_by') required String invitedBy,
+    required String status,
+    String? token,
+    @JsonKey(name: 'created_at') required DateTime createdAt,
+    @JsonKey(name: 'updated_at') DateTime? updatedAt,
+  }) = _ProjectInvitation;
 
   /// Factory for creating with generated ID
   factory ProjectInvitation.create({
@@ -49,58 +46,6 @@ class ProjectInvitation {
     );
   }
 
-  /// Factory constructor for creating from JSON
-  factory ProjectInvitation.fromJson(Map<String, dynamic> json) {
-    return ProjectInvitation(
-      id: json['id'] as String,
-      email: json['email'] as String,
-      projectId: json['project_id'] as String,
-      role: json['role'] as String,
-      invitedBy: json['invited_by'] as String,
-      status: json['status'] as String,
-      token: json['token'] as String?,
-      createdAt: DateTime.parse(json['created_at'] as String),
-      updatedAt: json['updated_at'] != null ? DateTime.parse(json['updated_at'] as String) : null,
-    );
-  }
-
-  /// Convert to JSON
-  Map<String, dynamic> toJson() {
-    return {
-      'id': id,
-      'email': email,
-      'project_id': projectId,
-      'role': role,
-      'invited_by': invitedBy,
-      'status': status,
-      'token': token,
-      'created_at': createdAt.toIso8601String(),
-      'updated_at': updatedAt?.toIso8601String(),
-    };
-  }
-
-  /// Copy with updated fields
-  ProjectInvitation copyWith({
-    String? id,
-    String? email,
-    String? projectId,
-    String? role,
-    String? invitedBy,
-    String? status,
-    String? token,
-    DateTime? createdAt,
-    DateTime? updatedAt,
-  }) {
-    return ProjectInvitation(
-      id: id ?? this.id,
-      email: email ?? this.email,
-      projectId: projectId ?? this.projectId,
-      role: role ?? this.role,
-      invitedBy: invitedBy ?? this.invitedBy,
-      status: status ?? this.status,
-      token: token ?? this.token,
-      createdAt: createdAt ?? this.createdAt,
-      updatedAt: updatedAt ?? this.updatedAt,
-    );
-  }
+  factory ProjectInvitation.fromJson(Map<String, dynamic> json) =>
+      _$ProjectInvitationFromJson(json);
 }

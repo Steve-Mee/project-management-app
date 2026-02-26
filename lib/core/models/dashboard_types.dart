@@ -1,4 +1,10 @@
+// ignore_for_file: invalid_annotation_target
+
+import 'package:freezed_annotation/freezed_annotation.dart';
 import 'package:project_management_app/core/repository/models/dashboard_models.dart';
+
+part 'dashboard_types.freezed.dart';
+part 'dashboard_types.g.dart';
 
 enum DashboardWidgetType {
   metricCard,
@@ -38,40 +44,31 @@ class InvalidWidgetTypeException implements Exception {
 
 enum DashboardPermission { view, edit }
 
-class SharedDashboard {
-  final String id;
-  final String ownerId;
-  final String title;
-  final List<DashboardItem> items;
-  final Map<String, String> permissions;
-  final DateTime updatedAt;
+@freezed
+abstract class SharedDashboard with _$SharedDashboard {
+  @JsonSerializable(explicitToJson: true)
+  const factory SharedDashboard({
+    required String id,
+    required String ownerId,
+    required String title,
+    required List<DashboardItem> items,
+    @JsonKey(fromJson: _sharedDashboardPermissionsFromJson, toJson: _sharedDashboardPermissionsToJson)
+    required Map<String, String> permissions,
+    @JsonKey(name: 'updated_at') required DateTime updatedAt,
+  }) = _SharedDashboard;
 
-  const SharedDashboard({
-    required this.id,
-    required this.ownerId,
-    required this.title,
-    required this.items,
-    required this.permissions,
-    required this.updatedAt,
-  });
-
-  Map<String, dynamic> toJson() => {
-        'id': id,
-        'ownerId': ownerId,
-        'title': title,
-        'items': items.map((item) => item.toJson()).toList(),
-        'permissions': permissions,
-        'updated_at': updatedAt.toIso8601String(),
-      };
-
-  factory SharedDashboard.fromJson(Map<String, dynamic> json) => SharedDashboard(
-        id: json['id'] as String,
-        ownerId: json['ownerId'] as String,
-        title: json['title'] as String,
-        items: (json['items'] as List<dynamic>)
-            .map((item) => DashboardItem.fromJson(item as Map<String, dynamic>))
-            .toList(),
-        permissions: Map<String, String>.from(json['permissions'] as Map),
-        updatedAt: DateTime.parse(json['updated_at'] as String),
-      );
+  factory SharedDashboard.fromJson(Map<String, dynamic> json) =>
+      _$SharedDashboardFromJson(json);
 }
+
+Map<String, String> _sharedDashboardPermissionsFromJson(Object? value) {
+  if (value is Map) {
+    return Map<String, String>.from(value);
+  }
+  return const <String, String>{};
+}
+
+Map<String, String> _sharedDashboardPermissionsToJson(
+  Map<String, String> value,
+) =>
+    value;

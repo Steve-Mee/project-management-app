@@ -99,24 +99,22 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
   Future<void> _showRegisterDialog() async {
     final l10n = AppLocalizations.of(context)!;
-    final usernameController = TextEditingController();
-    final passwordController = TextEditingController();
-    final repeatController = TextEditingController();
+    var username = '';
+    var password = '';
+    var repeatPassword = '';
     var showPassword = false;
     var showRepeatPassword = false;
     final result = await showDialog<bool>(
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setDialogState) {
-          final username = usernameController.text.trim();
-          final password = passwordController.text;
-          final repeatPassword = repeatController.text;
+          final trimmedUsername = username.trim();
           final hasMinLength = password.length >= 8;
           final hasLetter = RegExp(r'[A-Za-z]').hasMatch(password);
           final hasDigit = RegExp(r'\d').hasMatch(password);
           final matches = password.isNotEmpty && password == repeatPassword;
           final canSubmit =
-              username.isNotEmpty &&
+              trimmedUsername.isNotEmpty &&
               hasMinLength &&
               hasLetter &&
               hasDigit &&
@@ -128,17 +126,23 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 TextField(
-                  controller: usernameController,
                   textInputAction: TextInputAction.next,
-                  onChanged: (_) => setDialogState(() {}),
+                  onChanged: (value) {
+                    setDialogState(() {
+                      username = value;
+                    });
+                  },
                   decoration: InputDecoration(labelText: l10n.usernameLabel),
                 ),
                 const SizedBox(height: 12),
                 TextField(
-                  controller: passwordController,
                   obscureText: !showPassword,
                   textInputAction: TextInputAction.next,
-                  onChanged: (_) => setDialogState(() {}),
+                  onChanged: (value) {
+                    setDialogState(() {
+                      password = value;
+                    });
+                  },
                   decoration: InputDecoration(
                     labelText: l10n.passwordLabel,
                     suffixIcon: IconButton(
@@ -155,10 +159,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 ),
                 const SizedBox(height: 12),
                 TextField(
-                  controller: repeatController,
                   obscureText: !showRepeatPassword,
                   textInputAction: TextInputAction.done,
-                  onChanged: (_) => setDialogState(() {}),
+                  onChanged: (value) {
+                    setDialogState(() {
+                      repeatPassword = value;
+                    });
+                  },
                   decoration: InputDecoration(
                     labelText: l10n.repeatPasswordLabel,
                     suffixIcon: IconButton(
@@ -212,28 +219,23 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     );
 
     if (result != true) {
-      usernameController.dispose();
-      passwordController.dispose();
-      repeatController.dispose();
       return;
     }
 
-    final username = usernameController.text.trim();
-    final password = passwordController.text;
-    final repeatPassword = repeatController.text;
+    final trimmedUsername = username.trim();
     final hasMinLength = password.length >= 8;
     final hasLetter = RegExp(r'[A-Za-z]').hasMatch(password);
     final hasDigit = RegExp(r'\d').hasMatch(password);
     final matches = password == repeatPassword;
 
-    if (username.isEmpty ||
+    if (trimmedUsername.isEmpty ||
         !hasMinLength ||
         !hasLetter ||
         !hasDigit ||
         !matches) {
       if (mounted) {
         final issues = <String>[];
-        if (username.isEmpty) {
+        if (trimmedUsername.isEmpty) {
           issues.add(l10n.registrationIssueUsernameMissing);
         }
         if (!hasMinLength) {
@@ -250,34 +252,24 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         }
         _showSnackBar(l10n.registrationFailedWithIssues(issues.join(', ')));
       }
-      usernameController.dispose();
-      passwordController.dispose();
-      repeatController.dispose();
       return;
     }
 
     final added = await ref
         .read(authProvider.notifier)
-        .signUp(username, password);
+        .signUp(trimmedUsername, password);
 
     if (!mounted) {
-      usernameController.dispose();
-      passwordController.dispose();
-      repeatController.dispose();
       return;
     }
 
     if (added) {
-      _usernameController.text = usernameController.text.trim();
+      _usernameController.text = trimmedUsername;
       _passwordController.text = '';
       _showSnackBar(l10n.accountCreatedMessage);
     } else {
       _showSnackBar(l10n.registerFailedMessage);
     }
-
-    usernameController.dispose();
-    passwordController.dispose();
-    repeatController.dispose();
   }
 
   Future<void> _showBiometricDialog() async {
@@ -428,20 +420,22 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             ],
           ),
           SliverFillRemaining(
-            hasScrollBody: false,
-            child: Center(
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 420),
-                child: FadeInDown(
-                  duration: const Duration(milliseconds: 800),
-                  child: Card(
-                    elevation: 8,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(24),
-                    ),
-                    child: Padding(
-                      padding: const EdgeInsets.all(24),
-                      child: Column(
+            hasScrollBody: true,
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
+              child: Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 420),
+                  child: FadeInDown(
+                    duration: const Duration(milliseconds: 800),
+                    child: Card(
+                      elevation: 8,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(24),
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.all(24),
+                        child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Icon(
@@ -660,6 +654,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 ),
               ),
             ),
+          ),
           ),
         ],
       ),

@@ -101,3 +101,80 @@ class ProjectModelAdapter extends TypeAdapter<ProjectModel> {
           runtimeType == other.runtimeType &&
           typeId == other.typeId;
 }
+
+// **************************************************************************
+// JsonSerializableGenerator
+// **************************************************************************
+
+_ProjectModel _$ProjectModelFromJson(Map<String, dynamic> json) =>
+    _ProjectModel(
+      id: _parseId(json['id']),
+      name: json['name'] as String,
+      progress: (json['progress'] as num).toDouble(),
+      directoryPath: json['directoryPath'] as String?,
+      tasks:
+          (json['tasks'] as List<dynamic>?)?.map((e) => e as String).toList() ??
+              const <String>[],
+      status: json['status'] as String? ?? 'In Progress',
+      description: json['description'] as String?,
+      category: json['category'] as String?,
+      aiAssistant: json['aiAssistant'] as String?,
+      planJson: json['planJson'] as String?,
+      helpLevel: json['helpLevel'] == null
+          ? HelpLevel.basis
+          : _parseHelpLevel(json['helpLevel']),
+      complexity: json['complexity'] == null
+          ? Complexity.simpel
+          : _parseComplexity(json['complexity']),
+      history: json['history'] == null
+          ? const <Map<String, dynamic>>[]
+          : _parseHistory(json['history']),
+      sharedUsers: (json['sharedUsers'] as List<dynamic>?)
+              ?.map((e) => e as String)
+              .toList() ??
+          const <String>[],
+      sharedGroups: (json['sharedGroups'] as List<dynamic>?)
+              ?.map((e) => e as String)
+              .toList() ??
+          const <String>[],
+      priority: json['priority'] as String?,
+      startDate: json['startDate'] == null
+          ? null
+          : DateTime.parse(json['startDate'] as String),
+      dueDate: json['dueDate'] == null
+          ? null
+          : DateTime.parse(json['dueDate'] as String),
+      tags:
+          (json['tags'] as List<dynamic>?)?.map((e) => e as String).toList() ??
+              const <String>[],
+      customFields: json['customFields'] as Map<String, dynamic>?,
+      comments: (json['comments'] as List<dynamic>?)
+              ?.map((e) => CommentModel.fromJson(e as Map<String, dynamic>))
+              .toList() ??
+          const <CommentModel>[],
+    );
+
+Map<String, dynamic> _$ProjectModelToJson(_ProjectModel instance) =>
+    <String, dynamic>{
+      'id': instance.id,
+      'name': instance.name,
+      'progress': instance.progress,
+      'directoryPath': instance.directoryPath,
+      'tasks': instance.tasks,
+      'status': instance.status,
+      'description': instance.description,
+      'category': instance.category,
+      'aiAssistant': instance.aiAssistant,
+      'planJson': instance.planJson,
+      'helpLevel': _helpLevelToJson(instance.helpLevel),
+      'complexity': _complexityToJson(instance.complexity),
+      'history': _historyToJson(instance.history),
+      'sharedUsers': instance.sharedUsers,
+      'sharedGroups': instance.sharedGroups,
+      'priority': instance.priority,
+      'startDate': instance.startDate?.toIso8601String(),
+      'dueDate': instance.dueDate?.toIso8601String(),
+      'tags': instance.tags,
+      'customFields': instance.customFields,
+      'comments': instance.comments,
+    };

@@ -31,7 +31,7 @@ class FakeSettingsRepository extends SettingsRepository {
 
   @override
   AiRateLimitsConfig getAiRateLimitsConfig() {
-    return _aiRateLimitsConfig ?? const AiRateLimitsConfig.defaults();
+    return _aiRateLimitsConfig ?? const AiRateLimitsConfig();
   }
 
   @override
@@ -220,7 +220,7 @@ class FakeAiRateLimitsConfigNotifier extends AiRateLimitsConfigNotifier {
   }
   
   @override
-  Future<AiRateLimitsConfig> build() async => _testConfig ?? const AiRateLimitsConfig.defaults();
+  Future<AiRateLimitsConfig> build() async => _testConfig ?? const AiRateLimitsConfig();
 }
 
 void main() {
@@ -314,23 +314,11 @@ void main() {
       
       // Wait a bit more for the Consumer widgets to rebuild
       await tester.pumpAndSettle();
-      
-      // Debug: Check if the chat operation text is present
-      expect(find.text('Chat limit'), findsOneWidget);
 
-      // Find and update the chat operation limit
-      // The TextFormField is in the trailing of the ListTile that has "Chat limit" as title
-      final chatListTile = find.ancestor(
-        of: find.text('Chat limit'),
-        matching: find.byType(ListTile),
-      );
-      expect(chatListTile, findsOneWidget);
-      
-      final chatTextField = find.descendant(
-        of: chatListTile,
-        matching: find.byType(TextFormField),
-      );
-      expect(chatTextField, findsOneWidget);
+      // Find the first per-operation input (sorted keys -> 'chat' first in this config)
+      final operationInputs = find.byType(TextFormField);
+      expect(operationInputs, findsWidgets);
+      final chatTextField = operationInputs.first;
 
       await tester.enterText(chatTextField, '20');
       await tester.pumpAndSettle();

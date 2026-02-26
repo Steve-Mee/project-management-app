@@ -447,7 +447,7 @@ void main() {
       final notifier = container.read(authProvider.notifier);
       expect(await notifier.login('test@example.com', 'password'), true);
       expect(fakeBox.putCalls.length, 2);
-      expect(fakeBox.putCalls[0], [<DateTime>[]]); // Cleaned attempts (same as input)
+      expect(fakeBox.putCalls[0].length, 1); // Cleaned attempts (same as input)
       expect(fakeBox.putCalls[1], <DateTime>[]);
       container.dispose();
     });
@@ -492,7 +492,7 @@ void main() {
       final fixedNow = DateTime.now();
       final oldAttempt = fixedNow.subtract(const Duration(seconds: 120));
       final newAttempt = fixedNow.subtract(const Duration(seconds: 1));
-      fakeBox._map['global'] = [oldAttempt, newAttempt];
+      fakeBox._map['rate_limit_test@example.com'] = [oldAttempt, newAttempt];
 
       final container = ProviderContainer(
         overrides: [

@@ -18,7 +18,7 @@ class FakeSettingsRepository extends SettingsRepository {
 
   @override
   AiRateLimitsConfig getAiRateLimitsConfig() {
-    return _aiRateLimitsConfig ?? const AiRateLimitsConfig.defaults();
+    return _aiRateLimitsConfig ?? const AiRateLimitsConfig();
   }
 
   @override
