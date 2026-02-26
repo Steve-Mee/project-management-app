@@ -1,3 +1,4 @@
+// ignore_for_file: prefer_const_constructors
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -109,19 +110,19 @@ class _CustomizeDashboardScreenState extends ConsumerState<CustomizeDashboardScr
       } else {
         // Add some default widgets for testing
         _dashboardItems = [
-          DashboardItem(
+          const DashboardItem(
             widgetType: DashboardWidgetType.metricCard,
             position: {'x': 0, 'y': 0, 'width': 4, 'height': 1},
           ),
-          DashboardItem(
+          const DashboardItem(
             widgetType: DashboardWidgetType.taskList,
             position: {'x': 0, 'y': 1, 'width': 2, 'height': 2},
           ),
-          DashboardItem(
+          const DashboardItem(
             widgetType: DashboardWidgetType.progressChart,
             position: {'x': 2, 'y': 1, 'width': 2, 'height': 2},
           ),
-          DashboardItem(
+          const DashboardItem(
             widgetType: DashboardWidgetType.kanbanBoard,
             position: {'x': 0, 'y': 3, 'width': 4, 'height': 2},
           ),

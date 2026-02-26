@@ -1,3 +1,4 @@
+// ignore_for_file: prefer_const_constructors
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'dart:io';
@@ -174,7 +175,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       ref.read(colorSchemeSeedProvider.notifier).setColorSchemeSeed(Colors.green.toARGB32());
                     }
                   },
-                  avatar: CircleAvatar(
+                  avatar: const CircleAvatar(
                     backgroundColor: Colors.green,
                     radius: 8,
                   ),
@@ -190,7 +191,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       ref.read(colorSchemeSeedProvider.notifier).setColorSchemeSeed(Colors.blue.toARGB32());
                     }
                   },
-                  avatar: CircleAvatar(
+                  avatar: const CircleAvatar(
                     backgroundColor: Colors.blue,
                     radius: 8,
                   ),
@@ -206,7 +207,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       ref.read(colorSchemeSeedProvider.notifier).setColorSchemeSeed(Colors.purple.toARGB32());
                     }
                   },
-                  avatar: CircleAvatar(
+                  avatar: const CircleAvatar(
                     backgroundColor: Colors.purple,
                     radius: 8,
                   ),
@@ -222,7 +223,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       ref.read(colorSchemeSeedProvider.notifier).setColorSchemeSeed(Colors.orange.toARGB32());
                     }
                   },
-                  avatar: CircleAvatar(
+                  avatar: const CircleAvatar(
                     backgroundColor: Colors.orange,
                     radius: 8,
                   ),
@@ -455,7 +456,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
                   if (isPremium) {
                     return ListTile(
-                      leading: Icon(
+                      leading: const Icon(
                         Icons.check_circle,
                         color: Colors.green,
                       ),
@@ -509,7 +510,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   title: Text('Loading...'),
                 ),
                 error: (error, stack) => ListTile(
-                  leading: Icon(
+                  leading: const Icon(
                     Icons.error,
                     color: Colors.red,
                   ),
@@ -1542,7 +1543,7 @@ class _AiSettingsSection extends ConsumerWidget {
             builder: (context, ref, child) {
               final liveConfig = ref.watch(aiRateLimitsConfigProvider).maybeWhen(
                 data: (config) => config,
-                orElse: () => AiRateLimitsConfig.defaults(),
+                orElse: () => const AiRateLimitsConfig.defaults(),
               );
               final liveLimit = liveConfig.perOperationLimits[operation] ?? liveConfig.maxRequestsPerWindow;
               
@@ -1603,7 +1604,7 @@ class _AiSettingsSection extends ConsumerWidget {
           updatedLimits[operation] = limit;
           return currentConfig.copyWith(perOperationLimits: updatedLimits);
         },
-        orElse: () => AiRateLimitsConfig.defaults(),
+        orElse: () => const AiRateLimitsConfig.defaults(),
       ),
     ).then((_) {
       if (context.mounted) {
@@ -1632,12 +1633,12 @@ class _AiSettingsSection extends ConsumerWidget {
             builder: (context, ref, child) {
               final liveConfig = ref.watch(aiRateLimitsConfigProvider).maybeWhen(
                 data: (config) => config,
-                orElse: () => AiRateLimitsConfig.defaults(),
+                orElse: () => const AiRateLimitsConfig.defaults(),
               );
               final currentValue = liveConfig.backoffBaseDelay.inMilliseconds.toDouble();
               
               return ListTile(
-                title: Text('Base Delay'),
+                title: const Text('Base Delay'),
                 subtitle: Text('${currentValue.toInt()}ms'),
                 trailing: SizedBox(
                   width: 150,
@@ -1657,12 +1658,12 @@ class _AiSettingsSection extends ConsumerWidget {
             builder: (context, ref, child) {
               final liveConfig = ref.watch(aiRateLimitsConfigProvider).maybeWhen(
                 data: (config) => config,
-                orElse: () => AiRateLimitsConfig.defaults(),
+                orElse: () => const AiRateLimitsConfig.defaults(),
               );
               final currentValue = liveConfig.backoffMaxDelay.inSeconds.toDouble();
               
               return ListTile(
-                title: Text('Max Delay'),
+                title: const Text('Max Delay'),
                 subtitle: Text('${currentValue.toInt()}s'),
                 trailing: SizedBox(
                   width: 150,
@@ -1682,12 +1683,12 @@ class _AiSettingsSection extends ConsumerWidget {
             builder: (context, ref, child) {
               final liveConfig = ref.watch(aiRateLimitsConfigProvider).maybeWhen(
                 data: (config) => config,
-                orElse: () => AiRateLimitsConfig.defaults(),
+                orElse: () => const AiRateLimitsConfig.defaults(),
               );
               final currentValue = liveConfig.maxRetryAttempts.toDouble();
               
               return ListTile(
-                title: Text('Max Retries'),
+                title: const Text('Max Retries'),
                 subtitle: Text('${currentValue.toInt()} attempts'),
                 trailing: SizedBox(
                   width: 150,
@@ -1709,7 +1710,7 @@ class _AiSettingsSection extends ConsumerWidget {
               return chatStateAsync.maybeWhen(
                 data: (chatState) {
                   return ListTile(
-                    title: Text('Queued requests'),
+                    title: const Text('Queued requests'),
                     subtitle: Text('${chatState.queueLength} pending'),
                     leading: Icon(
                       Icons.queue,
@@ -1718,8 +1719,8 @@ class _AiSettingsSection extends ConsumerWidget {
                   );
                 },
                 orElse: () => ListTile(
-                  title: Text('Queued requests'),
-                  subtitle: Text('Loading...'),
+                  title: const Text('Queued requests'),
+                  subtitle: const Text('Loading...'),
                   leading: Icon(
                     Icons.queue,
                     color: Theme.of(context).colorScheme.secondary,
@@ -1733,14 +1734,14 @@ class _AiSettingsSection extends ConsumerWidget {
             builder: (context, ref, child) {
               final liveConfig = ref.watch(aiRateLimitsConfigProvider).maybeWhen(
                 data: (config) => config,
-                orElse: () => AiRateLimitsConfig.defaults(),
+                orElse: () => const AiRateLimitsConfig.defaults(),
               );
               
               return SwitchListTile(
                 value: liveConfig.queueEnabled,
                 onChanged: (value) => _updateQueueEnabled(ref, value, context),
-                title: Text('Enable Request Queuing'),
-                subtitle: Text('Queue requests when rate limits are exceeded'),
+                title: const Text('Enable Request Queuing'),
+                subtitle: const Text('Queue requests when rate limits are exceeded'),
                 secondary: Icon(
                   Icons.queue_play_next,
                   color: Theme.of(context).colorScheme.secondary,
@@ -1758,15 +1759,15 @@ class _AiSettingsSection extends ConsumerWidget {
               );
               
               return ListTile(
-                title: Text('Clear Queue'),
-                subtitle: Text('Cancel all queued requests'),
+                title: const Text('Clear Queue'),
+                subtitle: const Text('Cancel all queued requests'),
                 leading: Icon(
                   Icons.clear_all,
                   color: Theme.of(context).colorScheme.secondary,
                 ),
                 trailing: ElevatedButton(
                   onPressed: queueLength > 0 ? () => _clearQueue(ref, context) : null,
-                  child: Text('Clear'),
+                  child: const Text('Clear'),
                 ),
               );
             },
@@ -1786,12 +1787,12 @@ class _AiSettingsSection extends ConsumerWidget {
             backoffBaseDelay: Duration(milliseconds: milliseconds),
           );
         },
-        orElse: () => AiRateLimitsConfig.defaults(),
+        orElse: () => const AiRateLimitsConfig.defaults(),
       ),
     ).then((_) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Base delay updated')),
+          const SnackBar(content: Text('Base delay updated')),
         );
       }
     }).catchError((error) {
@@ -1812,12 +1813,12 @@ class _AiSettingsSection extends ConsumerWidget {
             backoffMaxDelay: Duration(seconds: seconds),
           );
         },
-        orElse: () => AiRateLimitsConfig.defaults(),
+        orElse: () => const AiRateLimitsConfig.defaults(),
       ),
     ).then((_) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Max delay updated')),
+          const SnackBar(content: Text('Max delay updated')),
         );
       }
     }).catchError((error) {
@@ -1838,12 +1839,12 @@ class _AiSettingsSection extends ConsumerWidget {
             maxRetryAttempts: attempts,
           );
         },
-        orElse: () => AiRateLimitsConfig.defaults(),
+        orElse: () => const AiRateLimitsConfig.defaults(),
       ),
     ).then((_) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Max retry attempts updated')),
+          const SnackBar(content: Text('Max retry attempts updated')),
         );
       }
     }).catchError((error) {
@@ -1864,7 +1865,7 @@ class _AiSettingsSection extends ConsumerWidget {
             queueEnabled: enabled,
           );
         },
-        orElse: () => AiRateLimitsConfig.defaults(),
+        orElse: () => const AiRateLimitsConfig.defaults(),
       ),
     ).then((_) {
       if (context.mounted) {
@@ -1886,7 +1887,7 @@ class _AiSettingsSection extends ConsumerWidget {
     ref.read(aiChatProvider.notifier).clearQueue();
     if (context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Queue cleared')),
+        const SnackBar(content: Text('Queue cleared')),
       );
     }
   }

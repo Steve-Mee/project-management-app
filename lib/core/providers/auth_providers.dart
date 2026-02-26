@@ -231,7 +231,7 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
     if (user != null) {
       state = AsyncValue.data(await _createAuthenticatedState(user));
     } else {
-      state = AsyncValue.data(const AuthState(isAuthenticated: false));
+      state = const AsyncValue.data(AuthState(isAuthenticated: false));
     }
   }
 
@@ -434,7 +434,7 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
       await repo.deleteUser(username.trim());
       final current = repo.getCurrentUser();
       if (current == null) {
-        state = AsyncValue.data(const AuthState(isAuthenticated: false));
+        state = const AsyncValue.data(AuthState(isAuthenticated: false));
       }
     } catch (e) {
       state = AsyncValue.error('Failed to delete user: $e', StackTrace.current);

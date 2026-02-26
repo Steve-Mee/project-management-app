@@ -1,3 +1,4 @@
+// ignore_for_file: prefer_const_constructors
 import 'package:project_management_app/models/project_invitation.dart';
 import 'package:project_management_app/core/services/app_logger.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -6,7 +7,7 @@ import 'package:uuid/uuid.dart';
 /// Service for managing project invitations
 class ProjectInvitationService {
   final SupabaseClient _supabaseClient;
-  static final Uuid _uuid = Uuid();
+  static const Uuid _uuid = Uuid();
 
   ProjectInvitationService(this._supabaseClient);
 

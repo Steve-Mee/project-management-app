@@ -15,6 +15,8 @@ import 'package:project_management_app/core/repository/i_auth_repository.dart';
 import 'package:project_management_app/core/auth/auth_user.dart';
 import 'package:project_management_app/core/auth/role_models.dart';
 
+// ignore_for_file: prefer_const_constructors
+
 class FakeSettingsRepository extends SettingsRepository {
   AiRateLimitsConfig? _aiRateLimitsConfig;
 
@@ -29,7 +31,7 @@ class FakeSettingsRepository extends SettingsRepository {
 
   @override
   AiRateLimitsConfig getAiRateLimitsConfig() {
-    return _aiRateLimitsConfig ?? AiRateLimitsConfig.defaults();
+    return _aiRateLimitsConfig ?? const AiRateLimitsConfig.defaults();
   }
 
   @override
@@ -218,7 +220,7 @@ class FakeAiRateLimitsConfigNotifier extends AiRateLimitsConfigNotifier {
   }
   
   @override
-  Future<AiRateLimitsConfig> build() async => _testConfig ?? AiRateLimitsConfig.defaults();
+  Future<AiRateLimitsConfig> build() async => _testConfig ?? const AiRateLimitsConfig.defaults();
 }
 
 void main() {
@@ -256,7 +258,7 @@ void main() {
 
   group('AI Rate Limits UI Tests', () {
     testWidgets('SettingsScreen renders without crashing', (WidgetTester tester) async {
-      final config = AiRateLimitsConfig(
+      const config = AiRateLimitsConfig(
         maxRequestsPerMinute: 10,
         maxRequestsPerHour: 100,
         maxRequestsPerDay: 500,
@@ -274,7 +276,7 @@ void main() {
       fakeSettingsRepo.setAiRateLimitsConfig(config);
       FakeAiRateLimitsConfigNotifier.setTestConfig(config);
 
-      await tester.pumpWidget(createTestWidget(SettingsScreen()));
+      await tester.pumpWidget(createTestWidget(const SettingsScreen()));
       await tester.pumpAndSettle();
 
       // Verify that the settings screen renders without crashing
@@ -283,7 +285,7 @@ void main() {
     });
 
     testWidgets('Per-operation rate limit inputs save correctly to config', (WidgetTester tester) async {
-      final config = AiRateLimitsConfig(
+      const config = AiRateLimitsConfig(
         maxRequestsPerMinute: 10,
         maxRequestsPerHour: 100,
         maxRequestsPerDay: 500,
@@ -301,7 +303,7 @@ void main() {
       fakeSettingsRepo.setAiRateLimitsConfig(config);
       FakeAiRateLimitsConfigNotifier.setTestConfig(config);
 
-      await tester.pumpWidget(createTestWidget(SettingsScreen()));
+      await tester.pumpWidget(createTestWidget(const SettingsScreen()));
       await tester.pumpAndSettle();
       await tester.pumpAndSettle(); // Extra pump to ensure async providers resolve
       
@@ -339,7 +341,7 @@ void main() {
     });
 
     testWidgets('Backoff and queue toggles work correctly', (WidgetTester tester) async {
-      final config = AiRateLimitsConfig(
+      const config = AiRateLimitsConfig(
         maxRequestsPerMinute: 10,
         maxRequestsPerHour: 100,
         maxRequestsPerDay: 500,
@@ -357,7 +359,7 @@ void main() {
       fakeSettingsRepo.setAiRateLimitsConfig(config);
       FakeAiRateLimitsConfigNotifier.setTestConfig(config);
 
-      await tester.pumpWidget(createTestWidget(SettingsScreen()));
+      await tester.pumpWidget(createTestWidget(const SettingsScreen()));
       await tester.pumpAndSettle();
       await tester.pumpAndSettle(); // Extra pump to ensure async providers resolve
 
@@ -367,7 +369,7 @@ void main() {
     });
 
     testWidgets('UI reflects real-time config changes', (WidgetTester tester) async {
-      final initialConfig = AiRateLimitsConfig(
+      const initialConfig = AiRateLimitsConfig(
         maxRequestsPerMinute: 10,
         maxRequestsPerHour: 100,
         maxRequestsPerDay: 500,
@@ -385,7 +387,7 @@ void main() {
       fakeSettingsRepo.setAiRateLimitsConfig(initialConfig);
       FakeAiRateLimitsConfigNotifier.setTestConfig(initialConfig);
 
-      await tester.pumpWidget(createTestWidget(SettingsScreen()));
+      await tester.pumpWidget(createTestWidget(const SettingsScreen()));
       await tester.pumpAndSettle();
       await tester.pumpAndSettle(); // Extra pump to ensure async providers resolve
 

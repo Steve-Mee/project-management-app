@@ -1,3 +1,4 @@
+// ignore_for_file: prefer_const_constructors
 // Usage Examples for ProjectRepository with Riverpod
 
 // ============================================================================
@@ -162,7 +163,7 @@ class ProjectManagementPage extends ConsumerStatefulWidget {
 class _ProjectManagementPageState extends ConsumerState<ProjectManagementPage> {
   @override
   Widget build(BuildContext context) {
-    final projectsAsync = ref.watch(projectsPaginatedProvider(ProjectPaginationParams(page: 1, limit: 100)));
+    final projectsAsync = ref.watch(projectsPaginatedProvider(const ProjectPaginationParams(page: 1, limit: 100)));
 
     return Scaffold(
       appBar: AppBar(title: const Text('Projects')),

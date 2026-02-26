@@ -1,3 +1,4 @@
+// ignore_for_file: prefer_const_constructors
 import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive/hive.dart';
@@ -8,6 +9,7 @@ import 'package:project_management_app/core/repository/models/project_models.dar
 import 'package:project_management_app/core/services/app_logger.dart';
 import 'auth_providers.dart'; // Import for auth provider access
 import 'package:project_management_app/core/repository/impl/project_meta_repository.dart';
+
 import 'package:project_management_app/models/project_meta.dart';
 import 'package:project_management_app/core/auth/permissions.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -443,7 +445,7 @@ class ProjectsNotifier extends Notifier<AsyncValue<List<ProjectModel>>> {
     Future.microtask(() async {
       state = await AsyncValue.guard(_loadProjects);
     });
-    return AsyncValue.loading();
+    return const AsyncValue.loading();
   }
 
   /// Load projects with error handling

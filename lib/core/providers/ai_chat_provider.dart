@@ -16,6 +16,8 @@ import '../models/ai_request_queue.dart';
 import '../models/ai_usage_record.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+// ignore_for_file: prefer_const_constructors
+
 /// Custom exception for rate limit exceeded
 class RateLimitExceededException implements Exception {
   final Duration backoffDuration;
@@ -159,7 +161,7 @@ class AiChatNotifier extends AsyncNotifier<AiChatState> {
     } catch (e) {
       // Fallback to defaults if settings fail to load
       AppLogger.event('Failed to load AI rate limits from settings, using defaults', params: {'error': e.toString()});
-      state = AiChatState(rateLimits: const AiRateLimitsConfig.defaults());
+      state = const AiChatState(rateLimits: AiRateLimitsConfig.defaults());
     }
 
     // Load persisted queue from previous app sessions
@@ -866,7 +868,7 @@ class AiChatNotifier extends AsyncNotifier<AiChatState> {
     } catch (e) {
       AppLogger.instance.e('Error generating final plan', error: e);
       // Return a default plan
-      return ProjectPlan(
+      return const ProjectPlan(
         overview: 'Default project plan - please refine with AI',
         chapters: [
           PlanChapter(

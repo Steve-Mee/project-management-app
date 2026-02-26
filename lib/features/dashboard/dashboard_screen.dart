@@ -1,3 +1,4 @@
+// ignore_for_file: prefer_const_constructors
 import 'dart:async';
 import 'dart:math';
 
@@ -306,7 +307,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Text('Advanced'),
+                          const Text('Advanced'),
                           const SizedBox(width: 4),
                           Icon(
                             _showAdvancedFilters ? Icons.expand_less : Icons.expand_more,
@@ -1082,7 +1083,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
 
     return Scaffold(
       body: Container(
-        decoration: BoxDecoration(
+        decoration: const BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
@@ -1785,7 +1786,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                         belowBarData: BarAreaData(show: false),
                       ),
                     ],
-                    lineTouchData: LineTouchData(enabled: true),
+                    lineTouchData: const LineTouchData(enabled: true),
                   ),
                 ),
               ),

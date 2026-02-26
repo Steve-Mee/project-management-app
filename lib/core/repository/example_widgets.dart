@@ -5,6 +5,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:project_management_app/core/providers/project_providers.dart';
 import 'package:project_management_app/models/project_model.dart';
 
+// ignore_for_file: prefer_const_constructors
+
 // ============================================================================
 // 1. PROJECT LIST WIDGET
 // ============================================================================
@@ -14,7 +16,7 @@ class ProjectListWidget extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final projectsAsync = ref.watch(projectsPaginatedProvider(ProjectPaginationParams(page: 1, limit: 100)));
+    final projectsAsync = ref.watch(projectsPaginatedProvider(const ProjectPaginationParams(page: 1, limit: 100)));
 
     return projectsAsync.when(
       data: (projects) {

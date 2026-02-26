@@ -1,3 +1,4 @@
+// ignore_for_file: prefer_const_constructors
 import 'package:flutter_test/flutter_test.dart';
 import 'package:project_management_app/core/models/ai_rate_limits_config.dart';
 import 'package:project_management_app/core/providers/ai_chat_provider.dart' as ai_provider;
@@ -17,7 +18,7 @@ class FakeSettingsRepository extends SettingsRepository {
 
   @override
   AiRateLimitsConfig getAiRateLimitsConfig() {
-    return _aiRateLimitsConfig ?? AiRateLimitsConfig.defaults();
+    return _aiRateLimitsConfig ?? const AiRateLimitsConfig.defaults();
   }
 
   @override
@@ -29,7 +30,7 @@ class FakeSettingsRepository extends SettingsRepository {
 void main() {
   group('Per-Operation Rate Limits Tests', () {
     test('should respect different limits for different operations (chat=15 vs summarize=8)', () {
-      final config = AiRateLimitsConfig(
+      const config = AiRateLimitsConfig(
         maxRequestsPerMinute: 100,
         maxRequestsPerHour: 1000,
         maxRequestsPerDay: 5000,
@@ -54,7 +55,7 @@ void main() {
     });
 
     test('should fallback to global limit for unknown operations', () {
-      final config = AiRateLimitsConfig(
+      const config = AiRateLimitsConfig(
         maxRequestsPerMinute: 100,
         maxRequestsPerHour: 1000,
         maxRequestsPerDay: 5000,
@@ -77,7 +78,7 @@ void main() {
     });
 
     test('should save and load perOperationLimits map correctly', () async {
-      final config = AiRateLimitsConfig(
+      const config = AiRateLimitsConfig(
         maxRequestsPerMinute: 10,
         maxRequestsPerHour: 100,
         maxRequestsPerDay: 500,
@@ -112,7 +113,7 @@ void main() {
     });
 
     test('should handle independent operation counters', () {
-      final config = AiRateLimitsConfig(
+      const config = AiRateLimitsConfig(
         maxRequestsPerMinute: 100,
         maxRequestsPerHour: 1000,
         maxRequestsPerDay: 5000,

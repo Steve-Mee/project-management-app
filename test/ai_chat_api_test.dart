@@ -1,3 +1,4 @@
+// ignore_for_file: prefer_const_constructors
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -120,7 +121,7 @@ void main() {
       AppLogger.instance.i('Grok API connection test successful!');
       AppLogger.instance.i('User message: ${userMessage.content}');
       AppLogger.instance.i('AI response: ${aiMessage.content}');
-    }, timeout: Timeout(Duration(seconds: 30)));
+    }, timeout: const Timeout(Duration(seconds: 30)));
 
     test('should handle API errors gracefully', () async {
       // Test with invalid API key to simulate error
@@ -143,7 +144,7 @@ void main() {
       if (originalKey != null) {
         dotenv.env['OPENAI_API_KEY'] = originalKey;
       }
-    }, timeout: Timeout(Duration(seconds: 15)));
+    }, timeout: const Timeout(Duration(seconds: 15)));
   });
 
   group('AI Chat State Tests', () {

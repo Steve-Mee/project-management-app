@@ -1,3 +1,4 @@
+// ignore_for_file: prefer_const_constructors
 import 'package:flutter/material.dart';
 import 'package:project_management_app/core/providers/project_providers.dart';
 import 'package:project_management_app/generated/app_localizations.dart';
@@ -117,10 +118,10 @@ class _ProjectFilterDialogState extends State<ProjectFilterDialog> with TickerPr
       _activePreset = presetKey;
       switch (presetKey) {
         case 'all':
-          _filter = ProjectFilter();
+          _filter = const ProjectFilter();
           break;
         case 'high':
-          _filter = ProjectFilter(priority: 'High');
+          _filter = const ProjectFilter(priority: 'High');
           break;
         case 'week':
           // Due this week - need to calculate dates
@@ -138,7 +139,7 @@ class _ProjectFilterDialogState extends State<ProjectFilterDialog> with TickerPr
           break;
         case 'my':
           // My projects - assuming current user, but for now just clear other filters
-          _filter = ProjectFilter();
+          _filter = const ProjectFilter();
           break;
       }
     });

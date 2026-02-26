@@ -1,3 +1,4 @@
+// ignore_for_file: prefer_const_constructors
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -162,7 +163,7 @@ class NavigationConfig {
       routeName: 'ai-chat',
       routePath: '/ai-chat',
     ),
-    NavigationItem(
+    const NavigationItem(
       label: 'AI Usage',
       icon: Icons.analytics_outlined,
       routeName: 'ai-usage',

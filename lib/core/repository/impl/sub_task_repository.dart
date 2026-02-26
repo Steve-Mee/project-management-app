@@ -1,3 +1,4 @@
+// ignore_for_file: prefer_const_constructors
 import 'package:hive/hive.dart';
 import 'package:project_management_app/models/sub_task_model.dart';
 import 'package:uuid/uuid.dart';

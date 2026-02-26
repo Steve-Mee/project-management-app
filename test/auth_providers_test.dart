@@ -1,3 +1,4 @@
+// ignore_for_file: prefer_const_constructors, prefer_const_declarations
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -638,11 +639,11 @@ void main() {
     });
 
     test('filteredUsersProvider handles null/empty filter values', () {
-      final nullFilter = const UsersFilter(searchQuery: null, role: null, status: null);
+      const nullFilter = UsersFilter(searchQuery: null, role: null, status: null);
       final users = testContainer.read(filteredUsersProvider(nullFilter));
       expect(users.length, 6);
       
-      final emptyStringFilter = const UsersFilter(searchQuery: '', role: '', status: '');
+      const emptyStringFilter = UsersFilter(searchQuery: '', role: '', status: '');
       final users2 = testContainer.read(filteredUsersProvider(emptyStringFilter));
       expect(users2.length, 6);
     });

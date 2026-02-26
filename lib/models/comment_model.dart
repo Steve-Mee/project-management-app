@@ -1,3 +1,4 @@
+// ignore_for_file: prefer_const_constructors
 import 'package:hive/hive.dart';
 import 'package:uuid/uuid.dart';
 
@@ -6,7 +7,7 @@ part 'comment_model.g.dart';
 /// Comment model for project and task comments with @mentions
 @HiveType(typeId: 3)
 class CommentModel {
-  static final Uuid _uuid = Uuid();
+  static const Uuid _uuid = Uuid();
 
   @HiveField(0)
   final String id;

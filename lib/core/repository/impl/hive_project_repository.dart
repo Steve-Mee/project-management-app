@@ -9,11 +9,13 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:project_management_app/core/repository/i_project_repository.dart';
 import '../models/project_models.dart';
 
+// ignore_for_file: prefer_const_constructors
+
 /// Repository for managing project persistence using Hive
 /// Refactored per .github/issues/049-repository-refactoring.md
 class HiveProjectRepository implements IProjectRepository {
   static const String _boxName = 'projects';
-  static final Uuid _uuid = Uuid();
+  static const Uuid _uuid = Uuid();
   static final RegExp _uuidRegex = RegExp(
     r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-'
     r'[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$',

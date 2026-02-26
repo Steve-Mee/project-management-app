@@ -10,6 +10,8 @@ import 'package:project_management_app/models/project_model.dart';
 import 'package:project_management_app/models/task_model.dart';
 import 'package:project_management_app/core/repository/impl/hive_task_repository.dart';
 
+// ignore_for_file: prefer_const_constructors
+
 class FakeProjectsNotifier extends ProjectsNotifier {
   final List<ProjectModel> projects;
 
@@ -44,21 +46,21 @@ void main() {
     addTearDown(() => tester.binding.setSurfaceSize(null));
 
     final projects = [
-      ProjectModel(
+      const ProjectModel(
         id: 'p1',
         name: 'Atlas Redesign',
         progress: 0.45,
         status: 'In Progress',
         description: 'Revamp onboarding flow',
-        tasks: const ['Wireframes', 'Prototype'],
+        tasks: ['Wireframes', 'Prototype'],
       ),
-      ProjectModel(
+      const ProjectModel(
         id: 'p2',
         name: 'Mobile MVP',
         progress: 0.82,
         status: 'Review',
         description: 'Release candidate for mobile app',
-        tasks: const ['QA', 'Beta sign-off'],
+        tasks: ['QA', 'Beta sign-off'],
       ),
     ];
 
@@ -86,12 +88,12 @@ void main() {
     ];
 
     final meta = {
-      'p1': ProjectMeta(
+      'p1': const ProjectMeta(
         projectId: 'p1',
         urgency: UrgencyLevel.high,
         trackedSeconds: 5400,
       ),
-      'p2': ProjectMeta(
+      'p2': const ProjectMeta(
         projectId: 'p2',
         urgency: UrgencyLevel.medium,
         trackedSeconds: 3600,
@@ -115,11 +117,11 @@ void main() {
         child: ScreenUtilInit(
           designSize: const Size(1280, 720),
           builder: (context, child) {
-            return MaterialApp(
-              locale: const Locale('en'),
+            return const MaterialApp(
+              locale: Locale('en'),
               localizationsDelegates: AppLocalizations.localizationsDelegates,
               supportedLocales: AppLocalizations.supportedLocales,
-              home: const DashboardScreen(),
+              home: DashboardScreen(),
             );
           },
         ),

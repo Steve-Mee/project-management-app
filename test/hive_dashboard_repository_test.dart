@@ -6,6 +6,8 @@ import 'package:project_management_app/core/models/dashboard_types.dart';
 import 'package:project_management_app/core/models/requirements.dart';
 import 'dart:io';
 
+// ignore_for_file: prefer_const_constructors
+
 void main() {
   late HiveDashboardRepository repository;
   late Directory tempDir;
@@ -25,7 +27,7 @@ void main() {
   group('Cache functionality', () {
     test('cache hit on second load within TTL', () async {
       // First load should populate cache
-      final items = [DashboardItem(widgetType: DashboardWidgetType.taskList, position: {'x': 0, 'y': 0, 'width': 100, 'height': 100})];
+      final items = [const DashboardItem(widgetType: DashboardWidgetType.taskList, position: {'x': 0, 'y': 0, 'width': 100, 'height': 100})];
       await repository.saveConfig(items);
       await repository.loadConfig(); // Should cache
 
@@ -37,7 +39,7 @@ void main() {
 
     test('cache miss after TTL expires', () async {
       // Mock time to simulate TTL expiration
-      final items = [DashboardItem(widgetType: DashboardWidgetType.taskList, position: {'x': 0, 'y': 0, 'width': 100, 'height': 100})];
+      final items = [const DashboardItem(widgetType: DashboardWidgetType.taskList, position: {'x': 0, 'y': 0, 'width': 100, 'height': 100})];
       await repository.saveConfig(items);
       await repository.loadConfig();
 
@@ -50,12 +52,12 @@ void main() {
     });
 
     test('cache invalidation after addItem', () async {
-      final initialItems = [DashboardItem(widgetType: DashboardWidgetType.taskList, position: {'x': 0, 'y': 0, 'width': 100, 'height': 100})];
+      final initialItems = [const DashboardItem(widgetType: DashboardWidgetType.taskList, position: {'x': 0, 'y': 0, 'width': 100, 'height': 100})];
       await repository.saveConfig(initialItems);
       await repository.loadConfig(); // Cache populated
 
       // Add item should invalidate cache
-      final newItem = DashboardItem(widgetType: DashboardWidgetType.progressChart, position: {'x': 100, 'y': 0, 'width': 100, 'height': 100});
+      const newItem = DashboardItem(widgetType: DashboardWidgetType.progressChart, position: {'x': 100, 'y': 0, 'width': 100, 'height': 100});
       await repository.addItem(newItem);
 
       // Next load should get fresh data
@@ -65,8 +67,8 @@ void main() {
 
     test('cache invalidation after removeItem', () async {
       final items = [
-        DashboardItem(widgetType: DashboardWidgetType.taskList, position: {'x': 0, 'y': 0, 'width': 100, 'height': 100}),
-        DashboardItem(widgetType: DashboardWidgetType.progressChart, position: {'x': 100, 'y': 0, 'width': 100, 'height': 100})
+        const DashboardItem(widgetType: DashboardWidgetType.taskList, position: {'x': 0, 'y': 0, 'width': 100, 'height': 100}),
+        const DashboardItem(widgetType: DashboardWidgetType.progressChart, position: {'x': 100, 'y': 0, 'width': 100, 'height': 100})
       ];
       await repository.saveConfig(items);
       await repository.loadConfig();
@@ -79,7 +81,7 @@ void main() {
     });
 
     test('cache invalidation after updateItemPosition', () async {
-      final items = [DashboardItem(widgetType: DashboardWidgetType.taskList, position: {'x': 0, 'y': 0, 'width': 100, 'height': 100})];
+      final items = [const DashboardItem(widgetType: DashboardWidgetType.taskList, position: {'x': 0, 'y': 0, 'width': 100, 'height': 100})];
       await repository.saveConfig(items);
       await repository.loadConfig();
 
@@ -91,7 +93,7 @@ void main() {
     });
 
     test('clearCache works', () async {
-      final items = [DashboardItem(widgetType: DashboardWidgetType.taskList, position: {'x': 0, 'y': 0, 'width': 100, 'height': 100})];
+      final items = [const DashboardItem(widgetType: DashboardWidgetType.taskList, position: {'x': 0, 'y': 0, 'width': 100, 'height': 100})];
       await repository.saveConfig(items);
       await repository.loadConfig();
 
@@ -104,7 +106,7 @@ void main() {
     });
 
     test('preloadCache populates cache', () async {
-      final items = [DashboardItem(widgetType: DashboardWidgetType.taskList, position: {'x': 0, 'y': 0, 'width': 100, 'height': 100})];
+      final items = [const DashboardItem(widgetType: DashboardWidgetType.taskList, position: {'x': 0, 'y': 0, 'width': 100, 'height': 100})];
       await repository.saveConfig(items);
 
       // Preload should load and cache
@@ -123,7 +125,7 @@ void main() {
     });
 
     test('saveRequirement and loadRequirements work correctly', () async {
-      final req = Requirement(
+      const req = Requirement(
         id: 'test-req-1',
         title: 'Test Requirement',
         status: RequirementStatus.pending,
@@ -141,7 +143,7 @@ void main() {
     });
 
     test('saveRequirement updates existing requirement', () async {
-      final req = Requirement(
+      const req = Requirement(
         id: 'test-req-1',
         title: 'Test Requirement',
         status: RequirementStatus.pending,
@@ -150,7 +152,7 @@ void main() {
 
       await repository.saveRequirement(req);
 
-      final updatedReq = Requirement(
+      const updatedReq = Requirement(
         id: 'test-req-1',
         title: 'Updated Test Requirement',
         status: RequirementStatus.inProgress,
@@ -194,7 +196,7 @@ void main() {
 
     test('migration: existing dashboard data still loads after requirements implementation', () async {
       // Save some dashboard config before requirements were added
-      final items = [DashboardItem(widgetType: DashboardWidgetType.taskList, position: {'x': 0, 'y': 0, 'width': 100, 'height': 100})];
+      final items = [const DashboardItem(widgetType: DashboardWidgetType.taskList, position: {'x': 0, 'y': 0, 'width': 100, 'height': 100})];
       await repository.saveConfig(items);
 
       // Load should still work

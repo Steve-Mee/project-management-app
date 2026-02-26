@@ -1,3 +1,4 @@
+// ignore_for_file: prefer_const_constructors
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -111,10 +112,10 @@ class _TaskHelpDialogState extends ConsumerState<TaskHelpDialog> {
 
             // AI Assistant selection for software category
             if (widget.projectCategory?.toLowerCase() == 'software') ...[
-              ListTile(
-                title: const Text('AI Assistant Recommendations'),
-                subtitle: const Text('Copilot for Flutter/Dart'),
-                leading: const Icon(Icons.smart_toy),
+              const ListTile(
+                title: Text('AI Assistant Recommendations'),
+                subtitle: Text('Copilot for Flutter/Dart'),
+                leading: Icon(Icons.smart_toy),
               ),
               const Text('Select AI Assistant:', style: TextStyle(fontWeight: FontWeight.bold)),
               SegmentedButton<String>(

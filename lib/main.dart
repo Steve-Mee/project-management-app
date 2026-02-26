@@ -1,3 +1,4 @@
+// ignore_for_file: prefer_const_constructors
 import 'dart:async';
 import 'dart:io';
 import 'dart:math';
@@ -574,7 +575,7 @@ class ResponsiveNavigationLayout extends ConsumerWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
-                Icon(
+                const Icon(
                   Icons.dashboard,
                   size: 48,
                   color: Colors.white,

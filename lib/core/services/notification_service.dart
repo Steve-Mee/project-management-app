@@ -1,3 +1,4 @@
+// ignore_for_file: prefer_const_constructors
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:project_management_app/models/task_model.dart';
 import 'package:timezone/data/latest.dart' as tz_data;
@@ -67,7 +68,7 @@ class NotificationService {
       return;
     }
 
-    final details = NotificationDetails(
+    const details = NotificationDetails(
       android: AndroidNotificationDetails(
         _channelId,
         _channelName,
@@ -122,7 +123,7 @@ class NotificationService {
       await initialize();
     }
 
-    final details = NotificationDetails(
+    const details = NotificationDetails(
       android: AndroidNotificationDetails(
         _updateChannelId,
         _updateChannelName,

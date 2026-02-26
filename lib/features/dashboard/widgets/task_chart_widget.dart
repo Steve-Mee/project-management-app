@@ -1,3 +1,4 @@
+// ignore_for_file: prefer_const_constructors
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -143,13 +144,13 @@ class TaskChartWidget extends ConsumerWidget {
   _TaskStatusStyle _statusStyleForTask(TaskStatus status) {
     switch (status) {
       case TaskStatus.inProgress:
-        return _TaskStatusStyle(color: Colors.blue, icon: Icons.autorenew);
+        return const _TaskStatusStyle(color: Colors.blue, icon: Icons.autorenew);
       case TaskStatus.review:
-        return _TaskStatusStyle(color: Colors.orange, icon: Icons.visibility);
+        return const _TaskStatusStyle(color: Colors.orange, icon: Icons.visibility);
       case TaskStatus.todo:
-        return _TaskStatusStyle(color: Colors.grey, icon: Icons.schedule);
+        return const _TaskStatusStyle(color: Colors.grey, icon: Icons.schedule);
       case TaskStatus.done:
-        return _TaskStatusStyle(color: Colors.green, icon: Icons.check_circle);
+        return const _TaskStatusStyle(color: Colors.green, icon: Icons.check_circle);
     }
   }
 

@@ -7,6 +7,8 @@ import 'package:project_management_app/core/repository/i_auth_repository.dart';
 import 'package:project_management_app/core/auth/auth_user.dart';
 import 'package:project_management_app/core/auth/role_models.dart';
 
+// ignore_for_file: prefer_const_constructors
+
 // Fake auth repository for testing user filtering
 class FakeAuthRepository implements IAuthRepository {
   final List<AppUser> _users;
@@ -275,26 +277,26 @@ void main() {
     });
 
     test('filteredUsersProvider returns all users for empty filter', () {
-      final filter = const UsersFilter();
+      const filter = UsersFilter();
       final users = testContainer.read(filteredUsersProvider(filter));
       expect(users.length, 6);
     });
 
     test('filteredUsersProvider filters by role', () {
       // Filter for admin role
-      final adminFilter = const UsersFilter(role: 'role_admin');
+      const adminFilter = UsersFilter(role: 'role_admin');
       final adminUsers = testContainer.read(filteredUsersProvider(adminFilter));
       expect(adminUsers.length, 2);
       expect(adminUsers.map((u) => u.username), containsAll(['admin_user', 'jane_smith']));
       
       // Filter for member role
-      final memberFilter = const UsersFilter(role: 'role_member');
+      const memberFilter = UsersFilter(role: 'role_member');
       final memberUsers = testContainer.read(filteredUsersProvider(memberFilter));
       expect(memberUsers.length, 3);
       expect(memberUsers.map((u) => u.username), containsAll(['member_one', 'member_two', 'john_doe']));
       
       // Filter for viewer role
-      final viewerFilter = const UsersFilter(role: 'role_viewer');
+      const viewerFilter = UsersFilter(role: 'role_viewer');
       final viewerUsers = testContainer.read(filteredUsersProvider(viewerFilter));
       expect(viewerUsers.length, 1);
       expect(viewerUsers.first.username, 'viewer_user');
@@ -302,13 +304,13 @@ void main() {
 
     test('filteredUsersProvider filters by search query (case insensitive)', () {
       // Search for 'jane'
-      final janeFilter = const UsersFilter(searchQuery: 'jane');
+      const janeFilter = UsersFilter(searchQuery: 'jane');
       final janeUsers = testContainer.read(filteredUsersProvider(janeFilter));
       expect(janeUsers.length, 1);
       expect(janeUsers.first.username, 'jane_smith');
       
       // Search for 'MEMBER' (case insensitive)
-      final memberSearchFilter = const UsersFilter(searchQuery: 'MEMBER');
+      const memberSearchFilter = UsersFilter(searchQuery: 'MEMBER');
       final memberSearchUsers = testContainer.read(filteredUsersProvider(memberSearchFilter));
       expect(memberSearchUsers.length, 2);
       expect(memberSearchUsers.map((u) => u.username), containsAll(['member_one', 'member_two']));
@@ -316,30 +318,30 @@ void main() {
 
     test('filteredUsersProvider combines search and role filters', () {
       // Search for 'member' and filter by role_member
-      final combinedFilter = const UsersFilter(searchQuery: 'member', role: 'role_member');
+      const combinedFilter = UsersFilter(searchQuery: 'member', role: 'role_member');
       final combinedUsers = testContainer.read(filteredUsersProvider(combinedFilter));
       expect(combinedUsers.length, 2);
       expect(combinedUsers.map((u) => u.username), containsAll(['member_one', 'member_two']));
       
       // Search for 'john' and filter by role_admin (should return empty)
-      final conflictingFilter = const UsersFilter(searchQuery: 'john', role: 'role_admin');
+      const conflictingFilter = UsersFilter(searchQuery: 'john', role: 'role_admin');
       final conflictingUsers = testContainer.read(filteredUsersProvider(conflictingFilter));
       expect(conflictingUsers, isEmpty);
     });
 
     test('filteredUsersProvider handles status filter placeholder', () {
       // Status filtering is not implemented, so it should be ignored
-      final statusFilter = const UsersFilter(status: 'active');
+      const statusFilter = UsersFilter(status: 'active');
       final users = testContainer.read(filteredUsersProvider(statusFilter));
       expect(users.length, 6); // All users returned since status filter is ignored
     });
 
     test('filteredUsersProvider handles null/empty filter values', () {
-      final nullFilter = const UsersFilter(searchQuery: null, role: null, status: null);
+      const nullFilter = UsersFilter(searchQuery: null, role: null, status: null);
       final users = testContainer.read(filteredUsersProvider(nullFilter));
       expect(users.length, 6);
       
-      final emptyStringFilter = const UsersFilter(searchQuery: '', role: '', status: '');
+      const emptyStringFilter = UsersFilter(searchQuery: '', role: '', status: '');
       final users2 = testContainer.read(filteredUsersProvider(emptyStringFilter));
       expect(users2.length, 6);
     });

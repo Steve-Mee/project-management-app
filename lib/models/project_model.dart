@@ -1,3 +1,4 @@
+// ignore_for_file: prefer_const_constructors
 import 'package:hive/hive.dart';
 import 'package:uuid/uuid.dart';
 import '../core/config/ai_config.dart';
@@ -8,7 +9,7 @@ part 'project_model.g.dart';
 /// Project data model for dashboard display
 @HiveType(typeId: 0)
 class ProjectModel {
-  static final Uuid _uuid = Uuid();
+  static const Uuid _uuid = Uuid();
 
   @HiveField(0)
   final String id;

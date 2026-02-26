@@ -32,14 +32,14 @@ class AiRateLimitsConfig {
       AppLogger.warning('Invalid maxRequestsPerWindow', params: {'value': maxRequestsPerWindow, 'action': 'clamping to 1'});
     }
     final backoffBaseDelay = config.backoffBaseDelay;
-    final minBaseDelay = const Duration(milliseconds: 100);
-    final maxBaseDelay = const Duration(seconds: 10);
+    const minBaseDelay = Duration(milliseconds: 100);
+    const maxBaseDelay = Duration(seconds: 10);
     if (backoffBaseDelay < minBaseDelay || backoffBaseDelay > maxBaseDelay) {
       AppLogger.warning('Invalid backoffBaseDelay', params: {'value': backoffBaseDelay.inMilliseconds, 'action': 'clamping to 100-10000ms'});
     }
     final backoffMaxDelay = config.backoffMaxDelay;
-    final minMaxDelay = const Duration(seconds: 5);
-    final maxMaxDelay = const Duration(minutes: 5);
+    const minMaxDelay = Duration(seconds: 5);
+    const maxMaxDelay = Duration(minutes: 5);
     if (backoffMaxDelay < minMaxDelay || backoffMaxDelay > maxMaxDelay) {
       AppLogger.warning('Invalid backoffMaxDelay', params: {'value': backoffMaxDelay.inSeconds, 'action': 'clamping to 5-300s'});
     }

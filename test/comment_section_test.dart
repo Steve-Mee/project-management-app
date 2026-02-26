@@ -1,3 +1,4 @@
+// ignore_for_file: prefer_const_constructors
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -211,8 +212,8 @@ void main() {
           ],
           child: ScreenUtilInit(
             designSize: const Size(1280, 720),
-            builder: (context, child) => MaterialApp(
-              locale: const Locale('en'),
+            builder: (context, child) => const MaterialApp(
+              locale: Locale('en'),
               localizationsDelegates: AppLocalizations.localizationsDelegates,
               supportedLocales: AppLocalizations.supportedLocales,
               home: Scaffold(
@@ -246,8 +247,8 @@ void main() {
           ],
           child: ScreenUtilInit(
             designSize: const Size(1280, 720),
-            builder: (context, child) => MaterialApp(
-              locale: const Locale('en'),
+            builder: (context, child) => const MaterialApp(
+              locale: Locale('en'),
               localizationsDelegates: AppLocalizations.localizationsDelegates,
               supportedLocales: AppLocalizations.supportedLocales,
               home: Scaffold(

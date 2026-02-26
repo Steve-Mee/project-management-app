@@ -8,6 +8,8 @@ import 'package:project_management_app/core/repository/models/project_models.dar
 import 'package:project_management_app/models/project_model.dart';
 import 'package:project_management_app/models/project_filter.dart';
 
+// ignore_for_file: prefer_const_constructors
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
@@ -143,7 +145,7 @@ void main() {
     await repository.addProject(await createProject(id: 'project-2', name: 'Project 2', status: 'Completed'));
     await repository.addProject(await createProject(id: 'project-3', name: 'Project 3', status: 'In Progress'));
 
-    final filter = ProjectFilter(status: 'In Progress');
+    const filter = ProjectFilter(status: 'In Progress');
     final filtered = await repository.getFilteredProjects(filter);
 
     expect(filtered.length, 2);
@@ -156,7 +158,7 @@ void main() {
     await repository.addProject(await createProject(id: 'project-2', name: 'React Website', status: 'Completed'));
     await repository.addProject(await createProject(id: 'project-3', name: 'Flutter Widget', status: 'In Progress'));
 
-    final filter = ProjectFilter(searchQuery: 'flutter');
+    const filter = ProjectFilter(searchQuery: 'flutter');
     final filtered = await repository.getFilteredProjects(filter);
 
     expect(filtered.length, 2);
@@ -170,7 +172,7 @@ void main() {
     await repository.addProject(await createProject(id: 'project-3', name: 'Project 3', status: 'In Progress'));
 
     final extraCondition = ProjectFilterConditions((project) => project.name.contains('1'));
-    final filtered = await repository.getFilteredProjects(ProjectFilter(), extraConditions: [extraCondition]);
+    final filtered = await repository.getFilteredProjects(const ProjectFilter(), extraConditions: [extraCondition]);
 
     expect(filtered.length, 1);
     expect(filtered[0].id, 'project-1');

@@ -267,10 +267,10 @@ Map<String, dynamic> computeUsageChartData(List<AiUsageRecord> records, String t
           getTitlesWidget: (value, meta) => Text(sortedKeys[value.toInt()], style: const TextStyle(fontSize: 10)),
         ),
       ),
-      leftTitles: AxisTitles(sideTitles: SideTitles(showTitles: true)),
+      leftTitles: const AxisTitles(sideTitles: const SideTitles(showTitles: true)),
     ),
     borderData: FlBorderData(show: true),
-    gridData: FlGridData(show: true),
+    gridData: const FlGridData(show: true),
   );
 
   // Cost per operation (Pie Chart)
@@ -304,10 +304,10 @@ Map<String, dynamic> computeUsageChartData(List<AiUsageRecord> records, String t
           getTitlesWidget: (value, meta) => Text(usageByOperation.keys.elementAt(value.toInt()), style: const TextStyle(fontSize: 10)),
         ),
       ),
-      leftTitles: AxisTitles(sideTitles: SideTitles(showTitles: true)),
+      leftTitles: const AxisTitles(sideTitles: const SideTitles(showTitles: true)),
     ),
     borderData: FlBorderData(show: true),
-    gridData: FlGridData(show: true),
+    gridData: const FlGridData(show: true),
   );
 
   return {

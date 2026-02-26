@@ -11,6 +11,8 @@ import 'package:project_management_app/core/services/app_logger.dart';
 import 'package:project_management_app/models/task_model.dart';
 import 'package:project_management_app/core/repository/impl/hive_settings_repository.dart';
 
+// ignore_for_file: prefer_const_constructors
+
 /// Helper class for initializing Hive and projects on app startup
 /// 
 /// Usage in main():
@@ -100,12 +102,12 @@ class HiveInitializer {
     final raw = await file.readAsString();
     final decoded = jsonDecode(raw);
     if (decoded is! Map<String, dynamic>) {
-      throw FormatException('Invalid backup format');
+      throw const FormatException('Invalid backup format');
     }
 
     final boxes = decoded['boxes'];
     if (boxes is! Map<String, dynamic>) {
-      throw FormatException('Backup data is missing boxes');
+      throw const FormatException('Backup data is missing boxes');
     }
 
     await _restoreProjectsBox(boxes['projects']);
@@ -348,12 +350,12 @@ class _ProjectsInitializerState extends ConsumerState<ProjectsInitializer> {
     }
 
     if (!_initialized) {
-      return MaterialApp(
+      return const MaterialApp(
         home: Scaffold(
           body: Center(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
-              children: const [
+              children: [
                 CircularProgressIndicator(),
                 SizedBox(height: 16),
                 Text('Loading projects...'),

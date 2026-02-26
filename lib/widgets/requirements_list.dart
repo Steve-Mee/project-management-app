@@ -1,3 +1,4 @@
+// ignore_for_file: prefer_const_constructors
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:project_management_app/core/providers/dashboard_providers.dart';
@@ -112,7 +113,7 @@ class _RequirementsListState extends ConsumerState<RequirementsList> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text('Requirements'),
+        title: const Text('Requirements'),
         actions: [
           if (isOffline)
             Container(

@@ -8,6 +8,8 @@ import 'package:project_management_app/core/repository/models/project_models.dar
 import 'package:project_management_app/models/project_model.dart';
 import 'package:project_management_app/models/project_filter.dart' as models;
 
+// ignore_for_file: prefer_const_constructors
+
 class FakeAuthNotifier extends AuthNotifier {
   @override
   Future<AuthState> build() async {
@@ -207,7 +209,7 @@ class FakeProjectRepository implements IProjectRepository {
 
 void main() {
   test('ProjectsNotifier initializes with repository data', () async {
-    final project = ProjectModel(
+    const project = ProjectModel(
       id: 'p1',
       name: 'Alpha',
       progress: 0.2,
@@ -330,26 +332,26 @@ void main() {
     final notifier = container.read(projectsProvider.notifier);
 
     // Add test projects
-    await notifier.addProject(ProjectModel(
+    await notifier.addProject(const ProjectModel(
       id: 'p1',
       name: 'Flutter Project',
       progress: 0.5,
       status: 'In Progress',
-      tasks: const [],
+      tasks: [],
       description: 'A mobile app',
     ));
 
-    await notifier.addProject(ProjectModel(
+    await notifier.addProject(const ProjectModel(
       id: 'p2',
       name: 'React Website',
       progress: 0.3,
       status: 'Planning',
-      tasks: const [],
+      tasks: [],
       description: 'A web application',
     ));
 
     // Test fuzzy search
-    final filter = models.ProjectFilter(searchQuery: 'flutter');
+    const filter = models.ProjectFilter(searchQuery: 'flutter');
     final results = container.read(filteredProjectsProvider(filter));
     expect(results.length, 1);
     expect(results[0].id, 'p1');
@@ -365,17 +367,17 @@ void main() {
 
     final notifier = container.read(projectsProvider.notifier);
 
-    await notifier.addProject(ProjectModel(
+    await notifier.addProject(const ProjectModel(
       id: 'p1',
       name: 'Mobile App',
       progress: 0.5,
       status: 'In Progress',
-      tasks: const [],
+      tasks: [],
       description: 'Built with Flutter framework',
     ));
 
     // Test fuzzy search on description
-    final filter = models.ProjectFilter(searchQuery: 'flutter');
+    const filter = models.ProjectFilter(searchQuery: 'flutter');
     final results = container.read(filteredProjectsProvider(filter));
     expect(results.length, 1);
     expect(results[0].id, 'p1');
@@ -391,18 +393,18 @@ void main() {
 
     final notifier = container.read(projectsProvider.notifier);
 
-    await notifier.addProject(ProjectModel(
+    await notifier.addProject(const ProjectModel(
       id: 'p1',
       name: 'Web App',
       progress: 0.5,
       status: 'In Progress',
-      tasks: const [],
+      tasks: [],
       description: 'A web application',
-      tags: const ['flutter', 'mobile', 'dart'],
+      tags: ['flutter', 'mobile', 'dart'],
     ));
 
     // Test fuzzy search on tags
-    final filter = models.ProjectFilter(searchQuery: 'mobile');
+    const filter = models.ProjectFilter(searchQuery: 'mobile');
     final results = container.read(filteredProjectsProvider(filter));
     expect(results.length, 1);
     expect(results[0].id, 'p1');

@@ -1,3 +1,4 @@
+// ignore_for_file: prefer_const_constructors
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -96,11 +97,11 @@ void main() {
         child: ScreenUtilInit(
           designSize: const Size(375, 812),
           builder: (context, child) {
-            return MaterialApp(
-              locale: const Locale('en'),
+            return const MaterialApp(
+              locale: Locale('en'),
               localizationsDelegates: AppLocalizations.localizationsDelegates,
               supportedLocales: AppLocalizations.supportedLocales,
-              home: const Scaffold(
+              home: Scaffold(
                 body: AiChatModal(projectId: 'project_1'),
               ),
             );

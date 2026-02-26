@@ -1,3 +1,4 @@
+// ignore_for_file: prefer_const_constructors
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -553,7 +554,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                     : Row(
                                         mainAxisAlignment: MainAxisAlignment.center,
                                         children: [
-                                          Icon(Icons.fingerprint),
+                                          const Icon(Icons.fingerprint),
                                           const SizedBox(width: 8),
                                           Text(l10n.loginWithBiometric),
                                         ],

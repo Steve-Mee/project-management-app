@@ -1,3 +1,4 @@
+// ignore_for_file: prefer_const_constructors
 import 'dart:async';
 import 'dart:math';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -8,6 +9,7 @@ import '../../config/ai_config.dart' as ai_config;
 import './ai_usage_provider.dart';
 import '../../../models/chat_message_model.dart';
 import '../../../models/project_plan.dart';
+
 import '../../models/ai_rate_limits_config.dart';
 import '../../models/ai_request_queue.dart';
 import '../auth_providers.dart';
@@ -146,7 +148,7 @@ class AiChatNotifier extends AsyncNotifier<AiChatState> {
     } catch (e) {
       AppLogger.instance.e('Failed to load AI rate limits config: $e');
       // Fallback to defaults if settings fail
-      _rateLimitsConfig = AiRateLimitsConfig.defaults();
+      _rateLimitsConfig = const AiRateLimitsConfig.defaults();
       
       // Restore persisted queue even with defaults
       await restoreQueue();
@@ -335,10 +337,10 @@ class AiChatNotifier extends AsyncNotifier<AiChatState> {
   /// Modular method for AI API calls using AiPlanningHelpers
   Future<AiApiResult<String>> _callAiWithAnonymizedPrompt(String prompt) async {
     // TEMP: Always return mock response for testing
-    return AiApiResult<String>(
+    return const AiApiResult<String>(
       content: 'Mock AI response for testing',
       tokensUsed: 50,
-      metadata: {'model': 'test-model', 'mock': true},
+      metadata: const {'model': 'test-model', 'mock': true},
     );
   }
 
@@ -659,7 +661,7 @@ class AiChatNotifier extends AsyncNotifier<AiChatState> {
   /// Calculate exponential backoff delay with jitter
   Duration _calculateBackoffDelay(int retryCount) {
     // Simple exponential backoff: base delay * 2^attempts with jitter
-    final baseDelay = Duration(seconds: 1);
+    const baseDelay = const Duration(seconds: 1);
     final exponentialDelay = baseDelay * pow(2, retryCount).toInt();
     final jitter = Duration(milliseconds: Random().nextInt(1000)); // 0-1 second jitter
     return exponentialDelay + jitter;

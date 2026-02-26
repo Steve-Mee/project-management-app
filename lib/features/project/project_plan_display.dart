@@ -1,3 +1,4 @@
+// ignore_for_file: prefer_const_constructors, prefer_const_declarations
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'dart:convert';
@@ -1450,7 +1451,7 @@ class _ProjectPlanDisplayState extends ConsumerState<ProjectPlanDisplay> {
         return DropdownButtonFormField<String?>(
           initialValue: assignedTo,
           items: [
-            DropdownMenuItem<String?>(
+            const DropdownMenuItem<String?>(
               value: null,
               child: Text('Unassigned'),
             ),
@@ -1793,7 +1794,7 @@ Provide a brief summary:
   }
 
   Future<void> initDb() async {
-    final createTableSQL = '''
+    const createTableSQL = '''
     CREATE TABLE IF NOT EXISTS projects (
       id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
       name TEXT NOT NULL,
@@ -1826,7 +1827,7 @@ Provide a brief summary:
     );
     ''';
 
-    final rlsSQL = '''
+    const rlsSQL = '''
     ALTER TABLE projects ENABLE ROW LEVEL SECURITY;
 
     CREATE POLICY "Users can insert their own projects" ON projects
@@ -1897,7 +1898,7 @@ Provide a brief summary:
       FOR INSERT WITH CHECK (auth.uid() = user_id);
     ''';
 
-    final versionControlSQL = '''
+    const versionControlSQL = '''
     CREATE OR REPLACE FUNCTION increment_version()
     RETURNS TRIGGER AS \$\$
     BEGIN

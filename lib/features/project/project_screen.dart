@@ -1,3 +1,4 @@
+// ignore_for_file: prefer_const_constructors, prefer_const_declarations
 import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
@@ -387,7 +388,7 @@ class _ProjectScreenState extends ConsumerState<ProjectScreen> {
     final sorted = _sortProjects(filtered, metaByProjectId);
 
     const baseCount = 4; // title + search + filters/sort + view mode
-    final itemCount = baseCount; // view content handles empty state internally
+    const itemCount = baseCount; // view content handles empty state internally
 
     return ListView.builder(
       controller: _scrollController,
@@ -1101,7 +1102,7 @@ class _ProjectScreenState extends ConsumerState<ProjectScreen> {
         child: Row(
           children: [
             Text(l10n.sortByLabel),
-            Icon(Icons.arrow_drop_down),
+            const Icon(Icons.arrow_drop_down),
           ],
         ),
       );
@@ -1134,7 +1135,7 @@ class _ProjectScreenState extends ConsumerState<ProjectScreen> {
           child: Row(
             children: [
               Text(_sortAscending ? '${_sortBy.toString().split('.').last} ↑' : '${_sortBy.toString().split('.').last} ↓'),
-              Icon(Icons.arrow_drop_down),
+              const Icon(Icons.arrow_drop_down),
             ],
           ),
         ),
@@ -1387,7 +1388,7 @@ class _ProjectScreenState extends ConsumerState<ProjectScreen> {
                   const SizedBox(height: 12),
                   DropdownButtonFormField<String>(
                     initialValue: category,
-                    decoration: InputDecoration(
+                    decoration: const InputDecoration(
                       labelText: 'Category',
                     ),
                     items: [
@@ -1416,7 +1417,7 @@ class _ProjectScreenState extends ConsumerState<ProjectScreen> {
                     const SizedBox(height: 12),
                     TextField(
                       controller: customCategoryController,
-                      decoration: InputDecoration(
+                      decoration: const InputDecoration(
                         labelText: 'Custom Category',
                       ),
                     ),
@@ -1873,7 +1874,7 @@ class _BulkActionsBottomSheetState extends ConsumerState<BulkActionsBottomSheet>
       }
 
       // Create a filter for selected projects
-      final filter = ProjectFilter(); // Empty filter since we're exporting selected projects
+      const filter = ProjectFilter(); // Empty filter since we're exporting selected projects
 
       await PdfExporter.exportProjectsToPdf(
         context: context,

@@ -8,6 +8,8 @@ import 'package:project_management_app/core/models/dashboard_types.dart';
 import 'package:project_management_app/models/project_model.dart';
 import 'package:project_management_app/models/project_requirements.dart';
 import 'dart:io';
+
+// ignore_for_file: prefer_const_constructors
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:uuid/uuid.dart';
 import 'package:mockito/mockito.dart';
@@ -172,7 +174,7 @@ void main() {
 
   group('DashboardConfigNotifier.addItem', () {
     test('valid widgetType succeeds', () async {
-      final item = DashboardItem(
+      const item = DashboardItem(
         widgetType: DashboardWidgetType.metricCard,
         position: {'x': 0, 'y': 0},
       );
@@ -195,7 +197,7 @@ void main() {
 
   group('DashboardConfigNotifier.removeItem', () {
     test('removes item at index', () async {
-      final item = DashboardItem(
+      const item = DashboardItem(
         widgetType: DashboardWidgetType.metricCard,
         position: {'x': 0, 'y': 0},
       );
@@ -216,7 +218,7 @@ void main() {
 
   group('DashboardConfigNotifier.updateItemPosition', () {
     test('updates position of item at index', () async {
-      final item = DashboardItem(
+      const item = DashboardItem(
         widgetType: DashboardWidgetType.metricCard,
         position: {'x': 0, 'y': 0},
       );
@@ -303,7 +305,7 @@ void main() {
     });
 
     test('addItem clamps position', () async {
-      final item = DashboardItem(
+      const item = DashboardItem(
         widgetType: DashboardWidgetType.metricCard,
         position: {'x': -10, 'y': -10, 'width': 100, 'height': 100},
       );
@@ -318,7 +320,7 @@ void main() {
 
     test('updateItemPosition clamps position', () async {
       // First add an item
-      final item = DashboardItem(
+      const item = DashboardItem(
         widgetType: DashboardWidgetType.metricCard,
         position: {'x': 0, 'y': 0, 'width': 200, 'height': 150},
       );
@@ -364,7 +366,7 @@ void main() {
     });
 
     test('after addItem, canUndo is true', () async {
-      final item = DashboardItem(
+      const item = DashboardItem(
         widgetType: DashboardWidgetType.metricCard,
         position: {'x': 0, 'y': 0},
       );
@@ -374,7 +376,7 @@ void main() {
     });
 
     test('undo restores previous state', () async {
-      final item = DashboardItem(
+      const item = DashboardItem(
         widgetType: DashboardWidgetType.metricCard,
         position: {'x': 0, 'y': 0},
       );
@@ -389,7 +391,7 @@ void main() {
     });
 
     test('redo restores next state', () async {
-      final item = DashboardItem(
+      const item = DashboardItem(
         widgetType: DashboardWidgetType.metricCard,
         position: {'x': 0, 'y': 0},
       );
@@ -407,11 +409,11 @@ void main() {
     });
 
     test('multiple changes + undo/redo sequence', () async {
-      final item1 = DashboardItem(
+      const item1 = DashboardItem(
         widgetType: DashboardWidgetType.metricCard,
         position: {'x': 0, 'y': 0},
       );
-      final item2 = DashboardItem(
+      const item2 = DashboardItem(
         widgetType: DashboardWidgetType.taskList,
         position: {'x': 200, 'y': 0},
       );
@@ -464,7 +466,7 @@ void main() {
     });
 
     test('canUndo/canRedo edge cases', () async {
-      final item = DashboardItem(
+      const item = DashboardItem(
         widgetType: DashboardWidgetType.metricCard,
         position: {'x': 0, 'y': 0},
       );
@@ -509,7 +511,7 @@ void main() {
 
     test('saveAsTemplate creates new template', () async {
       // Set up some dashboard items
-      final item = DashboardItem(
+      const item = DashboardItem(
         widgetType: DashboardWidgetType.metricCard,
         position: {'x': 0, 'y': 0, 'width': 200, 'height': 150},
       );
@@ -530,7 +532,7 @@ void main() {
 
     test('loadTemplate replaces current dashboard state', () async {
       // First save a template
-      final item1 = DashboardItem(
+      const item1 = DashboardItem(
         widgetType: DashboardWidgetType.metricCard,
         position: {'x': 0, 'y': 0, 'width': 200, 'height': 150},
       );
@@ -538,7 +540,7 @@ void main() {
       await notifier.saveAsTemplate('Load Test');
 
       // Add another item to current state
-      final item2 = DashboardItem(
+      const item2 = DashboardItem(
         widgetType: DashboardWidgetType.taskList,
         position: {'x': 200, 'y': 0, 'width': 200, 'height': 150},
       );
@@ -627,9 +629,9 @@ void main() {
     test('hasPermission returns true for owner', () async {
       // Test logic: owner always has permission
       final permissions = <String, String>{};
-      final ownerId = 'owner123';
-      final userId = 'owner123';
-      final required = DashboardPermission.view;
+      const ownerId = 'owner123';
+      const userId = 'owner123';
+      const required = DashboardPermission.view;
 
       // Simulate owner check
       if (userId == ownerId) {
@@ -642,9 +644,9 @@ void main() {
 
     test('hasPermission returns correct for viewer/editor', () async {
       final permissions = {'user456': 'view'};
-      final ownerId = 'owner123';
-      final userId = 'user456';
-      final required = DashboardPermission.view;
+      const ownerId = 'owner123';
+      const userId = 'user456';
+      const required = DashboardPermission.view;
 
       if (userId == ownerId) {
         expect(true, isTrue);
@@ -657,7 +659,7 @@ void main() {
     test('loadSharedDashboard merges data with last-write-wins', () async {
       // Test conflict resolution logic
       final remoteUpdated = DateTime.now();
-      final localUpdated = remoteUpdated.subtract(Duration(hours: 1));
+      final localUpdated = remoteUpdated.subtract(const Duration(hours: 1));
 
       // Remote is newer
       expect(remoteUpdated.isAfter(localUpdated), isTrue);
@@ -698,7 +700,7 @@ void main() {
       final notifier = container.read(dashboardConfigProvider.notifier);
       
       try {
-        await notifier.saveConfig([DashboardItem(widgetType: DashboardWidgetType.metricCard, position: {'x': 0, 'y': 0})]);
+        await notifier.saveConfig([const DashboardItem(widgetType: DashboardWidgetType.metricCard, position: {'x': 0, 'y': 0})]);
         fail('Expected exception');
       } catch (e) {
         expect(e, isA<Exception>());
@@ -710,7 +712,7 @@ void main() {
 
     test('addItem failure logs error and rethrows', () async {
       when(mockRepo.addItem(any)).thenThrow(Exception('Add failed'));
-      final item = DashboardItem(
+      const item = DashboardItem(
         widgetType: DashboardWidgetType.metricCard,
         position: {'x': 0, 'y': 0},
       );
@@ -745,7 +747,7 @@ void main() {
 
     test('updateItemPosition success logs event', () async {
       // Add item first
-      final item = DashboardItem(
+      const item = DashboardItem(
         widgetType: DashboardWidgetType.metricCard,
         position: {'x': 0, 'y': 0},
       );
@@ -787,7 +789,7 @@ void main() {
     });
 
     test('createCustomWidget success adds item and logs event', () async {
-      final jsonInput = '{"widgetType": "metricCard", "position": {"x": 0, "y": 0, "width": 2, "height": 1}}';
+      const jsonInput = '{"widgetType": "metricCard", "position": {"x": 0, "y": 0, "width": 2, "height": 1}}';
       final expectedItem = DashboardItem.fromJson({
         'widgetType': 'metricCard',
         'position': {'x': 0, 'y': 0, 'width': 2, 'height': 1}
@@ -805,7 +807,7 @@ void main() {
     });
 
     test('createCustomWidget with invalid JSON throws exception', () async {
-      final invalidJson = 'invalid json';
+      const invalidJson = 'invalid json';
 
       final notifier = container.read(dashboardConfigProvider.notifier);
 
@@ -832,7 +834,7 @@ void main() {
 
     test('HiveDashboardRepository saves and loads config', () async {
       final repo = container!.read(dashboardRepositoryProvider);
-      final item = DashboardItem(
+      const item = DashboardItem(
         widgetType: DashboardWidgetType.metricCard,
         position: {'x': 0, 'y': 0},
       );
@@ -850,7 +852,7 @@ void main() {
     late ProjectRequirements testRequirements;
 
     setUp(() {
-      testProject = ProjectModel(id: 'test-project-id', name: 'Test Project', category: 'web', progress: 0.0);
+      testProject = const ProjectModel(id: 'test-project-id', name: 'Test Project', category: 'web', progress: 0.0);
       testRequirements = const ProjectRequirements(software: ['Test Req']);
     });
 
@@ -892,7 +894,7 @@ void main() {
       final testContainer = ProviderContainer(
         overrides: [
           dashboardRepositoryProvider.overrideWithValue(mockRepo),
-          projectsProvider.overrideWith(() => FakeProjectsNotifier(AsyncValue.error('Test error', StackTrace.empty))),
+          projectsProvider.overrideWith(() => FakeProjectsNotifier(const AsyncValue.error('Test error', StackTrace.empty))),
         ],
       );
 
@@ -921,11 +923,11 @@ void main() {
     });
 
     test('returns empty requirements when project has no category', () async {
-      final projectNoCategory = ProjectModel(id: 'test-id', name: 'Test', category: null, progress: 0.0);
+      const projectNoCategory = ProjectModel(id: 'test-id', name: 'Test', category: null, progress: 0.0);
       final testContainer = ProviderContainer(
         overrides: [
           dashboardRepositoryProvider.overrideWithValue(mockRepo),
-          projectsProvider.overrideWith(() => FakeProjectsNotifier(AsyncValue.data([projectNoCategory]))),
+          projectsProvider.overrideWith(() => FakeProjectsNotifier(AsyncValue.data(const [projectNoCategory]))),
         ],
       );
 
@@ -956,7 +958,7 @@ void main() {
     test('dashboard items are saved to settings on config save', () async {
       // This would require mocking the settings repository
       // For now, we verify the saveConfig method exists and calls the right places
-      final items = [DashboardItem(widgetType: DashboardWidgetType.metricCard, position: {'x': 0, 'y': 0})];
+      final items = [const DashboardItem(widgetType: DashboardWidgetType.metricCard, position: {'x': 0, 'y': 0})];
       
       await notifier.saveConfig(items);
       
@@ -967,7 +969,7 @@ void main() {
 
     test('dashboard templates are saved to settings on template save', () async {
       // Add an item first
-      final item = DashboardItem(widgetType: DashboardWidgetType.metricCard, position: {'x': 0, 'y': 0});
+      const item = DashboardItem(widgetType: DashboardWidgetType.metricCard, position: {'x': 0, 'y': 0});
       await notifier.addItem(item);
       
       // Save as template
@@ -1002,7 +1004,7 @@ void main() {
       });
 
       // Add an item first
-      final item = DashboardItem(
+      const item = DashboardItem(
         widgetType: DashboardWidgetType.metricCard,
         position: {'x': 0, 'y': 0, 'width': 200, 'height': 150},
       );
@@ -1030,7 +1032,7 @@ void main() {
       });
 
       // Add an item first
-      final item = DashboardItem(
+      const item = DashboardItem(
         widgetType: DashboardWidgetType.metricCard,
         position: {'x': 0, 'y': 0, 'width': 200, 'height': 150},
       );
@@ -1053,7 +1055,7 @@ void main() {
     
     test('dashboard loads with custom widget configurations', () async {
       // Create a custom widget with specific configuration
-      final customJson = '{"widgetType": "metricCard", "position": {"x": 50, "y": 50, "width": 300, "height": 200}}';
+      const customJson = '{"widgetType": "metricCard", "position": {"x": 50, "y": 50, "width": 300, "height": 200}}';
       
       final notifier = container.read(dashboardConfigProvider.notifier);
       await notifier.createCustomWidget(customJson);

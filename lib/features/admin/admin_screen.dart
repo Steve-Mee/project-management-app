@@ -1,3 +1,4 @@
+// ignore_for_file: prefer_const_constructors
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:project_management_app/core/auth/permissions.dart';
@@ -411,7 +412,7 @@ class _AdminScreenState extends ConsumerState<AdminScreen> {
         ),
       ),
       loading: () => const Card(child: Padding(padding: EdgeInsets.all(16), child: CircularProgressIndicator())),
-      error: (e, _) => Card(child: Padding(padding: EdgeInsets.all(16), child: Text('Error loading users: $e'))),
+      error: (e, _) => Card(child: Padding(padding: const EdgeInsets.all(16), child: Text('Error loading users: $e'))),
     );
   }
 

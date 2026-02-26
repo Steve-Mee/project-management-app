@@ -1,3 +1,4 @@
+// ignore_for_file: prefer_const_constructors
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/providers/ai/index.dart';
@@ -14,7 +15,7 @@ class AIUsageScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text('AI Usage Overview'),
+        title: const Text('AI Usage Overview'),
       ),
       body: aiUsageAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),

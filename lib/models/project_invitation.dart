@@ -1,8 +1,9 @@
+// ignore_for_file: prefer_const_constructors
 import 'package:uuid/uuid.dart';
 
 /// Model for project invitations
 class ProjectInvitation {
-  static final Uuid _uuid = Uuid();
+  static const Uuid _uuid = Uuid();
 
   final String id;
   final String email;

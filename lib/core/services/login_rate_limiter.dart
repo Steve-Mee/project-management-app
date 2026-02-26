@@ -1,3 +1,4 @@
+// ignore_for_file: prefer_const_constructors
 import 'dart:convert';
 import 'package:crypto/crypto.dart';
 import 'package:hive_flutter/hive_flutter.dart';
@@ -174,7 +175,7 @@ class LoginRateLimiter {
 
   /// Cleans attempts older than the sliding window.
   void _cleanOldAttempts(List<DateTime> attempts) {
-    final cutoff = DateTime.now().subtract(Duration(seconds: windowSeconds));
+    final cutoff = DateTime.now().subtract(const Duration(seconds: windowSeconds));
     attempts.removeWhere((attempt) => attempt.isBefore(cutoff));
   }
 
