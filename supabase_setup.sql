@@ -80,6 +80,17 @@ CREATE TABLE IF NOT EXISTS user_views (
   UNIQUE(user_id, view_name)
 );
 
+-- AI usage per user for token metering
+CREATE TABLE IF NOT EXISTS ai_usage (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id UUID NOT NULL,
+  tokens_used INTEGER NOT NULL DEFAULT 0,
+  monthly_limit INTEGER NOT NULL DEFAULT 1000,
+  last_updated TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  UNIQUE(user_id)
+);
+
 -- Create indexes for better performance
 CREATE INDEX IF NOT EXISTS idx_project_members_project_id ON project_members(project_id);
 CREATE INDEX IF NOT EXISTS idx_project_members_user_id ON project_members(user_id);
@@ -92,3 +103,4 @@ CREATE INDEX IF NOT EXISTS idx_analytics_user_id ON analytics(user_id);
 CREATE INDEX IF NOT EXISTS idx_analytics_timestamp ON analytics(timestamp);
 CREATE INDEX IF NOT EXISTS idx_user_views_user_id ON user_views(user_id);
 CREATE INDEX IF NOT EXISTS idx_user_views_view_name ON user_views(view_name);
+CREATE INDEX IF NOT EXISTS idx_ai_usage_user_id ON ai_usage(user_id);

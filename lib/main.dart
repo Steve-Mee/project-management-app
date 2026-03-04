@@ -114,10 +114,10 @@ void main() async {
   Stripe.publishableKey = AppConfig.stripePublishableKey ?? '';
   Stripe.merchantIdentifier = 'merchant.com.example';
   Stripe.urlScheme = 'flutterstripe';
-  Hive.registerAdapter(ProjectModelAdapter());
-  Hive.registerAdapter(TaskStatusAdapter());
-  Hive.registerAdapter(TaskAdapter());
-  Hive.registerAdapter(CommentModelAdapter());
+  Hive.registerAdapter<ProjectModel>(ProjectModelAdapter());
+  Hive.registerAdapter<TaskStatus>(TaskStatusAdapter());
+  Hive.registerAdapter<Task>(TaskAdapter());
+  Hive.registerAdapter<CommentModel>(CommentModelAdapter());
   registerSafeMigratedModelAdapters();
   await Hive.initFlutter();
   await Hive.openBox('settings');
@@ -310,8 +310,8 @@ class _MyAppState extends ConsumerState<MyApp> {
   }
 
   Future<void> _handleInvitationToken(String token) async {
-    final authState = ref.read(authProvider).value!;
-    if (!authState.isAuthenticated) {
+    final authState = ref.read(authProvider).valueOrNull;
+    if (authState == null || !authState.isAuthenticated) {
       // Store token for after login
       setState(() {
         _pendingInvitationToken = token;
@@ -365,7 +365,8 @@ class _MyAppState extends ConsumerState<MyApp> {
       data: (seed) => seed,
       orElse: () => null,
     );
-    final authState = ref.watch(authProvider).value!;
+    final authStateAsync = ref.watch(authProvider);
+    final authState = authStateAsync.valueOrNull;
     final localeAsync = ref.watch(localeProvider);
     final locale = localeAsync.maybeWhen(
       data: (l) => l,
@@ -379,7 +380,7 @@ class _MyAppState extends ConsumerState<MyApp> {
     final goRouter = AppRoutes.createRouter();
 
     // Check for pending invitation when auth state changes
-    if (authState.isAuthenticated && _pendingInvitationToken != null) {
+    if (authState?.isAuthenticated == true && _pendingInvitationToken != null) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         _checkPendingInvitation();
       });
@@ -391,6 +392,27 @@ class _MyAppState extends ConsumerState<MyApp> {
       minTextAdapt: true,
       splitScreenMode: true,
       builder: (context, child) {
+        if (authStateAsync.isLoading || authState == null) {
+          return Directionality(
+            textDirection: isRtl ? TextDirection.rtl : TextDirection.ltr,
+            child: MaterialApp(
+              onGenerateTitle: (context) =>
+                  AppLocalizations.of(context)?.appTitle ??
+                  'Project Management App',
+              debugShowCheckedModeBanner: false,
+              locale: locale,
+              themeMode: currentThemeMode,
+              theme: AppTheme.lightTheme(seedColor: colorSchemeSeed),
+              darkTheme: AppTheme.darkTheme(seedColor: colorSchemeSeed),
+              localizationsDelegates: AppLocalizations.localizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+              home: const Scaffold(
+                body: Center(child: CircularProgressIndicator()),
+              ),
+            ),
+          );
+        }
+
         if (!authState.isAuthenticated) {
           return Directionality(
             textDirection: isRtl ? TextDirection.rtl : TextDirection.ltr,

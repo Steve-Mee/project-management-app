@@ -64,8 +64,8 @@ class _CustomizeDashboardScreenState extends ConsumerState<CustomizeDashboardScr
         position: {
           'x': widget.x,
           'y': widget.y,
-          'width': widget.width,
-          'height': widget.height,
+          'width': _normalizeWidth(widget.width),
+          'height': _normalizeHeight(widget.height),
         },
       )).toList();
     });
@@ -136,39 +136,62 @@ class _CustomizeDashboardScreenState extends ConsumerState<CustomizeDashboardScr
         _dashboardConfig.removeWidget(widget);
       }
       for (final item in _dashboardItems) {
-        _dashboardConfig.addWidget(DashboardWidget(
-          id: '${item.widgetType}_${item.position['x']}_${item.position['y']}',
-          x: item.position['x'] ?? 0,
-          y: item.position['y'] ?? 0,
-          width: item.position['width'] ?? 2,
-          height: item.position['height'] ?? 1,
-          builder: (context) => Card(
-            elevation: 2,
-            color: Theme.of(context).colorScheme.surface,
-            child: Stack(
-              children: [
-                Padding(
-                  padding: EdgeInsets.all(16.w),
-                  child: _buildWidgetForType(item.widgetType.name),
-                ),
-                Positioned(
-                  top: 8.h,
-                  right: 8.w,
-                  child: IconButton(
-                    icon: Icon(
-                      Icons.delete,
-                      size: 20.sp,
-                    ),
-                    onPressed: () => _removeWidget(item),
-                    color: Theme.of(context).colorScheme.error,
+        try {
+          _dashboardConfig.addWidget(DashboardWidget(
+            id: '${item.widgetType.name}_${item.position['x']}_${item.position['y']}',
+            x: _normalizeAxis(item.position['x']),
+            y: _normalizeAxis(item.position['y']),
+            width: _normalizeWidth(item.position['width']),
+            height: _normalizeHeight(item.position['height']),
+            builder: (context) => Card(
+              elevation: 2,
+              color: Theme.of(context).colorScheme.surface,
+              child: Stack(
+                children: [
+                  Padding(
+                    padding: EdgeInsets.all(16.w),
+                    child: _buildWidgetForType(item.widgetType.name),
                   ),
-                ),
-              ],
+                  Positioned(
+                    top: 8.h,
+                    right: 8.w,
+                    child: IconButton(
+                      icon: Icon(
+                        Icons.delete,
+                        size: 20.sp,
+                      ),
+                      onPressed: () => _removeWidget(item),
+                      color: Theme.of(context).colorScheme.error,
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ),
-        ));
+          ));
+        } catch (e) {
+          AppLogger.instance.w('Skipping invalid dashboard widget during load', error: e);
+        }
       }
     });
+  }
+
+  int _normalizeAxis(dynamic value) {
+    final raw = (value as num?)?.toDouble() ?? 0;
+    return raw >= kDashboardMinWidth
+        ? (raw / kDashboardMinWidth).round()
+        : raw.round();
+  }
+
+  int _normalizeWidth(dynamic value) {
+    final raw = (value as num?)?.toDouble() ?? 2;
+    final normalized = raw > 4 ? (raw / kDashboardMinWidth) : raw;
+    return normalized.round().clamp(1, 4);
+  }
+
+  int _normalizeHeight(dynamic value) {
+    final raw = (value as num?)?.toDouble() ?? 1;
+    final normalized = raw > 12 ? (raw / kDashboardMinHeight) : raw;
+    return normalized.round().clamp(1, 12);
   }
 
   void _saveConfig() {
@@ -241,12 +264,13 @@ class _CustomizeDashboardScreenState extends ConsumerState<CustomizeDashboardScr
     setState(() {
       _dashboardItems.remove(item);
       // Remove from dashboard config
-      final widgetId = '${item.widgetType}_${item.position['x']}_${item.position['y']}';
-      final widgetToRemove = _dashboardConfig.widgets.firstWhere(
-        (w) => w.id == widgetId,
-        orElse: () => throw StateError('Widget not found'),
-      );
-      _dashboardConfig.removeWidget(widgetToRemove);
+      final widgetId = '${item.widgetType.name}_${item.position['x']}_${item.position['y']}';
+      final matchingWidgets = _dashboardConfig.widgets
+          .where((w) => w.id == widgetId)
+          .toList();
+      if (matchingWidgets.isNotEmpty) {
+        _dashboardConfig.removeWidget(matchingWidgets.first);
+      }
     });
   }
 
@@ -275,11 +299,14 @@ class _CustomizeDashboardScreenState extends ConsumerState<CustomizeDashboardScr
       case 'taskChart':
         return TaskChartWidget(projects: _projects);
       case 'projectList':
-        return Column(
-          children: _projects.take(3).map((project) => ProjectCardWidget(
-            project: project,
-            onTap: () {},
-          )).toList(),
+        return SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: _projects.take(3).map((project) => ProjectCardWidget(
+              project: project,
+              onTap: () {},
+            )).toList(),
+          ),
         );
       case 'filters':
         return FiltersSortWidget(
@@ -441,11 +468,9 @@ class _CustomizeDashboardScreenState extends ConsumerState<CustomizeDashboardScr
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
-              Expanded(
-                child: SizedBox(
-                  height: 80.h,
-                  child: _buildWidgetForType(type),
-                ),
+              SizedBox(
+                height: 80.h,
+                child: _buildWidgetForType(type),
               ),
             ],
           ),
@@ -469,7 +494,8 @@ class _CustomizeDashboardScreenState extends ConsumerState<CustomizeDashboardScr
               overflow: TextOverflow.ellipsis,
             ),
             SizedBox(height: 4.h),
-            Expanded(
+            SizedBox(
+              height: 40.h,
               child: Container(
                 decoration: BoxDecoration(
                   color: Theme.of(context).colorScheme.surface,

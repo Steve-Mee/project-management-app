@@ -233,36 +233,34 @@ class SafeAppUserAdapter extends SafeJsonHiveAdapter<AppUser> {
 }
 
 void registerSafeMigratedModelAdapters() {
-  final adapters = <TypeAdapter<dynamic>>[
-    SafeChatMessageAdapter(),
-    SafeCommentModelAdapter(),
-    SafeProjectFilterAdapter(),
-    SafeProjectInvitationAdapter(),
-    SafeProjectMetaAdapter(),
-    SafePlanTaskAdapter(),
-    SafePlanChapterAdapter(),
-    SafeProjectPlanAdapter(),
-    SafeProjectModelAdapter(),
-    SafeProjectRequirementsAdapter(),
-    SafeSubTaskAdapter(),
-    SafeTaskAdapter(),
-    SafeAiUsageRecordAdapter(),
-    SafeRequirementAdapter(),
-    SafeDashboardItemAdapter(),
-    SafeDashboardTemplateAdapter(),
-    SafeSharedDashboardAdapter(),
-    SafeAiRateLimitsConfigAdapter(),
-    SafeAiRequestAdapter(),
-    SafeQueueMetricsAdapter(),
-    SafeRoleDefinitionAdapter(),
-    SafeGroupDefinitionAdapter(),
-    SafeAppUserAdapter(),
-    ProjectFilterConditionsAdapter(),
-  ];
-
-  for (final adapter in adapters) {
+  void registerTyped<T>(TypeAdapter<T> adapter) {
     if (!Hive.isAdapterRegistered(adapter.typeId)) {
-      Hive.registerAdapter(adapter);
+      Hive.registerAdapter<T>(adapter);
     }
   }
+
+  registerTyped(SafeChatMessageAdapter());
+  registerTyped(SafeCommentModelAdapter());
+  registerTyped(SafeProjectFilterAdapter());
+  registerTyped(SafeProjectInvitationAdapter());
+  registerTyped(SafeProjectMetaAdapter());
+  registerTyped(SafePlanTaskAdapter());
+  registerTyped(SafePlanChapterAdapter());
+  registerTyped(SafeProjectPlanAdapter());
+  registerTyped(SafeProjectModelAdapter());
+  registerTyped(SafeProjectRequirementsAdapter());
+  registerTyped(SafeSubTaskAdapter());
+  registerTyped(SafeTaskAdapter());
+  registerTyped(SafeAiUsageRecordAdapter());
+  registerTyped(SafeRequirementAdapter());
+  registerTyped(SafeDashboardItemAdapter());
+  registerTyped(SafeDashboardTemplateAdapter());
+  registerTyped(SafeSharedDashboardAdapter());
+  registerTyped(SafeAiRateLimitsConfigAdapter());
+  registerTyped(SafeAiRequestAdapter());
+  registerTyped(SafeQueueMetricsAdapter());
+  registerTyped(SafeRoleDefinitionAdapter());
+  registerTyped(SafeGroupDefinitionAdapter());
+  registerTyped(SafeAppUserAdapter());
+  registerTyped(ProjectFilterConditionsAdapter());
 }

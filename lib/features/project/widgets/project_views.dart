@@ -46,6 +46,8 @@ class ProjectListView extends ProjectView {
   Widget build(BuildContext context) {
     return ListView.builder(
       padding: const EdgeInsets.all(16),
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
       itemCount: projects.length,
       itemBuilder: (context, index) {
         final project = projects[index];

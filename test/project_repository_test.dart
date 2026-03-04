@@ -36,7 +36,7 @@ void main() {
   setUpAll(() async {
     tempDir = await Directory.systemTemp.createTemp('project_repo_test_');
     if (!Hive.isAdapterRegistered(0)) {
-      Hive.registerAdapter(ProjectModelAdapter());
+      Hive.registerAdapter<ProjectModel>(ProjectModelAdapter());
     }
   });
 

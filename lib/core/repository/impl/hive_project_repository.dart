@@ -49,6 +49,22 @@ class HiveProjectRepository implements IProjectRepository {
     _projectsBox = await Hive.openBox<Map<dynamic, dynamic>>(_boxName);
   }
 
+  Future<void> _ensureProjectsBoxReady() async {
+    try {
+      if (_projectsBox.isOpen) {
+        return;
+      }
+    } catch (_) {
+    }
+
+    if (Hive.isBoxOpen(_boxName)) {
+      _projectsBox = Hive.box<Map<dynamic, dynamic>>(_boxName);
+      return;
+    }
+
+    _projectsBox = await Hive.openBox<Map<dynamic, dynamic>>(_boxName);
+  }
+
   /// Check if repository is initialized
   bool get isInitialized => _projectsBox.isOpen;
 
@@ -95,6 +111,7 @@ class HiveProjectRepository implements IProjectRepository {
     String? userId,
     Map<String, Object?>? metadata,
   }) async {
+    await _ensureProjectsBoxReady();
     var resolved = project;
     if (!_isTestMode && (!_isValidUuid(project.id) || project.id.startsWith('project_'))) {
       final newId = _uuid.v4();
@@ -126,6 +143,7 @@ class HiveProjectRepository implements IProjectRepository {
   /// Get all projects from Hive
   @override
   Future<List<ProjectModel>> getAllProjects() async {
+    await _ensureProjectsBoxReady();
     final projects = <ProjectModel>[];
     try {
       final entries = _projectsBox.toMap().entries.toList();
@@ -234,6 +252,7 @@ class HiveProjectRepository implements IProjectRepository {
   /// Get a single project by ID
   @override
   Future<ProjectModel> getProjectById(String id) async {
+    await _ensureProjectsBoxReady();
     final data = _projectsBox.get(id);
     if (data == null) {
       throw Exception('Project with id $id not found');
@@ -817,6 +836,7 @@ class HiveProjectRepository implements IProjectRepository {
   /// Close the Hive box (call on app shutdown)
   @override
   Future<void> close() async {
+    await _ensureProjectsBoxReady();
     await _projectsBox.compact();
     await _projectsBox.close();
   }
