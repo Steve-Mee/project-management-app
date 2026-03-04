@@ -2,7 +2,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:project_management_app/core/providers/ai/index.dart';
+import 'package:project_management_app/core/providers/ai_providers.dart';
 import 'package:project_management_app/models/chat_message_model.dart';
 import 'package:project_management_app/core/services/app_logger.dart';
 

@@ -4,7 +4,7 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:csv/csv.dart';
 import 'dart:convert';
 import 'package:project_management_app/core/models/ai_usage_record.dart';
-import 'package:project_management_app/core/providers/ai/ai_usage_provider.dart';
+import 'package:project_management_app/core/providers/ai_providers.dart';
 import 'package:project_management_app/core/repository/i_ai_usage_repository.dart';
 
 class FakeAiUsageRepository implements IAiUsageRepository {

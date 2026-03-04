@@ -530,7 +530,7 @@ Add this to a settings screen or dedicated AI dashboard widget.
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
-import '../../../core/providers/ai/ai_usage_provider.dart';
+import '../../../core/providers/ai_providers.dart';
 import '../../../generated/l10n.dart';
 
 class AiUsageDashboard extends ConsumerWidget {

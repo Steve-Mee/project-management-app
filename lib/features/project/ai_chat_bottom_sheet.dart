@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:project_management_app/core/providers/project_providers.dart';
 import 'package:project_management_app/core/providers/task_providers.dart';
-import 'package:project_management_app/core/providers/ai/index.dart' show aiChatProvider;
+import 'package:project_management_app/core/providers/ai_providers.dart' show aiChatProvider;
 import 'package:project_management_app/core/providers/auth_providers.dart';
 import 'package:project_management_app/models/project_model.dart';
 import 'package:project_management_app/models/task_model.dart';

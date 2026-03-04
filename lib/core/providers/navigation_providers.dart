@@ -1,14 +1,5 @@
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+/// Barrel file for all navigation-related providers (compatibility export).
+/// See issue 055-barrel-files-providers.md.
+library;
 
-class NavigationIndexNotifier extends Notifier<int> {
-  @override
-  int build() => 0;
-
-  void setSelectedIndex(int index) {
-    state = index;
-  }
-}
-
-final navigationIndexProvider = NotifierProvider<NavigationIndexNotifier, int>(
-  NavigationIndexNotifier.new,
-);
+export 'navigation/navigation_providers.dart';

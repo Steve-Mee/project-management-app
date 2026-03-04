@@ -1,6 +1,5 @@
-/// AI Providers Barrel File
-/// Exports all AI-related providers for easy importing
-/// Modular design for future AI provider expansions
+/// Barrel file for AI module providers.
+/// See issue 055-barrel-files-providers.md.
 library;
 
 export 'ai_chat_provider.dart';

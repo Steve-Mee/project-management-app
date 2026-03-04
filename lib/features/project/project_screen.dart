@@ -18,7 +18,7 @@ import 'package:project_management_app/features/project/pdf_export.dart';
 import 'package:project_management_app/core/providers/project_providers.dart';
 import '../../core/providers/auth_providers.dart';
 import '../../core/providers/theme_providers.dart';
-import '../../core/providers/active_viewers_provider.dart';
+import '../../core/providers/active_viewers_providers.dart';
 import '../../models/project_meta.dart';
 import '../../models/project_model.dart';
 import '../../models/project_sort.dart';

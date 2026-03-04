@@ -4,7 +4,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_spinkit/flutter_spinkit.dart';
 import 'package:project_management_app/generated/app_localizations.dart';
 // bring in only the necessary providers to avoid name clashes
-import '../../core/providers/ai/index.dart' show aiChatProvider, useProjectFilesProvider, AiChatState;
+import '../../core/providers/ai_providers.dart' show aiChatProvider, useProjectFilesProvider, AiChatState;
 import '../../core/providers/auth_providers.dart' show privacyConsentProvider;
 import '../../core/providers/project_providers.dart' show projectsProvider;
 import '../../core/services/project_file_service.dart';

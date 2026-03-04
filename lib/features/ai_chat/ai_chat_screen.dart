@@ -4,7 +4,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:project_management_app/generated/app_localizations.dart';
 import 'package:project_management_app/core/auth/permissions.dart';
 // ai providers are pulled from the general barrel to avoid duplicate definitions
-import '../../core/providers/ai/index.dart' show aiChatProvider;
+import '../../core/providers/ai_providers.dart' show aiChatProvider;
 import '../../core/providers/auth_providers.dart' show hasPermissionProvider;
 import '../../models/chat_message_model.dart';
 

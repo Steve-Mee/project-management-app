@@ -8,11 +8,6 @@ import 'package:project_management_app/generated/app_localizations.dart';
 import 'package:project_management_app/core/auth/permissions.dart';
 import 'package:project_management_app/core/repository/hive_initializer.dart';
 import 'package:project_management_app/core/providers.dart';
-import 'package:project_management_app/core/providers/ai/index.dart'
-    show useProjectFilesProvider, aiChatProvider;
-import '../../core/providers/auth_providers.dart';
-import '../../core/providers/theme_providers.dart';
-import '../../core/providers/payment_providers.dart';
 import '../../core/services/project_transfer_service.dart';
 import '../../features/dashboard/customize_dashboard_screen.dart';
 import '../../core/config/ai_config.dart' as ai_config;

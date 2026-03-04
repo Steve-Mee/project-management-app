@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:project_management_app/models/project_model.dart';
-import 'package:project_management_app/core/providers/ai/ai_chat_provider.dart' show aiChatProvider, aiHelpLevelProvider;
+import 'package:project_management_app/core/providers/ai_providers.dart' show aiChatProvider, aiHelpLevelProvider;
 import 'package:project_management_app/core/providers/project_providers.dart';
 import 'package:project_management_app/core/services/ai_planning_service.dart';
 import 'package:project_management_app/core/config/ai_config.dart' as ai_config;

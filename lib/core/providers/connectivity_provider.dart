@@ -1,6 +1,5 @@
-import 'package:connectivity_plus/connectivity_plus.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+/// Barrel file for all connectivity-related providers (compatibility export).
+/// See issue 055-barrel-files-providers.md.
+library;
 
-final connectivityProvider = StreamProvider<ConnectivityResult>((ref) => 
-  Connectivity().onConnectivityChanged.map((results) => results.isNotEmpty ? results.first : ConnectivityResult.none)
-);
+export 'connectivity/connectivity_provider.dart';
