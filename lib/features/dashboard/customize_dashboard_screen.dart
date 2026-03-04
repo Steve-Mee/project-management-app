@@ -465,12 +465,18 @@ class _CustomizeDashboardScreenState extends ConsumerState<CustomizeDashboardScr
                 child: Text(
                   label,
                   style: TextStyle(color: Theme.of(context).colorScheme.primary),
+                  maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
-              SizedBox(
-                height: 80.h,
-                child: _buildWidgetForType(type),
+              Expanded(
+                child: Center(
+                  child: Icon(
+                    _getIconForType(type),
+                    color: Theme.of(context).colorScheme.primary,
+                    size: 28.sp,
+                  ),
+                ),
               ),
             ],
           ),
@@ -491,6 +497,7 @@ class _CustomizeDashboardScreenState extends ConsumerState<CustomizeDashboardScr
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                 color: Theme.of(context).colorScheme.onSurface,
               ),
+              maxLines: 1,
               overflow: TextOverflow.ellipsis,
             ),
             SizedBox(height: 4.h),
@@ -525,12 +532,19 @@ class _CustomizeDashboardScreenState extends ConsumerState<CustomizeDashboardScr
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                   color: Theme.of(context).colorScheme.onSurface,
                 ),
+                maxLines: 1,
                 overflow: TextOverflow.ellipsis,
               ),
               SizedBox(height: 4.h),
               SizedBox(
                 height: 60.h,
-                child: _buildWidgetForType(type),
+                child: Center(
+                  child: Icon(
+                    _getIconForType(type),
+                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.75),
+                    size: 26.sp,
+                  ),
+                ),
               ),
             ],
           ),
