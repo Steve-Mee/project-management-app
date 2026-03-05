@@ -8,6 +8,16 @@
 
 Flutter-based Project Management App for tracking projects, tasks, and sub-tasks. Features AI chat integration, offline Hive storage, Supabase backend, user authentication, roles/permissions, and customizable dashboards. Supports multi-language and desktop/mobile. Built with Riverpod for state management.
 
+## CI/CD
+
+[![Flutter Test](https://github.com/Steve-Mee/project-management-app/actions/workflows/flutter_test.yml/badge.svg)](https://github.com/Steve-Mee/project-management-app/actions/workflows/flutter_test.yml)
+[![codecov](https://codecov.io/gh/Steve-Mee/project-management-app/branch/main/graph/badge.svg)](https://codecov.io/gh/Steve-Mee/project-management-app)
+
+- `flutter_test.yml`: Runs Flutter analyze, tests with coverage, and web build on pull requests and pushes to `main`.
+- `flutter_desktop.yml`: Runs matrix desktop builds for Windows, macOS, and Linux on pull requests and pushes to `main`.
+- `semantic_pr.yml`: Validates pull request titles using conventional commit semantics.
+- `release.yml`: Runs semantic-release automation on pushes to `main`.
+
 ## Screenshots
 
 ### Dashboard Light
