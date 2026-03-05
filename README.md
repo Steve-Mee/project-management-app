@@ -188,3 +188,47 @@ We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) f
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 Built with ❤️ using Flutter
+
+## App Size Analysis (Issue #065)
+
+Reference report and raw output template: [`docs/app-size-analysis.md`](docs/app-size-analysis.md)
+
+### Before/After Summary
+
+| Metric | Before | After | Delta | Delta % |
+|------|------:|------:|------:|------:|
+| APK (armeabi-v7a, MB) | `TBD` | `TBD` | `TBD` | `TBD` |
+| APK (arm64-v8a, MB) | `TBD` | `TBD` | `TBD` | `TBD` |
+| APK (x86_64, MB) | `TBD` | `TBD` | `TBD` | `TBD` |
+| Dart code total | `TBD` | `TBD` | `TBD` | `TBD` |
+| Assets total | `TBD` | `TBD` | `TBD` | `TBD` |
+| Fonts total | `TBD` | `TBD` | `TBD` | `TBD` |
+
+### Optimizations Performed
+
+- Removed unused icon package: `cupertino_icons` (no `CupertinoIcons` usage).
+- Kept Material icons only via `uses-material-design: true` (`Icons.*` is actively used).
+- Removed unused dependency: `riverpod` (kept `flutter_riverpod`).
+- Removed unused dependency: `dart_openai`.
+- Removed unused dependency: `langchain`.
+- Removed unused dependency: `langchain_openai`.
+- Removed unused dependency: `flutter_ai_agent_tool`.
+- Removed unused dependency: `flutter_local_notifications`.
+- Removed unused dependency: `timezone`.
+- Removed unused dependency: `legacy_gantt_chart`.
+- Kept only referenced asset configuration in `pubspec.yaml`: `.env`.
+- No custom font declarations were present, so no custom font bundles are included.
+
+### Final APK Size Per ABI
+
+| ABI | APK File | Final Size (Bytes) | Final Size (MB) |
+|------|------|------:|------:|
+| armeabi-v7a | `app-armeabi-v7a-release.apk` | `TBD` | `TBD` |
+| arm64-v8a | `app-arm64-v8a-release.apk` | `TBD` | `TBD` |
+| x86_64 | `app-x86_64-release.apk` | `TBD` | `TBD` |
+
+### Re-run Analysis
+
+```bash
+flutter build apk --analyze-size --split-per-abi
+```
