@@ -44,7 +44,7 @@ Last full scan: February 22, 2026 – All previous TODOs (015-038) completed. Ne
 - [ ] 053. analysis_options.yaml strenger maken (20 min)
 - [ ] 054. Alle models migreren naar freezed + json_serializable (2-3 dagen)
 - [ ] 055. Barrel files aanmaken voor providers (1 uur)
-- [ ] 056. GetWidget volledig verwijderen (2 uur)
+- [ ] 056. Legacy UI package volledig verwijderen (2 uur)
 - [ ] 057. AiService abstractie maken (1.5 uur)
 - [ ] 058. Firebase alleen voor FCM houden & documenteren (1 uur)
 - [ ] 059. Test coverage + badge toevoegen (1 dag)

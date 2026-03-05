@@ -37,8 +37,8 @@
   Vervang alle lange imports door import 'package:.../providers.dart';  
   Doe hetzelfde voor models en repositories
 
-- **056. GetWidget volledig verwijderen (2 uur)**  
-  Vervang alle GetWidget, GetMaterialApp, GetBuilder etc. door pure MaterialApp + Riverpod + custom widgets  
+- **056. Legacy UI package volledig verwijderen (2 uur)**  
+  Vervang alle legacy UI package componenten door pure MaterialApp + Riverpod + custom widgets  
   Update main.dart, themes en alle screens  
   Verwijder get: ^4.x uit pubspec
 

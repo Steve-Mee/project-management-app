@@ -4,7 +4,6 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:getwidget/getwidget.dart';
 import 'package:project_management_app/generated/app_localizations.dart';
 import 'package:project_management_app/core/auth/permissions.dart';
 import 'package:project_management_app/core/providers/project_providers.dart';
@@ -674,12 +673,32 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen>
     );
   }
 
+  Widget _buildCardLikeLegacyGf({
+    required BuildContext context,
+    required BorderRadiusGeometry borderRadius,
+    required Widget content,
+  }) {
+    return Card(
+      margin: const EdgeInsets.all(16),
+      elevation: 1,
+      shape: RoundedRectangleBorder(borderRadius: borderRadius),
+      clipBehavior: Clip.none,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          child: content,
+        ),
+      ),
+    );
+  }
+
   /// Build statistics card
   Widget _buildStatisticsCard(BuildContext context, TaskStats stats) {
     final l10n = AppLocalizations.of(context)!;
-    return GFCard(
-      border: Border.all(color: Theme.of(context).dividerColor, width: 1),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
+    return _buildCardLikeLegacyGf(
+      context: context,
+      borderRadius: BorderRadius.circular(12.r),
       content: Padding(
         padding: EdgeInsets.all(12.w),
         child: Column(
@@ -802,9 +821,9 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen>
   /// Build burndown chart placeholder
   Widget _buildBurndownChartPlaceholder(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    return GFCard(
-      border: Border.all(color: Theme.of(context).dividerColor, width: 1),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
+    return _buildCardLikeLegacyGf(
+      context: context,
+      borderRadius: BorderRadius.circular(12.r),
       content: Padding(
         padding: EdgeInsets.all(16.w),
         child: Column(
@@ -1138,9 +1157,9 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen>
 
   Widget _buildTrackingCard(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    return GFCard(
-      border: Border.all(color: Theme.of(context).dividerColor, width: 1),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
+    return _buildCardLikeLegacyGf(
+      context: context,
+      borderRadius: BorderRadius.circular(12.r),
       content: Padding(
         padding: EdgeInsets.all(12.w),
         child: Column(
@@ -1347,9 +1366,9 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen>
     final isLoading = projectsState.isLoading;
     final hasError = projectsState.hasError;
 
-    return GFCard(
-      border: Border.all(color: Theme.of(context).dividerColor, width: 1),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
+    return _buildCardLikeLegacyGf(
+      context: context,
+      borderRadius: BorderRadius.circular(12.r),
       content: Padding(
         padding: EdgeInsets.all(12.w),
         child: Column(
@@ -1407,9 +1426,9 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen>
 
     final shared = project.sharedUsers;
     final sharedGroups = project.sharedGroups;
-    return GFCard(
-      border: Border.all(color: Theme.of(context).dividerColor, width: 1),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
+    return _buildCardLikeLegacyGf(
+      context: context,
+      borderRadius: BorderRadius.circular(12.r),
       content: Padding(
         padding: EdgeInsets.all(12.w),
         child: Column(
