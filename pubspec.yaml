@@ -141,6 +141,7 @@ flutter:
     - .env
 
 scripts:
+  golden: flutter test --update-goldens
   build:web: dart run tool/build.dart web
   build:windows: dart run tool/build.dart windows
   build:macos: dart run tool/build.dart macos

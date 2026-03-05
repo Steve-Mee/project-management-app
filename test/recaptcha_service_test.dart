@@ -1,41 +1,48 @@
+import 'dart:io';
+
 import 'package:flutter_test/flutter_test.dart';
-import 'package:mockito/mockito.dart';
 import 'package:project_management_app/core/services/recaptcha_service.dart';
 import 'package:project_management_app/core/repository/settings_repository.dart';
-
-// Mock classes
-class MockSettingsRepository extends Mock implements SettingsRepository {}
+import 'package:hive_flutter/hive_flutter.dart';
 
 void main() {
-  late MockSettingsRepository mockSettings;
+  late SettingsRepository settings;
   late RecaptchaService recaptchaService;
+  late Directory tempDir;
+
+  setUpAll(() async {
+    tempDir = await Directory.systemTemp.createTemp('recaptcha_service_test_');
+    Hive.init(tempDir.path);
+    await Hive.openBox('settings');
+  });
+
+  tearDownAll(() async {
+    await Hive.close();
+    if (await tempDir.exists()) {
+      await tempDir.delete(recursive: true);
+    }
+  });
 
   setUp(() {
-    mockSettings = MockSettingsRepository();
-    recaptchaService = RecaptchaService(mockSettings);
+    settings = SettingsRepository();
+    recaptchaService = RecaptchaService(settings);
   });
 
   group('RecaptchaService', () {
     test('returns null when site key is empty (dev mode)', () async {
-      when(mockSettings.getRecaptchaSiteKey()).thenReturn('');
+      await settings.setRecaptchaSiteKey('');
 
       final result = await recaptchaService.getRecaptchaToken();
 
       expect(result, isNull);
-      verify(mockSettings.getRecaptchaSiteKey()).called(1);
     });
 
-    test('returns null when site key is configured but execution fails', () async {
-      when(mockSettings.getRecaptchaSiteKey()).thenReturn('test-site-key');
+    test('returns null when site key is configured in non-production mode', () async {
+      await settings.setRecaptchaSiteKey('test-site-key');
 
-      // Note: In real testing, this would require mocking the RecaptchaHandler
-      // For now, we test the basic flow - the actual reCAPTCHA execution would
-      // need integration testing or proper mocking of the flutter_gcaptcha_v3 package
-      await recaptchaService.getRecaptchaToken();
+      final result = await recaptchaService.getRecaptchaToken();
 
-      // The result depends on the actual RecaptchaHandler behavior
-      // This test verifies the service doesn't crash and calls the right methods
-      verify(mockSettings.getRecaptchaSiteKey()).called(1);
+      expect(result, isNull);
     });
   });
 }

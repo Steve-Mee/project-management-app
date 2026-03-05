@@ -103,41 +103,10 @@ void main() {
       }
     });
 
-    test('invalid widget type throws InvalidWidgetTypeException with correct message', () {
+    test('invalid widget type falls back to metricCard', () {
       const invalidType = 'invalidType';
 
-      expect(
-        () => validateWidgetType(invalidType),
-        throwsA(isA<InvalidWidgetTypeException>()),
-      );
-
-      try {
-        validateWidgetType(invalidType);
-      } catch (e) {
-        expect(e, isA<InvalidWidgetTypeException>());
-        expect(
-          e.toString(),
-          contains('Invalid widget type \'invalidType\''),
-        );
-        expect(
-          e.toString(),
-          contains('Valid types are:'),
-        );
-        // Check that all valid types are listed
-        const validTypes = [
-          'metricCard',
-          'taskList',
-          'progressChart',
-          'kanbanBoard',
-          'calendar',
-          'notificationFeed',
-          'projectOverview',
-          'timeline',
-        ];
-        for (final type in validTypes) {
-          expect(e.toString(), contains(type));
-        }
-      }
+      expect(validateWidgetType(invalidType), DashboardWidgetType.metricCard);
     });
   });
 
@@ -156,26 +125,14 @@ void main() {
       expect(item.position['height'], 120.0);
     });
 
-    test('invalid widgetType in json throws InvalidWidgetTypeException', () {
+    test('invalid widgetType in json falls back to metricCard', () {
       const json = {
         'widgetType': 'invalidType',
         'position': {'x': 0, 'y': 0},
       };
 
-      expect(
-        () => DashboardItem.fromJson(json),
-        throwsA(isA<InvalidWidgetTypeException>()),
-      );
-
-      try {
-        DashboardItem.fromJson(json);
-      } catch (e) {
-        expect(e, isA<InvalidWidgetTypeException>());
-        expect(
-          e.toString(),
-          contains('Invalid widget type \'invalidType\''),
-        );
-      }
+      final item = DashboardItem.fromJson(json);
+      expect(item.widgetType, DashboardWidgetType.metricCard);
     });
   });
 

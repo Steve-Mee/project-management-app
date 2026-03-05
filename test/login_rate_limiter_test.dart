@@ -1,16 +1,24 @@
+import 'dart:io';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:project_management_app/core/services/login_rate_limiter.dart';
 
 void main() {
+  late Directory tempDir;
+
   setUpAll(() async {
-    // Initialize Hive for testing (required for LoginRateLimiter)
-    await Hive.initFlutter();
+    // Initialize Hive in a temp folder to avoid plugin dependencies in tests.
+    tempDir = await Directory.systemTemp.createTemp('login_rate_limiter_test_');
+    Hive.init(tempDir.path);
     await LoginRateLimiter.instance.initialize();
   });
 
   tearDownAll(() async {
     await Hive.close();
+    if (await tempDir.exists()) {
+      await tempDir.delete(recursive: true);
+    }
   });
 
   group('LoginRateLimiter', () {

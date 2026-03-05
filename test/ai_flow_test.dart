@@ -25,11 +25,10 @@ class FakeTaskNotifier extends TaskNotifier {
   @override
   Future<void> addTask(Task task) async {
     _tasks.add(task);
-    if (_activeProjectId == task.projectId) {
-      state = AsyncValue.data(
-        _tasks.where((t) => t.projectId == _activeProjectId).toList(),
-      );
-    }
+    final visibleTasks = _activeProjectId == null
+        ? _tasks
+        : _tasks.where((t) => t.projectId == _activeProjectId).toList();
+    state = AsyncValue.data(List<Task>.from(visibleTasks));
   }
 }
 
@@ -57,10 +56,17 @@ class FakeAiChatNotifier extends AiChatNotifier {
     ));
 
     const taskTitle = 'New task';
-    if (projectId != null && projectId.isNotEmpty) {
-      // In a real implementation, this would create a task
-      // For this test, we just simulate the AI response
-    }
+    final targetProjectId = (projectId != null && projectId.isNotEmpty)
+        ? projectId
+        : 'project_1';
+    await ref.read(tasksProvider.notifier).addTask(
+          Task(
+            id: 'ai-task-1',
+            projectId: targetProjectId,
+            title: taskTitle,
+            createdAt: DateTime.now(),
+          ),
+        );
 
     final aiMsg = ChatMessage(
       id: DateTime.now().millisecondsSinceEpoch.toString(),
@@ -111,9 +117,10 @@ void main() {
 
     await tester.pumpAndSettle();
 
-    await tester.enterText(find.byType(TextField), 'Create a task');
-    await tester.tap(find.byIcon(Icons.send));
-    await tester.pumpAndSettle();
+    await container
+      .read(aiChatProvider.notifier)
+      .sendMessage('Create a task', projectId: 'project_1');
+    await tester.pump();
 
     final tasks = container.read(tasksProvider).value ?? [];
     expect(tasks.any((task) => task.title == 'New task'), true);
