@@ -7,6 +7,7 @@ import 'package:project_management_app/core/repository/models/dashboard_models.d
 import 'package:project_management_app/core/models/dashboard_types.dart';
 import 'package:project_management_app/models/project_model.dart';
 import 'package:project_management_app/models/project_requirements.dart';
+import 'dart:async';
 import 'dart:io';
 
 // ignore_for_file: prefer_const_constructors
@@ -26,8 +27,14 @@ class FakeProjectsNotifier extends ProjectsNotifier {
   FakeProjectsNotifier(this.initialState);
 
   @override
-  AsyncValue<List<ProjectModel>> build() {
-    return initialState;
+  Future<List<ProjectModel>> build() async {
+    if (initialState.hasError) {
+      throw initialState.error!;
+    }
+    if (initialState.isLoading) {
+      return Completer<List<ProjectModel>>().future;
+    }
+    return initialState.value ?? const <ProjectModel>[];
   }
 }
 

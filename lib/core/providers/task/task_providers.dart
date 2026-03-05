@@ -22,21 +22,71 @@ final taskRepositoryProvider = FutureProvider<HiveTaskRepository>((ref) async {
 class TaskNotifier extends AsyncNotifier<List<Task>> {
   String? _activeProjectId;
   final Map<String, List<Task>> _cacheByProjectId = {};
+  final Map<String, List<Task>> _fullCacheByProjectId = {};
+
+  static const int pageSize = 20;
+
+  /// Current page of tasks loaded into [state] for the active project.
+  int currentPage = 1;
+
+  /// True when there are more tasks available for the active project.
+  bool hasMore = true;
+
+  /// True while [loadMoreTasks] is appending the next page.
+  bool isLoadingMore = false;
+
+  /// Stores non-fatal pagination errors from [loadMoreTasks].
+  /// Existing task items remain visible and recoverable via retry.
+  Object? loadMoreError;
 
   @override
   Future<List<Task>> build() async {
     return [];
   }
 
+  List<Task> _firstPage(List<Task> allTasks) {
+    return allTasks.take(pageSize).toList();
+  }
+
+  List<Task> _pageSlice(List<Task> allTasks, int page) {
+    final startIndex = (page - 1) * pageSize;
+    if (startIndex >= allTasks.length) {
+      return const <Task>[];
+    }
+    return allTasks.skip(startIndex).take(pageSize).toList();
+  }
+
+  void _setPagingFromLoaded(List<Task> loaded, List<Task> allTasks, int page) {
+    currentPage = page;
+    hasMore = loaded.length < allTasks.length;
+  }
+
+  int _pageFromLoadedCount(int loadedCount) {
+    if (loadedCount <= 0) {
+      return 1;
+    }
+    return ((loadedCount - 1) ~/ pageSize) + 1;
+  }
+
   /// Load tasks for a project from Hive-backed project data.
   Future<void> loadTasks(String projectId) async {
     _activeProjectId = projectId;
     final cached = _cacheByProjectId[projectId];
+    final fullCached = _fullCacheByProjectId[projectId];
     if (cached != null) {
       state = AsyncValue.data(List<Task>.from(cached));
+      if (fullCached != null) {
+        _setPagingFromLoaded(cached, fullCached, _pageFromLoadedCount(cached.length));
+      } else {
+        currentPage = _pageFromLoadedCount(cached.length);
+        hasMore = false;
+      }
     } else {
       state = const AsyncValue.loading();
+      currentPage = 1;
+      hasMore = true;
     }
+    loadMoreError = null;
 
     try {
       final repository = await ref.read(taskRepositoryProvider.future);
@@ -67,12 +117,72 @@ class TaskNotifier extends AsyncNotifier<List<Task>> {
           }
         }
       }
-      _cacheByProjectId[projectId] = List<Task>.from(tasks);
-      state = AsyncValue.data(tasks);
+
+      // Keep a full in-memory cache, then expose only the first page for infinite scroll.
+      _fullCacheByProjectId[projectId] = List<Task>.from(tasks);
+      final firstPage = _firstPage(tasks);
+      _cacheByProjectId[projectId] = List<Task>.from(firstPage);
+      _setPagingFromLoaded(firstPage, tasks, 1);
+      state = AsyncValue.data(firstPage);
+
+      // Keep existing behavior by scheduling notifications for all project tasks.
       await _rescheduleNotifications(tasks);
     } catch (e, st) {
       state = AsyncValue.error(e, st);
     }
+  }
+
+  /// Load and append the next page of tasks for the active project.
+  ///
+  /// Uses `TaskRepository.getTasksForProject(projectId)` as source, then slices
+  /// in-memory for compatibility with the existing repository API.
+  ///
+  /// Pagination logic (issue #064):
+  /// 1. Read all project tasks from repository.
+  /// 2. Compute next page start index as `(nextPage - 1) * pageSize`.
+  /// 3. Append `skip(startIndex).take(pageSize)` to current state.
+  /// 4. Mark [hasMore] false when no next slice is available.
+  Future<void> loadMoreTasks() async {
+    final projectId = _activeProjectId;
+    if (projectId == null || isLoadingMore || !hasMore) {
+      return;
+    }
+
+    final currentItems = state.value ?? const <Task>[];
+    isLoadingMore = true;
+    loadMoreError = null;
+
+    try {
+      final repository = await ref.read(taskRepositoryProvider.future);
+      final allTasks = repository.getTasksForProject(projectId);
+      _fullCacheByProjectId[projectId] = List<Task>.from(allTasks);
+
+      final nextPage = currentPage + 1;
+      final nextItems = _pageSlice(allTasks, nextPage);
+
+      if (nextItems.isEmpty) {
+        hasMore = false;
+        return;
+      }
+
+      final combined = [...currentItems, ...nextItems];
+      _cacheByProjectId[projectId] = List<Task>.from(combined);
+      _setPagingFromLoaded(combined, allTasks, nextPage);
+      state = AsyncValue.data(combined);
+    } catch (e, st) {
+      loadMoreError = e;
+      if (currentItems.isEmpty) {
+        state = AsyncValue.error(e, st);
+      } else {
+        state = AsyncValue.data(currentItems);
+      }
+    } finally {
+      isLoadingMore = false;
+    }
+  }
+
+  void clearLoadMoreError() {
+    loadMoreError = null;
   }
 
   /// Update task status
@@ -82,16 +192,30 @@ class TaskNotifier extends AsyncNotifier<List<Task>> {
       return;
     }
 
+    final projectId = _activeProjectId;
+
     final updated = [
       for (final task in tasks)
         if (task.id == taskId) task.copyWith(status: newStatus) else task,
     ];
 
+    final updatedAll = projectId == null
+        ? updated
+        : [
+            for (final task in (_fullCacheByProjectId[projectId] ?? tasks))
+              if (task.id == taskId) task.copyWith(status: newStatus) else task,
+          ];
+
+    if (projectId != null) {
+      _fullCacheByProjectId[projectId] = List<Task>.from(updatedAll);
+      hasMore = updated.length < updatedAll.length;
+    }
+
     _updateCacheForActiveProject(updated);
     state = AsyncValue.data(updated);
 
     // Persist task list after drag-and-drop updates.
-    _persistTasks(updated);
+    _persistTasks(updatedAll);
     final updatedTask = updated.firstWhere((task) => task.id == taskId);
     AppLogger.event(
       'task_status_updated',
@@ -111,14 +235,28 @@ class TaskNotifier extends AsyncNotifier<List<Task>> {
       return;
     }
 
+    final projectId = _activeProjectId;
+
     final updated = [
       for (final task in tasks)
         if (task.id == updatedTask.id) updatedTask else task,
     ];
 
+    final updatedAll = projectId == null
+        ? updated
+        : [
+            for (final task in (_fullCacheByProjectId[projectId] ?? tasks))
+              if (task.id == updatedTask.id) updatedTask else task,
+          ];
+
+    if (projectId != null) {
+      _fullCacheByProjectId[projectId] = List<Task>.from(updatedAll);
+      hasMore = updated.length < updatedAll.length;
+    }
+
     _updateCacheForActiveProject(updated);
     state = AsyncValue.data(updated);
-    await _persistTasks(updated);
+    await _persistTasks(updatedAll);
     AppLogger.event(
       'task_updated',
       params: {
@@ -134,9 +272,20 @@ class TaskNotifier extends AsyncNotifier<List<Task>> {
   Future<void> addTask(Task task) async {
     final tasks = state.value ?? const <Task>[];
     final updated = [...tasks, task];
+    final projectId = _activeProjectId;
+    List<Task> updatedAll = updated;
+
+    if (projectId != null) {
+      final full = List<Task>.from(_fullCacheByProjectId[projectId] ?? tasks)
+        ..add(task);
+      _fullCacheByProjectId[projectId] = full;
+      updatedAll = full;
+      hasMore = updated.length < full.length;
+    }
+
     _updateCacheForActiveProject(updated);
     state = AsyncValue.data(updated);
-    await _persistTasks(updated);
+    await _persistTasks(updatedAll);
     AppLogger.event(
       'task_created',
       params: {
@@ -152,9 +301,23 @@ class TaskNotifier extends AsyncNotifier<List<Task>> {
   Future<void> removeTask(String taskId) async {
     final tasks = state.value ?? const <Task>[];
     final updated = tasks.where((task) => task.id != taskId).toList();
+    final projectId = _activeProjectId;
+    List<Task> updatedAll = updated;
+
+    if (projectId != null) {
+      final full = List<Task>.from(_fullCacheByProjectId[projectId] ?? const <Task>[])
+        ..removeWhere((task) => task.id == taskId);
+      _fullCacheByProjectId[projectId] = full;
+      updatedAll = full;
+      hasMore = updated.length < full.length;
+      if (updated.length >= full.length) {
+        hasMore = false;
+      }
+    }
+
     _updateCacheForActiveProject(updated);
     state = AsyncValue.data(updated);
-    await _persistTasks(updated);
+    await _persistTasks(updatedAll);
     AppLogger.event(
       'task_deleted',
       params: {
@@ -240,6 +403,8 @@ class TaskNotifier extends AsyncNotifier<List<Task>> {
     final tasks = state.value;
     if (tasks == null) return;
 
+    final projectId = _activeProjectId;
+
     final updated = [
       for (final task in tasks)
         if (task.id == taskId)
@@ -248,15 +413,32 @@ class TaskNotifier extends AsyncNotifier<List<Task>> {
           task,
     ];
 
+    final updatedAll = projectId == null
+        ? updated
+        : [
+            for (final task in (_fullCacheByProjectId[projectId] ?? tasks))
+              if (task.id == taskId)
+                task.copyWith(subTaskIds: [...task.subTaskIds, ...subTaskIds])
+              else
+                task,
+          ];
+
+    if (projectId != null) {
+      _fullCacheByProjectId[projectId] = List<Task>.from(updatedAll);
+      hasMore = updated.length < updatedAll.length;
+    }
+
     _updateCacheForActiveProject(updated);
     state = AsyncValue.data(updated);
-    await _persistTasks(updated);
+    await _persistTasks(updatedAll);
   }
 
   /// Remove sub-task from task
   Future<void> removeSubTaskFromTask(String taskId, String subTaskId) async {
     final tasks = state.value;
     if (tasks == null) return;
+
+    final projectId = _activeProjectId;
 
     final updated = [
       for (final task in tasks)
@@ -266,9 +448,24 @@ class TaskNotifier extends AsyncNotifier<List<Task>> {
           task,
     ];
 
+    final updatedAll = projectId == null
+        ? updated
+        : [
+            for (final task in (_fullCacheByProjectId[projectId] ?? tasks))
+              if (task.id == taskId)
+                task.copyWith(subTaskIds: task.subTaskIds.where((id) => id != subTaskId).toList())
+              else
+                task,
+          ];
+
+    if (projectId != null) {
+      _fullCacheByProjectId[projectId] = List<Task>.from(updatedAll);
+      hasMore = updated.length < updatedAll.length;
+    }
+
     _updateCacheForActiveProject(updated);
     state = AsyncValue.data(updated);
-    await _persistTasks(updated);
+    await _persistTasks(updatedAll);
   }
 }
 

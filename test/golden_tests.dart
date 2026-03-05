@@ -18,9 +18,7 @@ class FakeProjectsNotifier extends ProjectsNotifier {
   FakeProjectsNotifier(this.projects);
 
   @override
-  AsyncValue<List<ProjectModel>> build() {
-    return AsyncValue.data(projects);
-  }
+  Future<List<ProjectModel>> build() async => projects;
 }
 
 class FakeTaskRepository extends HiveTaskRepository {

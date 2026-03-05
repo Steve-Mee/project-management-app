@@ -38,17 +38,21 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen>
   late TabController _tabController;
   final ProjectFileService _fileService = ProjectFileService();
   final TextEditingController _taskSearchController = TextEditingController();
+  final Map<TaskStatus, ScrollController> _kanbanScrollControllers = {};
   TaskStatus? _taskStatusFilter;
   Timer? _trackingTimer;
   int _trackedSeconds = 0;
   UrgencyLevel _urgency = UrgencyLevel.medium;
   bool _trackingPaused = false;
+  bool _taskLoadRequestInFlight = false;
+  Timer? _taskScrollDebounce;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _tabController = TabController(length: 3, vsync: this);
+    _initializeKanbanScrollControllers();
     // Load tasks for the project
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(tasksProvider.notifier).loadTasks(widget.projectId);
@@ -56,11 +60,75 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen>
     });
   }
 
+  void _initializeKanbanScrollControllers() {
+    final statuses = [
+      TaskStatus.todo,
+      TaskStatus.inProgress,
+      TaskStatus.review,
+      TaskStatus.done,
+    ];
+
+    for (final status in statuses) {
+      final controller = ScrollController();
+      controller.addListener(() => _onKanbanColumnScroll(controller));
+      _kanbanScrollControllers[status] = controller;
+    }
+  }
+
+  void _onKanbanColumnScroll(ScrollController controller) {
+    if (!controller.hasClients) {
+      return;
+    }
+
+    final position = controller.position;
+    final pixelsFromBottom = position.maxScrollExtent - position.pixels;
+
+    // Load before the absolute bottom to keep scrolling smooth.
+    if (pixelsFromBottom < 200) {
+      if (_taskScrollDebounce?.isActive ?? false) {
+        return;
+      }
+      _taskScrollDebounce = Timer(const Duration(milliseconds: 180), _loadMoreTasks);
+    }
+  }
+
+  Future<void> _loadMoreTasks() async {
+    if (_taskLoadRequestInFlight) {
+      return;
+    }
+
+    final notifier = ref.read(tasksProvider.notifier);
+    if (notifier.isLoadingMore || !notifier.hasMore) {
+      return;
+    }
+
+    notifier.clearLoadMoreError();
+
+    _taskLoadRequestInFlight = true;
+    final loadFuture = notifier.loadMoreTasks();
+
+    if (mounted) {
+      setState(() {});
+    }
+
+    await loadFuture;
+
+    if (mounted) {
+      setState(() {});
+    }
+    _taskLoadRequestInFlight = false;
+  }
+
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _trackingTimer?.cancel();
+    _taskScrollDebounce?.cancel();
     _persistTrackedTime();
+    for (final controller in _kanbanScrollControllers.values) {
+      controller.dispose();
+    }
+    _kanbanScrollControllers.clear();
     _tabController.dispose();
     _taskSearchController.dispose();
     super.dispose();
@@ -409,6 +477,10 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen>
     double? columnWidth,
   ) {
     final l10n = AppLocalizations.of(context)!;
+    final tasksNotifier = ref.read(tasksProvider.notifier);
+    final isLoadingMore = tasksNotifier.isLoadingMore;
+    final hasMore = tasksNotifier.hasMore;
+    final loadMoreError = tasksNotifier.loadMoreError;
     final filteredTasks = _filterTasks(tasks);
     final statusColors = {
       TaskStatus.todo: Colors.grey,
@@ -495,9 +567,63 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen>
                 },
                 builder: (context, candidateData, rejectedData) {
                   return ListView.builder(
+                    controller: _kanbanScrollControllers[status],
                     padding: EdgeInsets.all(12.w),
-                    itemCount: filteredTasks.length,
+                    itemCount: filteredTasks.length + 1,
                     itemBuilder: (context, index) {
+                      if (index == filteredTasks.length) {
+                        if (isLoadingMore) {
+                          return const Padding(
+                            padding: EdgeInsets.symmetric(vertical: 12),
+                            child: Center(child: CircularProgressIndicator()),
+                          );
+                        }
+
+                        if (loadMoreError != null) {
+                          return Padding(
+                            padding: EdgeInsets.symmetric(vertical: 12.h),
+                            child: Column(
+                              children: [
+                                Text(
+                                  'Could not load more tasks',
+                                  style: Theme.of(context).textTheme.bodySmall
+                                      ?.copyWith(
+                                        color: Theme.of(context)
+                                            .colorScheme
+                                            .error,
+                                      ),
+                                ),
+                                const SizedBox(height: 8),
+                                TextButton.icon(
+                                  onPressed: _loadMoreTasks,
+                                  icon: const Icon(Icons.refresh, size: 18),
+                                  label: const Text('Retry'),
+                                ),
+                              ],
+                            ),
+                          );
+                        }
+
+                        if (!hasMore) {
+                          return Padding(
+                            padding: EdgeInsets.symmetric(vertical: 12.h),
+                            child: Center(
+                              child: Text(
+                                'End reached',
+                                style: Theme.of(context).textTheme.bodySmall
+                                    ?.copyWith(
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .onSurfaceVariant,
+                                    ),
+                              ),
+                            ),
+                          );
+                        }
+
+                        return const SizedBox.shrink();
+                      }
+
                       final task = filteredTasks[index];
                       return Padding(
                         padding: EdgeInsets.only(bottom: 8.h),

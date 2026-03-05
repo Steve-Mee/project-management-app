@@ -67,7 +67,7 @@ final projectRepositoryProvider = Provider<repo.IProjectRepository>((ref) {
 /// (kept for backward compatibility)
 /// Provider for projects with caching and TTL
 /// Uses AsyncValue.guard() for robust error handling
-final projectsProvider = NotifierProvider<ProjectsNotifier, AsyncValue<List<ProjectModel>>>(
+final projectsProvider = AsyncNotifierProvider<ProjectsNotifier, List<ProjectModel>>(
   ProjectsNotifier.new,
 );
 
@@ -301,32 +301,113 @@ class ProjectPaginationParams {
   });
 }
 
-/// Notifier for managing projects with caching and error handling
-class ProjectsNotifier extends Notifier<AsyncValue<List<ProjectModel>>> {
+/// Notifier for managing projects with caching, pagination, and error handling.
+///
+/// Notes:
+/// - Uses [IProjectRepository.getAllProjects] as the source of truth.
+/// - Paginates in-memory for backward compatibility with existing repository APIs.
+/// - State remains `AsyncValue<List<ProjectModel>>` via `AsyncNotifier<List<ProjectModel>>`.
+class ProjectsNotifier extends AsyncNotifier<List<ProjectModel>> {
   late repo.IProjectRepository _repository;
   _CacheEntry<List<ProjectModel>>? _cache;
   static const _cacheTtl = Duration(minutes: 5); // Configurable TTL
+  static const int pageSize = 20;
+
+  /// Current page in the in-memory dataset (starts at 1).
+  int currentPage = 1;
+
+  /// True when more pages are available.
+  bool hasMore = true;
+
+  /// True while [loadMoreProjects] is appending data.
+  bool isLoadingMore = false;
+
+  /// Stores non-fatal pagination errors from [loadMoreProjects].
+  ///
+  /// We keep already-loaded items in state and surface this separately so
+  /// the UI can show a retry affordance at the list footer.
+  Object? loadMoreError;
 
   @override
-  AsyncValue<List<ProjectModel>> build() {
+  Future<List<ProjectModel>> build() async {
     _repository = ref.watch(projectRepositoryProvider);
-    // Load from cache if available and not expired
-    if (_cache != null && !_cache!.isExpired) {
-      return AsyncValue.data(_cache!.data);
-    }
-    // Otherwise load fresh data asynchronously
-    Future.microtask(() async {
-      state = await AsyncValue.guard(_loadProjects);
-    });
-    return const AsyncValue.loading();
+    return _loadInitialPage();
   }
 
-  /// Load projects with error handling
+  /// Loads all projects and updates cache.
   Future<List<ProjectModel>> _loadProjects() async {
     final projects = await _repository.getAllProjects();
-    // Update cache
     _cache = _CacheEntry(projects, DateTime.now(), _cacheTtl);
     return projects;
+  }
+
+  /// Resets pagination and loads page 1.
+  Future<List<ProjectModel>> _loadInitialPage() async {
+    final allProjects = (_cache != null && !_cache!.isExpired)
+        ? _cache!.data
+        : await _loadProjects();
+
+    currentPage = 1;
+    isLoadingMore = false;
+    loadMoreError = null;
+
+    final firstPage = allProjects.take(pageSize).toList();
+    hasMore = allProjects.length > firstPage.length;
+    return firstPage;
+  }
+
+  /// Loads and appends the next page for infinite scroll.
+  ///
+  /// Pagination logic (issue #064):
+  /// 1. Fetch source list from [IProjectRepository.getAllProjects].
+  /// 2. Compute next page start index as `(nextPage - 1) * pageSize`.
+  /// 3. Append `skip(startIndex).take(pageSize)` to existing state.
+  /// 4. Set [hasMore] to false when there are no more items.
+  ///
+  /// No-op when already loading or when [hasMore] is false.
+  Future<void> loadMoreProjects() async {
+    if (isLoadingMore || !hasMore) {
+      return;
+    }
+
+    final currentItems = state.valueOrNull ?? const <ProjectModel>[];
+    isLoadingMore = true;
+    loadMoreError = null;
+
+    try {
+      final allProjects = (_cache != null && !_cache!.isExpired)
+          ? _cache!.data
+          : await _loadProjects();
+
+      final nextPage = currentPage + 1;
+      final startIndex = (nextPage - 1) * pageSize;
+
+      if (startIndex >= allProjects.length) {
+        hasMore = false;
+        return;
+      }
+
+      final nextItems = allProjects.skip(startIndex).take(pageSize).toList();
+      final combined = [...currentItems, ...nextItems];
+
+      currentPage = nextPage;
+      hasMore = combined.length < allProjects.length;
+      state = AsyncValue.data(combined);
+    } catch (e, st) {
+      // Keep rendered items and surface load-more errors separately.
+      loadMoreError = e;
+      if (currentItems.isEmpty) {
+        state = AsyncValue.error(e, st);
+      } else {
+        state = AsyncValue.data(currentItems);
+      }
+    } finally {
+      isLoadingMore = false;
+    }
+  }
+
+  void clearLoadMoreError() {
+    loadMoreError = null;
   }
 
   Future<void> addProject(ProjectModel project) async {
@@ -352,7 +433,7 @@ class ProjectsNotifier extends Notifier<AsyncValue<List<ProjectModel>>> {
           'status': project.status,
         },
       );
-      return _loadProjects();
+      return _loadInitialPage();
     });
   }
 
@@ -374,7 +455,7 @@ class ProjectsNotifier extends Notifier<AsyncValue<List<ProjectModel>>> {
         'project_progress_updated',
         params: {'id': projectId, 'progress': newProgress},
       );
-      return _loadProjects();
+      return _loadInitialPage();
     });
   }
 
@@ -393,7 +474,7 @@ class ProjectsNotifier extends Notifier<AsyncValue<List<ProjectModel>>> {
         metadata: {'action': 'update_directory_path'},
       );
       AppLogger.event('project_directory_updated', params: {'id': projectId});
-      return _loadProjects();
+      return _loadInitialPage();
     });
   }
 
@@ -426,14 +507,16 @@ class ProjectsNotifier extends Notifier<AsyncValue<List<ProjectModel>>> {
           'change_description': changeDescription,
         },
       );
-      return _loadProjects();
+      return _loadInitialPage();
     });
   }
 
   /// Refresh projects (bypasses cache)
   Future<void> refresh() async {
+    _cache = null;
+    loadMoreError = null;
     state = const AsyncValue.loading();
-    state = await AsyncValue.guard(_loadProjects);
+    state = await AsyncValue.guard(_loadInitialPage);
   }
 
   @Deprecated('Use projectByIdProvider(id) family provider instead. It provides better performance by only loading the specific project when needed and auto-disposing when no longer watched. Migration: replace ref.read(projectsProvider.notifier).getProjectById(id) with ref.watch(projectByIdProvider(id)) or ref.read(projectByIdProvider(id).future)')
@@ -459,7 +542,7 @@ class ProjectsNotifier extends Notifier<AsyncValue<List<ProjectModel>>> {
       ) ?? 'system';
       await _repository.deleteProject(projectId, userId: userId);
       AppLogger.event('project_deleted', params: {'id': projectId});
-      return _loadProjects();
+      return _loadInitialPage();
     });
   }
 
@@ -478,7 +561,7 @@ class ProjectsNotifier extends Notifier<AsyncValue<List<ProjectModel>>> {
         metadata: {'action': 'update_tasks'},
       );
       AppLogger.event('project_tasks_updated', params: {'id': projectId});
-      return _loadProjects();
+      return _loadInitialPage();
     });
   }
 
@@ -497,7 +580,7 @@ class ProjectsNotifier extends Notifier<AsyncValue<List<ProjectModel>>> {
         metadata: {'action': 'update_plan_json'},
       );
       AppLogger.event('project_plan_updated', params: {'id': projectId});
-      return _loadProjects();
+      return _loadInitialPage();
     });
   }
 }

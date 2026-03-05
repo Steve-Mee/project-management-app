@@ -1,5 +1,7 @@
 // EXAMPLE WIDGETS - Ready-to-use widgets for project management UI
 
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:project_management_app/core/providers/project_providers.dart';
@@ -11,41 +13,174 @@ import 'package:project_management_app/models/project_model.dart';
 // 1. PROJECT LIST WIDGET
 // ============================================================================
 
-class ProjectListWidget extends ConsumerWidget {
+class ProjectListWidget extends ConsumerStatefulWidget {
   const ProjectListWidget({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final projectsAsync = ref.watch(projectsPaginatedProvider(const ProjectPaginationParams(page: 1, limit: 100)));
+  ConsumerState<ProjectListWidget> createState() => _ProjectListWidgetState();
+}
+
+class _ProjectListWidgetState extends ConsumerState<ProjectListWidget> {
+  final ScrollController _scrollController = ScrollController();
+  bool _isRequestInFlight = false;
+  Timer? _scrollDebounce;
+
+  @override
+  void initState() {
+    super.initState();
+    _scrollController.addListener(_onScroll);
+  }
+
+  @override
+  void dispose() {
+    _scrollDebounce?.cancel();
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _onScroll() {
+    if (!_scrollController.hasClients) {
+      return;
+    }
+
+    final position = _scrollController.position;
+    final pixelsFromBottom = position.maxScrollExtent - position.pixels;
+
+    // Trigger loading before the user reaches the end for a smoother UX.
+    if (pixelsFromBottom < 200) {
+      if (_scrollDebounce?.isActive ?? false) {
+        return;
+      }
+      _scrollDebounce = Timer(const Duration(milliseconds: 180), _loadMoreProjects);
+    }
+  }
+
+  Future<void> _loadMoreProjects() async {
+    if (_isRequestInFlight) {
+      return;
+    }
+
+    final notifier = ref.read(projectsProvider.notifier);
+    if (notifier.isLoadingMore || !notifier.hasMore) {
+      return;
+    }
+
+    notifier.clearLoadMoreError();
+
+    _isRequestInFlight = true;
+    final loadFuture = notifier.loadMoreProjects();
+
+    if (mounted) {
+      setState(() {});
+    }
+
+    await loadFuture;
+
+    if (mounted) {
+      setState(() {});
+    }
+    _isRequestInFlight = false;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final projectsAsync = ref.watch(projectsProvider);
+    final projectsNotifier = ref.read(projectsProvider.notifier);
+    final isLoadingMore = projectsNotifier.isLoadingMore;
+    final hasMore = projectsNotifier.hasMore;
+    final loadMoreError = projectsNotifier.loadMoreError;
 
     return projectsAsync.when(
       data: (projects) {
         if (projects.isEmpty) {
-          return Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
+          return RefreshIndicator(
+            onRefresh: () => ref.read(projectsProvider.notifier).refresh(),
+            child: ListView(
+              physics: const AlwaysScrollableScrollPhysics(),
               children: [
-                const Icon(Icons.inbox, size: 64, color: Colors.grey),
-                const SizedBox(height: 16),
-                const Text('No projects yet'),
-                const SizedBox(height: 16),
-                ElevatedButton(
-                  onPressed: () {
-                    // Navigate to create project screen
-                  },
-                  child: const Text('Create First Project'),
+                SizedBox(
+                  height: MediaQuery.of(context).size.height * 0.7,
+                  child: Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(Icons.inbox, size: 64, color: Colors.grey),
+                        const SizedBox(height: 16),
+                        const Text('No projects yet'),
+                        const SizedBox(height: 16),
+                        ElevatedButton(
+                          onPressed: () {
+                            // Navigate to create project screen
+                          },
+                          child: const Text('Create First Project'),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
               ],
             ),
           );
         }
 
-        return ListView.builder(
-          padding: const EdgeInsets.all(8),
-          itemCount: projects.length,
-          itemBuilder: (context, index) {
-            return ProjectCard(project: projects[index]);
-          },
+        return RefreshIndicator(
+          onRefresh: () => ref.read(projectsProvider.notifier).refresh(),
+          child: ListView.builder(
+            controller: _scrollController,
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: const EdgeInsets.all(8),
+            itemCount: projects.length + 1,
+            itemBuilder: (context, index) {
+              if (index == projects.length) {
+                if (isLoadingMore) {
+                  return const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 16),
+                    child: Center(child: CircularProgressIndicator()),
+                  );
+                }
+
+                if (loadMoreError != null) {
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    child: Column(
+                      children: [
+                        Text(
+                          'Could not load more projects',
+                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                color: Theme.of(context).colorScheme.error,
+                              ),
+                        ),
+                        const SizedBox(height: 8),
+                        TextButton.icon(
+                          onPressed: _loadMoreProjects,
+                          icon: const Icon(Icons.refresh, size: 18),
+                          label: const Text('Retry'),
+                        ),
+                      ],
+                    ),
+                  );
+                }
+
+                if (!hasMore) {
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    child: Center(
+                      child: Text(
+                        'End reached',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: Theme.of(context).colorScheme.onSurfaceVariant,
+                            ),
+                      ),
+                    ),
+                  );
+                }
+
+                return const SizedBox.shrink();
+              }
+
+              return ProjectCard(project: projects[index]);
+            },
+          ),
         );
       },
       loading: () => const Center(child: CircularProgressIndicator()),
@@ -59,7 +194,7 @@ class ProjectListWidget extends ConsumerWidget {
               Text('Error loading projects: $error'),
               const SizedBox(height: 16),
               ElevatedButton(
-                onPressed: () => ref.refresh(projectsProvider),
+                onPressed: () => ref.invalidate(projectsProvider),
                 child: const Text('Retry'),
               ),
             ],

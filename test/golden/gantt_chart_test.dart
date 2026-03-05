@@ -19,7 +19,7 @@ class _FakeProjectsNotifier extends ProjectsNotifier {
   final List<ProjectModel> projects;
 
   @override
-  AsyncValue<List<ProjectModel>> build() => AsyncValue.data(projects);
+  Future<List<ProjectModel>> build() async => projects;
 }
 
 class _FakeTaskRepository extends HiveTaskRepository {
