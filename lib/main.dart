@@ -25,6 +25,7 @@ import 'package:project_management_app/core/providers.dart';
 import 'package:project_management_app/core/services/cloud_sync_service.dart';
 import 'package:project_management_app/core/repository/impl/hive_project_repository.dart';
 import 'core/routes.dart';
+import 'core/widgets/offline_indicator.dart';
 import 'core/repository/hive_initializer.dart';
 import 'core/repository/encrypted_hive_box.dart';
 import 'core/services/app_logger.dart';
@@ -551,11 +552,14 @@ class ResponsiveNavigationLayout extends ConsumerWidget {
                     child: Column(
                       children: [
                         // App bar with theme toggle
-                        AppBar(
-                          title: Text(l10n.appTitle),
-                          centerTitle: true,
-                          elevation: 0,
-                          actions: _buildAppActions(context, ref),
+                        OfflineIndicatorAppBar(
+                          // Keep global indicator above the desktop app bar.
+                          appBar: AppBar(
+                            title: Text(l10n.appTitle),
+                            centerTitle: true,
+                            elevation: 0,
+                            actions: _buildAppActions(context, ref),
+                          ),
                         ),
                         Expanded(child: child),
                       ],
@@ -568,10 +572,13 @@ class ResponsiveNavigationLayout extends ConsumerWidget {
         } else {
           // Mobile layout with BottomNavigationBar
           return Scaffold(
-            appBar: AppBar(
-              title: Text(l10n.appTitle),
-              centerTitle: true,
-              actions: _buildAppActions(context, ref),
+            appBar: OfflineIndicatorAppBar(
+              // Global status bar appears above the route-level app bar.
+              appBar: AppBar(
+                title: Text(l10n.appTitle),
+                centerTitle: true,
+                actions: _buildAppActions(context, ref),
+              ),
             ),
             body: child,
             bottomNavigationBar: BottomNavigationBar(

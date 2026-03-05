@@ -16,6 +16,7 @@ import '../features/ai_chat/ai_chat_screen.dart';
 import '../features/settings/settings_screen.dart';
 import '../features/admin/admin_screen.dart';
 import '../features/ai_usage/ai_usage_screen.dart';
+import 'widgets/offline_indicator.dart';
 import 'providers/auth_providers.dart';
 import 'providers/theme_providers.dart';
 import 'auth/permissions.dart';
@@ -119,7 +120,9 @@ class AppRoutes {
       
       // Error route handler
       errorBuilder: (context, state) => Scaffold(
-        appBar: AppBar(title: const Text('Error')),
+        appBar: OfflineIndicatorAppBar(
+          appBar: AppBar(title: const Text('Error')),
+        ),
         body: Center(
           child: Text('Route not found: ${state.uri.toString()}'),
         ),
@@ -246,14 +249,17 @@ class ResponsiveNavigationLayout extends ConsumerWidget {
         if (isDesktop) {
           // Desktop layout with sidebar (NavigationRail)
           return Scaffold(
-            appBar: AppBar(
-              title: Text(l10n.appTitle),
-              actions: _buildAppActions(context),
-              bottom: const PreferredSize(
-                preferredSize: Size.fromHeight(56),
-                child: Padding(
-                  padding: EdgeInsets.fromLTRB(16, 0, 16, 12),
-                  child: _GlobalSearchField(),
+            appBar: OfflineIndicatorAppBar(
+              // Keep indicator globally visible above desktop app bars.
+              appBar: AppBar(
+                title: Text(l10n.appTitle),
+                actions: _buildAppActions(context),
+                bottom: const PreferredSize(
+                  preferredSize: Size.fromHeight(56),
+                  child: Padding(
+                    padding: EdgeInsets.fromLTRB(16, 0, 16, 12),
+                    child: _GlobalSearchField(),
+                  ),
                 ),
               ),
             ),
@@ -282,14 +288,17 @@ class ResponsiveNavigationLayout extends ConsumerWidget {
         } else {
           // Mobile layout with Drawer
           return Scaffold(
-            appBar: AppBar(
-              title: Text(l10n.appTitle),
-              actions: _buildAppActions(context),
-              bottom: const PreferredSize(
-                preferredSize: Size.fromHeight(56),
-                child: Padding(
-                  padding: EdgeInsets.fromLTRB(16, 0, 16, 12),
-                  child: _GlobalSearchField(),
+            appBar: OfflineIndicatorAppBar(
+              // Keep indicator globally visible above mobile app bars.
+              appBar: AppBar(
+                title: Text(l10n.appTitle),
+                actions: _buildAppActions(context),
+                bottom: const PreferredSize(
+                  preferredSize: Size.fromHeight(56),
+                  child: Padding(
+                    padding: EdgeInsets.fromLTRB(16, 0, 16, 12),
+                    child: _GlobalSearchField(),
+                  ),
                 ),
               ),
             ),

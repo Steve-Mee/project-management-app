@@ -5,6 +5,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:project_management_app/core/providers/project_providers.dart';
+import 'package:project_management_app/core/widgets/offline_indicator.dart';
 import 'package:project_management_app/models/project_model.dart';
 
 // ignore_for_file: prefer_const_constructors
@@ -440,7 +441,9 @@ class ProjectDetailsWidget extends ConsumerWidget {
     return projectAsync.when(
       data: (project) {
         return Scaffold(
-          appBar: AppBar(title: Text(project.name)),
+          appBar: OfflineIndicatorAppBar(
+            appBar: AppBar(title: Text(project.name)),
+          ),
           body: SingleChildScrollView(
             padding: const EdgeInsets.all(16),
             child: Column(

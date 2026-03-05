@@ -16,3 +16,4 @@ export 'theme_providers.dart';
 export 'navigation_providers.dart';
 export 'active_viewers_provider.dart';
 export 'connectivity_provider.dart';
+export 'offline_status_provider.dart';

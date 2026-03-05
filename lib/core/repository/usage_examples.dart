@@ -8,6 +8,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:project_management_app/core/providers/project_providers.dart';
+import 'package:project_management_app/core/widgets/offline_indicator.dart';
 import 'package:project_management_app/models/project_model.dart';
 
 class ProjectListWidget extends ConsumerStatefulWidget {
@@ -166,7 +167,9 @@ class _ProjectManagementPageState extends ConsumerState<ProjectManagementPage> {
     final projectsAsync = ref.watch(projectsPaginatedProvider(const ProjectPaginationParams(page: 1, limit: 100)));
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Projects')),
+      appBar: const OfflineIndicatorAppBar(
+        appBar: AppBar(title: Text('Projects')),
+      ),
       body: projectsAsync.when(
         data: (projects) {
           if (projects.isEmpty) {
