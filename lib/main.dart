@@ -34,6 +34,7 @@ import 'core/services/login_rate_limiter.dart';
 import 'core/services/recaptcha_config.dart';
 import 'core/services/project_invitation_service.dart';
 import 'core/services/supabase_connection_diagnostics.dart';
+import 'core/widgets/onboarding_wizard.dart';
 import 'features/auth/login_screen.dart';
 import 'models/project_model.dart';
 import 'models/task_model.dart';
@@ -164,7 +165,7 @@ void main() async {
         runApp(
           UncontrolledProviderScope(
             container: container,
-            child: const ProjectsInitializer(child: MyApp()),
+            child: const _AppBootstrapGate(child: MyApp()),
           ),
         );
       },
@@ -175,9 +176,98 @@ void main() async {
   runApp(
     UncontrolledProviderScope(
       container: container,
-      child: const ProjectsInitializer(child: MyApp()),
+      child: const _AppBootstrapGate(child: MyApp()),
     ),
   );
+}
+
+/// Global startup gate for issue #067 onboarding flow.
+///
+/// The onboarding wizard is shown before [ProjectsInitializer] on first launch.
+/// After completion, the persisted shared_preferences flag prevents it from
+/// appearing again and we transition smoothly into the main app.
+class _AppBootstrapGate extends ConsumerStatefulWidget {
+  final Widget child;
+
+  const _AppBootstrapGate({required this.child});
+
+  @override
+  ConsumerState<_AppBootstrapGate> createState() => _AppBootstrapGateState();
+}
+
+class _AppBootstrapGateState extends ConsumerState<_AppBootstrapGate> {
+  bool _isResolving = true;
+  bool _showOnboarding = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _resolveFirstLaunch();
+  }
+
+  Future<void> _resolveFirstLaunch() async {
+    final isFirstLaunch =
+        await ref.read(onboardingProvider.notifier).isFirstLaunch();
+
+    if (!mounted) {
+      return;
+    }
+
+    setState(() {
+      _showOnboarding = isFirstLaunch;
+      _isResolving = false;
+    });
+  }
+
+  void _handleOnboardingCompleted() {
+    if (!mounted) {
+      return;
+    }
+
+    setState(() {
+      _showOnboarding = false;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_isResolving) {
+      return const MaterialApp(
+        debugShowCheckedModeBanner: false,
+        home: Scaffold(
+          body: Center(child: CircularProgressIndicator()),
+        ),
+      );
+    }
+
+    final currentChild = _showOnboarding
+        ? MaterialApp(
+            debugShowCheckedModeBanner: false,
+            theme: AppTheme.lightTheme(),
+            darkTheme: AppTheme.darkTheme(),
+            home: OnboardingWizard(onCompleted: _handleOnboardingCompleted),
+          )
+        : ProjectsInitializer(child: widget.child);
+
+    return AnimatedSwitcher(
+      duration: const Duration(milliseconds: 350),
+      switchInCurve: Curves.easeOutCubic,
+      switchOutCurve: Curves.easeInCubic,
+      transitionBuilder: (child, animation) {
+        return FadeTransition(
+          opacity: animation,
+          child: ScaleTransition(
+            scale: Tween<double>(begin: 0.985, end: 1.0).animate(animation),
+            child: child,
+          ),
+        );
+      },
+      child: KeyedSubtree(
+        key: ValueKey(_showOnboarding ? 'onboarding' : 'main-app'),
+        child: currentChild,
+      ),
+    );
+  }
 }
 
 class _AppLifecycleHandler extends WidgetsBindingObserver {

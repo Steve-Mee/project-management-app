@@ -167,7 +167,7 @@ class _ProjectManagementPageState extends ConsumerState<ProjectManagementPage> {
     final projectsAsync = ref.watch(projectsPaginatedProvider(const ProjectPaginationParams(page: 1, limit: 100)));
 
     return Scaffold(
-      appBar: const OfflineIndicatorAppBar(
+      appBar: OfflineIndicatorAppBar(
         appBar: AppBar(title: Text('Projects')),
       ),
       body: projectsAsync.when(
