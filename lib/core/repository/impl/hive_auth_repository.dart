@@ -8,6 +8,7 @@ import 'package:project_management_app/core/auth/role_models.dart';
 import 'package:project_management_app/core/services/login_rate_limiter.dart';
 import 'package:project_management_app/core/auth/auth_user.dart';
 import 'package:project_management_app/core/repository/i_auth_repository.dart';
+import 'package:project_management_app/core/repository/encrypted_hive_box.dart';
 
 enum Role {
   admin,
@@ -67,7 +68,10 @@ class HiveAuthRepository implements IAuthRepository {
   Future<void> initialize() async {
     await Hive.initFlutter();
     if (!Hive.isBoxOpen(_boxName)) {
-      await Hive.openBox(_boxName);
+      await EncryptedHiveBox(
+        boxName: _boxName,
+        encryptionKey: 'hive_encryption_key_auth',
+      ).open();
     }
     await _seedRolesIfEmpty();
     await _seedDefaultsIfEmpty();

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import '../../models/ai_rate_limits_config.dart';
 import '../../services/app_logger.dart';
+import 'package:project_management_app/core/repository/encrypted_hive_box.dart';
 import '../i_settings_repository.dart';
 import '../models/dashboard_models.dart';
 
@@ -35,7 +36,10 @@ class HiveSettingsRepository implements ISettingsRepository {
   Future<void> initialize() async {
     await Hive.initFlutter();
     if (!Hive.isBoxOpen(_boxName)) {
-      await Hive.openBox(_boxName);
+      await EncryptedHiveBox(
+        boxName: _boxName,
+        encryptionKey: 'hive_encryption_key_settings',
+      ).open();
     }
   }
 

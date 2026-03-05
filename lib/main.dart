@@ -26,6 +26,7 @@ import 'package:project_management_app/core/services/cloud_sync_service.dart';
 import 'package:project_management_app/core/repository/impl/hive_project_repository.dart';
 import 'core/routes.dart';
 import 'core/repository/hive_initializer.dart';
+import 'core/repository/encrypted_hive_box.dart';
 import 'core/services/app_logger.dart';
 import 'core/services/ab_testing_service.dart';
 import 'core/services/login_rate_limiter.dart';
@@ -122,8 +123,18 @@ void main() async {
   Hive.registerAdapter<CommentModel>(CommentModelAdapter());
   registerSafeMigratedModelAdapters();
   await Hive.initFlutter();
-  await Hive.openBox('settings');
-  await Hive.openBox('auth');
+  await EncryptedHiveBox(
+    boxName: 'settings',
+    encryptionKey: 'hive_encryption_key_settings',
+  ).open();
+  await EncryptedHiveBox(
+    boxName: 'auth',
+    encryptionKey: 'hive_encryption_key_auth',
+  ).open();
+  await EncryptedHiveBox(
+    boxName: 'local_tokens',
+    encryptionKey: 'hive_encryption_key_local_tokens',
+  ).open();
   await Hive.openBox('groups');
   await Hive.openBox('roles');
   await HiveInitializer.initialize();

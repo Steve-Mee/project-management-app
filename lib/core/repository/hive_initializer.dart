@@ -8,6 +8,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:project_management_app/core/providers/notification_providers.dart';
 import 'package:project_management_app/core/providers/task_providers.dart';
 import 'package:project_management_app/core/services/app_logger.dart';
+import 'package:project_management_app/core/repository/encrypted_hive_box.dart';
 import 'package:project_management_app/models/task_model.dart';
 import 'package:project_management_app/core/repository/impl/hive_settings_repository.dart';
 
@@ -31,19 +32,31 @@ class HiveInitializer {
   /// Call this in main() before running the app
   static Future<void> initialize() async {
     try {
-      // Initialize the repository
-      // This will set up Hive and open the projects box
       AppLogger.instance.i('Initializing Hive data persistence...');
-      
-      // Note: The actual initialization happens when projectRepositoryProvider
-      // is first accessed, so no need to do anything here.
-      // The below is optional for eager initialization.
+
+      // Sensitive boxes are opened with encryption.
+      await _openSensitiveBoxes();
+      // Performance-sensitive boxes stay unencrypted.
+      await _openPerformanceBoxes();
       
       AppLogger.instance.i('Hive initialized successfully');
     } catch (e) {
       AppLogger.instance.e('Error initializing Hive', error: e);
       rethrow;
     }
+  }
+
+  static Future<void> _openSensitiveBoxes() async {
+    await _openGenericBox('auth');
+    await _openGenericBox('settings');
+    await _openGenericBox('ai_usage');
+    await _openGenericBox('local_tokens');
+  }
+
+  static Future<void> _openPerformanceBoxes() async {
+    await _openTasksBox();
+    await _openMapBox('projects');
+    await Hive.openBox<List>('dashboard_config');
   }
 
   /// Close Hive when app shuts down
@@ -236,7 +249,24 @@ class HiveInitializer {
     if (Hive.isBoxOpen(name)) {
       return Hive.box(name);
     }
+    if (_isEncryptedBox(name)) {
+      return EncryptedHiveBox(
+        boxName: name,
+        encryptionKey: _encryptionKeyForBox(name),
+      ).open();
+    }
     return Hive.openBox(name);
+  }
+
+  static bool _isEncryptedBox(String name) {
+    return name == 'auth' ||
+        name == 'settings' ||
+        name == 'ai_usage' ||
+        name == 'local_tokens';
+  }
+
+  static String _encryptionKeyForBox(String name) {
+    return 'hive_encryption_key_$name';
   }
 
   static dynamic _jsonSafe(dynamic value) {

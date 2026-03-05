@@ -2,6 +2,7 @@ import 'package:hive_flutter/hive_flutter.dart';
 import 'package:project_management_app/core/repository/i_ai_usage_repository.dart';
 import 'package:project_management_app/core/models/ai_usage_record.dart';
 import 'package:project_management_app/core/services/app_logger.dart';
+import 'package:project_management_app/core/repository/encrypted_hive_box.dart';
 
 /// Concrete implementation of IAiUsageRepository using Hive for local persistence
 /// Implements caching for usage totals as per .github/issues/027-dashboard-cache-requirements.md pattern
@@ -54,7 +55,10 @@ class HiveAiUsageRepository implements IAiUsageRepository {
   }
 
   Future<Box<List>> _getBox() async {
-    _usageBox ??= await Hive.openBox<List>(_usageBoxName);
+    _usageBox ??= await EncryptedHiveBox<List>(
+      boxName: _usageBoxName,
+      encryptionKey: 'hive_encryption_key_ai_usage',
+    ).open();
     return _usageBox!;
   }
 
