@@ -4,7 +4,7 @@ import 'package:project_management_app/models/project_model.dart';
 import 'package:project_management_app/core/repository/impl/hive_project_repository.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-/// Stub for future cloud sync (Supabase/Firestore/etc.).
+/// Stub for future cloud sync (Supabase/etc.).
 class CloudSyncService {
   final HiveProjectRepository? repository;
 
