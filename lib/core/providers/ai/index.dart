@@ -3,4 +3,5 @@
 library;
 
 export 'ai_chat_provider.dart';
+export 'ai_providers.dart';
 export 'ai_usage_provider.dart';

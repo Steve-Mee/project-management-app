@@ -6,6 +6,7 @@ import 'dart:async';
 import 'package:project_management_app/models/project_plan.dart';
 import 'package:project_management_app/core/providers/project_providers.dart';
 import 'package:project_management_app/core/providers/auth_providers.dart';
+import 'package:project_management_app/core/providers/ai/ai_providers.dart' show aiServiceProvider;
 import 'package:http/http.dart' as http;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -745,11 +746,6 @@ class _ProjectPlanDisplayState extends ConsumerState<ProjectPlanDisplay> {
       isLoading = true;
     });
     try {
-      final apiKey = dotenv.env['GROK_API_KEY'];
-      final endpoint = dotenv.env['GROK_ENDPOINT'] ?? 'https://api.x.ai/v1/chat/completions';
-      if (apiKey == null) {
-        throw Exception('GROK_API_KEY not found in .env');
-      }
       // Collect project data
       Map<String, dynamic> data = {
         'name': projectName ?? 'Unnamed Project',
@@ -768,33 +764,21 @@ class _ProjectPlanDisplayState extends ConsumerState<ProjectPlanDisplay> {
         },
       };
       String jsonString = jsonEncode(data);
-      final response = await http.post(
-        Uri.parse(endpoint),
-        headers: {
-          'Authorization': 'Bearer $apiKey',
-          'Content-Type': 'application/json',
-        },
-        body: jsonString,
-      );
-      if (response.statusCode == 200) {
-        final responseData = jsonDecode(response.body);
-        if (mounted) {
-          showDialog(
-            context: context,
-            builder: (context) => AlertDialog(
-              title: const Text('Grok Response'),
-              content: Text(responseData.toString()),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.of(context).pop(),
-                  child: const Text('OK'),
-                ),
-              ],
-            ),
-          );
-        }
-      } else {
-        throw Exception('HTTP ${response.statusCode}: ${response.body}');
+      final reply = await ref.read(aiServiceProvider).generate(jsonString, projectId: widget.projectId);
+      if (mounted) {
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('AI Response'),
+            content: Text(reply),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('OK'),
+              ),
+            ],
+          ),
+        );
       }
     } catch (e) {
       if (mounted) {
@@ -1004,42 +988,21 @@ class _ProjectPlanDisplayState extends ConsumerState<ProjectPlanDisplay> {
         return;
       }
 
-      final apiKey = dotenv.env['GROK_API_KEY'];
-      final endpoint = dotenv.env['GROK_ENDPOINT'] ?? 'https://api.x.ai/v1/chat/completions';
-      if (apiKey == null) {
-        throw Exception('GROK_API_KEY not found in .env');
-      }
-      final data = {
-        'message': prompt,
-      };
-      String jsonString = jsonEncode(data);
-      final response = await http.post(
-        Uri.parse(endpoint),
-        headers: {
-          'Authorization': 'Bearer $apiKey',
-          'Content-Type': 'application/json',
-        },
-        body: jsonString,
-      );
-      if (response.statusCode == 200) {
-        final responseData = jsonDecode(response.body);
-        if (mounted) {
-          showDialog(
-            context: context,
-            builder: (context) => AlertDialog(
-              title: const Text('Grok Response'),
-              content: Text(responseData.toString()),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.of(context).pop(),
-                  child: const Text('OK'),
-                ),
-              ],
-            ),
-          );
-        }
-      } else {
-        throw Exception('HTTP ${response.statusCode}: ${response.body}');
+      final reply = await ref.read(aiServiceProvider).generate(prompt, projectId: widget.projectId);
+      if (mounted) {
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('AI Response'),
+            content: Text(reply),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('OK'),
+              ),
+            ],
+          ),
+        );
       }
     } catch (e) {
       if (mounted) {
@@ -1047,7 +1010,7 @@ class _ProjectPlanDisplayState extends ConsumerState<ProjectPlanDisplay> {
           context: context,
           builder: (context) => AlertDialog(
             title: const Text('Error'),
-            content: Text('Failed to send data to Grok: $e'),
+            content: Text('Failed to send data to AI service: $e'),
             actions: [
               TextButton(
                 onPressed: () => Navigator.of(context).pop(),
@@ -1157,36 +1120,19 @@ class _ProjectPlanDisplayState extends ConsumerState<ProjectPlanDisplay> {
       isLoading = true;
     });
     try {
-      final apiKey = dotenv.env['GROK_API_KEY'];
-      final endpoint = dotenv.env['GROK_ENDPOINT'] ?? 'https://api.x.ai/v1/chat/completions';
-      if (apiKey == null) {
-        throw Exception('GROK_API_KEY not found in .env');
-      }
-      final data = {
-        'message': message,
-        'projectSummary': currentPlan.overview, // or something
-      };
-      String jsonString = jsonEncode(data);
-      final response = await http.post(
-        Uri.parse(endpoint),
-        headers: {
-          'Authorization': 'Bearer $apiKey',
-          'Content-Type': 'application/json',
-        },
-        body: jsonString,
+      final reply = await ref.read(aiServiceProvider).generate(
+        'message: $message\nprojectSummary: ${currentPlan.overview}',
+        projectId: widget.projectId,
       );
-      if (response.statusCode == 200) {
-        final responseData = jsonDecode(response.body);
+      if (reply.isNotEmpty) {
         setState(() {
           messages.add({
-            'text': responseData.toString(),
+            'text': reply,
             'isUser': false,
             'timestamp': DateTime.now().toString(),
           });
         });
         await _updateTokens(100); // Assume 100 tokens used
-      } else {
-        throw Exception('HTTP ${response.statusCode}: ${response.body}');
       }
     } catch (e) {
       setState(() {
@@ -1413,6 +1359,7 @@ class _ProjectPlanDisplayState extends ConsumerState<ProjectPlanDisplay> {
     final slackWebhook = dotenv.env['SLACK_WEBHOOK'];
     if (slackWebhook != null && slackWebhook.isNotEmpty) {
       try {
+        // Non-AI HTTP call: this posts operational notifications to Slack.
         final response = await http.post(
           Uri.parse(slackWebhook),
           headers: {'Content-Type': 'application/json'},
@@ -1607,12 +1554,6 @@ Please provide a detailed response in JSON format.
   Future<String> summarizeHistory(List history) async {
     if (history.isEmpty) return 'No history available.';
 
-    final apiKey = dotenv.env['GROK_API_KEY'];
-    final endpoint = dotenv.env['GROK_ENDPOINT'] ?? 'https://api.x.ai/v1/chat/completions';
-    if (apiKey == null) {
-      throw Exception('GROK_API_KEY not found in .env');
-    }
-
     final historyText = history.map((entry) {
       final timestamp = entry['timestamp'] ?? 'Unknown';
       final change = entry['change'] ?? 'Unknown change';
@@ -1630,24 +1571,8 @@ $historyText
 Provide a brief summary:
 ''';
 
-    final data = {
-      'message': prompt,
-      'model': 'grok-1', // or use getModel
-      'max_tokens': 200,
-    };
-
-    final response = await http.post(
-      Uri.parse(endpoint),
-      headers: {
-        'Authorization': 'Bearer $apiKey',
-        'Content-Type': 'application/json',
-      },
-      body: jsonEncode(data),
-    );
-
-    if (response.statusCode == 200) {
-      final responseData = jsonDecode(response.body);
-      final summary = responseData['choices']?[0]?['message']?['content'] ?? 'Summary not available';
+    final summary = await ref.read(aiServiceProvider).generate(prompt, projectId: widget.projectId);
+    if (summary.isNotEmpty) {
 
       // Save to DB
       final supabase = Supabase.instance.client;
@@ -1662,9 +1587,9 @@ Provide a brief summary:
       await _updateTokens(50);
 
       return summary;
-    } else {
-      throw Exception('Failed to summarize history: HTTP ${response.statusCode}');
     }
+
+    return 'Summary not available';
   }
 
   void setupRealtime(String projectId) {

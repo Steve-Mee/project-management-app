@@ -8,7 +8,6 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:project_management_app/generated/app_localizations.dart';
 import 'package:project_management_app/core/auth/permissions.dart';
 import 'dart:convert';
-import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
 import 'package:csv/csv.dart';
 import 'package:share_plus/share_plus.dart';
@@ -19,6 +18,7 @@ import 'package:project_management_app/core/providers/project_providers.dart';
 import '../../core/providers/auth_providers.dart';
 import '../../core/providers/theme_providers.dart';
 import '../../core/providers/active_viewers_providers.dart';
+import '../../core/providers/ai/ai_providers.dart' show aiServiceProvider;
 import '../../models/project_meta.dart';
 import '../../models/project_model.dart';
 import '../../models/project_sort.dart';
@@ -1257,22 +1257,8 @@ class _ProjectScreenState extends ConsumerState<ProjectScreen> {
           'complexiteit': complexiteit,
         };
         final prompt = 'Discuss this project: ${jsonEncode(data)}';
-        final response = await http.post(
-          Uri.parse('https://api.x.ai/v1/chat/completions'),
-          headers: {
-            'Authorization': 'Bearer YOUR_API_KEY',
-            'Content-Type': 'application/json',
-          },
-          body: jsonEncode({
-            'model': 'grok-1',
-            'messages': [
-              {'role': 'user', 'content': prompt}
-            ],
-          }),
-        );
-        if (response.statusCode == 200) {
-          final responseData = jsonDecode(response.body);
-          final reply = responseData['choices'][0]['message']['content'];
+        final reply = await ref.read(aiServiceProvider).generate(prompt);
+        try {
           final parsed = jsonDecode(reply);
           final questions = parsed['questions'] as List<dynamic>? ?? [];
           final proposals = parsed['proposals'] as List<dynamic>? ?? [];
@@ -1340,8 +1326,20 @@ class _ProjectScreenState extends ConsumerState<ProjectScreen> {
               },
             ),
           );
-        } else {
-          throw Exception('Failed to get response: ${response.statusCode}');
+        } catch (_) {
+          showDialog(
+            context: dialogContext,
+            builder: (context) => AlertDialog(
+              title: const Text('AI Response'),
+              content: Text(reply),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('OK'),
+                ),
+              ],
+            ),
+          );
         }
       } catch (e) {
         showDialog(

@@ -65,4 +65,7 @@ abstract class ISettingsRepository {
 
   bool getEnableRealPaymentBackend();
   Future<void> setEnableRealPaymentBackend(bool enabled);
+
+  bool? getEnableOpenAILangchain();
+  Future<void> setEnableOpenAILangchain(bool enabled);
 }

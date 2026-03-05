@@ -4,11 +4,12 @@ import 'dart:math';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import '../../services/app_logger.dart';
-import '../../services/ai_planning_helpers.dart';
 import '../../config/ai_config.dart' as ai_config;
 import './ai_usage_provider.dart';
+import './ai_providers.dart';
 import '../../../models/chat_message_model.dart';
 import '../../../models/project_plan.dart';
+import '../../services/ai/ai_service.dart';
 
 import '../../models/ai_rate_limits_config.dart';
 import '../../models/ai_request_queue.dart';
@@ -75,6 +76,9 @@ class AiChatState {
 /// tracking for UI feedback.
 /// See .github/issues/033-ai-request-queue.md for queue implementation details.
 class AiChatNotifier extends AsyncNotifier<AiChatState> {
+  AiChatNotifier([AiService? aiService]) : _aiService = aiService;
+
+  AiService? _aiService;
   AiRateLimitsConfig? _rateLimitsConfig;
   final List<DateTime> _requestTimestamps = [];
   final List<DateTime> _hourlyRequestTimestamps = [];
@@ -122,6 +126,8 @@ class AiChatNotifier extends AsyncNotifier<AiChatState> {
 
   @override
   Future<AiChatState> build() async {
+    _aiService ??= ref.read(aiServiceProvider);
+
     try {
       final settings = await ref.watch(settingsRepositoryProvider.future);
       final baseConfig = settings.getAiRateLimitsConfig();
@@ -137,7 +143,13 @@ class AiChatNotifier extends AsyncNotifier<AiChatState> {
       _startWorker();
       
       // Cleanup worker when notifier is disposed
-      ref.onDispose(() => _stopWorker());
+      ref.onDispose(() {
+        _stopWorker();
+        final service = _aiService;
+        if (service != null) {
+          unawaited(service.dispose());
+        }
+      });
       
       return AiChatState(
         rateLimitsConfig: _rateLimitsConfig!,
@@ -157,7 +169,13 @@ class AiChatNotifier extends AsyncNotifier<AiChatState> {
       _startWorker();
       
       // Cleanup worker when notifier is disposed
-      ref.onDispose(() => _stopWorker());
+      ref.onDispose(() {
+        _stopWorker();
+        final service = _aiService;
+        if (service != null) {
+          unawaited(service.dispose());
+        }
+      });
       
       return AiChatState(
         rateLimitsConfig: _rateLimitsConfig!,
@@ -334,14 +352,13 @@ class AiChatNotifier extends AsyncNotifier<AiChatState> {
     _updateQueueMetrics(); // Update UI with new queue length
   }
 
-  /// Modular method for AI API calls using AiPlanningHelpers
-  Future<AiApiResult<String>> _callAiWithAnonymizedPrompt(String prompt) async {
-    // TEMP: Always return mock response for testing
-    return const AiApiResult<String>(
-      content: 'Mock AI response for testing',
-      tokensUsed: 50,
-      metadata: const {'model': 'test-model', 'mock': true},
-    );
+  /// Modular method for AI API calls via AiService abstraction.
+  Future<String> _callAiWithAnonymizedPrompt(String prompt, {String? projectId}) async {
+    final service = _aiService;
+    if (service == null) {
+      throw StateError('AiService not initialized');
+    }
+    return service.generate(prompt, projectId: projectId);
   }
 
   /// Anonymize message for worldwide compliance
@@ -569,12 +586,15 @@ class AiChatNotifier extends AsyncNotifier<AiChatState> {
       final anonymizedMessage = _anonymizeMessage(userMessage);
 
       // Use AiPlanningHelpers for modular API calls
-      final result = await _callAiWithAnonymizedPrompt(anonymizedMessage);
+      final result = await _callAiWithAnonymizedPrompt(
+        anonymizedMessage,
+        projectId: request.payload['projectId'] as String?,
+      );
 
       // Add AI message to UI
       final aiMsg = ChatMessage(
         id: DateTime.now().millisecondsSinceEpoch.toString(),
-        content: result.content,
+        content: result,
         isUser: false,
         timestamp: DateTime.now(),
       );
@@ -591,10 +611,13 @@ class AiChatNotifier extends AsyncNotifier<AiChatState> {
       }
 
       // Log token usage from metadata
-      ref.read(aiUsageUpdateProvider(result.tokensUsed));
+      final estimatedInput = request.payload['estimatedTokens'] as int? ?? _estimateTokenCount(userMessage);
+      final estimatedOutput = _estimateTokenCount(result);
+      final estimatedTotalTokens = estimatedInput + estimatedOutput;
+      ref.read(aiUsageUpdateProvider(estimatedTotalTokens));
 
       // Update total tokens used with actual tokens
-      _totalTokensUsedToday += result.tokensUsed;
+      _totalTokensUsedToday += estimatedTotalTokens;
 
     } catch (e) {
       final errorMsg = e.toString();
@@ -616,16 +639,21 @@ class AiChatNotifier extends AsyncNotifier<AiChatState> {
   Future<List<String>> _executeGenerateQuestionsRequest(AiRequest request) async {
     final projectData = request.payload['projectData'] as Map<String, dynamic>;
     final helpLevel = request.payload['helpLevel'] as ai_config.HelpLevel;
+    final service = _aiService;
+    if (service == null) throw StateError('AiService not initialized');
 
-    final result = await AiPlanningHelpers.generatePlanningQuestions(
+    final questions = await service.generatePlanningQuestions(
       projectData,
       helpLevel,
+      projectId: request.payload['projectId'] as String?,
     );
 
-    // Log token usage
-    ref.read(aiUsageUpdateProvider(result.tokensUsed));
+    // Preserve usage tracking with conservative estimate.
+    final estimatedTokens = _estimateTokenCount(projectData.toString()) +
+        questions.fold<int>(0, (sum, q) => sum + _estimateTokenCount(q));
+    ref.read(aiUsageUpdateProvider(estimatedTokens));
 
-    return result.content;
+    return questions;
   }
 
   /// Execute a generate proposals request
@@ -633,29 +661,52 @@ class AiChatNotifier extends AsyncNotifier<AiChatState> {
     final projectData = request.payload['projectData'] as Map<String, dynamic>;
     final helpLevel = request.payload['helpLevel'] as ai_config.HelpLevel;
     final answers = request.payload['answers'] as List<String>?;
+    final service = _aiService;
+    if (service == null) throw StateError('AiService not initialized');
 
-    final result = await AiPlanningHelpers.generateProposals(
+    final proposals = await service.generateProposals(
       projectData,
       helpLevel,
       answers: answers,
+      projectId: request.payload['projectId'] as String?,
     );
 
-    // Log token usage
-    ref.read(aiUsageUpdateProvider(result.tokensUsed));
+    // Preserve usage tracking with conservative estimate.
+    final estimatedTokens = _estimateTokenCount(projectData.toString()) +
+        (answers?.fold<int>(0, (sum, a) => sum + _estimateTokenCount(a)) ?? 0) +
+        proposals.fold<int>(0, (sum, p) => sum + _estimateTokenCount(p));
+    ref.read(aiUsageUpdateProvider(estimatedTokens));
 
-    return result.content;
+    return proposals;
   }
 
   /// Execute a generate final plan request
   Future<ProjectPlan> _executeGenerateFinalPlanRequest(AiRequest request) async {
     final projectData = request.payload['projectData'] as Map<String, dynamic>;
+    final service = _aiService;
+    if (service == null) throw StateError('AiService not initialized');
 
-    final result = await AiPlanningHelpers.generateFinalPlan(projectData);
+    final plan = await service.generateFinalPlan(
+      projectData,
+      projectId: request.payload['projectId'] as String?,
+    );
 
-    // Log token usage
-    ref.read(aiUsageUpdateProvider(result.tokensUsed));
+    // Preserve usage tracking with conservative estimate.
+    final estimatedTokens = _estimateTokenCount(projectData.toString()) +
+        _estimateTokenCount(plan.overview) +
+        plan.chapters.fold<int>(
+          0,
+          (sum, chapter) =>
+              sum + _estimateTokenCount(chapter.title) +
+              _estimateTokenCount(chapter.overview) +
+              chapter.tasks.fold<int>(
+                0,
+                (taskSum, task) => taskSum + _estimateTokenCount(task.description),
+              ),
+        );
+    ref.read(aiUsageUpdateProvider(estimatedTokens));
 
-    return result.content;
+    return plan;
   }
 
   /// Calculate exponential backoff delay with jitter

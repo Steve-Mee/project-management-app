@@ -1,10 +1,11 @@
 // ignore_for_file: prefer_const_constructors
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:project_management_app/core/providers/project_providers.dart';
 import 'package:project_management_app/generated/app_localizations.dart';
 import 'package:project_management_app/models/project_model.dart';
 import 'package:project_management_app/features/project/pdf_export.dart';
-import 'package:project_management_app/core/services/ai_planning_helpers.dart';
+import 'package:project_management_app/core/providers/ai/ai_providers.dart' show aiServiceProvider;
 import 'package:csv/csv.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:path_provider/path_provider.dart';
@@ -280,11 +281,13 @@ class _ProjectFilterDialogState extends State<ProjectFilterDialog> with TickerPr
       }
 
       // Call AI to parse the filter request
-      final result = await AiPlanningHelpers.parseFilterRequest(userRequest);
+      final aiSuggestedFilter = await ProviderScope.containerOf(context)
+          .read(aiServiceProvider)
+          .parseFilterRequest(userRequest);
 
-      if (result.content != null) {
+      if (aiSuggestedFilter != null) {
         setState(() {
-          _aiSuggestedFilter = result.content;
+          _aiSuggestedFilter = aiSuggestedFilter;
           _isProcessingAiRequest = false;
         });
       } else {

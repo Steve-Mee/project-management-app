@@ -4,8 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:project_management_app/generated/app_localizations.dart';
 import 'package:project_management_app/core/providers/ai_providers.dart' show aiChatProvider;
+import 'package:project_management_app/core/providers/ai/ai_providers.dart' show aiServiceProvider;
 import 'package:project_management_app/core/providers/auth_providers.dart' show helpLevelProvider;
-import 'package:project_management_app/core/services/ai_planning_helpers.dart';
 import 'package:project_management_app/core/config/ai_config.dart' as ai_config;
 import 'package:project_management_app/models/task_model.dart';
 
@@ -446,11 +446,14 @@ class _TaskHelpDialogState extends ConsumerState<TaskHelpDialog> {
       final taskData = _isAnonymized ? _anonymizeTaskDataForQuestions() : _getFullTaskDataForQuestions();
 
       // Use ai_planning_helpers for modular generation with compliance
-      final result = await AiPlanningHelpers.generatePlanningQuestions(taskData, _selectedLevel);
+      final questions = await ref.read(aiServiceProvider).generatePlanningQuestions(
+        taskData,
+        _selectedLevel,
+      );
 
       if (mounted) {
         setState(() {
-          _generatedQuestions = result.content;
+          _generatedQuestions = questions;
           _isGeneratingQuestions = false;
         });
       }

@@ -3,11 +3,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:project_management_app/core/providers/project_providers.dart';
 import 'package:project_management_app/core/providers/task_providers.dart';
 import 'package:project_management_app/core/providers/ai_providers.dart' show aiChatProvider;
+import 'package:project_management_app/core/providers/ai/ai_providers.dart' show aiServiceProvider;
 import 'package:project_management_app/core/providers/auth_providers.dart';
 import 'package:project_management_app/models/project_model.dart';
 import 'package:project_management_app/models/task_model.dart';
 import 'package:project_management_app/core/config/ai_config.dart';
-import 'package:project_management_app/core/services/ai_planning_helpers.dart';
 import 'package:project_management_app/core/auth/auth_user.dart';
 
 /// Model for chat history entries
@@ -327,13 +327,13 @@ Current Date: ${DateTime.now().toString().split(' ')[0]}
         'progress': project.progress.toString(),
       };
 
-      final questionsResult = await AiPlanningHelpers.generatePlanningQuestions(
+      final questions = await ref.read(aiServiceProvider).generatePlanningQuestions(
         contextData,
         project.helpLevel,
       );
 
-      final additionalContext = questionsResult.content.isNotEmpty
-          ? '\n\nAdditional Context Questions:\n${questionsResult.content.take(3).join('\n')}\n\nUse these questions to provide more targeted assistance.'
+      final additionalContext = questions.isNotEmpty
+          ? '\n\nAdditional Context Questions:\n${questions.take(3).join('\n')}\n\nUse these questions to provide more targeted assistance.'
           : '';
 
       return '${AiConfig.systemPrompt}\n\n$helpLevelPrompt\n\n$complexityPrompt$additionalContext';

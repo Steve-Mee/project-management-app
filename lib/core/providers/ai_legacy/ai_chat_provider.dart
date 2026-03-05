@@ -5,15 +5,17 @@ import 'dart:async';
 import 'dart:math';
 import 'package:hive/hive.dart';
 import 'package:project_management_app/core/services/app_logger.dart';
-import 'package:project_management_app/core/services/ai_planning_helpers.dart';
+import 'package:project_management_app/core/services/ai_planning_helpers.dart' show AiApiResult;
 import 'package:project_management_app/core/config/ai_config.dart' as ai_config;
 import 'package:project_management_app/core/providers/analytics_providers.dart';
 import 'package:project_management_app/core/providers/auth_providers.dart';
+import 'package:project_management_app/core/providers/ai/ai_providers.dart' show aiServiceProvider;
 import 'package:project_management_app/models/chat_message_model.dart';
 import 'package:project_management_app/models/project_plan.dart';
 import 'package:project_management_app/core/models/ai_rate_limits_config.dart';
 import 'package:project_management_app/core/models/ai_request_queue.dart';
 import 'package:project_management_app/core/models/ai_usage_record.dart';
+import 'package:project_management_app/core/services/ai/ai_service.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 // ignore_for_file: prefer_const_constructors
@@ -150,8 +152,12 @@ class AiChatState {
 /// - Automatic queue size management (max 50 requests)
 /// - Priority-based processing (higher priority first, then FIFO)
 class AiChatNotifier extends AsyncNotifier<AiChatState> {
+  AiService? _aiService;
+
   @override
   Future<AiChatState> build() async {
+    _aiService ??= ref.read(aiServiceProvider);
+
     AiChatState state;
     try {
       final settings = await ref.watch(settingsRepositoryProvider.future);
@@ -263,6 +269,12 @@ class AiChatNotifier extends AsyncNotifier<AiChatState> {
     const double costPerToken = 0.0000015; // Example: $1.50 per 1M tokens
     return (inputTokens + outputTokens) * costPerToken;
   }
+
+  /// Estimate token count for a message using a simple character heuristic.
+  int _estimateTokenCount(String message) {
+    return (message.length / 4).ceil();
+  }
+
   Future<(ChatMessage, int)> _executeChatRequest(Map<String, dynamic> payload) async {
     final userMessage = payload['userMessage'] as String;
     // NOTE: converted to issue 041
@@ -286,14 +298,14 @@ class AiChatNotifier extends AsyncNotifier<AiChatState> {
   Future<(List<String>, int)> _executeGenerateQuestionsRequest(Map<String, dynamic> payload) async {
     final projectData = payload['projectData'] as Map<String, dynamic>;
     final helpLevel = payload['helpLevel'] as ai_config.HelpLevel;
+    final service = _aiService;
+    if (service == null) throw StateError('AiService not initialized');
 
-    final result = await _retryAiCall(() => AiPlanningHelpers.generatePlanningQuestions(
-      projectData,
-      helpLevel,
-    ));
-
-    ref.read(aiUsageUpdateProvider(result.tokensUsed));
-    return (result.content, result.tokensUsed);
+    final content = await service.generatePlanningQuestions(projectData, helpLevel);
+    final estimatedTokens = _estimateTokenCount(projectData.toString()) +
+        content.fold<int>(0, (sum, q) => sum + _estimateTokenCount(q));
+    ref.read(aiUsageUpdateProvider(estimatedTokens));
+    return (content, estimatedTokens);
   }
 
   /// Execute queued generate proposals request
@@ -301,25 +313,32 @@ class AiChatNotifier extends AsyncNotifier<AiChatState> {
     final projectData = payload['projectData'] as Map<String, dynamic>;
     final helpLevel = payload['helpLevel'] as ai_config.HelpLevel;
     final answers = payload['answers'] as List<String>?;
+    final service = _aiService;
+    if (service == null) throw StateError('AiService not initialized');
 
-    final result = await _retryAiCall(() => AiPlanningHelpers.generateProposals(
+    final content = await service.generateProposals(
       projectData,
       helpLevel,
       answers: answers,
-    ));
-
-    ref.read(aiUsageUpdateProvider(result.tokensUsed));
-    return (result.content, result.tokensUsed);
+    );
+    final estimatedTokens = _estimateTokenCount(projectData.toString()) +
+        (answers?.fold<int>(0, (sum, a) => sum + _estimateTokenCount(a)) ?? 0) +
+        content.fold<int>(0, (sum, p) => sum + _estimateTokenCount(p));
+    ref.read(aiUsageUpdateProvider(estimatedTokens));
+    return (content, estimatedTokens);
   }
 
   /// Execute queued generate plan request
   Future<(ProjectPlan, int)> _executeGeneratePlanRequest(Map<String, dynamic> payload) async {
     final projectData = payload['projectData'] as Map<String, dynamic>;
+    final service = _aiService;
+    if (service == null) throw StateError('AiService not initialized');
 
-    final result = await _retryAiCall(() => AiPlanningHelpers.generateFinalPlan(projectData));
-
-    ref.read(aiUsageUpdateProvider(result.tokensUsed));
-    return (result.content, result.tokensUsed);
+    final content = await service.generateFinalPlan(projectData);
+    final estimatedTokens = _estimateTokenCount(projectData.toString()) +
+        _estimateTokenCount(content.overview);
+    ref.read(aiUsageUpdateProvider(estimatedTokens));
+    return (content, estimatedTokens);
   }
 
   /// Send a message and get AI response with queuing
@@ -557,8 +576,16 @@ class AiChatNotifier extends AsyncNotifier<AiChatState> {
   }
 
   Future<AiApiResult<String>> _callAiWithAnonymizedPrompt(String prompt) async {
-    // Use the new general chat method from AiPlanningHelpers
-    return await AiPlanningHelpers.sendChatMessage(prompt);
+    final service = _aiService;
+    if (service == null) throw StateError('AiService not initialized');
+
+    final content = await service.generate(prompt);
+    final tokensUsed = _estimateTokenCount(prompt) + _estimateTokenCount(content);
+    return AiApiResult<String>(
+      content: content,
+      tokensUsed: tokensUsed,
+      metadata: const {'source': 'AiService'},
+    );
   }
 
   /// Check if an error is a throttling/rate limit error that should be retried
@@ -612,6 +639,7 @@ class AiChatNotifier extends AsyncNotifier<AiChatState> {
   /// Implements configurable retry logic with exponential backoff for AI API calls.
   /// Retries on throttling errors up to maxRetryAttempts, using full jitter backoff.
   /// Logs each retry attempt and final failures. See .github/issues/032-ai-exponential-backoff.md
+  // ignore: unused_element
   Future<T> _retryAiCall<T>(Future<T> Function() aiCall) async {
     final currentState = state.value!;
     final maxAttempts = currentState.rateLimits.maxRetryAttempts;

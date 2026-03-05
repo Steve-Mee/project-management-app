@@ -29,6 +29,7 @@ class HiveSettingsRepository implements ISettingsRepository {
   static const String _stripeSecretKey = 'stripe_secret_key';
   static const String _subscriptionLevelKey = 'subscription_level';
   static const String _enableRealPaymentBackendKey = 'enable_real_payment_backend';
+  static const String _enableOpenAILangchainKey = 'enable_openai_langchain';
 
   @override
   Future<void> initialize() async {
@@ -348,6 +349,20 @@ class HiveSettingsRepository implements ISettingsRepository {
   @override
   Future<void> setSubscriptionLevel(String level) async {
     await _box.put(_subscriptionLevelKey, level);
+  }
+
+  @override
+  bool? getEnableOpenAILangchain() {
+    final value = _box.get(_enableOpenAILangchainKey);
+    if (value is bool) {
+      return value;
+    }
+    return null;
+  }
+
+  @override
+  Future<void> setEnableOpenAILangchain(bool enabled) async {
+    await _box.put(_enableOpenAILangchainKey, enabled);
   }
 
   @override
