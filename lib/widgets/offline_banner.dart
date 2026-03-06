@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
-import 'package:project_management_app/core/providers/connectivity_providers.dart';
+import 'package:pma_core/providers/connectivity_providers.dart';
 import 'package:project_management_app/generated/app_localizations.dart';
 
 /// Offline Banner Widget

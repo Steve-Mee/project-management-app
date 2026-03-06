@@ -1,7 +1,7 @@
 // ignore_for_file: prefer_const_constructors
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../core/providers/ai_providers.dart';
+import 'package:pma_core/providers/ai_providers.dart';
 
 /// AI Usage Overview Screen
 /// Displays detailed AI token usage information and analytics

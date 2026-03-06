@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:project_management_app/core/services/payment_backend_service.dart';
+import 'package:pma_core/services/payment_backend_service.dart';
 
 void main() {
   late PaymentBackendService serviceMockMode;

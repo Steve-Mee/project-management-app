@@ -2,11 +2,10 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hive/hive.dart';
-import 'package:project_management_app/core/repository/impl/hive_project_repository.dart';
-
-import 'package:project_management_app/core/repository/models/project_models.dart';
-import 'package:project_management_app/models/project_model.dart';
-import 'package:project_management_app/models/project_filter.dart';
+import 'package:pma_core/models/project_filter.dart';
+import 'package:pma_core/models/project_model.dart';
+import 'package:pma_core/repository/impl/hive_project_repository.dart';
+import 'package:pma_core/repository/models/project_models.dart';
 
 // ignore_for_file: prefer_const_constructors
 
@@ -147,9 +146,10 @@ void main() {
 
     const filter = ProjectFilter(status: 'In Progress');
     final filtered = await repository.getFilteredProjects(filter);
+    final typedFiltered = filtered.whereType<ProjectModel>().toList();
 
-    expect(filtered.length, 2);
-    expect(filtered.every((p) => p.status == 'In Progress'), true);
+    expect(typedFiltered.length, 2);
+    expect(typedFiltered.every((p) => p.status == 'In Progress'), true);
   });
 
   test('getFilteredProjects filters by search query', () async {
@@ -160,9 +160,10 @@ void main() {
 
     const filter = ProjectFilter(searchQuery: 'flutter');
     final filtered = await repository.getFilteredProjects(filter);
+    final typedFiltered = filtered.whereType<ProjectModel>().toList();
 
-    expect(filtered.length, 2);
-    expect(filtered.every((p) => p.name.toLowerCase().contains('flutter')), true);
+    expect(typedFiltered.length, 2);
+    expect(typedFiltered.every((p) => p.name.toLowerCase().contains('flutter')), true);
   });
 
   test('getFilteredProjects applies extra conditions', () async {
@@ -171,10 +172,13 @@ void main() {
     await repository.addProject(await createProject(id: 'project-2', name: 'Project 2', status: 'Completed'));
     await repository.addProject(await createProject(id: 'project-3', name: 'Project 3', status: 'In Progress'));
 
-    final extraCondition = ProjectFilterConditions((project) => project.name.contains('1'));
+    final extraCondition = ProjectFilterConditions(
+      (project) => project.name.contains('1'),
+    );
     final filtered = await repository.getFilteredProjects(const ProjectFilter(), extraConditions: [extraCondition]);
+    final typedFiltered = filtered.whereType<ProjectModel>().toList();
 
-    expect(filtered.length, 1);
-    expect(filtered[0].id, 'project-1');
+    expect(typedFiltered.length, 1);
+    expect(typedFiltered[0].id, 'project-1');
   });
 }

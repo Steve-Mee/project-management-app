@@ -2,12 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:project_management_app/core/auth/permissions.dart';
-import 'package:project_management_app/core/providers/ai_providers.dart';
-import 'package:project_management_app/core/providers/auth_providers.dart';
+import 'package:pma_core/auth/permissions.dart';
+import 'package:pma_core/providers/ai_providers.dart';
+import 'package:pma_core/providers/auth_providers.dart';
 import 'package:project_management_app/features/ai_chat/ai_chat_screen.dart';
 import 'package:project_management_app/generated/app_localizations.dart';
-import 'package:project_management_app/models/chat_message_model.dart';
+import 'package:pma_core/models/chat_message_model.dart';
 
 const _surfaceSize = Size(1280, 800);
 const _screenKey = Key('ai_chat_bubble_golden');

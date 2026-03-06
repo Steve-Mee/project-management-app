@@ -3,11 +3,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:project_management_app/core/providers.dart';
+import 'package:pma_core/providers.dart';
 import 'package:project_management_app/features/ai_chat/ai_chat_modal.dart';
 import 'package:project_management_app/generated/app_localizations.dart';
-import 'package:project_management_app/models/chat_message_model.dart';
-import 'package:project_management_app/models/task_model.dart';
+import 'package:pma_core/models/chat_message_model.dart';
+import 'package:pma_core/models/task_model.dart';
 
 class FakeTaskNotifier extends TaskNotifier {
   final List<Task> _tasks = [];
@@ -123,12 +123,15 @@ void main() {
     await tester.pump();
 
     final tasks = container.read(tasksProvider).value ?? [];
-    expect(tasks.any((task) => task.title == 'New task'), true);
+    expect(
+      tasks.whereType<Task>().any((task) => task.title == 'New task'),
+      true,
+    );
     final chatState = container.read(aiChatProvider);
     expect(
-      chatState.value!.messages.any(
-        (message) => message.content == 'Taak aangemaakt: New task',
-      ),
+      chatState.value!.messages
+          .whereType<ChatMessage>()
+          .any((message) => message.content == 'Taak aangemaakt: New task'),
       true,
     );
   });

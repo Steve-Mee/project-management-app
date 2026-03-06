@@ -1,11 +1,11 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:project_management_app/core/config/ai_config.dart' as ai_config;
-import 'package:project_management_app/core/providers/ai/ai_providers.dart';
-import 'package:project_management_app/core/services/ai/ai_service.dart';
-import 'package:project_management_app/core/services/ai/openai_langchain_service.dart';
-import 'package:project_management_app/core/providers/project/project_providers.dart' show ProjectFilter;
-import 'package:project_management_app/models/project_plan.dart';
+import 'package:pma_core/core/config/ai_config.dart' as ai_config;
+import 'package:pma_core/providers/ai/ai_providers.dart';
+import 'package:pma_core/services/ai/ai_service.dart';
+import 'package:pma_core/services/ai/openai_langchain_service.dart';
+import 'package:pma_core/providers/project/project_providers.dart' show ProjectFilter;
+import 'package:pma_core/models/project_plan.dart';
 
 class MockAiService implements AiService {
   int generateCallCount = 0;

@@ -1,12 +1,12 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:project_management_app/core/providers/dashboard_providers.dart';
-import 'package:project_management_app/core/providers/project_providers.dart';
-import 'package:project_management_app/core/repository/i_dashboard_repository.dart';
-import 'package:project_management_app/core/repository/models/dashboard_models.dart';
-import 'package:project_management_app/core/models/dashboard_types.dart';
-import 'package:project_management_app/models/project_model.dart';
-import 'package:project_management_app/models/project_requirements.dart';
+import 'package:pma_core/providers/dashboard_providers.dart';
+import 'package:pma_core/providers/project_providers.dart';
+import 'package:pma_core/repository/i_dashboard_repository.dart';
+import 'package:pma_core/repository/models/dashboard_models.dart';
+import 'package:pma_core/models/dashboard_types.dart';
+import 'package:pma_core/models/project_model.dart';
+import 'package:pma_core/models/project_requirements.dart';
 import 'dart:async';
 import 'dart:io';
 
@@ -59,6 +59,30 @@ void main() {
       },
     );
 
+    // Mock flutter_secure_storage for settings repository usage in dashboard providers.
+    const MethodChannel secureStorageChannel =
+        MethodChannel('plugins.it_nomads.com/flutter_secure_storage');
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(
+      secureStorageChannel,
+      (MethodCall methodCall) async {
+        switch (methodCall.method) {
+          case 'read':
+            return null;
+          case 'write':
+          case 'delete':
+          case 'deleteAll':
+            return null;
+          case 'readAll':
+            return <String, String>{};
+          case 'containsKey':
+            return false;
+          default:
+            return null;
+        }
+      },
+    );
+
     mockRepo = MockIDashboardRepository();
     mockItems = [];
     mockTemplates = [];
@@ -87,6 +111,10 @@ void main() {
 
   tearDown(() async {
     container.dispose();
+    const MethodChannel secureStorageChannel =
+        MethodChannel('plugins.it_nomads.com/flutter_secure_storage');
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(secureStorageChannel, null);
     // Clean up Hive boxes
     await Hive.close();
   });
@@ -491,12 +519,13 @@ void main() {
 
     test('built-in presets are always available', () async {
       final templates = notifier.getAllTemplates();
+      final typedTemplates = templates.whereType<DashboardTemplate>().toList();
       expect(templates.length, greaterThanOrEqualTo(4)); // At least the 4 presets
-      expect(templates.where((t) => t.isPreset).length, 4);
-      expect(templates.any((t) => t.id == 'project-overview'), true);
-      expect(templates.any((t) => t.id == 'task-management'), true);
-      expect(templates.any((t) => t.id == 'analytics'), true);
-      expect(templates.any((t) => t.id == 'notifications'), true);
+      expect(typedTemplates.where((t) => t.isPreset).length, 4);
+      expect(typedTemplates.any((t) => t.id == 'project-overview'), true);
+      expect(typedTemplates.any((t) => t.id == 'task-management'), true);
+      expect(typedTemplates.any((t) => t.id == 'analytics'), true);
+      expect(typedTemplates.any((t) => t.id == 'notifications'), true);
     });
 
     test('saveAsTemplate creates new template', () async {
@@ -512,7 +541,7 @@ void main() {
 
       // Verify template was saved
       final templates = notifier.getAllTemplates();
-      final userTemplates = templates.where((t) => !t.isPreset).toList();
+      final userTemplates = templates.whereType<DashboardTemplate>().where((t) => !t.isPreset).toList();
       expect(userTemplates.length, 1);
       expect(userTemplates[0].name, 'Test Template');
       expect(userTemplates[0].items.length, 1);
@@ -538,7 +567,7 @@ void main() {
 
       // Load the template
       final templates = notifier.getAllTemplates();
-      final userTemplate = templates.firstWhere((t) => t.name == 'Load Test');
+      final userTemplate = templates.whereType<DashboardTemplate>().firstWhere((t) => t.name == 'Load Test');
       await notifier.loadTemplate(userTemplate.id);
 
       // Verify state was replaced
@@ -553,7 +582,7 @@ void main() {
 
       // Verify it exists
       var templates = notifier.getAllTemplates();
-      var userTemplates = templates.where((t) => !t.isPreset).toList();
+      var userTemplates = templates.whereType<DashboardTemplate>().where((t) => !t.isPreset).toList();
       expect(userTemplates.length, 1);
 
       // Delete it
@@ -561,30 +590,32 @@ void main() {
 
       // Verify it's gone
       templates = notifier.getAllTemplates();
-      userTemplates = templates.where((t) => !t.isPreset).toList();
+      userTemplates = templates.whereType<DashboardTemplate>().where((t) => !t.isPreset).toList();
       expect(userTemplates.length, 0);
     });
 
     test('getAllTemplates returns presets + user templates', () async {
       // Initially only presets
       var templates = notifier.getAllTemplates();
-      expect(templates.where((t) => t.isPreset).length, 4);
-      expect(templates.where((t) => !t.isPreset).length, 0);
+      var typedTemplates = templates.whereType<DashboardTemplate>().toList();
+      expect(typedTemplates.where((t) => t.isPreset).length, 4);
+      expect(typedTemplates.where((t) => !t.isPreset).length, 0);
 
       // Add user template
       await notifier.saveAsTemplate('User Template');
 
       // Now presets + 1 user
       templates = notifier.getAllTemplates();
-      expect(templates.where((t) => t.isPreset).length, 4);
-      expect(templates.where((t) => !t.isPreset).length, 1);
+      typedTemplates = templates.whereType<DashboardTemplate>().toList();
+      expect(typedTemplates.where((t) => t.isPreset).length, 4);
+      expect(typedTemplates.where((t) => !t.isPreset).length, 1);
     });
 
     test('saveAsTemplate with empty name still saves', () async {
       await notifier.saveAsTemplate('');
 
       final templates = notifier.getAllTemplates();
-      final userTemplates = templates.where((t) => !t.isPreset).toList();
+      final userTemplates = templates.whereType<DashboardTemplate>().where((t) => !t.isPreset).toList();
       expect(userTemplates.length, 1);
       expect(userTemplates[0].name, '');
     });
@@ -594,7 +625,10 @@ void main() {
       await notifier.saveAsTemplate('Duplicate');
 
       final templates = notifier.getAllTemplates();
-      final userTemplates = templates.where((t) => !t.isPreset && t.name == 'Duplicate').toList();
+        final userTemplates = templates
+          .whereType<DashboardTemplate>()
+          .where((t) => !t.isPreset && t.name == 'Duplicate')
+          .toList();
       expect(userTemplates.length, 2);
     });
 
@@ -859,8 +893,9 @@ void main() {
         ],
       );
 
-      final provider = testContainer.read(projectRequirementsProvider('test-project-id'));
-      final result = await testContainer.read(provider.future);
+      final result = await testContainer.read(
+        projectRequirementsProvider('test-project-id').future,
+      );
 
       expect(result, equals(testRequirements));
       verify(mockRepo.fetchRequirements('web')).called(1);
@@ -875,8 +910,9 @@ void main() {
         ],
       );
 
-      final provider = testContainer.read(projectRequirementsProvider('test-project-id'));
-      final result = await testContainer.read(provider.future);
+      final result = await testContainer.read(
+        projectRequirementsProvider('test-project-id').future,
+      );
 
       expect(result, equals(const ProjectRequirements()));
       verifyNever(mockRepo.fetchRequirements(any));
@@ -891,8 +927,9 @@ void main() {
         ],
       );
 
-      final provider = testContainer.read(projectRequirementsProvider('test-project-id'));
-      final result = await testContainer.read(provider.future);
+      final result = await testContainer.read(
+        projectRequirementsProvider('test-project-id').future,
+      );
 
       expect(result, equals(const ProjectRequirements()));
       verifyNever(mockRepo.fetchRequirements(any));
@@ -907,8 +944,9 @@ void main() {
         ],
       );
 
-      final provider = testContainer.read(projectRequirementsProvider('non-existent-id'));
-      final result = await testContainer.read(provider.future);
+      final result = await testContainer.read(
+        projectRequirementsProvider('non-existent-id').future,
+      );
 
       expect(result, equals(const ProjectRequirements()));
       verifyNever(mockRepo.fetchRequirements(any));
@@ -924,8 +962,9 @@ void main() {
         ],
       );
 
-      final provider = testContainer.read(projectRequirementsProvider('test-id'));
-      final result = await testContainer.read(provider.future);
+      final result = await testContainer.read(
+        projectRequirementsProvider('test-id').future,
+      );
 
       expect(result, equals(const ProjectRequirements()));
       verifyNever(mockRepo.fetchRequirements(any));
@@ -972,7 +1011,7 @@ void main() {
       
       // Verify template was saved (this would persist to settings in real implementation)
       final templates = notifier.getAllTemplates();
-      final userTemplates = templates.where((t) => !t.isPreset).toList();
+      final userTemplates = templates.whereType<DashboardTemplate>().where((t) => !t.isPreset).toList();
       expect(userTemplates.length, 1);
       expect(userTemplates[0].name, 'Test Template');
     });

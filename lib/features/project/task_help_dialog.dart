@@ -3,11 +3,11 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:project_management_app/generated/app_localizations.dart';
-import 'package:project_management_app/core/providers/ai_providers.dart' show aiChatProvider;
-import 'package:project_management_app/core/providers/ai/ai_providers.dart' show aiServiceProvider;
-import 'package:project_management_app/core/providers/auth_providers.dart' show helpLevelProvider;
-import 'package:project_management_app/core/config/ai_config.dart' as ai_config;
-import 'package:project_management_app/models/task_model.dart';
+import 'package:pma_core/providers/ai_providers.dart' show aiChatProvider;
+import 'package:pma_core/providers/ai/ai_providers.dart' show aiServiceProvider;
+import 'package:pma_core/providers/auth_providers.dart' show helpLevelProvider;
+import 'package:pma_core/core/config/ai_config.dart' as ai_config;
+import 'package:pma_core/models/task_model.dart';
 
 /// Dialog for displaying task help with adjustable detail level and AI chat
 class TaskHelpDialog extends ConsumerStatefulWidget {

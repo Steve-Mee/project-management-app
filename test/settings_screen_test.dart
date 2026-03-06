@@ -1,23 +1,23 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:project_management_app/core/models/ai_rate_limits_config.dart';
-import 'package:project_management_app/core/providers/ai_providers.dart';
-import 'package:project_management_app/core/providers/auth_providers.dart';
-import 'package:project_management_app/core/providers/theme_providers.dart';
-import 'package:project_management_app/core/providers/payment_providers.dart';
-import 'package:project_management_app/core/providers/settings_providers.dart';
-import 'package:project_management_app/core/providers/notification_providers.dart';
-import 'package:project_management_app/core/repository/settings_repository.dart';
+import 'package:pma_core/models/ai_rate_limits_config.dart';
+import 'package:pma_core/providers/ai_providers.dart';
+import 'package:pma_core/providers/auth_providers.dart';
+import 'package:pma_core/providers/theme_providers.dart';
+import 'package:pma_core/providers/payment_providers.dart';
+import 'package:pma_core/providers/settings_providers.dart';
+import 'package:pma_core/providers/notification_providers.dart';
+import 'package:pma_core/repository/impl/hive_settings_repository.dart';
 import 'package:project_management_app/features/settings/settings_screen.dart';
 import 'package:project_management_app/generated/app_localizations.dart';
-import 'package:project_management_app/core/repository/i_auth_repository.dart';
-import 'package:project_management_app/core/auth/auth_user.dart';
-import 'package:project_management_app/core/auth/role_models.dart';
+import 'package:pma_core/repository/i_auth_repository.dart';
+import 'package:pma_core/auth/auth_user.dart';
+import 'package:pma_core/auth/role_models.dart';
 
 // ignore_for_file: prefer_const_constructors
 
-class FakeSettingsRepository extends SettingsRepository {
+class FakeSettingsRepository extends HiveSettingsRepository {
   AiRateLimitsConfig? _aiRateLimitsConfig;
 
   FakeSettingsRepository({AiRateLimitsConfig? aiRateLimitsConfig})

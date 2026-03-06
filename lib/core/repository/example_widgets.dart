@@ -4,13 +4,13 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:project_management_app/core/providers/project_providers.dart';
-import 'package:project_management_app/core/providers/task_providers.dart';
-import 'package:project_management_app/core/utils/accessibility_helper.dart';
-import 'package:project_management_app/core/widgets/modern_gantt_chart.dart';
-import 'package:project_management_app/core/widgets/offline_indicator.dart';
-import 'package:project_management_app/models/project_model.dart';
-import 'package:project_management_app/models/task_model.dart';
+import 'package:pma_core/providers/project_providers.dart';
+import 'package:pma_core/providers/task_providers.dart';
+import 'package:pma_core/utils/accessibility_helper.dart';
+import 'package:pma_core/widgets/modern_gantt_chart.dart';
+import 'package:pma_core/widgets/offline_indicator.dart';
+import 'package:pma_core/models/project_model.dart';
+import 'package:pma_core/models/task_model.dart';
 
 // ignore_for_file: prefer_const_constructors
 
@@ -584,9 +584,10 @@ class _ProjectDetailsWidgetState extends ConsumerState<ProjectDetailsWidget> {
     final tasksAsync = ref.watch(tasksProvider);
 
     return projectAsync.when(
-      data: (project) {
+      data: (projectData) {
+        final project = projectData;
         final tasks = tasksAsync.maybeWhen(
-          data: (items) => items,
+          data: (items) => items.whereType<Task>().toList(),
           orElse: () => const <Task>[],
         );
 

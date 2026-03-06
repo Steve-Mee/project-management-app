@@ -1,12 +1,12 @@
 import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:project_management_app/core/providers/project_providers.dart';
-import 'package:project_management_app/core/providers/auth_providers.dart';
-import 'package:project_management_app/core/repository/i_project_repository.dart';
-import 'package:project_management_app/core/repository/models/project_models.dart';
-import 'package:project_management_app/models/project_model.dart';
-import 'package:project_management_app/models/project_filter.dart' as models;
+import 'package:pma_core/models/project_filter.dart' as model_filters;
+import 'package:pma_core/models/project_model.dart';
+import 'package:pma_core/providers/project_providers.dart';
+import 'package:pma_core/providers/auth_providers.dart';
+import 'package:pma_core/repository/i_project_repository.dart';
+import 'package:pma_core/repository/models/project_models.dart';
 
 // ignore_for_file: prefer_const_constructors
 
@@ -166,7 +166,7 @@ class FakeProjectRepository implements IProjectRepository {
   }
 
   @override
-  Future<List<ProjectModel>> getProjectsPaginated({int page = 1, int limit = 20, models.ProjectFilter? filter}) async {
+  Future<List<ProjectModel>> getProjectsPaginated({int page = 1, int limit = 20, model_filters.ProjectFilter? filter}) async {
     return _store.values.toList();
   }
 
@@ -176,7 +176,7 @@ class FakeProjectRepository implements IProjectRepository {
   }
 
   @override
-  Future<List<ProjectModel>> getFilteredProjects(models.ProjectFilter filter, {List<ProjectFilterConditions> extraConditions = const []}) async {
+  Future<List<ProjectModel>> getFilteredProjects(model_filters.ProjectFilter filter, {List<ProjectFilterConditions> extraConditions = const []}) async {
     return _store.values.toList();
   }
 
@@ -351,7 +351,7 @@ void main() {
     ));
 
     // Test fuzzy search
-    const filter = models.ProjectFilter(searchQuery: 'flutter');
+    const filter = model_filters.ProjectFilter(searchQuery: 'flutter');
     final results = container.read(filteredProjectsProvider(filter));
     expect(results.length, 1);
     expect(results[0].id, 'p1');
@@ -377,7 +377,7 @@ void main() {
     ));
 
     // Test fuzzy search on description
-    const filter = models.ProjectFilter(searchQuery: 'flutter');
+    const filter = model_filters.ProjectFilter(searchQuery: 'flutter');
     final results = container.read(filteredProjectsProvider(filter));
     expect(results.length, 1);
     expect(results[0].id, 'p1');
@@ -404,7 +404,7 @@ void main() {
     ));
 
     // Test fuzzy search on tags
-    const filter = models.ProjectFilter(searchQuery: 'mobile');
+    const filter = model_filters.ProjectFilter(searchQuery: 'mobile');
     final results = container.read(filteredProjectsProvider(filter));
     expect(results.length, 1);
     expect(results[0].id, 'p1');

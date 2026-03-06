@@ -6,13 +6,13 @@
 import 'dart:async' as _i4;
 
 import 'package:mockito/mockito.dart' as _i1;
-import 'package:project_management_app/core/models/dashboard_types.dart' as _i6;
-import 'package:project_management_app/core/models/requirements.dart' as _i7;
-import 'package:project_management_app/core/repository/i_dashboard_repository.dart'
+import 'package:pma_core/models/dashboard_types.dart' as _i6;
+import 'package:pma_core/models/requirements.dart' as _i7;
+import 'package:pma_core/repository/i_dashboard_repository.dart'
     as _i3;
-import 'package:project_management_app/core/repository/models/dashboard_models.dart'
+import 'package:pma_core/repository/models/dashboard_models.dart'
     as _i5;
-import 'package:project_management_app/models/project_requirements.dart' as _i2;
+import 'package:pma_core/models/project_requirements.dart' as _i2;
 
 // ignore_for_file: type=lint
 // ignore_for_file: avoid_redundant_argument_values

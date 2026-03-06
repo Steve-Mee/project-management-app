@@ -8,7 +8,7 @@ import 'package:share_plus/share_plus.dart';
 import 'package:intl/intl.dart';
 import 'package:project_management_app/generated/app_localizations.dart';
 import 'package:project_management_app/models/project_model.dart';
-import 'package:project_management_app/core/providers/project_providers.dart';
+import 'package:pma_core/providers/project_providers.dart';
 
 /// PDF export utility for project reports
 class PdfExporter {

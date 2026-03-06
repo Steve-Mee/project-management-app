@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 
 /// Custom theme configuration for the application
 /// Provides both dark and light themes with green primary color for consistency across the app
@@ -34,29 +33,34 @@ class AppTheme {
   /// Shared TextTheme configuration with custom font sizes
   /// Used for both light and dark themes
   static TextTheme _buildTextTheme(TextTheme baseTheme, {Color? textColor}) {
-    return GoogleFonts.poppinsTextTheme(baseTheme).copyWith(
-      // Custom headline sizes
-      headlineMedium: GoogleFonts.poppins(
+    return baseTheme.copyWith(
+      // Prefer Poppins when available locally; fallback font is handled by Flutter.
+      headlineMedium: baseTheme.headlineMedium?.copyWith(
+        fontFamily: 'Poppins',
         fontSize: 24,
         fontWeight: FontWeight.w600,
         color: textColor,
       ),
-      headlineSmall: GoogleFonts.poppins(
+      headlineSmall: baseTheme.headlineSmall?.copyWith(
+        fontFamily: 'Poppins',
         fontSize: 20,
         fontWeight: FontWeight.w600,
         color: textColor,
       ),
-      titleLarge: GoogleFonts.poppins(
+      titleLarge: baseTheme.titleLarge?.copyWith(
+        fontFamily: 'Poppins',
         fontSize: 18,
         fontWeight: FontWeight.w500,
         color: textColor,
       ),
-      bodyLarge: GoogleFonts.poppins(
+      bodyLarge: baseTheme.bodyLarge?.copyWith(
+        fontFamily: 'Poppins',
         fontSize: 16,
         fontWeight: FontWeight.w400,
         color: textColor,
       ),
-      bodyMedium: GoogleFonts.poppins(
+      bodyMedium: baseTheme.bodyMedium?.copyWith(
+        fontFamily: 'Poppins',
         fontSize: 14,
         fontWeight: FontWeight.w400,
         color: textColor,

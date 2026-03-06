@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:project_management_app/core/providers/task_providers.dart';
-import 'package:project_management_app/core/providers/project_providers.dart';
-import 'package:project_management_app/core/providers/auth_providers.dart';
-import 'package:project_management_app/core/services/sub_task_generation_service.dart';
-import 'package:project_management_app/models/task_model.dart';
-import 'package:project_management_app/models/sub_task_model.dart';
+import 'package:pma_core/providers/task_providers.dart';
+import 'package:pma_core/providers/project_providers.dart';
+import 'package:pma_core/providers/auth_providers.dart';
+import 'package:pma_core/services/sub_task_generation_service.dart';
+import 'package:pma_core/models/task_model.dart';
+import 'package:pma_core/models/sub_task_model.dart';
 import 'package:project_management_app/features/project/task_help_dialog.dart';
 
 /// Expandable task card with sub-tasks and assignment functionality

@@ -30,8 +30,14 @@ jobs:
       - name: Analyze
         run: flutter analyze
 
+      - name: Analyze pma_core
+        run: dart analyze packages/pma_core
+
       - name: Run tests with coverage
         run: flutter test --coverage
+
+      - name: Run pma_core tests
+        run: flutter test packages/pma_core/test
 
       - name: Build web
         run: flutter build web --release

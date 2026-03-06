@@ -1,8 +1,8 @@
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:project_management_app/core/providers/sync_providers.dart';
-import 'package:project_management_app/core/services/cloud_sync_service.dart';
+import 'package:pma_core/providers/sync_providers.dart';
+import 'package:pma_core/services/cloud_sync_service.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -34,7 +34,13 @@ void main() {
 
   group('Push notifications', () {
     test('notification service uses FCM-only flow', () async {
-      final file = File('lib/core/services/notification_service.dart');
+      final candidatePaths = [
+        'lib/core/services/notification_service.dart',
+        'packages/pma_core/lib/services/notification_service.dart',
+      ];
+      final file = candidatePaths
+          .map(File.new)
+          .firstWhere((f) => f.existsSync(), orElse: () => File(candidatePaths.first));
       final source = await file.readAsString();
 
       expect(source, contains("import 'package:firebase_messaging/firebase_messaging.dart';"));

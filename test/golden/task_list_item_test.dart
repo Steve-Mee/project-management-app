@@ -2,12 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:project_management_app/core/providers/task_providers.dart';
-import 'package:project_management_app/core/repository/impl/hive_task_repository.dart';
+import 'package:pma_core/providers/task_providers.dart';
+import 'package:pma_core/repository/impl/hive_task_repository.dart';
 import 'package:project_management_app/features/dashboard/widgets/task_chart_widget.dart';
 import 'package:project_management_app/generated/app_localizations.dart';
-import 'package:project_management_app/models/project_model.dart';
-import 'package:project_management_app/models/task_model.dart';
+import 'package:pma_core/models/project_model.dart';
+import 'package:pma_core/models/task_model.dart';
 
 const _surfaceSize = Size(1000, 800);
 const _listKey = Key('task_list_item_golden');

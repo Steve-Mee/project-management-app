@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:project_management_app/generated/app_localizations.dart';
 import 'package:project_management_app/models/project_sort.dart';
-import 'package:project_management_app/models/project_model.dart';
+import 'package:pma_core/models/project_model.dart';
 
 class FiltersSortWidget extends ConsumerStatefulWidget {
   const FiltersSortWidget({

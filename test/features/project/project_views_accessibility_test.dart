@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:project_management_app/features/project/widgets/project_views.dart';
 import 'package:project_management_app/generated/app_localizations.dart';
-import 'package:project_management_app/models/project_model.dart';
+import 'package:pma_core/models/project_model.dart';
 
 ProjectModel _project({
   required String id,

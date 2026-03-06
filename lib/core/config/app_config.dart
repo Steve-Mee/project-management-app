@@ -2,7 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
-import '../services/app_logger.dart';
+import 'package:pma_core/services/app_logger.dart';
 
 /// Centralized application configuration loaded from environment variables.
 /// Provides typed access to API keys and configuration values.

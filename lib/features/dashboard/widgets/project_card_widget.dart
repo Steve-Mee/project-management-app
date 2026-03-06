@@ -5,7 +5,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:auto_size_text/auto_size_text.dart';
 import 'package:project_management_app/generated/app_localizations.dart';
-import 'package:project_management_app/models/project_model.dart';
+import 'package:pma_core/models/project_model.dart';
 
 class _ChartColors {
   final Color primary;

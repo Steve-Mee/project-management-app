@@ -29,7 +29,7 @@ void _expectAaContrast({
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
-  GoogleFonts.config.allowRuntimeFetching = false;
+  GoogleFonts.config.allowRuntimeFetching = true;
 
   group('Theme contrast (WCAG AA)', () {
     test('dark theme key text and controls meet AA contrast', () {

@@ -14,13 +14,14 @@ import 'package:share_plus/share_plus.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:project_management_app/features/project/pdf_export.dart';
 // ignore_for_file: use_build_context_synchronously, unnecessary_underscores
-import 'package:project_management_app/core/providers/project_providers.dart';
-import '../../core/providers/auth_providers.dart';
-import '../../core/providers/theme_providers.dart';
-import '../../core/providers/active_viewers_providers.dart';
-import '../../core/providers/ai/ai_providers.dart' show aiServiceProvider;
-import '../../models/project_meta.dart';
-import '../../models/project_model.dart';
+import 'package:pma_core/providers/project_providers.dart';
+import 'package:pma_core/providers/auth_providers.dart';
+import 'package:pma_core/providers/theme_providers.dart';
+import 'package:pma_core/providers/active_viewers_providers.dart';
+import 'package:pma_core/providers/ai/ai_providers.dart' show aiServiceProvider;
+import 'package:pma_core/models/project_meta.dart';
+import 'package:pma_core/models/project_model.dart';
+import 'package:project_management_app/models/project_model.dart' as app_models;
 import '../../models/project_sort.dart';
 import 'widgets/project_filter_dialog.dart';
 import 'widgets/project_views.dart';
@@ -1814,7 +1815,7 @@ class _BulkActionsBottomSheetState extends ConsumerState<BulkActionsBottomSheet>
       
       for (final id in widget.selectedProjectIds) {
         final project = await ref.read(projectByIdProvider(id).future);
-        projects.add(project);
+        projects.add(ProjectModel.fromJson(project.toJson()));
       }
 
       final csvData = [
@@ -1864,11 +1865,11 @@ class _BulkActionsBottomSheetState extends ConsumerState<BulkActionsBottomSheet>
   Future<void> _exportSelectedProjectsToPdf(BuildContext context, WidgetRef ref, AppLocalizations l10n) async {
     try {
       // Migrated to use projectByIdProvider for consistency with Riverpod patterns.
-      final projects = <ProjectModel>[];
+      final projects = <app_models.ProjectModel>[];
 
       for (final id in widget.selectedProjectIds) {
         final project = await ref.read(projectByIdProvider(id).future);
-        projects.add(project);
+        projects.add(app_models.ProjectModel.fromJson(project.toJson()));
       }
 
       // Create a filter for selected projects

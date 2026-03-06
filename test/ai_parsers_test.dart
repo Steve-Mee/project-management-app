@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:project_management_app/core/services/ai_parsers.dart';
+import 'package:pma_core/services/ai_parsers.dart';
 
 void main() {
   group('AiParsers.safeParseXml', () {

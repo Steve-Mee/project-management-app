@@ -4,11 +4,12 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_spinkit/flutter_spinkit.dart';
 import 'package:project_management_app/generated/app_localizations.dart';
 // bring in only the necessary providers to avoid name clashes
-import '../../core/providers/ai_providers.dart' show aiChatProvider, useProjectFilesProvider, AiChatState;
-import '../../core/providers/auth_providers.dart' show privacyConsentProvider;
-import '../../core/providers/project_providers.dart' show projectsProvider;
-import '../../core/services/project_file_service.dart';
+import 'package:pma_core/providers/ai_providers.dart' show aiChatProvider, useProjectFilesProvider, AiChatState;
+import 'package:pma_core/providers/auth_providers.dart' show privacyConsentProvider;
+import 'package:pma_core/providers/project_providers.dart' show projectsProvider;
+import 'package:pma_core/services/project_file_service.dart';
 import '../../models/chat_message_model.dart';
+import '../../models/project_model.dart';
 
 /// AI Chat Modal - Dialog/Drawer with chat interface
 class AiChatModal extends ConsumerStatefulWidget {
@@ -219,7 +220,7 @@ class _AiChatModalState extends ConsumerState<AiChatModal> {
       controller: _scrollController,
       padding: EdgeInsets.all(16.w),
       children: [
-        ...chatState.messages.map((message) => _buildMessageRow(message)),
+        ...chatState.messages.whereType<ChatMessage>().map((message) => _buildMessageRow(message)),
         if (chatState.isLoading) _buildTypingIndicator(),
       ],
     );
@@ -474,10 +475,11 @@ class _AiChatModalState extends ConsumerState<AiChatModal> {
     final projectsState = ref.read(projectsProvider);
     return projectsState.maybeWhen(
       data: (projects) {
+        final typedProjects = projects.whereType<ProjectModel>().toList();
         final projectId = widget.projectId;
         if (projectId != null) {
           final project = _firstWhereOrNull(
-            projects,
+            typedProjects,
             (item) => item.id == projectId,
           );
           if (project == null) {
@@ -491,7 +493,7 @@ class _AiChatModalState extends ConsumerState<AiChatModal> {
         }
 
         final project = _firstWhereOrNull(
-          projects,
+          typedProjects,
           (item) => (item.directoryPath?.isNotEmpty ?? false),
         );
         if (project == null) {

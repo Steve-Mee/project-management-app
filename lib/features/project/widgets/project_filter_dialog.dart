@@ -1,11 +1,12 @@
 // ignore_for_file: prefer_const_constructors
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:project_management_app/core/providers/project_providers.dart';
+import 'package:pma_core/providers/project_providers.dart';
 import 'package:project_management_app/generated/app_localizations.dart';
-import 'package:project_management_app/models/project_model.dart';
+import 'package:pma_core/models/project_model.dart';
 import 'package:project_management_app/features/project/pdf_export.dart';
-import 'package:project_management_app/core/providers/ai/ai_providers.dart' show aiServiceProvider;
+import 'package:project_management_app/models/project_model.dart' as project_management;
+import 'package:pma_core/providers/ai/ai_providers.dart' show aiServiceProvider;
 import 'package:csv/csv.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:path_provider/path_provider.dart';
@@ -212,7 +213,10 @@ class _ProjectFilterDialogState extends State<ProjectFilterDialog> with TickerPr
 
   Future<void> _exportToPdf() async {
     try {
-      final projects = widget.filteredProjects ?? [];
+      final projects =
+          (widget.filteredProjects ?? <ProjectModel>[])
+              .map((project) => project_management.ProjectModel.fromJson(project.toJson()))
+              .toList();
       final searchQuery = _filter.searchQuery ?? '';
 
       await PdfExporter.exportProjectsToPdf(

@@ -3,7 +3,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:project_management_app/features/dashboard/widgets/project_card_widget.dart';
 import 'package:project_management_app/generated/app_localizations.dart';
-import 'package:project_management_app/models/project_model.dart';
+import 'package:pma_core/models/project_model.dart';
 
 const _surfaceSize = Size(1280, 720);
 const _cardKey = Key('dashboard_card_golden');

@@ -3,13 +3,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-import '../providers/project_providers.dart';
-import '../providers/onboarding_providers.dart';
-import '../providers/ai/ai_chat_providers.dart';
 import '../routes.dart';
-import '../services/project_invitation_service.dart';
-import '../utils/accessibility_helper.dart';
-import '../../models/project_model.dart';
+import 'package:pma_core/providers/project_providers.dart';
+import 'package:pma_core/providers/onboarding_providers.dart';
+import 'package:pma_core/providers/ai/ai_chat_providers.dart';
+import 'package:pma_core/services/project_invitation_service.dart';
+import 'package:pma_core/utils/accessibility_helper.dart';
+import 'package:pma_core/models/project_model.dart';
+import 'package:pma_core/models/chat_message_model.dart';
 
 /// Issue #067: main onboarding wizard (4-step flow).
 ///
@@ -355,8 +356,8 @@ class _QuickAiDemoDialogState extends ConsumerState<_QuickAiDemoDialog> {
         child: chatStateAsync.when(
           data: (chatState) {
             final lastAiMessage = chatState.messages
+                .whereType<ChatMessage>()
                 .where((msg) => !msg.isUser)
-                .cast<dynamic>()
                 .lastOrNull;
 
             return Column(

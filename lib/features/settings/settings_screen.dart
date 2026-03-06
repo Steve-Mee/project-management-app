@@ -5,13 +5,13 @@ import 'dart:io';
 import 'package:file_picker/file_picker.dart';
 import 'package:go_router/go_router.dart';
 import 'package:project_management_app/generated/app_localizations.dart';
-import 'package:project_management_app/core/auth/permissions.dart';
-import 'package:project_management_app/core/repository/hive_initializer.dart';
-import 'package:project_management_app/core/providers.dart';
-import '../../core/services/project_transfer_service.dart';
+import 'package:pma_core/auth/permissions.dart';
+import 'package:pma_core/repository/hive_initializer.dart';
+import 'package:pma_core/providers.dart';
+import 'package:pma_core/services/project_transfer_service.dart';
 import '../../features/dashboard/customize_dashboard_screen.dart';
-import '../../core/config/ai_config.dart' as ai_config;
-import '../../core/models/ai_rate_limits_config.dart';
+import 'package:pma_core/core/config/ai_config.dart' as ai_config;
+import 'package:pma_core/models/ai_rate_limits_config.dart';
 
 /// Settings screen - placeholder for application settings
 class SettingsScreen extends ConsumerStatefulWidget {
@@ -71,11 +71,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       orElse: () => false,
     );
     final lastBackupTime = settingsAsync.maybeWhen(
-      data: (settings) => settings.getLastBackupTime(),
+      data: (settings) => (settings as dynamic)?.getLastBackupTime() as DateTime?,
       orElse: () => null,
     );
     final lastBackupPath = settingsAsync.maybeWhen(
-      data: (settings) => settings.getLastBackupPath(),
+      data: (settings) => (settings as dynamic)?.getLastBackupPath() as String?,
       orElse: () => null,
     );
     final lastBackupLabel =
@@ -393,7 +393,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           ),
           SwitchListTile(
             value: settingsAsync.maybeWhen(
-              data: (settings) => settings.getAutoLoginEnabled(),
+              data: (settings) => ((settings as dynamic)?.getAutoLoginEnabled() as bool?) ?? false,
               orElse: () => false,
             ),
             onChanged: (value) async {
@@ -1528,16 +1528,17 @@ class _AiSettingsSection extends ConsumerWidget {
     
     return rateLimitsAsync.maybeWhen(
       data: (config) {
-        final operations = config.perOperationLimits.keys.toList()..sort();
+        final safeConfig = (config as AiRateLimitsConfig?) ?? const AiRateLimitsConfig();
+        final operations = safeConfig.perOperationLimits.keys.toList()..sort();
         
         return operations.map((operation) {
-          final currentLimit = config.perOperationLimits[operation] ?? config.maxRequestsPerWindow;
+          final currentLimit = safeConfig.perOperationLimits[operation] ?? safeConfig.maxRequestsPerWindow;
           final displayName = _getOperationDisplayName(operation, l10n);
           
           return Consumer(
             builder: (context, ref, child) {
               final liveConfig = ref.watch(aiRateLimitsConfigProvider).maybeWhen(
-                data: (config) => config,
+                data: (config) => (config as AiRateLimitsConfig?) ?? const AiRateLimitsConfig(),
                 orElse: () => const AiRateLimitsConfig(),
               );
               final liveLimit = liveConfig.perOperationLimits[operation] ?? liveConfig.maxRequestsPerWindow;
@@ -1595,9 +1596,10 @@ class _AiSettingsSection extends ConsumerWidget {
     ref.read(aiRateLimitsConfigProvider.notifier).setAiRateLimitsConfig(
       ref.read(aiRateLimitsConfigProvider).maybeWhen(
         data: (currentConfig) {
-          final updatedLimits = Map<String, int>.from(currentConfig.perOperationLimits);
+          final safeConfig = (currentConfig as AiRateLimitsConfig?) ?? const AiRateLimitsConfig();
+          final updatedLimits = Map<String, int>.from(safeConfig.perOperationLimits);
           updatedLimits[operation] = limit;
-          return currentConfig.copyWith(perOperationLimits: updatedLimits);
+          return safeConfig.copyWith(perOperationLimits: updatedLimits);
         },
         orElse: () => const AiRateLimitsConfig(),
       ),
@@ -1627,7 +1629,7 @@ class _AiSettingsSection extends ConsumerWidget {
           Consumer(
             builder: (context, ref, child) {
               final liveConfig = ref.watch(aiRateLimitsConfigProvider).maybeWhen(
-                data: (config) => config,
+                data: (config) => (config as AiRateLimitsConfig?) ?? const AiRateLimitsConfig(),
                 orElse: () => const AiRateLimitsConfig(),
               );
               final currentValue = liveConfig.backoffBaseDelay.inMilliseconds.toDouble();
@@ -1652,7 +1654,7 @@ class _AiSettingsSection extends ConsumerWidget {
           Consumer(
             builder: (context, ref, child) {
               final liveConfig = ref.watch(aiRateLimitsConfigProvider).maybeWhen(
-                data: (config) => config,
+                data: (config) => (config as AiRateLimitsConfig?) ?? const AiRateLimitsConfig(),
                 orElse: () => const AiRateLimitsConfig(),
               );
               final currentValue = liveConfig.backoffMaxDelay.inSeconds.toDouble();
@@ -1677,7 +1679,7 @@ class _AiSettingsSection extends ConsumerWidget {
           Consumer(
             builder: (context, ref, child) {
               final liveConfig = ref.watch(aiRateLimitsConfigProvider).maybeWhen(
-                data: (config) => config,
+                data: (config) => (config as AiRateLimitsConfig?) ?? const AiRateLimitsConfig(),
                 orElse: () => const AiRateLimitsConfig(),
               );
               final currentValue = liveConfig.maxRetryAttempts.toDouble();
@@ -1728,7 +1730,7 @@ class _AiSettingsSection extends ConsumerWidget {
           Consumer(
             builder: (context, ref, child) {
               final liveConfig = ref.watch(aiRateLimitsConfigProvider).maybeWhen(
-                data: (config) => config,
+                data: (config) => (config as AiRateLimitsConfig?) ?? const AiRateLimitsConfig(),
                 orElse: () => const AiRateLimitsConfig(),
               );
               
@@ -1778,7 +1780,8 @@ class _AiSettingsSection extends ConsumerWidget {
     ref.read(aiRateLimitsConfigProvider.notifier).setAiRateLimitsConfig(
       ref.read(aiRateLimitsConfigProvider).maybeWhen(
         data: (currentConfig) {
-          return currentConfig.copyWith(
+          final safeConfig = (currentConfig as AiRateLimitsConfig?) ?? const AiRateLimitsConfig();
+          return safeConfig.copyWith(
             backoffBaseDelay: Duration(milliseconds: milliseconds),
           );
         },
@@ -1804,7 +1807,8 @@ class _AiSettingsSection extends ConsumerWidget {
     ref.read(aiRateLimitsConfigProvider.notifier).setAiRateLimitsConfig(
       ref.read(aiRateLimitsConfigProvider).maybeWhen(
         data: (currentConfig) {
-          return currentConfig.copyWith(
+          final safeConfig = (currentConfig as AiRateLimitsConfig?) ?? const AiRateLimitsConfig();
+          return safeConfig.copyWith(
             backoffMaxDelay: Duration(seconds: seconds),
           );
         },
@@ -1830,7 +1834,8 @@ class _AiSettingsSection extends ConsumerWidget {
     ref.read(aiRateLimitsConfigProvider.notifier).setAiRateLimitsConfig(
       ref.read(aiRateLimitsConfigProvider).maybeWhen(
         data: (currentConfig) {
-          return currentConfig.copyWith(
+          final safeConfig = (currentConfig as AiRateLimitsConfig?) ?? const AiRateLimitsConfig();
+          return safeConfig.copyWith(
             maxRetryAttempts: attempts,
           );
         },
@@ -1856,7 +1861,8 @@ class _AiSettingsSection extends ConsumerWidget {
     ref.read(aiRateLimitsConfigProvider.notifier).setAiRateLimitsConfig(
       ref.read(aiRateLimitsConfigProvider).maybeWhen(
         data: (currentConfig) {
-          return currentConfig.copyWith(
+          final safeConfig = (currentConfig as AiRateLimitsConfig?) ?? const AiRateLimitsConfig();
+          return safeConfig.copyWith(
             queueEnabled: enabled,
           );
         },

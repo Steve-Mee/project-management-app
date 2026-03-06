@@ -1,7 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:project_management_app/core/providers/payment_providers.dart';
+import 'package:pma_core/providers/payment_providers.dart';
 
 // Fake classes for testing
 class FakeRef extends Fake implements Ref {}

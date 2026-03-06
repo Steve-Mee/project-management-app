@@ -2,12 +2,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:project_management_app/core/repository/repository.dart';
-import 'package:project_management_app/core/auth/auth_user.dart';
-import 'package:project_management_app/core/auth/role_models.dart';
-import 'package:project_management_app/core/providers/auth_providers.dart';
-import 'package:project_management_app/core/services/recaptcha_service.dart';
-import 'package:project_management_app/core/config/ai_config.dart' as ai_config;
+import 'package:pma_core/repository/i_auth_repository.dart';
+import 'package:pma_core/repository/impl/hive_auth_repository.dart';
+import 'package:pma_core/repository/impl/hive_settings_repository.dart';
+import 'package:pma_core/repository/settings_repository.dart';
+import 'package:pma_core/auth/auth_user.dart';
+import 'package:pma_core/auth/role_models.dart';
+import 'package:pma_core/providers/auth_providers.dart';
+import 'package:pma_core/services/recaptcha_service.dart';
+import 'package:pma_core/core/config/ai_config.dart' as ai_config;
 
 // Fake box for testing
 class FakeBox {
@@ -107,7 +110,7 @@ class TestAuthNotifier extends AuthNotifier {
 }
 
 // Fake classes
-class FakeSettingsRepository extends Fake implements SettingsRepository {
+class FakeSettingsRepository extends HiveSettingsRepository {
   bool _enableBiometricLogin = false;
   String? _helpLevel;
   String _recaptchaSiteKey = '';

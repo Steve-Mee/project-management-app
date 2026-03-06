@@ -2,16 +2,16 @@ import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:project_management_app/core/models/dashboard_types.dart';
-import 'package:project_management_app/core/models/requirements.dart';
-import 'package:project_management_app/core/providers/sync_providers.dart';
-import 'package:project_management_app/core/repository/i_dashboard_repository.dart';
-import 'package:project_management_app/core/repository/i_project_repository.dart';
-import 'package:project_management_app/core/repository/models/dashboard_models.dart';
-import 'package:project_management_app/core/repository/models/project_models.dart';
-import 'package:project_management_app/models/project_filter.dart';
-import 'package:project_management_app/models/project_model.dart';
-import 'package:project_management_app/models/project_requirements.dart';
+import 'package:pma_core/models/dashboard_types.dart';
+import 'package:pma_core/models/project_filter.dart';
+import 'package:pma_core/models/project_model.dart';
+import 'package:pma_core/models/project_requirements.dart';
+import 'package:pma_core/models/requirements.dart';
+import 'package:pma_core/providers/sync_providers.dart';
+import 'package:pma_core/repository/i_dashboard_repository.dart';
+import 'package:pma_core/repository/i_project_repository.dart';
+import 'package:pma_core/repository/models/dashboard_models.dart';
+import 'package:pma_core/repository/models/project_models.dart';
 
 class FakeProjectRepository implements IProjectRepository {
   final Map<String, ProjectModel> _projects = <String, ProjectModel>{};

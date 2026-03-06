@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
-import 'package:project_management_app/core/providers/project_providers.dart';
+import 'package:pma_core/providers/project_providers.dart';
 import 'package:project_management_app/generated/app_localizations.dart';
-import 'package:project_management_app/models/project_model.dart';
+import 'package:pma_core/models/project_model.dart';
 import 'package:animate_do/animate_do.dart';
 
 /// Widget that displays a saved view as a card with stats and quick access

@@ -1,12 +1,12 @@
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:project_management_app/core/services/recaptcha_service.dart';
-import 'package:project_management_app/core/repository/settings_repository.dart';
+import 'package:pma_core/services/recaptcha_service.dart';
+import 'package:pma_core/repository/impl/hive_settings_repository.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 
 void main() {
-  late SettingsRepository settings;
+  late HiveSettingsRepository settings;
   late RecaptchaService recaptchaService;
   late Directory tempDir;
 
@@ -24,7 +24,7 @@ void main() {
   });
 
   setUp(() {
-    settings = SettingsRepository();
+    settings = HiveSettingsRepository();
     recaptchaService = RecaptchaService(settings);
   });
 

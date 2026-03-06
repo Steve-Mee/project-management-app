@@ -5,15 +5,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:project_management_app/generated/app_localizations.dart';
-import 'package:project_management_app/core/auth/permissions.dart';
-import 'package:project_management_app/core/providers/project_providers.dart';
-import 'package:project_management_app/core/providers/task_providers.dart';
-import 'package:project_management_app/core/providers/dashboard_providers.dart';
-import '../../core/providers/auth_providers.dart';
-import '../../core/services/project_file_service.dart';
-import '../../models/project_meta.dart';
-import '../../models/project_model.dart';
-import '../../models/task_model.dart';
+import 'package:pma_core/auth/permissions.dart';
+import 'package:pma_core/providers/project_providers.dart';
+import 'package:pma_core/providers/task_providers.dart';
+import 'package:pma_core/providers/dashboard_providers.dart';
+import 'package:pma_core/providers/auth_providers.dart';
+import 'package:pma_core/services/project_file_service.dart';
+import 'package:pma_core/models/project_meta.dart';
+import 'package:pma_core/models/project_model.dart';
+import 'package:pma_core/models/task_model.dart';
 import 'package:project_management_app/features/project/ai_chat_bottom_sheet.dart';
 import 'package:project_management_app/features/project/expandable_task_card.dart';
 import 'package:project_management_app/features/project/project_chat.dart';
@@ -1855,8 +1855,7 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen>
 
   /// Build requirements section
   Widget _buildRequirementsSection(BuildContext context) {
-    final innerProvider = ref.watch(projectRequirementsProvider(widget.projectId));
-    final requirementsAsync = ref.watch(innerProvider);
+    final requirementsAsync = ref.watch(projectRequirementsProvider(widget.projectId));
 
     return requirementsAsync.when(
       data: (requirements) {

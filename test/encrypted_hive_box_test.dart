@@ -4,8 +4,8 @@ import 'dart:io';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hive_flutter/hive_flutter.dart';
-import 'package:project_management_app/core/repository/encrypted_hive_box.dart';
-import 'package:project_management_app/core/services/secure_storage_service.dart';
+import 'package:pma_core/repository/encrypted_hive_box.dart';
+import 'package:pma_core/services/secure_storage_service.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();

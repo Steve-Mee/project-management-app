@@ -2,13 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:project_management_app/core/providers.dart';
+import 'package:hive_flutter/hive_flutter.dart';
+import 'package:pma_core/providers.dart';
 import 'package:project_management_app/features/dashboard/dashboard_screen.dart';
 import 'package:project_management_app/generated/app_localizations.dart';
-import 'package:project_management_app/models/project_meta.dart';
-import 'package:project_management_app/models/project_model.dart';
-import 'package:project_management_app/models/task_model.dart';
-import 'package:project_management_app/core/repository/impl/hive_task_repository.dart';
+import 'package:pma_core/models/project_meta.dart';
+import 'package:pma_core/models/project_model.dart';
+import 'package:pma_core/models/task_model.dart';
+import 'package:pma_core/repository/impl/hive_task_repository.dart';
+import 'dart:io';
 
 // ignore_for_file: prefer_const_constructors
 
@@ -42,6 +44,15 @@ void main() {
     const size = Size(1280, 720);
     await tester.binding.setSurfaceSize(size);
     addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    final hiveDir = Directory.systemTemp.createTempSync('dashboard_golden_hive');
+    Hive.init(hiveDir.path);
+    addTearDown(() async {
+      await Hive.close();
+      if (hiveDir.existsSync()) {
+        hiveDir.deleteSync(recursive: true);
+      }
+    });
 
     final projects = [
       const ProjectModel(
@@ -107,7 +118,6 @@ void main() {
         projectMetaProvider.overrideWithValue(meta),
       ],
     );
-    addTearDown(container.dispose);
 
     await tester.pumpWidget(
       UncontrolledProviderScope(
@@ -126,10 +136,15 @@ void main() {
       ),
     );
 
-    await tester.pumpAndSettle();
+    // Dashboard has periodic/background provider activity; settle with fixed pumps.
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
     await expectLater(
       find.byType(DashboardScreen),
-      matchesGoldenFile('goldens/dashboard.png'),
+      matchesGoldenFile('test/goldens/dashboard.png'),
     );
+
+    container.dispose();
+    await tester.pump();
   });
 }

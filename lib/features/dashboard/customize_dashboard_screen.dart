@@ -8,13 +8,13 @@ import 'package:project_management_app/features/dashboard/widgets/welcome_header
 import 'package:project_management_app/features/dashboard/widgets/project_card_widget.dart';
 import 'package:project_management_app/features/dashboard/widgets/filters_sort_widget.dart';
 import 'package:project_management_app/features/dashboard/widgets/recent_workflows_header_widget.dart';
-import 'package:project_management_app/models/project_model.dart';
-import 'package:project_management_app/core/models/dashboard_types.dart';
+import 'package:pma_core/models/project_model.dart';
+import 'package:pma_core/models/dashboard_types.dart';
 import 'package:project_management_app/models/project_sort.dart';
-import 'package:project_management_app/core/providers/dashboard_providers.dart';
-import 'package:project_management_app/core/providers/project_providers.dart';
-import 'package:project_management_app/core/repository/models/dashboard_models.dart';
-import 'package:project_management_app/core/services/app_logger.dart';
+import 'package:pma_core/providers/dashboard_providers.dart';
+import 'package:pma_core/providers/project_providers.dart';
+import 'package:pma_core/repository/models/dashboard_models.dart';
+import 'package:pma_core/services/app_logger.dart';
 
 class CustomizeDashboardScreen extends ConsumerStatefulWidget {
   const CustomizeDashboardScreen({super.key});

@@ -43,6 +43,8 @@ dependencies:
     sdk: flutter
   flutter_localizations:
     sdk: flutter
+  pma_core:
+    path: packages/pma_core
 
   # Removed unused packages during app-size cleanup (#065):
   # - `cupertino_icons` (no `CupertinoIcons` usage)

@@ -1,15 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:project_management_app/core/providers/project_providers.dart';
-import 'package:project_management_app/core/providers/task_providers.dart';
-import 'package:project_management_app/core/providers/ai_providers.dart' show aiChatProvider;
-import 'package:project_management_app/core/providers/ai/ai_providers.dart' show aiServiceProvider;
-import 'package:project_management_app/core/providers/auth_providers.dart';
-import 'package:project_management_app/core/utils/accessibility_helper.dart';
-import 'package:project_management_app/models/project_model.dart';
-import 'package:project_management_app/models/task_model.dart';
-import 'package:project_management_app/core/config/ai_config.dart';
-import 'package:project_management_app/core/auth/auth_user.dart';
+import 'package:pma_core/providers/project_providers.dart';
+import 'package:pma_core/providers/task_providers.dart';
+import 'package:pma_core/providers/ai_providers.dart' show aiChatProvider;
+import 'package:pma_core/providers/ai/ai_providers.dart' show aiServiceProvider;
+import 'package:pma_core/providers/auth_providers.dart';
+import 'package:pma_core/utils/accessibility_helper.dart';
+import 'package:pma_core/models/project_model.dart';
+import 'package:pma_core/models/task_model.dart';
+import 'package:pma_core/core/config/ai_config.dart';
+import 'package:pma_core/auth/auth_user.dart';
 
 /// Model for chat history entries
 class ChatHistoryEntry {
@@ -301,7 +301,7 @@ class _AiChatBottomSheetState extends ConsumerState<AiChatBottomSheet> {
     final tasksState = ref.read(tasksProvider);
 
     final project = projectsState.maybeWhen(
-      data: (projects) => projects.firstWhere(
+      data: (projects) => projects.whereType<ProjectModel>().firstWhere(
         (p) => p.id == widget.projectId,
         orElse: () => ProjectModel.create(name: 'Unknown Project', progress: 0.0),
       ),
@@ -331,7 +331,7 @@ Current Date: ${DateTime.now().toString().split(' ')[0]}
     // Get project to determine help level and complexity
     final projectsState = ref.read(projectsProvider);
     final project = projectsState.maybeWhen(
-      data: (projects) => projects.firstWhere(
+      data: (projects) => projects.whereType<ProjectModel>().firstWhere(
         (p) => p.id == widget.projectId,
         orElse: () => ProjectModel.create(name: 'Unknown Project', progress: 0.0),
       ),
@@ -538,7 +538,7 @@ Current Date: ${DateTime.now().toString().split(' ')[0]}
     // Get current project
     final projectsState = ref.read(projectsProvider);
     final project = projectsState.maybeWhen(
-      data: (projects) => projects.firstWhere(
+      data: (projects) => projects.whereType<ProjectModel>().firstWhere(
         (p) => p.id == widget.projectId,
         orElse: () => throw Exception('Project not found'),
       ),

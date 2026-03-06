@@ -8,20 +8,52 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:window_manager/window_manager.dart';
 import '../generated/app_localizations.dart';
-import '../features/dashboard/dashboard_screen.dart';
-import '../features/project/project_screen.dart';
-import '../features/project/project_detail_screen.dart';
-import '../features/project/project_members_screen.dart';
-import '../features/ai_chat/ai_chat_screen.dart';
-import '../features/settings/settings_screen.dart';
-import '../features/admin/admin_screen.dart';
-import '../features/ai_usage/ai_usage_screen.dart';
-import 'widgets/offline_indicator.dart';
-import 'providers/auth_providers.dart';
-import 'providers/theme_providers.dart';
+import '../features/dashboard/dashboard_screen.dart' deferred as dashboard_feature;
+import '../features/project/project_screen.dart' deferred as project_feature;
+import '../features/project/project_detail_screen.dart' deferred as project_detail_feature;
+import '../features/project/project_members_screen.dart' deferred as project_members_feature;
+import '../features/ai_chat/ai_chat_screen.dart' deferred as ai_chat_feature;
+import '../features/settings/settings_screen.dart' deferred as settings_feature;
+import '../features/admin/admin_screen.dart' deferred as admin_feature;
+import '../features/ai_usage/ai_usage_screen.dart' deferred as ai_usage_feature;
+import 'package:pma_core/widgets/offline_indicator.dart';
+import 'package:pma_core/providers/auth_providers.dart';
+import 'package:pma_core/providers/theme_providers.dart';
 import 'auth/permissions.dart';
 
 part 'routes.freezed.dart';
+
+class _DeferredFeatureScreen extends StatefulWidget {
+  const _DeferredFeatureScreen({
+    required this.loadLibrary,
+    required this.builder,
+  });
+
+  final Future<void> Function() loadLibrary;
+  final Widget Function() builder;
+
+  @override
+  State<_DeferredFeatureScreen> createState() => _DeferredFeatureScreenState();
+}
+
+class _DeferredFeatureScreenState extends State<_DeferredFeatureScreen> {
+  late final Future<void> _libraryFuture = widget.loadLibrary();
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<void>(
+      future: _libraryFuture,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.done) {
+          return widget.builder();
+        }
+        return const Scaffold(
+          body: Center(child: CircularProgressIndicator()),
+        );
+      },
+    );
+  }
+}
 
 /// Navigation route definitions for the application
 /// Uses go_router for declarative routing with named routes
@@ -57,14 +89,20 @@ class AppRoutes {
             GoRoute(
               path: dashboard,
               name: 'dashboard',
-              builder: (context, state) => const DashboardScreen(),
+              builder: (context, state) => _DeferredFeatureScreen(
+                loadLibrary: dashboard_feature.loadLibrary,
+                builder: () => dashboard_feature.DashboardScreen(),
+              ),
             ),
             
             // Projects list route
             GoRoute(
               path: projects,
               name: 'projects',
-              builder: (context, state) => const ProjectScreen(),
+              builder: (context, state) => _DeferredFeatureScreen(
+                loadLibrary: project_feature.loadLibrary,
+                builder: () => project_feature.ProjectScreen(),
+              ),
               
               // Project detail route - nested under projects
               routes: [
@@ -73,7 +111,10 @@ class AppRoutes {
                   name: 'project-detail',
                   builder: (context, state) {
                     final projectId = state.pathParameters['id'] ?? 'unknown';
-                    return ProjectDetailScreen(projectId: projectId);
+                    return _DeferredFeatureScreen(
+                      loadLibrary: project_detail_feature.loadLibrary,
+                      builder: () => project_detail_feature.ProjectDetailScreen(projectId: projectId),
+                    );
                   },
                   routes: [
                     GoRoute(
@@ -81,7 +122,10 @@ class AppRoutes {
                       name: 'project-members',
                       builder: (context, state) {
                         final projectId = state.pathParameters['id'] ?? 'unknown';
-                        return ProjectMembersScreen(projectId: projectId);
+                        return _DeferredFeatureScreen(
+                          loadLibrary: project_members_feature.loadLibrary,
+                          builder: () => project_members_feature.ProjectMembersScreen(projectId: projectId),
+                        );
                       },
                     ),
                   ],
@@ -93,26 +137,38 @@ class AppRoutes {
             GoRoute(
               path: aiChat,
               name: 'ai-chat',
-              builder: (context, state) => const AIChatScreen(),
+              builder: (context, state) => _DeferredFeatureScreen(
+                loadLibrary: ai_chat_feature.loadLibrary,
+                builder: () => ai_chat_feature.AIChatScreen(),
+              ),
             ),
             
             // AI Usage route
             GoRoute(
               path: aiUsage,
               name: 'ai-usage',
-              builder: (context, state) => const AIUsageScreen(),
+              builder: (context, state) => _DeferredFeatureScreen(
+                loadLibrary: ai_usage_feature.loadLibrary,
+                builder: () => ai_usage_feature.AIUsageScreen(),
+              ),
             ),
             
             // Settings route
             GoRoute(
               path: settings,
               name: 'settings',
-              builder: (context, state) => const SettingsScreen(),
+              builder: (context, state) => _DeferredFeatureScreen(
+                loadLibrary: settings_feature.loadLibrary,
+                builder: () => settings_feature.SettingsScreen(),
+              ),
             ),
             GoRoute(
               path: admin,
               name: 'admin',
-              builder: (context, state) => const AdminScreen(),
+              builder: (context, state) => _DeferredFeatureScreen(
+                loadLibrary: admin_feature.loadLibrary,
+                builder: () => admin_feature.AdminScreen(),
+              ),
             ),
           ],
         ),

@@ -86,6 +86,16 @@ graph TD
 - **Repositories**: Data access abstraction
 - **Supabase/Hive**: External data sources
 
+## Modular Architecture
+
+The app now uses a modular core package (`packages/pma_core`) to separate reusable core logic from app-specific feature UI.
+
+- `pma_core` contains shared providers, services, repository logic, models, utils, and shared widgets
+- Feature screens stay in the main app under `lib/features/...` and import shared code via `package:pma_core/...`
+- Router-level deferred loading is enabled for feature routes to reduce initial load work
+
+For status and acceptance checklist details, see [`docs/modularization.md`](docs/modularization.md).
+
 ## Documentation
 
 | File | Description |
@@ -95,6 +105,7 @@ graph TD
 | [IMPLEMENTATION_SUMMARY.md](IMPLEMENTATION_SUMMARY.md) | Summary of the implementation details |
 | [INTEGRATION_GUIDE.md](INTEGRATION_GUIDE.md) | Guide for integrating various components |
 | [docs/gantt-chart.md](docs/gantt-chart.md) | Gantt upgrade checklist, architecture notes, and verification |
+| [docs/modularization.md](docs/modularization.md) | Issue #070 modularization acceptance checklist and deferred routing summary |
 | [NAVIGATION_GUIDE.md](NAVIGATION_GUIDE.md) | Guide for navigating the application |
 | [QUICK_REFERENCE.md](QUICK_REFERENCE.md) | Quick reference for key features |
 | [TODO.md](TODO.md) | List of tasks and todos |

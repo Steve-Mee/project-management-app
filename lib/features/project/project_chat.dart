@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:project_management_app/core/providers/auth_providers.dart';
-import 'package:project_management_app/core/providers/project_providers.dart';
-import 'package:project_management_app/models/project_model.dart';
+import 'package:pma_core/providers/auth_providers.dart';
+import 'package:pma_core/providers/project_providers.dart';
+import 'package:pma_core/models/project_model.dart';
 
 
 /// Model for chat messages

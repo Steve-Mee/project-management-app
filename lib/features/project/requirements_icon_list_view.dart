@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:project_management_app/models/project_requirements.dart';
+import 'package:pma_core/models/project_requirements.dart';
 
 /// Widget to display project requirements in an icon list view
 class RequirementsIconListView extends StatelessWidget {

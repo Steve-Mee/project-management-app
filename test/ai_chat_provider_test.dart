@@ -1,10 +1,10 @@
 // ignore_for_file: prefer_const_constructors
 import 'package:flutter_test/flutter_test.dart';
-import 'package:project_management_app/core/models/ai_rate_limits_config.dart';
-import 'package:project_management_app/core/providers/ai_legacy_providers.dart' as ai_provider;
-import 'package:project_management_app/core/repository/settings_repository.dart';
+import 'package:pma_core/models/ai_rate_limits_config.dart';
+import 'package:pma_core/providers/ai_legacy_providers.dart' as ai_provider;
+import 'package:pma_core/repository/impl/hive_settings_repository.dart';
 
-class FakeSettingsRepository extends SettingsRepository {
+class FakeSettingsRepository extends HiveSettingsRepository {
   AiRateLimitsConfig? _aiRateLimitsConfig;
 
   FakeSettingsRepository({AiRateLimitsConfig? aiRateLimitsConfig})

@@ -3,11 +3,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:intl/intl.dart';
 import 'package:go_router/go_router.dart';
-import 'package:project_management_app/models/project_model.dart';
-import 'package:project_management_app/models/task_model.dart';
-import 'package:project_management_app/core/providers/project_providers.dart';
-import 'package:project_management_app/core/providers/task_providers.dart';
-import 'package:project_management_app/core/widgets/modern_gantt_chart.dart';
+import 'package:pma_core/models/project_model.dart';
+import 'package:pma_core/models/task_model.dart';
+import 'package:pma_core/providers/project_providers.dart';
+import 'package:pma_core/providers/task_providers.dart';
+import 'package:pma_core/widgets/modern_gantt_chart.dart';
 import 'package:project_management_app/generated/app_localizations.dart';
 
 /// Gantt chart view for projects and tasks
@@ -159,7 +159,7 @@ class _ProjectGanttViewState extends ConsumerState<ProjectGanttView> {
             else
               ModernGanttChart(
                 project: project,
-                tasks: tasks,
+                    tasks: tasks.whereType<Task>().toList(),
                 startDate: _startDate,
                 endDate: _endDate,
                 enableDragReschedule: true,
