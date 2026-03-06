@@ -57,6 +57,7 @@ dependencies:
   auto_size_text: ^3.0.0
   http: ^1.2.0
   fl_chart: ^1.1.1
+  gantt_chart: ^0.3.0
   flutter_dotenv: ^6.0.0
   flutter_secure_storage: ^9.2.2
   shared_preferences: ^2.5.2

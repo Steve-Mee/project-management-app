@@ -1,5 +1,6 @@
 // ignore_for_file: invalid_annotation_target
 
+import 'package:flutter/material.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 import 'package:hive/hive.dart';
 import 'comment_model.dart';
@@ -106,3 +107,67 @@ List<String> _attachmentsFromJson(Object? rawValue) {
 }
 
 List<String> _attachmentsToJson(List<String> attachments) => attachments;
+
+DateTime _dateOnly(DateTime value) =>
+    DateTime(value.year, value.month, value.day);
+
+/// Gantt-focused helpers for converting generic task data into timeline data.
+extension TaskGanttX on Task {
+  /// Normalized start date used by Gantt widgets.
+  DateTime get ganttStartDate => _dateOnly(createdAt);
+
+  /// Normalized end date used by Gantt widgets.
+  ///
+  /// If `dueDate` is missing, we default to one day after start.
+  /// If end accidentally precedes start, start is used as a safe fallback.
+  DateTime get ganttEndDate {
+    final rawEnd = dueDate ?? ganttStartDate.add(const Duration(days: 1));
+    final normalizedEnd = _dateOnly(rawEnd);
+    return normalizedEnd.isBefore(ganttStartDate)
+        ? ganttStartDate
+        : normalizedEnd;
+  }
+
+  /// Inclusive duration used for timeline calculations.
+  Duration get ganttDuration =>
+      ganttEndDate.difference(ganttStartDate) + const Duration(days: 1);
+
+  /// Basic dependency mapping for Gantt usage.
+  ///
+  /// Currently maps to `subTaskIds` so dependency-aware Gantt renderers can
+  /// consume existing relationships without schema changes.
+  List<String> get ganttDependencies => List<String>.unmodifiable(subTaskIds);
+
+  /// Returns a task copy with Gantt-safe date values filled in.
+  Task withGanttDefaults({
+    Duration defaultDuration = const Duration(days: 1),
+  }) {
+    final normalizedStart = _dateOnly(createdAt);
+    final fallbackEnd = normalizedStart.add(defaultDuration);
+    final rawEnd = dueDate ?? fallbackEnd;
+    final normalizedEnd = _dateOnly(rawEnd);
+    final safeEnd =
+        normalizedEnd.isBefore(normalizedStart) ? normalizedStart : normalizedEnd;
+
+    return copyWith(
+      createdAt: normalizedStart,
+      dueDate: safeEnd,
+    );
+  }
+}
+
+/// Centralized task status -> Material 3 color mapping.
+extension TaskStatusThemeX on TaskStatus {
+  Color toThemeColor(ColorScheme colorScheme) {
+    switch (this) {
+      case TaskStatus.todo:
+        return colorScheme.outline;
+      case TaskStatus.inProgress:
+        return colorScheme.primary;
+      case TaskStatus.review:
+        return colorScheme.tertiary;
+      case TaskStatus.done:
+        return colorScheme.secondary;
+    }
+  }
+}

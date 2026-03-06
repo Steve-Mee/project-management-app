@@ -24,6 +24,9 @@ class TaskNotifier extends AsyncNotifier<List<Task>> {
   final Map<String, List<Task>> _cacheByProjectId = {};
   final Map<String, List<Task>> _fullCacheByProjectId = {};
 
+  /// Currently active project id for [tasksProvider] state.
+  String? get activeProjectId => _activeProjectId;
+
   static const int pageSize = 20;
 
   /// Current page of tasks loaded into [state] for the active project.
@@ -342,6 +345,23 @@ class TaskNotifier extends AsyncNotifier<List<Task>> {
     return tasks.where((task) => task.status == status).toList();
   }
 
+  /// Returns tasks normalized for Gantt usage without mutating stored values.
+  ///
+  /// This keeps offline Hive data intact while exposing stable timeline ranges
+  /// to consumers that need guaranteed start/end dates.
+  List<Task> getGanttCompatibleTasks({List<Task>? source}) {
+    final baseTasks = source ?? state.value ?? const <Task>[];
+    return baseTasks
+        .map((task) => task.withGanttDefaults())
+        .toList(growable: false);
+  }
+
+  /// Ensures a project's tasks are loaded and returns Gantt-compatible values.
+  Future<List<Task>> loadGanttTasks(String projectId) async {
+    await loadTasks(projectId);
+    return getGanttCompatibleTasks();
+  }
+
   Future<void> _persistTasks(List<Task> tasks) async {
     final projectId = _activeProjectId;
     if (projectId == null) {
@@ -473,6 +493,34 @@ class TaskNotifier extends AsyncNotifier<List<Task>> {
 final tasksProvider = AsyncNotifierProvider<TaskNotifier, List<Task>>(
   TaskNotifier.new,
 );
+
+/// Derived tasks stream for active project timelines.
+///
+/// Real-time behavior is provided by Riverpod state updates from [tasksProvider]
+/// and persistence remains backed by Hive via [TaskNotifier].
+final ganttTasksProvider = Provider<List<Task>>((ref) {
+  final notifier = ref.watch(tasksProvider.notifier);
+  final tasks = ref.watch(tasksProvider).maybeWhen(
+        data: (items) => items,
+        orElse: () => const <Task>[],
+      );
+  return notifier.getGanttCompatibleTasks(source: tasks);
+});
+
+/// Project-scoped Gantt tasks provider.
+///
+/// Reads directly from the Hive-backed repository for the requested project,
+/// then normalizes dates for timeline rendering.
+///
+/// This avoids coupling to a single "active" project in UI flows that may show
+/// multiple project contexts.
+final ganttTasksByProjectProvider = FutureProvider.family<List<Task>, String>((ref, projectId) async {
+  final repository = await ref.watch(taskRepositoryProvider.future);
+  final rawTasks = repository.getTasksForProject(projectId);
+  return rawTasks
+      .map((task) => task.withGanttDefaults())
+      .toList(growable: false);
+});
 
 /// Provider for tasks grouped by status (for Kanban board)
 final tasksByStatusProvider = Provider<Map<TaskStatus, List<Task>>>((ref) {

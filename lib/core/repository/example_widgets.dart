@@ -5,9 +5,12 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:project_management_app/core/providers/project_providers.dart';
+import 'package:project_management_app/core/providers/task_providers.dart';
 import 'package:project_management_app/core/utils/accessibility_helper.dart';
+import 'package:project_management_app/core/widgets/modern_gantt_chart.dart';
 import 'package:project_management_app/core/widgets/offline_indicator.dart';
 import 'package:project_management_app/models/project_model.dart';
+import 'package:project_management_app/models/task_model.dart';
 
 // ignore_for_file: prefer_const_constructors
 
@@ -552,7 +555,7 @@ class _AddProjectDialogState extends ConsumerState<AddProjectDialog> {
 // 4. PROJECT DETAILS WIDGET
 // ============================================================================
 
-class ProjectDetailsWidget extends ConsumerWidget {
+class ProjectDetailsWidget extends ConsumerStatefulWidget {
   final String projectId;
 
   const ProjectDetailsWidget({
@@ -561,26 +564,54 @@ class ProjectDetailsWidget extends ConsumerWidget {
   });
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final projectAsync = ref.watch(projectByIdProvider(projectId));
+  ConsumerState<ProjectDetailsWidget> createState() =>
+      _ProjectDetailsWidgetState();
+}
+
+class _ProjectDetailsWidgetState extends ConsumerState<ProjectDetailsWidget> {
+  @override
+  void initState() {
+    super.initState();
+    // Load project-scoped tasks into Riverpod state (Hive-backed, offline-first).
+    Future.microtask(
+      () => ref.read(tasksProvider.notifier).loadTasks(widget.projectId),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final projectAsync = ref.watch(projectByIdProvider(widget.projectId));
+    final tasksAsync = ref.watch(tasksProvider);
 
     return projectAsync.when(
       data: (project) {
+        final tasks = tasksAsync.maybeWhen(
+          data: (items) => items,
+          orElse: () => const <Task>[],
+        );
+
         return Scaffold(
           appBar: OfflineIndicatorAppBar(
             appBar: AppBar(title: Text(project.name)),
           ),
-          body: SingleChildScrollView(
-            padding: const EdgeInsets.all(16),
+          body: DefaultTabController(
+            length: 2,
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _buildSection('Status', project.status),
-                _buildSection('Progress', '${(project.progress * 100).toStringAsFixed(1)}%'),
-                _buildProgressBar(project.progress),
-                if (project.description != null)
-                  _buildSection('Description', project.description!),
-                _buildTasksSection(project.tasks),
+                const TabBar(
+                  tabs: [
+                    Tab(text: 'Overview'),
+                    Tab(text: 'Gantt View'),
+                  ],
+                ),
+                Expanded(
+                  child: TabBarView(
+                    children: [
+                      _buildOverviewTab(project, tasks),
+                      _buildGanttTab(project, tasks),
+                    ],
+                  ),
+                ),
               ],
             ),
           ),
@@ -592,6 +623,65 @@ class ProjectDetailsWidget extends ConsumerWidget {
       error: (error, st) => Scaffold(
         body: Center(child: Text('Error: $error')),
       ),
+    );
+  }
+
+  Widget _buildOverviewTab(ProjectModel project, List<Task> tasks) {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildSection('Status', project.status),
+          _buildSection(
+            'Progress',
+            '${(project.progress * 100).toStringAsFixed(1)}%',
+          ),
+          _buildProgressBar(project.progress),
+          if (project.description != null)
+            _buildSection('Description', project.description!),
+          _buildTasksSection(tasks),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildGanttTab(ProjectModel project, List<Task> tasks) {
+    return Padding(
+      padding: const EdgeInsets.all(16),
+      child: tasks.isEmpty
+          ? Text(
+              'No tasks available for Gantt view yet.',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+            )
+          // BEFORE: Project details showed only text-based task rows.
+          // AFTER: Replaced with ModernGanttChart bound to real Riverpod tasks data.
+          : ModernGanttChart(
+              tasks: tasks,
+              project: project,
+              enableDragReschedule: true,
+              onTaskRescheduleCommit: (task, newStartDate, newEndDate) async {
+                final messenger = ScaffoldMessenger.of(context);
+                try {
+                  final updatedTask = task.copyWith(
+                    createdAt: newStartDate,
+                    dueDate: newEndDate,
+                  );
+                  await ref.read(tasksProvider.notifier).updateTask(updatedTask);
+                } catch (error) {
+                  if (!mounted) {
+                    return;
+                  }
+                  messenger.showSnackBar(
+                    SnackBar(
+                      content: Text('Failed to reschedule task: $error'),
+                    ),
+                  );
+                }
+              },
+            ),
     );
   }
 
@@ -634,7 +724,7 @@ class ProjectDetailsWidget extends ConsumerWidget {
     );
   }
 
-  Widget _buildTasksSection(List<String> tasks) {
+  Widget _buildTasksSection(List<Task> tasks) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -651,9 +741,13 @@ class ProjectDetailsWidget extends ConsumerWidget {
               padding: const EdgeInsets.symmetric(vertical: 4),
               child: Row(
                 children: [
-                  const Icon(Icons.check_circle, color: Colors.green, size: 20),
+                  Icon(
+                    Icons.check_circle,
+                    color: task.status.toThemeColor(Theme.of(context).colorScheme),
+                    size: 20,
+                  ),
                   const SizedBox(width: 8),
-                  Expanded(child: Text(task)),
+                  Expanded(child: Text(task.title)),
                 ],
               ),
             ),

@@ -36,6 +36,21 @@ Flutter-based Project Management App for tracking projects, tasks, and sub-tasks
 
 ![Gantt Chart View](images/gantt_chart.png)
 
+## Gantt Chart (Modern)
+
+The app now uses a modern `gantt_chart`-based timeline wrapper (`ModernGanttChart`) with Riverpod-driven task data.
+
+- Material 3 styling via `Theme.of(context).colorScheme`
+- Automatic dark mode support
+- Touch gestures:
+   - Horizontal pan/scroll on timeline
+   - Drag task bars to reschedule (with callback persistence)
+- Controls:
+   - Zoom in/out
+   - Pan left/right
+   - Export menu (CSV/PDF via platform share)
+- Offline-first data source through Hive-backed repositories and `tasksProvider`
+
 ### Offline Mode
 
 ![Offline Mode Indicator](images/offline_mode.png)
@@ -79,6 +94,7 @@ graph TD
 | [DASHBOARD_GUIDE.md](DASHBOARD_GUIDE.md) | Guide for using the dashboard features |
 | [IMPLEMENTATION_SUMMARY.md](IMPLEMENTATION_SUMMARY.md) | Summary of the implementation details |
 | [INTEGRATION_GUIDE.md](INTEGRATION_GUIDE.md) | Guide for integrating various components |
+| [docs/gantt-chart.md](docs/gantt-chart.md) | Gantt upgrade checklist, architecture notes, and verification |
 | [NAVIGATION_GUIDE.md](NAVIGATION_GUIDE.md) | Guide for navigating the application |
 | [QUICK_REFERENCE.md](QUICK_REFERENCE.md) | Quick reference for key features |
 | [TODO.md](TODO.md) | List of tasks and todos |
@@ -240,7 +256,7 @@ Reference report and raw output template: [`docs/app-size-analysis.md`](docs/app
 - Removed unused dependency: `flutter_ai_agent_tool`.
 - Removed unused dependency: `flutter_local_notifications`.
 - Removed unused dependency: `timezone`.
-- Removed unused dependency: `legacy_gantt_chart`.
+- Removed unused dependency: `legacy_gantt_chart` (legacy package no longer used in runtime code).
 - Kept only referenced asset configuration in `pubspec.yaml`: `.env`.
 - No custom font declarations were present, so no custom font bundles are included.
 

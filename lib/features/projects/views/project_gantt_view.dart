@@ -7,6 +7,7 @@ import 'package:project_management_app/models/project_model.dart';
 import 'package:project_management_app/models/task_model.dart';
 import 'package:project_management_app/core/providers/project_providers.dart';
 import 'package:project_management_app/core/providers/task_providers.dart';
+import 'package:project_management_app/core/widgets/modern_gantt_chart.dart';
 import 'package:project_management_app/generated/app_localizations.dart';
 
 /// Gantt chart view for projects and tasks
@@ -96,15 +97,15 @@ class _ProjectGanttViewState extends ConsumerState<ProjectGanttView> {
   }
 
   Widget _buildProjectTimeline(BuildContext context, ProjectModel project, AppLocalizations l10n) {
-    final totalDays = _endDate.difference(_startDate).inDays;
     final projectStart = project.startDate!;
     final projectEnd = project.dueDate!;
-    final projectDuration = projectEnd.difference(projectStart).inDays;
-
-    // Calculate position and width as percentage of total timeline
-    final startOffset = projectStart.difference(_startDate).inDays;
-    final leftPercent = (startOffset / totalDays).clamp(0.0, 1.0);
-    final widthPercent = (projectDuration / totalDays).clamp(0.0, 1.0 - leftPercent);
+    final taskRepository = ref.watch(taskRepositoryProvider).value;
+    final tasks = taskRepository == null
+        ? const <Task>[]
+        : taskRepository
+            .getTasksForProject(project.id)
+            .where((task) => task.dueDate != null)
+            .toList();
 
     return Card(
       margin: EdgeInsets.only(bottom: 16.h),
@@ -141,156 +142,65 @@ class _ProjectGanttViewState extends ConsumerState<ProjectGanttView> {
               ),
             ),
             SizedBox(height: 16.h),
-
-            // Timeline visualization
-            Container(
-              height: 40.h,
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.surfaceContainerHighest,
-                borderRadius: BorderRadius.circular(4.r),
-              ),
-              child: Stack(
-                children: [
-                  // Project bar
-                  Positioned(
-                    left: leftPercent * (MediaQuery.of(context).size.width - 64.w),
-                    width: widthPercent * (MediaQuery.of(context).size.width - 64.w),
-                    top: 8.h,
-                    bottom: 8.h,
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: _getStatusColor(project.status),
-                        borderRadius: BorderRadius.circular(4.r),
-                      ),
-                      child: Center(
-                        child: Text(
-                          '${project.progress}%',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 12.sp,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
+            Text(
+              l10n.tasksTitle,
+              style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                fontWeight: FontWeight.w600,
               ),
             ),
-
-            // Tasks
-            SizedBox(height: 16.h),
-            _buildProjectTasks(context, project, l10n),
+            SizedBox(height: 8.h),
+            if (tasks.isEmpty)
+              Text(
+                l10n.noTasksYet,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
+              )
+            else
+              ModernGanttChart(
+                project: project,
+                tasks: tasks,
+                startDate: _startDate,
+                endDate: _endDate,
+                enableDragReschedule: true,
+                onTaskRescheduleCommit: (task, newStartDate, newEndDate) {
+                  _rescheduleTask(
+                    project.id,
+                    task,
+                    newStartDate,
+                    newEndDate,
+                  );
+                },
+              ),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildProjectTasks(BuildContext context, ProjectModel project, AppLocalizations l10n) {
-    final taskRepository = ref.read(taskRepositoryProvider).value;
-    if (taskRepository == null) return const SizedBox.shrink();
+  Future<void> _rescheduleTask(
+    String projectId,
+    Task task,
+    DateTime newStartDate,
+    DateTime newEndDate,
+  ) async {
+    final notifier = ref.read(tasksProvider.notifier);
 
-    final tasks = taskRepository.getTasksForProject(project.id)
-        .where((task) => task.dueDate != null)
-        .toList();
+    // Ensure TaskNotifier is scoped to the project before persisting updates.
+    await notifier.loadTasks(projectId);
 
-    if (tasks.isEmpty) return const SizedBox.shrink();
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          l10n.tasksTitle,
-          style: Theme.of(context).textTheme.titleSmall?.copyWith(
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        SizedBox(height: 8.h),
-        ...tasks.map((task) => _buildTaskItem(context, task, project)),
-      ],
+    final updatedTask = task.copyWith(
+      createdAt: newStartDate,
+      dueDate: newEndDate,
     );
-  }
+    await notifier.updateTask(updatedTask);
 
-  Widget _buildTaskItem(BuildContext context, Task task, ProjectModel project) {
-    final totalDays = _endDate.difference(_startDate).inDays;
-    final taskStart = task.createdAt;
-    final taskEnd = task.dueDate!;
-    final taskDuration = taskEnd.difference(taskStart).inDays;
-
-    final startOffset = taskStart.difference(_startDate).inDays;
-    final leftPercent = (startOffset / totalDays).clamp(0.0, 1.0);
-    final widthPercent = (taskDuration / totalDays).clamp(0.0, 1.0 - leftPercent);
-
-    return Padding(
-      padding: EdgeInsets.only(bottom: 8.h),
-      child: Row(
-        children: [
-          SizedBox(
-            width: 120.w,
-            child: Text(
-              task.title,
-              style: Theme.of(context).textTheme.bodySmall,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ),
-          SizedBox(width: 16.w),
-          Expanded(
-            child: Container(
-              height: 20.h,
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.surfaceContainerHighest,
-                borderRadius: BorderRadius.circular(2.r),
-              ),
-              child: Stack(
-                children: [
-                  Positioned(
-                    left: leftPercent * (MediaQuery.of(context).size.width - 200.w),
-                    width: widthPercent * (MediaQuery.of(context).size.width - 200.w),
-                    top: 2.h,
-                    bottom: 2.h,
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: _getTaskStatusColor(task.status),
-                        borderRadius: BorderRadius.circular(2.r),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Color _getStatusColor(String status) {
-    switch (status.toLowerCase()) {
-      case 'completed':
-        return Colors.green;
-      case 'in progress':
-        return Colors.blue;
-      case 'on hold':
-        return Colors.orange;
-      case 'cancelled':
-        return Colors.red;
-      default:
-        return Colors.grey;
+    if (!mounted) {
+      return;
     }
-  }
 
-  Color _getTaskStatusColor(TaskStatus status) {
-    switch (status) {
-      case TaskStatus.done:
-        return Colors.green;
-      case TaskStatus.inProgress:
-        return Colors.blue;
-      case TaskStatus.review:
-        return Colors.orange;
-      case TaskStatus.todo:
-        return Colors.grey;
-    }
+    // Refresh card content so task dates are reflected immediately.
+    setState(() {});
   }
 
   void _zoomIn() {
