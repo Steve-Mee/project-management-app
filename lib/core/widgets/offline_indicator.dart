@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:project_management_app/core/providers/offline_status_providers.dart';
+import 'package:project_management_app/core/utils/accessibility_helper.dart';
 
 /// Global app bar wrapper that renders a slim offline/sync indicator above [appBar].
 ///
@@ -72,7 +73,7 @@ class OfflineIndicatorAppBar extends ConsumerWidget
                   Text(
                     'Sync Status',
                     style: theme.textTheme.titleLarge,
-                  ),
+                  ).withSemantics('Sync status sheet title'),
                   const SizedBox(height: 12),
                   _StatusRow(
                     label: 'Current status',
@@ -87,7 +88,11 @@ class OfflineIndicatorAppBar extends ConsumerWidget
                   const SizedBox(height: 16),
                   SizedBox(
                     width: double.infinity,
-                    child: ElevatedButton.icon(
+                    child: Semantics(
+                      button: true,
+                      label: 'Manual sync now',
+                      hint: 'Starts sync when online',
+                      child: ElevatedButton.icon(
                       onPressed: state.isSyncing
                           ? null
                           : () async {
@@ -103,10 +108,14 @@ class OfflineIndicatorAppBar extends ConsumerWidget
                                 strokeWidth: 2,
                               ),
                             )
-                          : const Icon(Icons.sync_rounded),
+                          : labeledIcon(
+                              icon: Icons.sync_rounded,
+                              label: 'Sync icon',
+                            ),
                       label: Text(
                         state.isSyncing ? 'Syncing...' : 'Manual Sync Now',
                       ),
+                    ),
                     ),
                   ),
                 ],
@@ -147,47 +156,52 @@ class _OfflineIndicatorBar extends StatelessWidget {
   Widget build(BuildContext context) {
     final Color barColor = state.statusColor;
     final _IndicatorPresentation presentation = _presentationForState(state);
+    final statusText = _buildStatusText(context, state);
 
-    return Material(
-      color: barColor,
-      elevation: 0,
-      child: InkWell(
-        onTap: onTap,
-        child: SizedBox(
-          height: height,
-          width: double.infinity,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12),
-            child: Row(
-              children: [
-                Icon(
-                  presentation.icon,
-                  size: 14,
-                  color: Colors.white,
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    _buildStatusText(
-                      context,
-                      state,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      letterSpacing: 0.2,
+    return Semantics(
+      button: onTap != null,
+      label: 'Offline status indicator',
+      hint: 'Double tap to open sync details',
+      value: statusText,
+      child: Material(
+        color: barColor,
+        elevation: 0,
+        child: InkWell(
+          onTap: onTap,
+          child: SizedBox(
+            height: height,
+            width: double.infinity,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              child: Row(
+                children: [
+                  labeledIcon(
+                    icon: presentation.icon,
+                    label: presentation.label,
+                    size: 14,
+                    color: Colors.white,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      statusText,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w600,
+                            letterSpacing: 0.2,
+                          ),
                     ),
                   ),
-                ),
-                const Icon(
-                  Icons.keyboard_arrow_up,
-                  size: 16,
-                  color: Colors.white,
-                ),
-              ],
+                  labeledIcon(
+                    icon: Icons.keyboard_arrow_up,
+                    label: 'Open sync details',
+                    size: 16,
+                    color: Colors.white,
+                  ),
+                ],
+              ),
             ),
           ),
         ),

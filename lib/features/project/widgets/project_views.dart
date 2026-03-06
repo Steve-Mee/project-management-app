@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:project_management_app/models/project_model.dart';
 import 'package:project_management_app/generated/app_localizations.dart';
+import 'package:project_management_app/core/utils/accessibility_helper.dart';
 import 'package:intl/intl.dart';
 import 'package:go_router/go_router.dart';
 
@@ -44,15 +45,20 @@ class ProjectListView extends ProjectView {
 
   @override
   Widget build(BuildContext context) {
-    return ListView.builder(
-      padding: const EdgeInsets.all(16),
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
+    return wrapSemanticList(
+      label: AccessibilityLabels.projectsList,
       itemCount: projects.length,
-      itemBuilder: (context, index) {
-        final project = projects[index];
-        return _buildProjectListItem(context, project);
-      },
+      hint: 'Project list view',
+      child: ListView.builder(
+        padding: const EdgeInsets.all(16),
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        itemCount: projects.length,
+        itemBuilder: (context, index) {
+          final project = projects[index];
+          return _buildProjectListItem(context, project);
+        },
+      ),
     );
   }
 
@@ -106,8 +112,9 @@ class ProjectListView extends ProjectView {
                     color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  child: Icon(
-                    Icons.folder,
+                  child: labeledIcon(
+                    icon: Icons.folder,
+                    label: 'Project folder icon',
                     color: Theme.of(context).colorScheme.primary,
                     size: 32,
                   ),
@@ -128,8 +135,9 @@ class ProjectListView extends ProjectView {
                         children: [
                           Semantics(
                             label: l10n.statusSemanticsLabel(project.status),
-                            child: Icon(
-                              statusIcon,
+                            child: labeledIcon(
+                              icon: statusIcon,
+                              label: 'Status icon ${project.status}',
                               size: 16,
                               color: statusColor,
                             ),
@@ -137,11 +145,10 @@ class ProjectListView extends ProjectView {
                           const SizedBox(width: 4),
                           Text(
                             project.status,
-                            style: TextStyle(
-                              color: statusColor,
-                              fontSize: 12,
-                              fontWeight: FontWeight.w500,
-                            ),
+                            style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                                  color: statusColor,
+                                  fontWeight: FontWeight.w500,
+                                ),
                           ),
                         ],
                       ),
@@ -151,7 +158,10 @@ class ProjectListView extends ProjectView {
                           spacing: 4,
                           runSpacing: 4,
                           children: project.tags.map((tag) => Chip(
-                            label: Text('#$tag', style: const TextStyle(fontSize: 10)),
+                            label: Text(
+                              '#$tag',
+                              style: Theme.of(context).textTheme.labelSmall,
+                            ),
                             materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                             padding: EdgeInsets.zero,
                             backgroundColor: _getTagColor(tag),
@@ -161,8 +171,9 @@ class ProjectListView extends ProjectView {
                     ],
                   ),
                 ),
-                Icon(
-                  Icons.arrow_forward_ios,
+                labeledIcon(
+                  icon: Icons.arrow_forward_ios,
+                  label: 'Open project details',
                   size: 16,
                   color: Theme.of(context).colorScheme.primary,
                 ),
@@ -209,13 +220,13 @@ class ProjectKanbanView extends ProjectView {
 
   @override
   Widget build(BuildContext context) {
-    // Group projects by status
+    // Group projects by status.
     final groupedProjects = <String, List<ProjectModel>>{};
     for (final project in projects) {
       groupedProjects.putIfAbsent(project.status, () => []).add(project);
     }
 
-    // Ensure all status columns exist
+    // Ensure all status columns exist.
     const statuses = ['In Progress', 'In Review', 'Completed'];
     for (final status in statuses) {
       groupedProjects.putIfAbsent(status, () => []);
@@ -233,7 +244,11 @@ class ProjectKanbanView extends ProjectView {
     );
   }
 
-  Widget _buildKanbanColumn(BuildContext context, String status, List<ProjectModel> projects) {
+  Widget _buildKanbanColumn(
+    BuildContext context,
+    String status,
+    List<ProjectModel> statusProjects,
+  ) {
     Color statusColor;
     switch (status) {
       case 'In Progress':
@@ -269,55 +284,63 @@ class ProjectKanbanView extends ProjectView {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Column header
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: statusColor.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Row(
-                  children: [
-                    Icon(
-                      _getStatusIcon(status),
-                      color: statusColor,
-                      size: 20,
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      status,
-                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
+              Semantics(
+                container: true,
+                label: '$status column',
+                value: '${statusProjects.length} projects',
+                child: Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: statusColor.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Row(
+                    children: [
+                      labeledIcon(
+                        icon: _getStatusIcon(status),
+                        label: '$status status icon',
                         color: statusColor,
-                        fontWeight: FontWeight.w600,
+                        size: 20,
                       ),
-                    ),
-                    const Spacer(),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: statusColor.withValues(alpha: 0.2),
-                        borderRadius: BorderRadius.circular(12),
+                      const SizedBox(width: 8),
+                      Text(
+                        status,
+                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                              color: statusColor,
+                              fontWeight: FontWeight.w600,
+                            ),
                       ),
-                      child: Text(
-                        '${projects.length}',
-                        style: TextStyle(
-                          color: statusColor,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w500,
+                      const Spacer(),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: statusColor.withValues(alpha: 0.2),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Text(
+                          '${statusProjects.length}',
+                          style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                                color: statusColor,
+                                fontWeight: FontWeight.w500,
+                              ),
                         ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
               const SizedBox(height: 12),
-              // Projects in this column
               Expanded(
-                child: ListView.builder(
-                  itemCount: projects.length,
-                  itemBuilder: (context, index) {
-                    return _buildKanbanCard(context, projects[index]);
-                  },
+                child: wrapSemanticList(
+                  label: '$status project list',
+                  itemCount: statusProjects.length,
+                  hint: 'Drag and drop cards to update status',
+                  child: ListView.builder(
+                    itemCount: statusProjects.length,
+                    itemBuilder: (context, index) {
+                      return _buildKanbanCard(context, statusProjects[index]);
+                    },
+                  ),
                 ),
               ),
             ],
@@ -328,31 +351,36 @@ class ProjectKanbanView extends ProjectView {
   }
 
   Widget _buildKanbanCard(BuildContext context, ProjectModel project) {
-    return Draggable<ProjectModel>(
-      data: project,
-      feedback: Material(
-        elevation: 4,
-        borderRadius: BorderRadius.circular(8),
-        child: Container(
-          width: 280,
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: Theme.of(context).cardColor,
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Text(
-            project.name,
-            style: Theme.of(context).textTheme.titleSmall,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
+    return Semantics(
+      container: true,
+      label: 'Kanban project card ${project.name}',
+      value: 'Status ${project.status}',
+      child: Draggable<ProjectModel>(
+        data: project,
+        feedback: Material(
+          elevation: 4,
+          borderRadius: BorderRadius.circular(8),
+          child: Container(
+            width: 280,
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Theme.of(context).cardColor,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Text(
+              project.name,
+              style: Theme.of(context).textTheme.titleSmall,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
           ),
         ),
-      ),
-      childWhenDragging: Opacity(
-        opacity: 0.5,
+        childWhenDragging: Opacity(
+          opacity: 0.5,
+          child: _buildCardContent(context, project),
+        ),
         child: _buildCardContent(context, project),
       ),
-      child: _buildCardContent(context, project),
     );
   }
 
@@ -404,18 +432,18 @@ class ProjectKanbanView extends ProjectView {
                     ),
                     child: Text(
                       project.priority!,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 10,
-                        fontWeight: FontWeight.w500,
-                      ),
+                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w600,
+                          ),
                     ),
                   ),
                   const SizedBox(width: 8),
                 ],
                 if (project.dueDate != null) ...[
-                  Icon(
-                    Icons.calendar_today,
+                  labeledIcon(
+                    icon: Icons.calendar_today,
+                    label: 'Due date icon',
                     size: 14,
                     color: Theme.of(context).colorScheme.onSurfaceVariant,
                   ),
@@ -423,8 +451,8 @@ class ProjectKanbanView extends ProjectView {
                   Text(
                     DateFormat('MMM dd').format(project.dueDate!),
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: Theme.of(context).colorScheme.onSurfaceVariant,
-                    ),
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        ),
                   ),
                 ],
               ],
@@ -434,12 +462,19 @@ class ProjectKanbanView extends ProjectView {
               Wrap(
                 spacing: 4,
                 runSpacing: 4,
-                children: project.tags.map((tag) => Chip(
-                  label: Text('#$tag', style: const TextStyle(fontSize: 10)),
-                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                  padding: EdgeInsets.zero,
-                  backgroundColor: _getTagColor(tag),
-                )).toList(),
+                children: project.tags
+                    .map(
+                      (tag) => Chip(
+                        label: Text(
+                          '#$tag',
+                          style: Theme.of(context).textTheme.labelSmall,
+                        ),
+                        materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        padding: EdgeInsets.zero,
+                        backgroundColor: _getTagColor(tag),
+                      ),
+                    )
+                    .toList(),
               ),
             ],
           ],
@@ -475,7 +510,7 @@ class ProjectKanbanView extends ProjectView {
   }
 
   Color _getTagColor(String tag) {
-    // Simple hash-based color assignment for consistent colors per tag
+    // Simple hash-based color assignment for consistent colors per tag.
     final hash = tag.hashCode;
     final colors = [
       Colors.blue.shade100,
@@ -492,8 +527,6 @@ class ProjectKanbanView extends ProjectView {
     return colors[hash.abs() % colors.length];
   }
 }
-
-/// Table view for projects
 class ProjectTableView extends ProjectView {
   const ProjectTableView({
     super.key,
@@ -511,82 +544,98 @@ class ProjectTableView extends ProjectView {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
 
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
+    return Semantics(
+      container: true,
+      label: 'Projects table view',
+      value: '${projects.length} projects',
+      hint: 'Swipe horizontally for additional columns and vertically for rows',
       child: SingleChildScrollView(
-        child: DataTable(
-          columns: [
-            if (isSelectionMode) const DataColumn(label: Text('')),
-            DataColumn(label: Text(l10n.nameLabel)),
-            DataColumn(label: Text(l10n.statusLabel)),
-            DataColumn(label: Text(l10n.priorityLabel)),
-            DataColumn(label: Text(l10n.startDateLabel)),
-            DataColumn(label: Text(l10n.dueDateLabel)),
-            DataColumn(label: Text(l10n.progressLabel)),
-            DataColumn(label: Text(l10n.tagsLabel)),
-          ],
-          rows: projects.map((project) => DataRow(
-            selected: selectedIds.contains(project.id),
-            onSelectChanged: isSelectionMode ? (selected) => onSelectionChanged(selected ?? false) : null,
-            cells: [
-              if (isSelectionMode)
-                DataCell(Checkbox(
-                  value: selectedIds.contains(project.id),
-                  onChanged: (value) => onSelectionChanged(value ?? false),
-                )),
-              DataCell(
-                Text(project.name),
-                onTap: () => context.go('/projects/${project.id}'),
-              ),
-              DataCell(Text(project.status)),
-              DataCell(
-                project.priority != null
-                    ? Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: _getPriorityColor(project.priority!),
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                        child: Text(
-                          project.priority!,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      )
-                    : const Text(''),
-              ),
-              DataCell(
-                Text(project.startDate != null
-                    ? DateFormat('MMM dd, yyyy').format(project.startDate!)
-                    : ''),
-              ),
-              DataCell(
-                Text(project.dueDate != null
-                    ? DateFormat('MMM dd, yyyy').format(project.dueDate!)
-                    : ''),
-              ),
-              DataCell(
-                LinearProgressIndicator(
-                  value: project.progress,
-                  backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
-                ),
-              ),
-              DataCell(
-                Wrap(
-                  spacing: 4,
-                  children: project.tags.map((tag) => Chip(
-                    label: Text('#$tag', style: const TextStyle(fontSize: 10)),
-                    materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                    padding: EdgeInsets.zero,
-                    backgroundColor: _getTagColor(tag),
-                  )).toList(),
-                ),
-              ),
+        scrollDirection: Axis.horizontal,
+        child: SingleChildScrollView(
+          child: DataTable(
+            columns: [
+              if (isSelectionMode) const DataColumn(label: Text('')),
+              DataColumn(label: Text(l10n.nameLabel)),
+              DataColumn(label: Text(l10n.statusLabel)),
+              DataColumn(label: Text(l10n.priorityLabel)),
+              DataColumn(label: Text(l10n.startDateLabel)),
+              DataColumn(label: Text(l10n.dueDateLabel)),
+              DataColumn(label: Text(l10n.progressLabel)),
+              DataColumn(label: Text(l10n.tagsLabel)),
             ],
-          )).toList(),
+            rows: projects.map((project) => DataRow(
+              selected: selectedIds.contains(project.id),
+              onSelectChanged: isSelectionMode ? (selected) => onSelectionChanged(selected ?? false) : null,
+              cells: [
+                if (isSelectionMode)
+                  DataCell(Checkbox(
+                    value: selectedIds.contains(project.id),
+                    onChanged: (value) => onSelectionChanged(value ?? false),
+                  )),
+                DataCell(
+                  Semantics(
+                    button: true,
+                    label: 'Open project ${project.name}',
+                    child: Text(project.name),
+                  ),
+                  onTap: () => context.go('/projects/${project.id}'),
+                ),
+                DataCell(Text(project.status)),
+                DataCell(
+                  project.priority != null
+                      ? Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: _getPriorityColor(project.priority!),
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: Text(
+                            project.priority!,
+                            style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                          ),
+                        )
+                      : const Text(''),
+                ),
+                DataCell(
+                  Text(project.startDate != null
+                      ? DateFormat('MMM dd, yyyy').format(project.startDate!)
+                      : ''),
+                ),
+                DataCell(
+                  Text(project.dueDate != null
+                      ? DateFormat('MMM dd, yyyy').format(project.dueDate!)
+                      : ''),
+                ),
+                DataCell(
+                  Semantics(
+                    label: 'Project progress',
+                    value: '${(project.progress * 100).toStringAsFixed(0)} percent',
+                    child: LinearProgressIndicator(
+                      value: project.progress,
+                      backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
+                    ),
+                  ),
+                ),
+                DataCell(
+                  Wrap(
+                    spacing: 4,
+                    children: project.tags.map((tag) => Chip(
+                      label: Text(
+                        '#$tag',
+                        style: Theme.of(context).textTheme.labelSmall,
+                      ),
+                      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      padding: EdgeInsets.zero,
+                      backgroundColor: _getTagColor(tag),
+                    )).toList(),
+                  ),
+                ),
+              ],
+            )).toList(),
+          ),
         ),
       ),
     );

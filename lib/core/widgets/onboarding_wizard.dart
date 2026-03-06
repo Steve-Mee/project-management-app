@@ -8,6 +8,7 @@ import '../providers/onboarding_providers.dart';
 import '../providers/ai/ai_chat_providers.dart';
 import '../routes.dart';
 import '../services/project_invitation_service.dart';
+import '../utils/accessibility_helper.dart';
 import '../../models/project_model.dart';
 
 /// Issue #067: main onboarding wizard (4-step flow).
@@ -132,9 +133,10 @@ class _OnboardingWizardState extends ConsumerState<OnboardingWizard> {
         title: const Text('Welcome Setup'),
         centerTitle: true,
         actions: [
-          TextButton(
+          labeledTextButton(
+            label: 'Skip all',
+            hint: 'Skips onboarding and opens the dashboard',
             onPressed: _isSubmitting ? null : _skipOnboarding,
-            child: const Text('Skip all'),
           ),
         ],
       ),
@@ -154,9 +156,14 @@ class _OnboardingWizardState extends ConsumerState<OnboardingWizard> {
                   const SizedBox(height: 8),
                   ClipRRect(
                     borderRadius: BorderRadius.circular(8),
-                    child: LinearProgressIndicator(
-                      value: progressValue,
-                      minHeight: 8,
+                    child: Semantics(
+                      label: 'Onboarding progress',
+                      value:
+                          '${((_currentStep + 1) / _totalSteps * 100).toStringAsFixed(0)} percent complete',
+                      child: LinearProgressIndicator(
+                        value: progressValue,
+                        minHeight: 8,
+                      ),
                     ),
                   ),
                 ],
@@ -194,12 +201,19 @@ class _OnboardingWizardState extends ConsumerState<OnboardingWizard> {
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
               child: Row(
                 children: [
-                  TextButton(
+                  labeledTextButton(
+                    label: 'Skip',
+                    hint: 'Skips onboarding and opens the dashboard',
                     onPressed: _isSubmitting ? null : _skipOnboarding,
-                    child: const Text('Skip'),
                   ),
                   const Spacer(),
-                  FilledButton(
+                  Semantics(
+                    button: true,
+                    label: isLastStep ? 'Finish onboarding' : 'Continue onboarding',
+                    hint: isLastStep
+                        ? 'Completes onboarding'
+                        : 'Moves to the next onboarding step',
+                    child: FilledButton(
                     onPressed: continueEnabled ? _nextStep : null,
                     child: _isSubmitting
                         ? const SizedBox(
@@ -214,6 +228,7 @@ class _OnboardingWizardState extends ConsumerState<OnboardingWizard> {
                                     ? 'Continue'
                                     : 'Continue'),
                           ),
+                    ),
                   ),
                 ],
               ),
@@ -245,8 +260,9 @@ class _OnboardingAiIntroStep extends StatelessWidget {
               CircleAvatar(
                 radius: 28,
                 backgroundColor: colorScheme.primaryContainer,
-                child: Icon(
-                  Icons.smart_toy_outlined,
+                child: labeledIcon(
+                  icon: Icons.smart_toy_outlined,
+                  label: 'AI introduction icon',
                   size: 28,
                   color: colorScheme.onPrimaryContainer,
                 ),
@@ -277,15 +293,20 @@ class _OnboardingAiIntroStep extends StatelessWidget {
               const SizedBox(height: 20),
               Align(
                 alignment: Alignment.centerRight,
-                child: FilledButton.icon(
-                  onPressed: () {
-                    showDialog<void>(
-                      context: context,
-                      builder: (_) => const _QuickAiDemoDialog(),
-                    );
-                  },
-                  icon: const Icon(Icons.chat_bubble_outline),
-                  label: const Text('Open AI Demo'),
+                child: Semantics(
+                  button: true,
+                  label: 'Open AI demo',
+                  hint: 'Opens a dialog to test an AI prompt',
+                  child: FilledButton.icon(
+                    onPressed: () {
+                      showDialog<void>(
+                        context: context,
+                        builder: (_) => const _QuickAiDemoDialog(),
+                      );
+                    },
+                    icon: const Icon(Icons.chat_bubble_outline),
+                    label: const Text('Open AI Demo'),
+                  ),
                 ),
               ),
             ],
@@ -342,12 +363,17 @@ class _QuickAiDemoDialogState extends ConsumerState<_QuickAiDemoDialog> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                TextField(
-                  controller: _messageController,
-                  maxLines: 3,
-                  decoration: const InputDecoration(
-                    labelText: 'Prompt',
-                    border: OutlineInputBorder(),
+                Semantics(
+                  textField: true,
+                  label: 'AI demo prompt input',
+                  hint: 'Type a prompt for the AI assistant',
+                  child: TextField(
+                    controller: _messageController,
+                    maxLines: 3,
+                    decoration: const InputDecoration(
+                      labelText: 'Prompt',
+                      border: OutlineInputBorder(),
+                    ),
                   ),
                 ),
                 const SizedBox(height: 12),
@@ -381,13 +407,18 @@ class _QuickAiDemoDialogState extends ConsumerState<_QuickAiDemoDialog> {
         ),
       ),
       actions: [
-        TextButton(
+        labeledTextButton(
+          label: 'Close',
+          hint: 'Closes AI demo dialog',
           onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Close'),
         ),
-        FilledButton(
-          onPressed: _sendDemoPrompt,
-          child: const Text('Send'),
+        Semantics(
+          button: true,
+          label: 'Send AI demo prompt',
+          child: FilledButton(
+            onPressed: _sendDemoPrompt,
+            child: const Text('Send'),
+          ),
         ),
       ],
     );
@@ -497,8 +528,9 @@ class _OnboardingInviteTeamStepState
               CircleAvatar(
                 radius: 28,
                 backgroundColor: colorScheme.primaryContainer,
-                child: Icon(
-                  Icons.group_add_outlined,
+                child: labeledIcon(
+                  icon: Icons.group_add_outlined,
+                  label: 'Invite team icon',
                   size: 28,
                   color: colorScheme.onPrimaryContainer,
                 ),
@@ -514,13 +546,18 @@ class _OnboardingInviteTeamStepState
                 style: Theme.of(context).textTheme.bodyLarge,
               ),
               const SizedBox(height: 16),
-              TextField(
-                controller: _emailController,
-                keyboardType: TextInputType.emailAddress,
-                decoration: const InputDecoration(
-                  labelText: 'Email address',
-                  hintText: 'teammate@example.com',
-                  border: OutlineInputBorder(),
+              Semantics(
+                textField: true,
+                label: 'Teammate email input',
+                hint: 'Enter a valid email address',
+                child: TextField(
+                  controller: _emailController,
+                  keyboardType: TextInputType.emailAddress,
+                  decoration: const InputDecoration(
+                    labelText: 'Email address',
+                    hintText: 'teammate@example.com',
+                    border: OutlineInputBorder(),
+                  ),
                 ),
               ),
               const SizedBox(height: 12),
@@ -538,21 +575,27 @@ class _OnboardingInviteTeamStepState
                 ),
               Row(
                 children: [
-                  TextButton(
+                  labeledTextButton(
+                    label: 'Skip for now',
+                    hint: 'Finishes onboarding without sending an invite',
                     onPressed: _isSendingInvite ? null : widget.onSkipForNow,
-                    child: const Text('Skip for now'),
                   ),
                   const Spacer(),
-                  FilledButton.icon(
-                    onPressed: _isSendingInvite ? null : _sendInvite,
-                    icon: _isSendingInvite
-                        ? const SizedBox(
-                            width: 16,
-                            height: 16,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : const Icon(Icons.send_outlined),
-                    label: const Text('Send Invite'),
+                  Semantics(
+                    button: true,
+                    label: 'Send invite',
+                    hint: 'Sends an invitation email to teammate',
+                    child: FilledButton.icon(
+                      onPressed: _isSendingInvite ? null : _sendInvite,
+                      icon: _isSendingInvite
+                          ? const SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Icon(Icons.send_outlined),
+                      label: const Text('Send Invite'),
+                    ),
                   ),
                 ],
               ),
@@ -590,8 +633,9 @@ class _OnboardingWelcomeStep extends StatelessWidget {
                   CircleAvatar(
                     radius: 26,
                     backgroundColor: colorScheme.primaryContainer,
-                    child: Icon(
-                      Icons.dashboard_customize_rounded,
+                    child: labeledIcon(
+                      icon: Icons.dashboard_customize_rounded,
+                      label: 'Welcome setup icon',
                       size: 28,
                       color: colorScheme.onPrimaryContainer,
                     ),
@@ -631,10 +675,15 @@ class _OnboardingWelcomeStep extends StatelessWidget {
               const SizedBox(height: 24),
               Align(
                 alignment: Alignment.centerRight,
-                child: FilledButton.icon(
-                  onPressed: onGetStarted,
-                  icon: const Icon(Icons.arrow_forward_rounded),
-                  label: const Text('Get Started'),
+                child: Semantics(
+                  button: true,
+                  label: 'Get started',
+                  hint: 'Moves to project creation step',
+                  child: FilledButton.icon(
+                    onPressed: onGetStarted,
+                    icon: const Icon(Icons.arrow_forward_rounded),
+                    label: const Text('Get Started'),
+                  ),
                 ),
               ),
             ],
@@ -743,8 +792,9 @@ class _OnboardingCreateProjectStepState
               CircleAvatar(
                 radius: 28,
                 backgroundColor: colorScheme.primaryContainer,
-                child: Icon(
-                  Icons.add_task_rounded,
+                child: labeledIcon(
+                  icon: Icons.add_task_rounded,
+                  label: 'Create project icon',
                   size: 28,
                   color: colorScheme.onPrimaryContainer,
                 ),
@@ -760,24 +810,34 @@ class _OnboardingCreateProjectStepState
                 style: Theme.of(context).textTheme.bodyLarge,
               ),
               const SizedBox(height: 16),
-              TextField(
-                controller: _nameController,
-                enabled: !_projectCreated,
-                decoration: const InputDecoration(
-                  labelText: 'Project Name',
-                  hintText: 'Enter project name',
-                  border: OutlineInputBorder(),
+              Semantics(
+                textField: true,
+                label: 'Project name input',
+                hint: 'Required field',
+                child: TextField(
+                  controller: _nameController,
+                  enabled: !_projectCreated,
+                  decoration: const InputDecoration(
+                    labelText: 'Project Name',
+                    hintText: 'Enter project name',
+                    border: OutlineInputBorder(),
+                  ),
                 ),
               ),
               const SizedBox(height: 12),
-              TextField(
-                controller: _descriptionController,
-                enabled: !_projectCreated,
-                maxLines: 3,
-                decoration: const InputDecoration(
-                  labelText: 'Description (optional)',
-                  hintText: 'Enter project description',
-                  border: OutlineInputBorder(),
+              Semantics(
+                textField: true,
+                label: 'Project description input',
+                hint: 'Optional field',
+                child: TextField(
+                  controller: _descriptionController,
+                  enabled: !_projectCreated,
+                  maxLines: 3,
+                  decoration: const InputDecoration(
+                    labelText: 'Description (optional)',
+                    hintText: 'Enter project description',
+                    border: OutlineInputBorder(),
+                  ),
                 ),
               ),
               const SizedBox(height: 16),
@@ -803,18 +863,23 @@ class _OnboardingCreateProjectStepState
               const SizedBox(height: 12),
               Align(
                 alignment: Alignment.centerRight,
-                child: FilledButton.icon(
-                  onPressed: (_isCreating || _projectCreated)
-                      ? null
-                      : _createProject,
-                  icon: _isCreating
-                      ? const SizedBox(
-                          width: 16,
-                          height: 16,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : const Icon(Icons.add_circle_outline_rounded),
-                  label: const Text('Create Project'),
+                child: Semantics(
+                  button: true,
+                  label: 'Create project',
+                  hint: 'Creates your first onboarding project',
+                  child: FilledButton.icon(
+                    onPressed: (_isCreating || _projectCreated)
+                        ? null
+                        : _createProject,
+                    icon: _isCreating
+                        ? const SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Icon(Icons.add_circle_outline_rounded),
+                    label: const Text('Create Project'),
+                  ),
                 ),
               ),
             ],

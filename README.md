@@ -160,6 +160,31 @@ graph TD
    flutter run
    ```
 
+### Accessibility Contrast Checks
+
+Run the WCAG AA theme contrast tests introduced for issue `#068-accessibility-improvements`:
+
+```bash
+flutter test test/core/theme_contrast_test.dart
+```
+
+Run the same check with coverage output:
+
+```bash
+flutter test --coverage test/core/theme_contrast_test.dart
+```
+
+### Accessibility
+
+Accessibility implementation and manual validation checklist are documented in [`docs/accessibility.md`](docs/accessibility.md).
+
+Quick commands:
+
+```bash
+flutter run --dart-define=ENABLE_SEMANTICS_DEBUGGER=true
+flutter test test/core/theme_contrast_test.dart test/features/project/project_views_accessibility_test.dart
+```
+
 <!-- Add platform-specific setup instructions -->
 
 ## Contributing

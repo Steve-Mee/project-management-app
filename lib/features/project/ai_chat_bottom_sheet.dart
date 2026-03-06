@@ -5,6 +5,7 @@ import 'package:project_management_app/core/providers/task_providers.dart';
 import 'package:project_management_app/core/providers/ai_providers.dart' show aiChatProvider;
 import 'package:project_management_app/core/providers/ai/ai_providers.dart' show aiServiceProvider;
 import 'package:project_management_app/core/providers/auth_providers.dart';
+import 'package:project_management_app/core/utils/accessibility_helper.dart';
 import 'package:project_management_app/models/project_model.dart';
 import 'package:project_management_app/models/task_model.dart';
 import 'package:project_management_app/core/config/ai_config.dart';
@@ -115,13 +116,15 @@ class _AiChatBottomSheetState extends ConsumerState<AiChatBottomSheet> {
                     style: Theme.of(context).textTheme.titleLarge,
                   ),
                   const Spacer(),
-                  IconButton(
-                    icon: const Icon(Icons.history),
+                  labeledIconButton(
+                    icon: Icons.history,
+                    label: 'View history',
+                    hint: 'Opens chat history for this project',
                     onPressed: () => _showHistoryDialog(context, history),
-                    tooltip: 'View History',
                   ),
-                  IconButton(
-                    icon: const Icon(Icons.close),
+                  labeledIconButton(
+                    icon: Icons.close,
+                    label: 'Close AI assistant',
                     onPressed: () => Navigator.of(context).pop(),
                   ),
                 ],
@@ -130,18 +133,23 @@ class _AiChatBottomSheetState extends ConsumerState<AiChatBottomSheet> {
 
               // Chat messages area
               Expanded(
-                child: ListView(
-                  controller: _scrollController,
-                  children: [
-                    if (_lastAiResponse != null) ...[
-                      _buildAiMessage(_lastAiResponse!),
-                      const SizedBox(height: 16),
+                child: wrapSemanticList(
+                  label: 'Project AI chat responses',
+                  itemCount: _lastAiResponse == null ? 0 : 1,
+                  hint: 'Latest AI response appears in this list',
+                  child: ListView(
+                    controller: _scrollController,
+                    children: [
+                      if (_lastAiResponse != null) ...[
+                        _buildAiMessage(_lastAiResponse!),
+                        const SizedBox(height: 16),
+                      ],
+                      if (_isLoading) ...[
+                        const Center(child: CircularProgressIndicator()),
+                        const SizedBox(height: 16),
+                      ],
                     ],
-                    if (_isLoading) ...[
-                      const Center(child: CircularProgressIndicator()),
-                      const SizedBox(height: 16),
-                    ],
-                  ],
+                  ),
                 ),
               ),
 
@@ -149,24 +157,31 @@ class _AiChatBottomSheetState extends ConsumerState<AiChatBottomSheet> {
               Row(
                 children: [
                   Expanded(
-                    child: TextField(
-                  controller: _messageController,
-                  decoration: const InputDecoration(
-                    hintText: 'Ask me anything about this project...',
-                    border: OutlineInputBorder(),
+                    child: Semantics(
+                      textField: true,
+                      label: 'Project AI question input',
+                      hint: 'Ask me anything about this project',
+                      child: TextField(
+                        controller: _messageController,
+                        decoration: const InputDecoration(
+                          hintText: 'Ask me anything about this project...',
+                          border: OutlineInputBorder(),
+                        ),
+                        maxLines: 3,
+                        minLines: 1,
+                        onSubmitted: (_) => _sendMessage(),
+                      ),
+                    ),
                   ),
-                  maxLines: 3,
-                  minLines: 1,
-                  onSubmitted: (_) => _sendMessage(),
-                ),
+                  const SizedBox(width: 8),
+                  labeledIconButton(
+                    icon: Icons.send,
+                    label: 'Send AI message',
+                    hint: 'Sends your question to the AI assistant',
+                    onPressed: _isLoading ? null : _sendMessage,
+                  ),
+                ],
               ),
-              const SizedBox(width: 8),
-              IconButton(
-                icon: const Icon(Icons.send),
-                onPressed: _isLoading ? null : _sendMessage,
-              ),
-            ],
-          ),
 
           const SizedBox(height: 8),
 
@@ -174,7 +189,11 @@ class _AiChatBottomSheetState extends ConsumerState<AiChatBottomSheet> {
           Row(
             children: [
               Expanded(
-                child: ElevatedButton.icon(
+                child: Semantics(
+                  button: true,
+                  label: 'Apply AI changes',
+                  hint: 'Applies actionable suggestions to this project',
+                  child: ElevatedButton.icon(
                   onPressed: _isLoading ? null : () => _showApplyConfirmationDialog(context, currentUserAsync),
                   icon: const Icon(Icons.check_circle),
                   label: const Text('Apply Changes'),
@@ -182,6 +201,7 @@ class _AiChatBottomSheetState extends ConsumerState<AiChatBottomSheet> {
                     backgroundColor: Colors.green,
                     foregroundColor: Colors.white,
                   ),
+                ),
                 ),
               ),
             ],
@@ -196,7 +216,11 @@ class _AiChatBottomSheetState extends ConsumerState<AiChatBottomSheet> {
   }
 
   Widget _buildAiMessage(String message) {
-    return Container(
+    return Semantics(
+      container: true,
+      label: 'AI response message',
+      value: message,
+      child: Container(
       padding: const EdgeInsets.all(12),
       margin: const EdgeInsets.only(bottom: 8),
       decoration: BoxDecoration(
@@ -208,8 +232,9 @@ class _AiChatBottomSheetState extends ConsumerState<AiChatBottomSheet> {
         children: [
           Row(
             children: [
-              Icon(
-                Icons.smart_toy,
+              labeledIcon(
+                icon: Icons.smart_toy,
+                label: 'AI assistant icon',
                 size: 16,
                 color: Theme.of(context).colorScheme.primary,
               ),
@@ -227,7 +252,7 @@ class _AiChatBottomSheetState extends ConsumerState<AiChatBottomSheet> {
           SelectableText(message),
         ],
       ),
-    );
+    ));
   }
 
   Future<void> _sendMessage() async {
@@ -353,23 +378,29 @@ Current Date: ${DateTime.now().toString().split(' ')[0]}
 
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Apply AI Changes - Compliance Warning'),
-        content: const SingleChildScrollView(
+      builder: (context) {
+        final textTheme = Theme.of(context).textTheme;
+        return AlertDialog(
+        title: const Text('Apply AI Changes - Compliance Warning')
+            .withSemantics('Apply AI changes compliance warning dialog'),
+        content: SingleChildScrollView(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
               Text(
                 '⚠️ COMPLIANCE NOTICE - Worldwide Legal Requirements',
-                style: TextStyle(fontWeight: FontWeight.bold, color: Colors.red),
+                style: textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.bold,
+                  color: Colors.red,
+                ),
               ),
-              SizedBox(height: 8),
+              const SizedBox(height: 8),
               Text(
                 'Before applying AI-generated changes, ensure compliance with ALL applicable laws and regulations in your jurisdiction and globally:',
-                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
+                style: textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w500),
               ),
-              SizedBox(height: 8),
+              const SizedBox(height: 8),
               Text(
                 '• Data Privacy & Protection Laws (GDPR, CCPA, PIPEDA, LGPD, PDPA, POPIA, etc.)\n'
                 '• Intellectual Property Rights (Copyright, Patents, Trademarks)\n'
@@ -378,45 +409,48 @@ Current Date: ${DateTime.now().toString().split(' ')[0]}
                 '• Local Business & Professional Regulations\n'
                 '• AI-Specific Regulations (EU AI Act, etc.)\n'
                 '• Cybersecurity & Data Security Standards',
-                style: TextStyle(fontSize: 11),
+                style: textTheme.bodySmall,
               ),
-              SizedBox(height: 12),
+              const SizedBox(height: 12),
               Text(
                 'Changes will be permanently logged in the project history with user identification, timestamps, and change details for audit and compliance purposes. '
                 'This action cannot be undone and may have legal implications.',
-                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: Colors.red),
+                style: textTheme.bodySmall?.copyWith(
+                  fontWeight: FontWeight.w500,
+                  color: Colors.red,
+                ),
               ),
-              SizedBox(height: 12),
+              const SizedBox(height: 12),
               Text(
                 'By proceeding, you confirm that you have reviewed the AI suggestions for compliance and accept responsibility for their application.',
-                style: TextStyle(fontSize: 12, fontStyle: FontStyle.italic),
+                style: textTheme.bodySmall?.copyWith(fontStyle: FontStyle.italic),
               ),
-              SizedBox(height: 12),
+              const SizedBox(height: 12),
               Text(
                 'Do you want to proceed with applying the AI suggestions?',
-                style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                style: textTheme.bodySmall?.copyWith(fontWeight: FontWeight.bold),
               ),
             ],
           ),
         ),
         actions: [
-          TextButton(
+          labeledTextButton(
+            label: AccessibilityLabels.cancelAction,
+            hint: 'Closes compliance confirmation dialog',
             onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancel'),
           ),
-          ElevatedButton(
+          labeledElevatedButton(
+            label: 'Apply Changes',
+            hint: 'Applies AI generated changes to project',
             onPressed: () {
               Navigator.of(context).pop();
               _applyChanges(context, currentUserAsync);
             },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.green,
-              foregroundColor: Colors.white,
-            ),
-            child: const Text('Apply Changes'),
+            leadingIcon: Icons.check_circle,
           ),
         ],
-      ),
+      );
+      },
     );
   }
 

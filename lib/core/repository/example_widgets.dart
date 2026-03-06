@@ -5,6 +5,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:project_management_app/core/providers/project_providers.dart';
+import 'package:project_management_app/core/utils/accessibility_helper.dart';
 import 'package:project_management_app/core/widgets/offline_indicator.dart';
 import 'package:project_management_app/models/project_model.dart';
 
@@ -96,91 +97,123 @@ class _ProjectListWidgetState extends ConsumerState<ProjectListWidget> {
         if (projects.isEmpty) {
           return RefreshIndicator(
             onRefresh: () => ref.read(projectsProvider.notifier).refresh(),
-            child: ListView(
-              physics: const AlwaysScrollableScrollPhysics(),
-              children: [
-                SizedBox(
-                  height: MediaQuery.of(context).size.height * 0.7,
-                  child: Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const Icon(Icons.inbox, size: 64, color: Colors.grey),
-                        const SizedBox(height: 16),
-                        const Text('No projects yet'),
-                        const SizedBox(height: 16),
-                        ElevatedButton(
-                          onPressed: () {
-                            // Navigate to create project screen
-                          },
-                          child: const Text('Create First Project'),
-                        ),
-                      ],
+            child: wrapSemanticList(
+              label: AccessibilityLabels.projectsList,
+              itemCount: 0,
+              hint: 'No projects available',
+              child: ListView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                children: [
+                  SizedBox(
+                    height: MediaQuery.of(context).size.height * 0.7,
+                    child: Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          labeledIcon(
+                            icon: Icons.inbox,
+                            label: 'Empty projects inbox icon',
+                            color: Colors.grey,
+                            size: 64,
+                          ),
+                          const SizedBox(height: 16),
+                          const Text('No projects yet').withSemantics(
+                            'No projects yet',
+                            hint: 'Use create first project button to add one',
+                          ),
+                          const SizedBox(height: 16),
+                          labeledElevatedButton(
+                            label: 'Create First Project',
+                            hint: 'Opens the form to create your first project',
+                            onPressed: () {
+                              // Navigate to create project screen
+                            },
+                            leadingIcon: Icons.add,
+                          ),
+                        ],
+                      ),
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           );
         }
 
         return RefreshIndicator(
           onRefresh: () => ref.read(projectsProvider.notifier).refresh(),
-          child: ListView.builder(
-            controller: _scrollController,
-            physics: const AlwaysScrollableScrollPhysics(),
-            padding: const EdgeInsets.all(8),
-            itemCount: projects.length + 1,
-            itemBuilder: (context, index) {
-              if (index == projects.length) {
-                if (isLoadingMore) {
-                  return const Padding(
-                    padding: EdgeInsets.symmetric(vertical: 16),
-                    child: Center(child: CircularProgressIndicator()),
-                  );
-                }
-
-                if (loadMoreError != null) {
-                  return Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    child: Column(
-                      children: [
-                        Text(
-                          'Could not load more projects',
-                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                color: Theme.of(context).colorScheme.error,
-                              ),
+          child: wrapSemanticList(
+            label: AccessibilityLabels.projectsList,
+            itemCount: projects.length,
+            hint: 'Swipe up or down to navigate projects',
+            child: ListView.builder(
+              controller: _scrollController,
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: const EdgeInsets.all(8),
+              itemCount: projects.length + 1,
+              itemBuilder: (context, index) {
+                if (index == projects.length) {
+                  if (isLoadingMore) {
+                    return Padding(
+                      padding: EdgeInsets.symmetric(vertical: 16),
+                      child: Center(
+                        child: CircularProgressIndicator().withSemantics(
+                          'Loading more projects',
+                          hint: 'Please wait while additional projects are fetched',
                         ),
-                        const SizedBox(height: 8),
-                        TextButton.icon(
-                          onPressed: _loadMoreProjects,
-                          icon: const Icon(Icons.refresh, size: 18),
-                          label: const Text('Retry'),
-                        ),
-                      ],
-                    ),
-                  );
-                }
-
-                if (!hasMore) {
-                  return Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    child: Center(
-                      child: Text(
-                        'End reached',
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: Theme.of(context).colorScheme.onSurfaceVariant,
-                            ),
                       ),
-                    ),
-                  );
+                    );
+                  }
+
+                  if (loadMoreError != null) {
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      child: Column(
+                        children: [
+                          Text(
+                            'Could not load more projects',
+                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                  color: Theme.of(context).colorScheme.error,
+                                ),
+                          ).withSemantics(
+                            'Could not load more projects',
+                            hint: 'Use retry to load more projects',
+                          ),
+                          const SizedBox(height: 8),
+                          labeledTextButton(
+                            label: AccessibilityLabels.retryAction,
+                            hint: 'Retries loading more projects',
+                            onPressed: _loadMoreProjects,
+                            leadingIcon: Icons.refresh,
+                          ),
+                        ],
+                      ),
+                    );
+                  }
+
+                  if (!hasMore) {
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      child: Center(
+                        child: Text(
+                          'End reached',
+                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                color: Theme.of(context).colorScheme.onSurfaceVariant,
+                              ),
+                        ).withSemantics(
+                          'End of projects list',
+                          hint: 'No more projects to load',
+                        ),
+                      ),
+                    );
+                  }
+
+                  return const SizedBox.shrink();
                 }
 
-                return const SizedBox.shrink();
-              }
-
-              return ProjectCard(project: projects[index]);
-            },
+                return ProjectCard(project: projects[index]);
+              },
+            ),
           ),
         );
       },
@@ -190,13 +223,23 @@ class _ProjectListWidgetState extends ConsumerState<ProjectListWidget> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(Icons.error, size: 64, color: Colors.red),
+              labeledIcon(
+                icon: Icons.error,
+                label: 'Error icon',
+                color: Colors.red,
+                size: 64,
+              ),
               const SizedBox(height: 16),
-              Text('Error loading projects: $error'),
+              Text('Error loading projects: $error').withSemantics(
+                'Error loading projects',
+                value: '$error',
+              ),
               const SizedBox(height: 16),
-              ElevatedButton(
+              labeledElevatedButton(
+                label: AccessibilityLabels.retryAction,
+                hint: 'Attempts to reload the projects list',
                 onPressed: () => ref.invalidate(projectsProvider),
-                child: const Text('Retry'),
+                leadingIcon: Icons.refresh,
               ),
             ],
           ),
@@ -220,55 +263,116 @@ class ProjectCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return Card(
-      margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      child: ListTile(
-        contentPadding: const EdgeInsets.all(16),
-        title: Text(
-          project.name,
-          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-        ),
-        subtitle: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const SizedBox(height: 8),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+    final progressPercent = (project.progress * 100).toStringAsFixed(1);
+    final description = project.description?.trim();
+
+    return Semantics(
+      container: true,
+      button: true,
+      label: 'Project ${project.name}',
+      hint: 'Double tap to open project details',
+      value: 'Status ${project.status}, $progressPercent percent complete',
+      child: MergeSemantics(
+        // Merge keeps card information announced as one coherent item.
+        child: Card(
+          margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          child: ListTile(
+            contentPadding: const EdgeInsets.all(16),
+            title: Text(
+              project.name,
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ).withSemantics(
+              'Project name ${project.name}',
+            ),
+            subtitle: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Status: ${project.status}'),
-                Text('Tasks: ${project.tasks.length}'),
+                const SizedBox(height: 8),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text('Status: ${project.status}').withSemantics(
+                      'Project status ${project.status}',
+                    ),
+                    Text('Tasks: ${project.tasks.length}').withSemantics(
+                      'Task count ${project.tasks.length}',
+                    ),
+                  ],
+                ),
+                if (description != null && description.isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  Text(
+                    description,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ).withSemantics(
+                    'Project description $description',
+                  ),
+                ],
+                const SizedBox(height: 12),
+                Semantics(
+                  label: 'Project progress',
+                  value: '$progressPercent percent complete',
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(4),
+                    child: LinearProgressIndicator(
+                      value: project.progress,
+                      minHeight: 8,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  '$progressPercent% Complete',
+                  style: Theme.of(context).textTheme.bodySmall,
+                ).withSemantics(
+                  'Progress $progressPercent percent complete',
+                ),
               ],
             ),
-            const SizedBox(height: 12),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(4),
-              child: LinearProgressIndicator(
-                value: project.progress,
-                minHeight: 8,
+            trailing: Semantics(
+              button: true,
+              label: 'Project actions menu',
+              hint: 'Double tap to open actions for ${project.name}',
+              child: PopupMenuButton<String>(
+                tooltip: 'Project actions',
+                icon: labeledIcon(
+                  icon: Icons.more_vert,
+                  label: 'Project actions icon',
+                ),
+                onSelected: (value) {
+                  switch (value) {
+                    case 'edit':
+                      _showEditDialog(context, ref);
+                      break;
+                    case 'delete':
+                      _deleteProject(ref);
+                      break;
+                    default:
+                      break;
+                  }
+                },
+                itemBuilder: (context) => [
+                  PopupMenuItem<String>(
+                    value: 'edit',
+                    child: const Text('Edit Progress').withSemantics(
+                      AccessibilityLabels.editProjectProgress,
+                    ),
+                  ),
+                  PopupMenuItem<String>(
+                    value: 'delete',
+                    child: const Text('Delete').withSemantics(
+                      AccessibilityLabels.deleteProject,
+                    ),
+                  ),
+                ],
               ),
             ),
-            const SizedBox(height: 4),
-            Text(
-              '${(project.progress * 100).toStringAsFixed(1)}% Complete',
-              style: const TextStyle(fontSize: 12, color: Colors.grey),
-            ),
-          ],
+            onTap: () {
+              // Navigate to project details
+            },
+          ),
         ),
-        trailing: PopupMenuButton(
-          itemBuilder: (context) => [
-            PopupMenuItem(
-              onTap: () => _showEditDialog(context, ref),
-              child: const Text('Edit Progress'),
-            ),
-            PopupMenuItem(
-              onTap: () => _deleteProject(ref),
-              child: const Text('Delete'),
-            ),
-          ],
-        ),
-        onTap: () {
-          // Navigate to project details
-        },
       ),
     );
   }
@@ -281,7 +385,10 @@ class ProjectCard extends ConsumerWidget {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Update Progress'),
+        title: const Text('Update Progress').withSemantics(
+          'Update progress dialog',
+          hint: 'Enter progress as a percentage from zero to one hundred',
+        ),
         content: TextField(
           controller: controller,
           keyboardType: TextInputType.number,
@@ -291,11 +398,14 @@ class ProjectCard extends ConsumerWidget {
           ),
         ),
         actions: [
-          TextButton(
+          labeledTextButton(
+            label: AccessibilityLabels.cancelAction,
+            hint: 'Closes the dialog without saving progress',
             onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
           ),
-          ElevatedButton(
+          labeledElevatedButton(
+            label: AccessibilityLabels.saveChanges,
+            hint: 'Saves the updated project progress',
             onPressed: () {
               final progress = double.tryParse(controller.text) ?? 0;
               final normalized = (progress / 100).clamp(0.0, 1.0);
@@ -309,7 +419,7 @@ class ProjectCard extends ConsumerWidget {
                 const SnackBar(content: Text('Progress updated')),
               );
             },
-            child: const Text('Save'),
+            leadingIcon: Icons.save,
           ),
         ],
       ),
@@ -353,40 +463,56 @@ class _AddProjectDialogState extends ConsumerState<AddProjectDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: const Text('Create New Project'),
+      title: const Text('Create New Project').withSemantics(
+        'Create new project dialog',
+        hint: 'Fill in the project details and activate create',
+      ),
       content: SingleChildScrollView(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            TextField(
-              controller: _nameController,
-              decoration: const InputDecoration(
-                labelText: 'Project Name',
-                hintText: 'Enter project name',
-                border: OutlineInputBorder(),
+            Semantics(
+              textField: true,
+              label: 'Project name input',
+              hint: 'Required field',
+              child: TextField(
+                controller: _nameController,
+                decoration: const InputDecoration(
+                  labelText: 'Project Name',
+                  hintText: 'Enter project name',
+                  border: OutlineInputBorder(),
+                ),
               ),
             ),
             const SizedBox(height: 16),
-            TextField(
-              controller: _descriptionController,
-              decoration: const InputDecoration(
-                labelText: 'Description (optional)',
-                hintText: 'Enter project description',
-                border: OutlineInputBorder(),
+            Semantics(
+              textField: true,
+              label: 'Project description input',
+              hint: 'Optional field',
+              child: TextField(
+                controller: _descriptionController,
+                decoration: const InputDecoration(
+                  labelText: 'Description (optional)',
+                  hintText: 'Enter project description',
+                  border: OutlineInputBorder(),
+                ),
+                maxLines: 3,
               ),
-              maxLines: 3,
             ),
           ],
         ),
       ),
       actions: [
-        TextButton(
+        labeledTextButton(
+          label: AccessibilityLabels.cancelAction,
+          hint: 'Closes create project dialog',
           onPressed: () => Navigator.pop(context),
-          child: const Text('Cancel'),
         ),
-        ElevatedButton(
+        labeledElevatedButton(
+          label: 'Create',
+          hint: 'Creates a new project',
           onPressed: () => _createProject(),
-          child: const Text('Create'),
+          leadingIcon: Icons.add,
         ),
       ],
     );

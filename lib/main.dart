@@ -42,6 +42,13 @@ import 'models/comment_model.dart';
 import 'core/models/adapters/migrated_model_adapters.dart';
 import 'core/config/app_config.dart';
 
+/// Enable Semantics Debugger only in debug mode when explicitly requested.
+/// Use: flutter run --dart-define=ENABLE_SEMANTICS_DEBUGGER=true
+const bool _enableSemanticsDebugger =
+  bool.fromEnvironment('ENABLE_SEMANTICS_DEBUGGER', defaultValue: false);
+const bool _showSemanticsDebugger =
+  kDebugMode && _enableSemanticsDebugger;
+
 /// Initializes environment variables from .env file
 /// Loads dotenv for development. In production, uses secure storage if available
 /// NOTE: converted to issue 048
@@ -234,6 +241,7 @@ class _AppBootstrapGateState extends ConsumerState<_AppBootstrapGate> {
     if (_isResolving) {
       return const MaterialApp(
         debugShowCheckedModeBanner: false,
+        showSemanticsDebugger: _showSemanticsDebugger,
         home: Scaffold(
           body: Center(child: CircularProgressIndicator()),
         ),
@@ -243,6 +251,7 @@ class _AppBootstrapGateState extends ConsumerState<_AppBootstrapGate> {
     final currentChild = _showOnboarding
         ? MaterialApp(
             debugShowCheckedModeBanner: false,
+            showSemanticsDebugger: _showSemanticsDebugger,
             theme: AppTheme.lightTheme(),
             darkTheme: AppTheme.darkTheme(),
             home: OnboardingWizard(onCompleted: _handleOnboardingCompleted),
@@ -504,6 +513,7 @@ class _MyAppState extends ConsumerState<MyApp> {
                   AppLocalizations.of(context)?.appTitle ??
                   'Project Management App',
               debugShowCheckedModeBanner: false,
+              showSemanticsDebugger: _showSemanticsDebugger,
               locale: locale,
               themeMode: currentThemeMode,
               theme: AppTheme.lightTheme(seedColor: colorSchemeSeed),
@@ -525,6 +535,7 @@ class _MyAppState extends ConsumerState<MyApp> {
                   AppLocalizations.of(context)?.appTitle ??
                   'Project Management App',
               debugShowCheckedModeBanner: false,
+              showSemanticsDebugger: _showSemanticsDebugger,
               locale: locale,
               themeMode: currentThemeMode,
               theme: AppTheme.lightTheme(seedColor: colorSchemeSeed),
@@ -543,6 +554,7 @@ class _MyAppState extends ConsumerState<MyApp> {
                 AppLocalizations.of(context)?.appTitle ??
                 'Project Management App',
             debugShowCheckedModeBanner: false,
+            showSemanticsDebugger: _showSemanticsDebugger,
 
             // Theme mode - supports system/dark/light
             themeMode: currentThemeMode,
