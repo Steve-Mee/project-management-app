@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:project_management_app/core/providers/offline_status_provider.dart';
+import 'package:project_management_app/core/providers/offline_status_providers.dart';
 
 /// Global app bar wrapper that renders a slim offline/sync indicator above [appBar].
 ///

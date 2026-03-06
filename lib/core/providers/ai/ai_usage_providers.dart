@@ -11,7 +11,7 @@ import '../../repository/i_ai_usage_repository.dart';
 import '../../repository/impl/hive_ai_usage_repository.dart';
 import '../auth_providers.dart';
 
-part 'ai_usage_provider.freezed.dart';
+part 'ai_usage_providers.freezed.dart';
 
 /// Model for AI usage data
 @Freezed(fromJson: false, toJson: false)

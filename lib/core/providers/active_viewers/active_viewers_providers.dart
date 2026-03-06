@@ -3,8 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-part 'active_viewers_provider.freezed.dart';
-part 'active_viewers_provider.g.dart';
+part 'active_viewers_providers.freezed.dart';
+part 'active_viewers_providers.g.dart';
 
 /// Represents an active viewer in the projects list
 @freezed

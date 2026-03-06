@@ -1,6 +1,6 @@
 // GENERATED CODE - DO NOT MODIFY BY HAND
 
-part of 'active_viewers_provider.dart';
+part of 'active_viewers_providers.dart';
 
 // **************************************************************************
 // JsonSerializableGenerator

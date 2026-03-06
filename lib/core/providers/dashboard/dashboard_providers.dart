@@ -13,7 +13,7 @@ import 'package:project_management_app/core/services/app_logger.dart';
 import 'package:project_management_app/core/providers/auth/auth_providers.dart';
 import 'package:project_management_app/core/models/dashboard_types.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
-import 'package:project_management_app/core/providers/connectivity/connectivity_provider.dart';
+import 'package:project_management_app/core/providers/connectivity/connectivity_providers.dart';
 import 'package:project_management_app/core/models/requirements.dart';
 
 /// DashboardItem

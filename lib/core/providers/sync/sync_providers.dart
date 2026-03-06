@@ -2,7 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:project_management_app/core/repository/i_project_repository.dart';
 import 'package:project_management_app/core/services/cloud_sync_service.dart';
-import 'package:project_management_app/core/providers/connectivity/connectivity_provider.dart';
+import 'package:project_management_app/core/providers/connectivity/connectivity_providers.dart';
 import 'package:project_management_app/core/repository/i_dashboard_repository.dart';
 import 'package:project_management_app/core/services/app_logger.dart';
 import 'package:project_management_app/models/project_model.dart';

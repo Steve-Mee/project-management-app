@@ -5,7 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import '../../services/app_logger.dart';
 import '../../config/ai_config.dart' as ai_config;
-import './ai_usage_provider.dart';
+import './ai_usage_providers.dart';
 import './ai_providers.dart';
 import '../../../models/chat_message_model.dart';
 import '../../../models/project_plan.dart';

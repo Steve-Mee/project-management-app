@@ -3,4 +3,4 @@
 library;
 
 export 'providers/index.dart';
-export 'providers/onboarding_provider.dart';
+export 'providers/onboarding_providers.dart';
