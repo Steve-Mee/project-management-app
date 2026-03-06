@@ -93,3 +93,10 @@ build/
 # Backups
 *.backup
 
+# Local analysis and test artifacts
+.analysis_full.txt
+.analysis_lib.txt
+full_test_output.txt
+failures/
+test/failures/
+
