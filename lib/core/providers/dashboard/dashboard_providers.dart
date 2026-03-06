@@ -7,13 +7,13 @@ import 'package:project_management_app/models/project_model.dart';
 import 'package:project_management_app/core/repository/i_dashboard_repository.dart';
 import 'package:project_management_app/core/repository/impl/hive_dashboard_repository.dart';
 import 'package:project_management_app/core/repository/models/dashboard_models.dart';
-import 'package:project_management_app/core/providers/project_providers.dart';
+import 'package:project_management_app/core/providers/project/project_providers.dart';
 import 'package:project_management_app/core/services/ai_parsers.dart';
 import 'package:project_management_app/core/services/app_logger.dart';
-import 'package:project_management_app/core/providers/auth_providers.dart';
+import 'package:project_management_app/core/providers/auth/auth_providers.dart';
 import 'package:project_management_app/core/models/dashboard_types.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
-import 'package:project_management_app/core/providers/connectivity_providers.dart';
+import 'package:project_management_app/core/providers/connectivity/connectivity_provider.dart';
 import 'package:project_management_app/core/models/requirements.dart';
 
 /// DashboardItem

@@ -4,7 +4,7 @@
 library;
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:project_management_app/core/providers/auth_providers.dart';
+import 'package:project_management_app/core/providers/auth/auth_providers.dart';
 import 'package:project_management_app/core/services/notification_service.dart';
 
 /// Provider for the notification service instance used throughout the app.

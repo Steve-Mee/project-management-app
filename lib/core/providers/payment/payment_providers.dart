@@ -1,8 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:project_management_app/core/services/app_logger.dart';
-import 'package:project_management_app/core/providers/auth_providers.dart';
-import 'package:project_management_app/core/providers/settings_providers.dart';
+import 'package:project_management_app/core/providers/auth/auth_providers.dart';
+import 'package:project_management_app/core/providers/settings/settings_providers.dart';
 
 /// Payment status model
 class PaymentStatus {

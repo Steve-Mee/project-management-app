@@ -14,6 +14,6 @@ export 'notification_providers.dart';
 export 'comment_providers.dart';
 export 'theme_providers.dart';
 export 'navigation_providers.dart';
-export 'active_viewers_provider.dart';
-export 'connectivity_provider.dart';
+export 'active_viewers_providers.dart';
+export 'connectivity_providers.dart';
 export 'offline_status_provider.dart';

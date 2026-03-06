@@ -3,8 +3,8 @@
 library;
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:project_management_app/core/providers/project_providers.dart' show projectRepositoryProvider, projectByIdProvider;
-import 'package:project_management_app/core/providers/notification_providers.dart';
+import 'package:project_management_app/core/providers/project/project_providers.dart' show projectRepositoryProvider, projectByIdProvider;
+import 'package:project_management_app/core/providers/notification/notification_providers.dart';
 import 'package:project_management_app/core/services/app_logger.dart';
 import 'package:project_management_app/models/task_model.dart';
 import 'package:project_management_app/core/repository/impl/hive_task_repository.dart';
