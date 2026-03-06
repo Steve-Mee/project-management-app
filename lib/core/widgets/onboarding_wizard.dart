@@ -4,8 +4,8 @@ import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../providers/project_providers.dart';
-import '../providers/onboarding_provider.dart';
-import '../providers/ai/ai_chat_provider.dart';
+import '../providers/onboarding_providers.dart';
+import '../providers/ai/ai_chat_providers.dart';
 import '../routes.dart';
 import '../services/project_invitation_service.dart';
 import '../../models/project_model.dart';
