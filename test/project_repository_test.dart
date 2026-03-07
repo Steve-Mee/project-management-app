@@ -20,15 +20,24 @@ void main() {
     String name = 'Test Project',
     double progress = 0.2,
     String status = 'In Progress',
+    String? priority,
+    DateTime? startDate,
+    DateTime? dueDate,
+    List<String> tags = const <String>[],
+    String description = 'Sample',
   }) async {
     return ProjectModel(
       id: id,
       name: name,
       progress: progress,
       status: status,
+      priority: priority,
+      startDate: startDate,
+      dueDate: dueDate,
+      tags: tags,
       tasks: const [],
       directoryPath: null,
-      description: 'Sample',
+      description: description,
     );
   }
 
@@ -233,6 +242,61 @@ void main() {
 
     expect(typedFiltered.length, 1);
     expect(typedFiltered[0].id, 'project-1');
+  });
+
+  test('getFilteredProjects supports priority, tags, and date range', () async {
+    await repository.addProject(
+      await createProject(
+        id: 'project-1',
+        name: 'Alpha',
+        status: 'In Progress',
+        priority: 'High',
+        tags: const ['mobile', 'urgent'],
+        startDate: DateTime(2026, 1, 1),
+        dueDate: DateTime(2026, 1, 20),
+      ),
+    );
+    await repository.addProject(
+      await createProject(
+        id: 'project-2',
+        name: 'Beta',
+        status: 'In Progress',
+        priority: 'Low',
+        tags: const ['backend'],
+        startDate: DateTime(2026, 2, 1),
+        dueDate: DateTime(2026, 2, 20),
+      ),
+    );
+
+    final result = await repository.getFilteredProjects(
+      ProjectFilter(
+        status: 'In Progress',
+        priority: 'High',
+        tags: const ['urgent'],
+        startDate: DateTime(2026, 1, 1),
+        endDate: DateTime(2026, 1, 31),
+      ),
+    );
+
+    expect(result.length, 1);
+    expect(result.first.id, 'project-1');
+  });
+
+  test('getFilteredProjects searchQuery also matches tags', () async {
+    await repository.addProject(
+      await createProject(
+        id: 'project-1',
+        name: 'Alpha',
+        tags: const ['finops'],
+      ),
+    );
+
+    final result = await repository.getFilteredProjects(
+      const ProjectFilter(searchQuery: 'finops'),
+    );
+
+    expect(result.length, 1);
+    expect(result.first.id, 'project-1');
   });
 
   test('IProjectRepository contract: status filter matches getProjectsByStatus', () async {

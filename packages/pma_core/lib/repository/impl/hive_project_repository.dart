@@ -204,34 +204,7 @@ class HiveProjectRepository implements IProjectRepository {
 
       final allProjects = await getAllProjects();
 
-      // Apply optional filters
-      var filtered = allProjects;
-      if (filter != null) {
-        if (filter.status != null && filter.status!.isNotEmpty) {
-          filtered = filtered.where((p) => p.status == filter.status).toList();
-        }
-        if (filter.searchQuery != null && filter.searchQuery!.isNotEmpty) {
-          final q = filter.searchQuery!.toLowerCase();
-          filtered = filtered.where((p) {
-            final nameMatch = p.name.toLowerCase().contains(q);
-            final descMatch = (p.description != null) && p.description!.toLowerCase().contains(q);
-            final tagsMatch = p.tags.any((tag) => tag.toLowerCase().contains(q));
-            return nameMatch || descMatch || tagsMatch;
-          }).toList();
-        }
-        if (filter.priority != null && filter.priority!.isNotEmpty) {
-          filtered = filtered.where((p) => p.priority == filter.priority).toList();
-        }
-        if (filter.tags != null && filter.tags!.isNotEmpty) {
-          filtered = filtered.where((p) => filter.tags!.any((tag) => p.tags.contains(tag))).toList();
-        }
-        if (filter.startDate != null) {
-          filtered = filtered.where((p) => p.startDate != null && p.startDate!.isAfter(filter.startDate!.subtract(const Duration(days: 1)))).toList();
-        }
-        if (filter.endDate != null) {
-          filtered = filtered.where((p) => p.dueDate != null && p.dueDate!.isBefore(filter.endDate!.add(const Duration(days: 1)))).toList();
-        }
-      }
+      final filtered = _applyProjectFilter(allProjects, filter);
 
       // Keep pagination deterministic across implementations and runtimes.
       // Primary: name (case-insensitive), Secondary: id.
@@ -261,31 +234,78 @@ class HiveProjectRepository implements IProjectRepository {
     return allProjects.where((p) => p.status == status).toList();
   }
 
-  /// Apply complex filtering criteria defined by [ProjectFilter].
-  /// Currently supports status, search query, and date ranges; other fields
-  /// (priority, ownerId, tags) are reserved for future use.
+  /// Apply repository-level filtering criteria defined by [ProjectFilter].
+  ///
+  /// Supported fields in repository:
+  /// - status
+  /// - searchQuery (name/description/tags contains)
+  /// - priority
+  /// - tags (OR semantics)
+  /// - startDate / endDate (inclusive)
+  ///
+  /// Provider-only fields remain outside repository scope:
+  /// - ownerId
+  /// - requiredTags / sortBy / sortAscending / viewMode
   @override
   Future<List<ProjectModel>> getFilteredProjects(models.ProjectFilter filter, {List<ProjectFilterConditions> extraConditions = const []}) async {
-    var projects = await getAllProjects();
-
-    if (filter.status != null) {
-      projects = projects.where((p) => p.status == filter.status).toList();
-    }
-    if (filter.searchQuery != null && filter.searchQuery!.isNotEmpty) {
-      final q = filter.searchQuery!.toLowerCase();
-      projects = projects.where((p) =>
-        p.name.toLowerCase().contains(q) ||
-        (p.description?.toLowerCase().contains(q) ?? false)
-      ).toList();
-    }
-    // Date-based and priority filtering are now handled client-side in the provider for better performance
-    // ownerId, tags filtering can be added here later if needed
+    var projects = _applyProjectFilter(await getAllProjects(), filter);
 
     for (final cond in extraConditions) {
       projects = projects.where(cond.condition).toList();
     }
 
     return projects;
+  }
+
+  List<ProjectModel> _applyProjectFilter(
+    List<ProjectModel> projects,
+    models.ProjectFilter? filter,
+  ) {
+    if (filter == null) {
+      return projects;
+    }
+
+    var filtered = projects;
+
+    if (filter.status != null && filter.status!.isNotEmpty) {
+      filtered = filtered.where((p) => p.status == filter.status).toList();
+    }
+
+    if (filter.searchQuery != null && filter.searchQuery!.isNotEmpty) {
+      final q = filter.searchQuery!.toLowerCase();
+      filtered = filtered.where((p) {
+        final nameMatch = p.name.toLowerCase().contains(q);
+        final descMatch = (p.description?.toLowerCase().contains(q) ?? false);
+        final tagsMatch = p.tags.any((tag) => tag.toLowerCase().contains(q));
+        return nameMatch || descMatch || tagsMatch;
+      }).toList();
+    }
+
+    if (filter.priority != null && filter.priority!.isNotEmpty) {
+      filtered = filtered.where((p) => p.priority == filter.priority).toList();
+    }
+
+    if (filter.tags != null && filter.tags!.isNotEmpty) {
+      filtered = filtered
+          .where((p) => filter.tags!.any((tag) => p.tags.contains(tag)))
+          .toList();
+    }
+
+    if (filter.startDate != null) {
+      final from = filter.startDate!;
+      filtered = filtered
+          .where((p) => p.startDate != null && !p.startDate!.isBefore(from))
+          .toList();
+    }
+
+    if (filter.endDate != null) {
+      final to = filter.endDate!;
+      filtered = filtered
+          .where((p) => p.dueDate != null && !p.dueDate!.isAfter(to))
+          .toList();
+    }
+
+    return filtered;
   }
 
   /// Get a single project by ID

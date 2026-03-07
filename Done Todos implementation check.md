@@ -80,6 +80,10 @@
 
 ## 003 - Voeg filtering-methoden toe aan project repository
 
+### Opvolging status
+
+- DONE (afgewerkt op 2026-03-07): gedeelde repository-filter-engine toegevoegd en semantiek geharmoniseerd tussen paginatie en filtering.
+
 ### Wat is correct geimplementeerd
 
 - Interface bevat `getProjectsByStatus` en `getFilteredProjects(...)`.
