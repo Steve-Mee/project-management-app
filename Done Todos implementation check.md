@@ -2402,11 +2402,11 @@
 
 ### Wat ik nog zou wijzigen
 
-- `project_created` wordt in project provider nu gelogd via `AppLogger.event(...)` i.p.v. expliciete `AnalyticsService.logEvent(...)` callsite. Dit werkt voor observability, maar maakt analytics-backend wisselbaarheid minder strikt dan bij de andere drie kern-events.
+- DONE: canonical `project_created` analytics-callsite loopt al via `AnalyticsService.logEvent(...)` in `hive_project_repository`; provider-level `AppLogger.event(...)` blijft aanvullend voor breadcrumbs/observability.
 
 ### Wat ik nog zou toevoegen
 
-- Expliciete `AnalyticsService.logEvent(AnalyticsEventName.projectCreated, ...)` in project-create pad voor volledige uniformiteit met de abstractielaag.
+- Geen extra toevoeging vereist voor acceptance; uniformiteitsdoel is al gehaald op canonical repository-callsite.
 
 ### Wat ik nog zou verwijderen
 
@@ -2425,11 +2425,11 @@
 
 ### Wat ik nog zou wijzigen
 
-- Acceptance noemt "add ... service worker"; in huidige Flutter-architectuur is de service worker build-generated (`flutter_service_worker.js`) i.p.v. handmatig sourcebestand in `web/`. Dat is functioneel correct, maar verdient expliciete noot in de todo-context om verwarring te voorkomen.
+- DONE: service-worker generatiecontext expliciet vastgelegd in `docs/pwa-support.md` (Flutter build-generated `flutter_service_worker.js`).
 
 ### Wat ik nog zou toevoegen
 
-- Eventueel een korte verwijzing in README dat PWA offline support CI-gevalideerd is via Playwright-check.
+- DONE: README-verwijzing toegevoegd naar CI-gevalideerde PWA/offline ondersteuning in `docs/pwa-support.md`.
 
 ### Wat ik nog zou verwijderen
 
@@ -2462,12 +2462,9 @@
 
 ## Samenvatting batch 071-075
 
-- Volledig functioneel: TODO 071, TODO 072, TODO 074
-- Functioneel met kleine uniformiteitsverbetering wenselijk: TODO 073
+- Volledig functioneel: TODO 071, TODO 072, TODO 073, TODO 074
 - Configuratief volledig in repo, operationeel deels afhankelijk van externe platform-setup: TODO 075
 - Belangrijkste restwerk:
-  - `project_created` analytics-callsite expliciet via `AnalyticsService` aligneren,
-  - PWA service-worker generatie-context kort documenteren in todo/README,
   - release pipeline na eerste live distributierun voorzien van verifieerbare evidence links.
 
 ---

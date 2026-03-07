@@ -379,6 +379,10 @@ flutter run --dart-define=ENABLE_SEMANTICS_DEBUGGER=true
 flutter test test/core/theme_contrast_test.dart test/features/project/project_views_accessibility_test.dart
 ```
 
+### PWA Support
+
+PWA setup and offline-mode verification are documented in [`docs/pwa-support.md`](docs/pwa-support.md), including CI validation coverage (manifest link, service worker registration, cache creation, offline reload).
+
 <!-- Add platform-specific setup instructions -->
 
 ## Contributing

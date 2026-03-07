@@ -22,6 +22,8 @@ flutter build web --release --pwa-strategy=offline-first
 
 Note: Some issue notes may reference `flutter build web --web-renderer html --pwa`. That command is not supported by the current Flutter CLI in this repo.
 
+Service worker note: this project uses Flutter's generated `flutter_service_worker.js` (emitted during `flutter build web`) instead of a hand-maintained custom service worker in `web/`.
+
 ## Manual Test (Chrome)
 
 1. Build the app:
