@@ -141,7 +141,23 @@ void main() {
     test('invalid widget type falls back to metricCard', () {
       const invalidType = 'invalidType';
 
-      expect(validateWidgetType(invalidType), DashboardWidgetType.metricCard);
+      expect(
+        () => validateWidgetType(invalidType),
+        throwsA(
+          isA<InvalidWidgetTypeException>().having(
+            (e) => e.message,
+            'message',
+            contains('Valid types are:'),
+          ),
+        ),
+      );
+    });
+
+    test('fromStringOrDefault keeps permissive behavior for UI parsing', () {
+      expect(
+        DashboardWidgetType.fromStringOrDefault('invalidType'),
+        DashboardWidgetType.metricCard,
+      );
     });
   });
 
@@ -160,14 +176,16 @@ void main() {
       expect(item.position['height'], 120.0);
     });
 
-    test('invalid widgetType in json falls back to metricCard', () {
+    test('invalid widgetType in json throws InvalidWidgetTypeException', () {
       const json = {
         'widgetType': 'invalidType',
         'position': {'x': 0, 'y': 0},
       };
 
-      final item = DashboardItem.fromJson(json);
-      expect(item.widgetType, DashboardWidgetType.metricCard);
+      expect(
+        () => DashboardItem.fromJson(json),
+        throwsA(isA<InvalidWidgetTypeException>()),
+      );
     });
   });
 

@@ -671,6 +671,10 @@
 
 ## 020 - Valideer widgetType bij dashboard widgets
 
+### Opvolging status
+
+- DONE (afgewerkt op 2026-03-07): strict validatiecontract vastgezet voor dashboard widget types (`validateWidgetType` en JSON parsing throwen nu bij invalid input), met expliciete permissieve helper voor UI parsing (`fromStringOrDefault`) om runtime-robustheid te behouden.
+
 ### Wat is correct geimplementeerd
 
 - `validateWidgetType(...)` helper bestaat en `DashboardWidgetType` enum centraliseert toegelaten types.

@@ -60,7 +60,7 @@ class _CustomizeDashboardScreenState extends ConsumerState<CustomizeDashboardScr
     
     setState(() {
       _dashboardItems = _dashboardConfig.widgets.map((widget) => DashboardItem(
-        widgetType: DashboardWidgetType.fromString(widget.id.split('_')[0]), // Extract type from id
+        widgetType: DashboardWidgetType.fromStringOrDefault(widget.id.split('_')[0]), // Extract type from id
         position: {
           'x': widget.x,
           'y': widget.y,
@@ -252,7 +252,7 @@ class _CustomizeDashboardScreenState extends ConsumerState<CustomizeDashboardScr
 
   void _addWidget(String type, int x, int y) {
     final item = DashboardItem(
-      widgetType: DashboardWidgetType.fromString(type),
+      widgetType: DashboardWidgetType.fromStringOrDefault(type),
       position: {'x': x, 'y': y, 'width': 2, 'height': 1},
     );
     setState(() {

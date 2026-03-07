@@ -20,10 +20,23 @@ enum DashboardWidgetType {
 
   static DashboardWidgetType fromString(String value) {
     final normalized = value.contains('.') ? value.split('.').last : value;
-    return DashboardWidgetType.values.firstWhere(
-      (e) => e.name == normalized,
-      orElse: () => DashboardWidgetType.metricCard,
-    );
+    return DashboardWidgetType.values.firstWhere((e) => e.name == normalized,
+        orElse: () {
+      throw InvalidWidgetTypeException(
+        'Invalid widget type \'$value\'. Valid types are: ${DashboardWidgetType.values.map((e) => e.name).join(', ')}',
+      );
+    });
+  }
+
+  static DashboardWidgetType fromStringOrDefault(
+    String value, {
+    DashboardWidgetType defaultType = DashboardWidgetType.metricCard,
+  }) {
+    try {
+      return fromString(value);
+    } catch (_) {
+      return defaultType;
+    }
   }
 }
 
