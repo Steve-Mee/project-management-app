@@ -169,5 +169,37 @@ void main() {
       await tester.pump();
       expect(tester.takeException(), isNull);
     });
+
+    testWidgets('shows load error when projectByIdProvider returns not found', (
+      WidgetTester tester,
+    ) async {
+      final container = ProviderContainer(
+        overrides: [
+          projectsProvider.overrideWith(() => FakeProjectsNotifier([project])),
+          projectByIdProvider.overrideWith((ref, id) async {
+            throw Exception('Project with id $id not found');
+          }),
+          tasksProvider.overrideWith(FakeTaskNotifier.new),
+          permissionsProvider.overrideWith(
+            (ref) => {
+              AppPermissions.viewProjects,
+              AppPermissions.shareProjects,
+              AppPermissions.useAi,
+            },
+          ),
+          projectMetaRepositoryProvider.overrideWith(
+            (ref) async => fakeMetaRepository,
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      await tester.pumpWidget(createTestWidget(container));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Error'), findsOneWidget);
+      expect(find.textContaining('Failed to load project:'), findsOneWidget);
+      expect(find.textContaining('not found'), findsOneWidget);
+    });
   });
 }
