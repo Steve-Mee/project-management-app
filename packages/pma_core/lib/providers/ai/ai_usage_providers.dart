@@ -13,6 +13,13 @@ import '../auth_providers.dart';
 
 part 'ai_usage_providers.freezed.dart';
 
+typedef AiUsageHistoryFilter = ({
+  DateTime? from,
+  DateTime? to,
+  String? userId,
+  String? projectId,
+});
+
 /// Model for AI usage data
 @Freezed(fromJson: false, toJson: false)
 abstract class AiUsage with _$AiUsage {
@@ -403,6 +410,21 @@ class AiUsageNotifier extends StateNotifier<AsyncValue<List<AiUsageRecord>>> {
     return await _repository.getUsageTotals(userId: userId, projectId: projectId);
   }
 
+  /// Retrieves usage history records with optional filters.
+  Future<List<AiUsageRecord>> getHistory({
+    DateTime? from,
+    DateTime? to,
+    String? userId,
+    String? projectId,
+  }) async {
+    return await _repository.getUsageHistory(
+      from: from,
+      to: to,
+      userId: userId,
+      projectId: projectId,
+    );
+  }
+
   /// Exports usage history in specified format with optional filters
   Future<String> exportUsageHistory({
     required String format,
@@ -521,4 +543,16 @@ final aiUsageUserProvider = FutureProvider.family<Map<String, dynamic>, String>(
 final aiUsageProjectProvider = FutureProvider.family<Map<String, dynamic>, String>((ref, projectId) async {
   final notifier = ref.watch(aiUsageHistoryProvider.notifier);
   return await notifier.getTotals(projectId: projectId);
+});
+
+/// Family provider for filtered AI usage history.
+final aiUsageFilteredHistoryProvider =
+    FutureProvider.family<List<AiUsageRecord>, AiUsageHistoryFilter>((ref, filter) async {
+  final notifier = ref.watch(aiUsageHistoryProvider.notifier);
+  return notifier.getHistory(
+    from: filter.from,
+    to: filter.to,
+    userId: filter.userId,
+    projectId: filter.projectId,
+  );
 });

@@ -1427,6 +1427,7 @@
 
 - Usage history tracking is aanwezig via `AiUsageRecord`, `AiUsageNotifier`, repository en history provider (`packages/pma_core/lib/providers/ai/ai_usage_providers.dart`, `packages/pma_core/lib/repository/impl/hive_ai_usage_repository.dart`).
 - Filtering op history (from/to/userId/projectId) is aanwezig in notifier/repository.
+- Filter-endpoint is expliciet beschikbaar via `aiUsageFilteredHistoryProvider` in `packages/pma_core/lib/providers/ai/ai_usage_providers.dart`.
 - CSV/JSON export is aanwezig via `exportUsageHistory(...)` in `ai_usage_providers.dart`.
 - Project- en user-aggregaties zijn beschikbaar via `aiUsagePerProjectProvider` en `aiUsagePerUserProvider`.
 - `promptOverride` en `projectId` worden doorgegeven in AI chat request payload en service calls (`packages/pma_core/lib/providers/ai/ai_chat_providers.dart`).
@@ -1439,7 +1440,7 @@
 
 ### Wat ik nog zou toevoegen
 
-- End-to-end test: AI request -> usage record met projectId -> history filter -> CSV export.
+- End-to-end test met echte AI request-pipeline + usage logging kan nog verdiept worden; providerniveau filtering/export is afgedekt.
 - Expliciete pricing source-of-truth (model/config/service) zodat `estimatedCost` uniform en herleidbaar is.
 
 ### Wat ik nog zou verwijderen
@@ -1449,6 +1450,11 @@
 ### Impact van jongere TODO op oudere TODO
 
 - TODO 037 legde de basis; TODO 041 bouwt daarop verder. Zonder extra harmonisatie blijft er wel overlap tussen aggregate usage (Supabase) en lokale history (Hive).
+
+### Opvolging status
+
+- DONE (2026-03-07): AI usage analytics verbetering is functioneel afgerond met history tracking, filtering endpoint provider, export en aggregaties inclusief aanvullende testdekking.
+- Open follow-up (niet blocker): pricing source-of-truth explicieter maken en AIUsageScreen later uitbreiden met rijkere metrics UI.
 
 ---
 

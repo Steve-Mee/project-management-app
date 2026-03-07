@@ -517,6 +517,45 @@ void main() {
       expect(result['requestCount'], 1);
     });
 
+    test('getHistory returns records filtered by project and user', () async {
+      final now = DateTime.now();
+      await fakeRepository.logUsage(
+        AiUsageRecord(
+          id: 'history-1',
+          operation: 'chat',
+          inputTokens: 100,
+          outputTokens: 20,
+          estimatedCost: 0.001,
+          timestamp: now.subtract(const Duration(minutes: 5)),
+          success: true,
+          userId: 'user-a',
+          projectId: 'project-1',
+        ),
+      );
+      await fakeRepository.logUsage(
+        AiUsageRecord(
+          id: 'history-2',
+          operation: 'summarize',
+          inputTokens: 80,
+          outputTokens: 10,
+          estimatedCost: 0.001,
+          timestamp: now.subtract(const Duration(minutes: 3)),
+          success: true,
+          userId: 'user-b',
+          projectId: 'project-1',
+        ),
+      );
+
+      final notifier = container.read(aiUsageHistoryProvider.notifier);
+      final filtered = await notifier.getHistory(
+        userId: 'user-a',
+        projectId: 'project-1',
+      );
+
+      expect(filtered.length, 1);
+      expect(filtered.first.id, 'history-1');
+    });
+
     test('end-to-end flow exposes user and project totals providers', () async {
       final now = DateTime.now();
       final records = [
@@ -790,6 +829,46 @@ void main() {
       expect(perProject['project2']!['totalCost'], 0.003);
       expect(perProject['project2']!['requestCount'], 1);
       expect(perProject['project2']!['successfulRequests'], 1);
+    });
+
+    test('aiUsageFilteredHistoryProvider returns filtered history records', () async {
+      final now = DateTime.now();
+      await fakeRepository.logUsage(
+        AiUsageRecord(
+          id: 'filter-1',
+          operation: 'chat',
+          inputTokens: 60,
+          outputTokens: 15,
+          estimatedCost: 0.001,
+          timestamp: now.subtract(const Duration(minutes: 2)),
+          success: true,
+          userId: 'user-x',
+          projectId: 'project-z',
+        ),
+      );
+      await fakeRepository.logUsage(
+        AiUsageRecord(
+          id: 'filter-2',
+          operation: 'chat',
+          inputTokens: 40,
+          outputTokens: 10,
+          estimatedCost: 0.001,
+          timestamp: now.subtract(const Duration(minutes: 1)),
+          success: true,
+          userId: 'user-y',
+          projectId: 'project-z',
+        ),
+      );
+
+      final result = await container.read(aiUsageFilteredHistoryProvider((
+        from: now.subtract(const Duration(minutes: 10)),
+        to: now,
+        userId: 'user-x',
+        projectId: 'project-z',
+      )).future);
+
+      expect(result.length, 1);
+      expect(result.first.id, 'filter-1');
     });
   });
 
