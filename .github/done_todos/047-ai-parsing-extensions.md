@@ -9,3 +9,7 @@
 - [x] DONE: Implement YAML parsing in ai_parsers.dart
 - [x] DONE: Update AI parsing service with new formats
 - [x] DONE: Add extension points for additional parsing formats
+
+**Verification Notes:**
+- Hardened default parser registration to register `json`, `xml`, and `yaml` independently.
+- Added regression test in `test/ai_parsers_test.dart` to confirm `xml`/`yaml` remain available when only `json` is custom-registered.

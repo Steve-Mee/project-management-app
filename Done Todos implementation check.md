@@ -1642,11 +1642,11 @@
 
 ### Wat ik nog zou wijzigen
 
-- Geen groot functioneel issue; implementatie dekt de acceptance criteria goed.
+- Kleine hardening doorgevoerd: default parser-registratie gebeurt nu per formaat, zodat gedeeltelijke custom registratie (bijv. alleen `json`) `xml`/`yaml` niet onbedoeld onbeschikbaar maakt.
 
 ### Wat ik nog zou toevoegen
 
-- Eventueel tests voor custom parser-failure isolation (één extensie faalt, andere blijven werken).
+- Geen directe must-have meer voor 047; regressietest toegevoegd voor partial registration scenario.
 
 ### Wat ik nog zou verwijderen
 

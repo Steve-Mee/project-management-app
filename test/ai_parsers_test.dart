@@ -125,6 +125,22 @@ users:
   });
 
   group('Extension system integration', () {
+    test('default XML and YAML parsers are still registered after custom JSON registration', () {
+      addTearDown(() {
+        ParserRegistry.registerParser('json', JsonAiParser());
+      });
+
+      ParserRegistry.registerParser('json', TestParser());
+
+      final xmlResult = AiParsers.parseAIResponse('<node><v>1</v></node>', 'xml');
+      expect(xmlResult, isA<Map<String, dynamic>>());
+      expect((xmlResult as Map)['v'], {'#text': '1'});
+
+      final yamlResult = AiParsers.parseAIResponse('v: 1', 'yaml');
+      expect(yamlResult, isA<Map<String, dynamic>>());
+      expect((yamlResult as Map)['v'], 1);
+    });
+
     test('XML parsing works via extension system', () {
       const xml = '<user><name>John</name><age>30</age></user>';
       final result = AiParsers.parseAIResponse(xml, 'xml');

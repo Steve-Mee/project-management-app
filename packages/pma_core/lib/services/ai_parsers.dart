@@ -298,7 +298,11 @@ class AiParsers {
   static void _ensureDefaultParsersRegistered() {
     if (ParserRegistry.getParser('json') == null) {
       ParserRegistry.registerParser('json', JsonAiParser());
+    }
+    if (ParserRegistry.getParser('xml') == null) {
       ParserRegistry.registerParser('xml', XmlAiParser());
+    }
+    if (ParserRegistry.getParser('yaml') == null) {
       ParserRegistry.registerParser('yaml', YamlAiParser());
     }
   }
