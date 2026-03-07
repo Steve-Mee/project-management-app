@@ -1,3 +1,9 @@
+## [1.10.0](https://github.com/Steve-Mee/project-management-app/compare/v1.9.0...v1.10.0) (2026-03-07)
+
+### Features
+
+* **todo-009:** extend filtered provider condition semantics ([558b3be](https://github.com/Steve-Mee/project-management-app/commit/558b3be1cfdd6df13a1c6892e72a0f3ea63c4085))
+
 ## [1.9.0](https://github.com/Steve-Mee/project-management-app/compare/v1.8.0...v1.9.0) (2026-03-07)
 
 ### Features
