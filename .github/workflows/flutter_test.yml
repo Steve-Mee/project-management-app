@@ -12,6 +12,7 @@ permissions:
 
 jobs:
   test:
+    name: flutter-test
     runs-on: ubuntu-latest
 
     steps:
