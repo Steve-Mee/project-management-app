@@ -5,5 +5,5 @@
 **Description:** Implement global ErrorBoundary widget with Sentry breadcrumbs for better error tracking.
 
 **Acceptance Criteria:**
-- [ ] ErrorBoundary wrapper around entire app
-- [ ] Log all errors + user actions as breadcrumbs
+- [x] DONE: ErrorBoundary wrapper around entire app
+- [x] DONE: Log all errors + user actions as breadcrumbs

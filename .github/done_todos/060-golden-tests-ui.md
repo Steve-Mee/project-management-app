@@ -5,5 +5,5 @@
 **Description:** Add golden tests for critical UI components to ensure visual consistency.
 
 **Acceptance Criteria:**
-- [ ] Golden tests for: DashboardCard, AiChatBubble, GanttChart, TaskListItem, Theme switcher
-- [ ] Add flutter_test golden configuration
+- [x] DONE: Golden tests for: DashboardCard, AiChatBubble, GanttChart, TaskListItem, Theme switcher
+- [x] DONE: Add flutter_test golden configuration

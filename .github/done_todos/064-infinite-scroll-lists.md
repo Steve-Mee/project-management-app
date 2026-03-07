@@ -5,5 +5,5 @@
 **Description:** Add infinite scroll functionality to ProjectsList and TasksList for better UX.
 
 **Acceptance Criteria:**
-- [ ] Use Riverpod AsyncNotifier with pagination + scrollController
-- [ ] Add loading indicator + "end reached" message
+- [x] DONE: Use Riverpod AsyncNotifier with pagination + scrollController
+- [x] DONE: Add loading indicator + "end reached" message

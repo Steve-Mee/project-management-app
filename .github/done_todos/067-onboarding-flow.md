@@ -5,5 +5,5 @@
 **Description:** Implement comprehensive onboarding flow for new users to improve first-time experience.
 
 **Acceptance Criteria:**
-- [ ] First launch: wizard (welcome → create first project → AI intro → invite team)
-- [ ] Use shared_preferences + Riverpod flag
+- [x] DONE: First launch: wizard (welcome → create first project → AI intro → invite team)
+- [x] DONE: Use shared_preferences + Riverpod flag

@@ -5,5 +5,5 @@
 **Description:** Add Progressive Web App support for better web experience.
 
 **Acceptance Criteria:**
-- [ ] Add web/manifest.json + service worker
-- [ ] Test offline mode in Chrome
+- [x] DONE: Add web/manifest.json + service worker
+- [x] DONE: Test offline mode in Chrome
