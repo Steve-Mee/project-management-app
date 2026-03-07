@@ -77,3 +77,13 @@ In Sentry, check:
 - `AppLogger` now forwards `event(...)` -> `app.event`, `warning(...)` -> `app.warning`, `debug(...)` -> `app.debug`, and `userAction(...)` -> `user.action`.
 - `AppLogger.error(...)` also calls `Sentry.captureException(...)` in addition to local logging.
 - All Sentry forwarding is best-effort and non-fatal; logging does not throw if Sentry is unavailable.
+
+## Code Review Checklist (User Action Breadcrumbs)
+
+Use this checklist for new feature PRs to keep `user.action` breadcrumb coverage consistent:
+
+- For every critical user mutation (create/update/delete/send/invite/confirm), add one `AppLogger.userAction(...)` call near the success path.
+- Include stable identifiers in `data` when available (`projectId`, `taskId`, `userId`, `feature`).
+- Avoid duplicate breadcrumbs for the same UI action (log once at the canonical success boundary).
+- Keep breadcrumb messages action-oriented and searchable (for example: `User created project`, `User completed task`).
+- For failure paths, log warning/error separately and keep `userAction` focused on intentional user interactions.

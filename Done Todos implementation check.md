@@ -2375,11 +2375,11 @@
 
 ### Wat ik nog zou wijzigen
 
-- Acceptance zegt "log all user actions"; in praktijk is dit afhankelijk van consistente callsite-adoptie van `AppLogger.userAction(...)`. Technisch is de infrastructuur aanwezig, maar volledige dekking blijft een disciplinevraag.
+- DONE: discipline-risico afgedekt met expliciete code-review checklist voor `AppLogger.userAction(...)` in `docs/error-boundary.md`.
 
 ### Wat ik nog zou toevoegen
 
-- Eventueel een kleine lint- of code review checklistregel voor nieuwe feature-acties: "voeg userAction breadcrumb toe voor kritieke interacties".
+- DONE: code-review checklistregel toegevoegd: "voeg `AppLogger.userAction(...)` toe voor kritieke interacties".
 
 ### Wat ik nog zou verwijderen
 
