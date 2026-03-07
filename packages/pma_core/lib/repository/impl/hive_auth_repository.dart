@@ -1,41 +1,14 @@
-import 'dart:convert';
-
-import 'package:crypto/crypto.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:pma_core/auth/auth_user.dart';
 import 'package:pma_core/auth/permissions.dart';
 import 'package:pma_core/auth/role_models.dart';
-import 'package:pma_core/services/login_rate_limiter.dart';
-import 'package:pma_core/auth/auth_user.dart';
-import 'package:pma_core/repository/i_auth_repository.dart';
 import 'package:pma_core/repository/encrypted_hive_box.dart';
-
-enum Role {
-  admin,
-  user,
-}
-
-/// Remote auth service using Supabase
-class RemoteAuthService {
-  Future<void> signIn(String username, String password, {String? captchaToken}) async {
-    await Supabase.instance.client.auth.signInWithPassword(
-      email: username.trim(),
-      password: password,
-      captchaToken: captchaToken,
-    );
-  }
-
-  Future<void> signOut() async {
-    await Supabase.instance.client.auth.signOut();
-  }
-
-  Future<void> registerUser(String username, String password) async {
-    await Supabase.instance.client.auth.signUp(
-      email: username.trim(),
-      password: password,
-    );
-  }
-}
+import 'package:pma_core/repository/i_auth_repository.dart';
+import 'package:pma_core/repository/impl/auth/auth_data_mapper.dart';
+import 'package:pma_core/repository/impl/auth/auth_operations.dart';
+import 'package:pma_core/repository/impl/auth/auth_remote_service.dart';
+import 'package:pma_core/services/login_rate_limiter.dart';
 
 Future<bool> _isLoginBlockedSafely(String identifier) async {
   try {
@@ -65,23 +38,24 @@ Future<void> _resetLoginAttemptsSafely(String identifier) async {
   }
 }
 
-
 /// Concrete implementation of IAuthRepository using Hive for local persistence
-/// and Supabase for remote authentication
-/// Refactored per .github/issues/049-repository-refactoring.md
+/// and Supabase for remote authentication.
+///
+/// Refactored per .github/issues/049-repository-refactoring.md:
+/// mapping and auth workflows are split into dedicated helper modules.
 class HiveAuthRepository implements IAuthRepository {
   static const String _boxName = 'auth';
 
-  final RemoteAuthService _remote;
-
-  /// Helper class for data mapping operations
-  final _AuthDataMapper _dataMapper = _AuthDataMapper();
-
-  /// Helper class for authentication operations
-  final _AuthOperations _authOperations = _AuthOperations();
-
   HiveAuthRepository({RemoteAuthService? remote})
       : _remote = remote ?? RemoteAuthService();
+
+  final RemoteAuthService _remote;
+  final AuthDataMapper _dataMapper = AuthDataMapper();
+  late final AuthOperations _authOperations = AuthOperations(
+    dataMapper: _dataMapper,
+    recordLoginAttempt: _recordLoginAttemptSafely,
+    resetLoginAttempts: _resetLoginAttemptsSafely,
+  );
 
   @override
   String get adminRoleId => 'role_admin';
@@ -226,7 +200,8 @@ class HiveAuthRepository implements IAuthRepository {
   }
 
   @override
-  Stream<dynamic> get onAuthStateChange => Supabase.instance.client.auth.onAuthStateChange;
+  Stream<dynamic> get onAuthStateChange =>
+      Supabase.instance.client.auth.onAuthStateChange;
 
   @override
   Future<bool> login(String email, String password) async {
@@ -264,16 +239,16 @@ class HiveAuthRepository implements IAuthRepository {
     }
 
     await _box.put(
-      _AuthDataMapper._usersKey,
+      AuthDataMapper.usersKey,
       [
         {
           'username': 'admin',
-          'password': _hashPassword('admin123'),
+          'password': _dataMapper.hashPassword('admin123'),
           'roleId': adminRoleId,
         },
         {
           'username': 'user',
-          'password': _hashPassword('user123'),
+          'password': _dataMapper.hashPassword('user123'),
           'roleId': defaultUserRoleId,
         },
       ],
@@ -287,7 +262,7 @@ class HiveAuthRepository implements IAuthRepository {
     }
 
     await _box.put(
-      _AuthDataMapper._rolesKey,
+      AuthDataMapper.rolesKey,
       [
         RoleDefinition(
           id: adminRoleId,
@@ -314,335 +289,6 @@ class HiveAuthRepository implements IAuthRepository {
           ],
         ).toMap(),
       ],
-    );
-  }
-
-  String _hashPassword(String password) {
-    final bytes = utf8.encode(password);
-    return sha256.convert(bytes).toString();
-  }
-}
-
-/// Helper class for data mapping operations
-class _AuthDataMapper {
-  static const String _boxName = 'auth';
-  static const String _usersKey = 'users';
-  static const String _currentUserKey = 'current_user';
-  static const String _rolesKey = 'roles';
-  static const String _groupsKey = 'groups';
-
-  Box get _box => Hive.box(_boxName);
-
-  List<AppUser> getUsers() {
-    final raw = _box.get(_usersKey);
-    if (raw is List) {
-      return raw
-          .whereType<Map>()
-          .map((entry) => AppUser.fromMap(Map<String, dynamic>.from(entry)))
-          .where((user) => user.username.isNotEmpty)
-          .toList();
-    }
-    return [];
-  }
-
-  AppUser? getUserByUsername(String username) {
-    final trimmed = username.trim().toLowerCase();
-    if (trimmed.isEmpty) {
-      return null;
-    }
-
-    for (final user in getUsers()) {
-      if (user.username.toLowerCase() == trimmed) {
-        return user;
-      }
-    }
-    return null;
-  }
-
-  List<RoleDefinition> getRoles() {
-    final raw = _box.get(_rolesKey);
-    if (raw is List) {
-      return raw
-          .whereType<Map>()
-          .map((entry) => RoleDefinition.fromMap(Map<String, dynamic>.from(entry)))
-          .where((role) => role.id.isNotEmpty)
-          .toList();
-    }
-    return [];
-  }
-
-  RoleDefinition? getRoleById(String roleId) {
-    for (final role in getRoles()) {
-      if (role.id == roleId) {
-        return role;
-      }
-    }
-    return null;
-  }
-
-  Future<void> upsertRole(RoleDefinition role) async {
-    final roles = getRoles();
-    roles.removeWhere((item) => item.id == role.id);
-    roles.add(role);
-    await _box.put(
-      _rolesKey,
-      roles.map((entry) => entry.toMap()).toList(),
-    );
-  }
-
-  Future<void> deleteRole(String roleId) async {
-    if (roleId == 'role_admin' || roleId == 'role_member') {
-      return;
-    }
-    final roles = getRoles()..removeWhere((item) => item.id == roleId);
-    await _box.put(
-      _rolesKey,
-      roles.map((entry) => entry.toMap()).toList(),
-    );
-  }
-
-  List<GroupDefinition> getGroups() {
-    final raw = _box.get(_groupsKey);
-    if (raw is List) {
-      return raw
-          .whereType<Map>()
-          .map((entry) => GroupDefinition.fromMap(Map<String, dynamic>.from(entry)))
-          .where((group) => group.id.isNotEmpty)
-          .toList();
-    }
-    return [];
-  }
-
-  GroupDefinition? getGroupById(String groupId) {
-    for (final group in getGroups()) {
-      if (group.id == groupId) {
-        return group;
-      }
-    }
-    return null;
-  }
-
-  List<GroupDefinition> getGroupsForUser(String username) {
-    final trimmed = username.trim().toLowerCase();
-    if (trimmed.isEmpty) {
-      return [];
-    }
-    return getGroups()
-        .where(
-          (group) => group.members
-              .any((member) => member.toLowerCase() == trimmed),
-        )
-        .toList();
-  }
-
-  Future<void> upsertGroup(GroupDefinition group) async {
-    final groups = getGroups();
-    groups.removeWhere((item) => item.id == group.id);
-    groups.add(group);
-    await _box.put(
-      _groupsKey,
-      groups.map((entry) => entry.toMap()).toList(),
-    );
-  }
-
-  Future<void> deleteGroup(String groupId) async {
-    final groups = getGroups()..removeWhere((item) => item.id == groupId);
-    await _box.put(
-      _groupsKey,
-      groups.map((entry) => entry.toMap()).toList(),
-    );
-  }
-
-  Future<void> addUserToGroup(String groupId, String username) async {
-    final group = getGroupById(groupId);
-    if (group == null) {
-      return;
-    }
-    final trimmed = username.trim();
-    if (trimmed.isEmpty) {
-      return;
-    }
-    if (group.members.any((member) => member.toLowerCase() == trimmed.toLowerCase())) {
-      return;
-    }
-
-    await upsertGroup(
-      group.copyWith(members: [...group.members, trimmed]),
-    );
-  }
-
-  Future<void> removeUserFromGroup(String groupId, String username) async {
-    final group = getGroupById(groupId);
-    if (group == null) {
-      return;
-    }
-    final trimmed = username.trim();
-    if (trimmed.isEmpty) {
-      return;
-    }
-
-    await upsertGroup(
-      group.copyWith(
-        members: group.members
-            .where((member) => member.toLowerCase() != trimmed.toLowerCase())
-            .toList(),
-      ),
-    );
-  }
-
-  Future<void> updateUserRole(String username, String roleId) async {
-    final users = getUsers();
-    final updated = users.map((user) {
-      if (user.username.toLowerCase() == username.toLowerCase()) {
-        return AppUser(
-          username: user.username,
-          password: user.password,
-          roleId: roleId,
-        );
-      }
-      return user;
-    }).toList();
-
-    await _box.put(
-      _usersKey,
-      updated.map((entry) => entry.toMap()).toList(),
-    );
-  }
-
-  Future<void> addUser(AppUser user) async {
-    final users = getUsers();
-    final hashedPassword = _hashPassword(user.password);
-    users.removeWhere(
-      (existing) => existing.username.toLowerCase() == user.username.toLowerCase(),
-    );
-    users.add(
-      AppUser(
-        username: user.username,
-        password: hashedPassword,
-        roleId: user.roleId,
-      ),
-    );
-    await _box.put(
-      _usersKey,
-      users.map((entry) => entry.toMap()).toList(),
-    );
-  }
-
-  Future<void> deleteUser(String username) async {
-    final users = getUsers();
-    users.removeWhere(
-      (existing) => existing.username.toLowerCase() == username.toLowerCase(),
-    );
-    await _box.put(
-      _usersKey,
-      users.map((entry) => entry.toMap()).toList(),
-    );
-
-    final current = getCurrentUser();
-    if (current != null && current.toLowerCase() == username.toLowerCase()) {
-      await setCurrentUser(null);
-    }
-  }
-
-  String? getCurrentUser() {
-    final value = _box.get(_currentUserKey);
-    if (value is String && value.isNotEmpty) {
-      return value;
-    }
-    return null;
-  }
-
-  Future<void> setCurrentUser(String? username) async {
-    if (username == null || username.isEmpty) {
-      await _box.delete(_currentUserKey);
-      return;
-    }
-    await _box.put(_currentUserKey, username);
-  }
-
-  String _hashPassword(String password) {
-    final bytes = utf8.encode(password);
-    return sha256.convert(bytes).toString();
-  }
-}
-
-/// Helper class for authentication operations
-class _AuthOperations {
-  AppUser? validateUser(String username, String password) {
-    final dataMapper = _AuthDataMapper();
-    final users = dataMapper.getUsers();
-    final hashedPassword = _hashPassword(password);
-    for (final user in users) {
-      if (user.username == username && user.password == hashedPassword) {
-        return user;
-      }
-      if (user.username == username && user.password == password) {
-        _upgradeLegacyPassword(username, hashedPassword, users);
-        return AppUser(
-          username: user.username,
-          password: hashedPassword,
-          roleId: user.roleId,
-        );
-      }
-    }
-    return null;
-  }
-
-  Future<bool> login(String email, String password, RemoteAuthService remote) async {
-    try {
-      await remote.signIn(email, password);
-      final dataMapper = _AuthDataMapper();
-      await dataMapper.setCurrentUser(email.trim());
-      await _resetLoginAttemptsSafely(email.trim().toLowerCase());
-      return true;
-    } catch (e) {
-      await _recordLoginAttemptSafely(email.trim().toLowerCase());
-      return false;
-    }
-  }
-
-  Future<void> register(String email, String password, RemoteAuthService remote) async {
-    await remote.registerUser(email, password);
-  }
-
-  Future<bool> isLoggedIn() async {
-    return Supabase.instance.client.auth.currentSession != null;
-  }
-
-  Future<void> logout(RemoteAuthService remote) async {
-    await remote.signOut();
-    final dataMapper = _AuthDataMapper();
-    await dataMapper.setCurrentUser(null);
-  }
-
-  String _hashPassword(String password) {
-    final bytes = utf8.encode(password);
-    return sha256.convert(bytes).toString();
-  }
-
-  void _upgradeLegacyPassword(
-    String username,
-    String hashedPassword,
-    List<AppUser> users,
-  ) {
-    final updated = <AppUser>[];
-    for (final user in users) {
-      if (user.username == username) {
-        updated.add(
-          AppUser(
-            username: user.username,
-            password: hashedPassword,
-            roleId: user.roleId,
-          ),
-        );
-      } else {
-        updated.add(user);
-      }
-    }
-    final dataMapper = _AuthDataMapper();
-    dataMapper._box.put(
-      '_users',
-      updated.map((entry) => entry.toMap()).toList(),
     );
   }
 }

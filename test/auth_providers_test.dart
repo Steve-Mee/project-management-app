@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pma_core/repository/i_auth_repository.dart';
 import 'package:pma_core/repository/impl/hive_auth_repository.dart';
+import 'package:pma_core/repository/impl/auth/auth_remote_service.dart';
 import 'package:pma_core/repository/impl/hive_settings_repository.dart';
 import 'package:pma_core/repository/settings_repository.dart';
 import 'package:pma_core/auth/auth_user.dart';

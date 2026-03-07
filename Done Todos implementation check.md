@@ -1688,11 +1688,11 @@
 
 ### Wat ik nog zou wijzigen
 
-- Sommige implementatiebestanden blijven zeer groot (met helperklassen en meerdere verantwoordelijkheden), dus "split when they grow" is slechts deels voltooid.
+- Belangrijkste hotspot aangepakt: `hive_auth_repository.dart` is opgesplitst in mapper/operations/remote-service modules, waardoor verantwoordelijkheden duidelijker gescheiden zijn.
 
 ### Wat ik nog zou toevoegen
 
-- Verdere opsplitsing op domeinverantwoordelijkheid (bijv. sync managers, data mappers, auth ops in aparte bestanden met small interfaces).
+- Eventueel soortgelijke opsplitsing doorzetten voor andere grote implementaties als die verder groeien.
 
 ### Wat ik nog zou verwijderen
 
