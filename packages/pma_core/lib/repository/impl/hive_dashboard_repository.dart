@@ -3,6 +3,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:pma_core/repository/i_dashboard_repository.dart';
 import 'package:pma_core/repository/models/dashboard_models.dart';
 import 'package:pma_core/services/requirements_service.dart';
+import 'package:pma_core/services/app_logger.dart';
 import 'package:pma_core/models/project_requirements.dart';
 import 'package:pma_core/models/dashboard_types.dart';
 import 'package:pma_core/models/requirements.dart';
@@ -64,7 +65,12 @@ class HiveDashboardRepository implements IDashboardRepository {
         return items;
       }
       return [];
-    } catch (e) {
+    } catch (e, st) {
+      await AppLogger.error(
+        'dashboard_repository_load_config_failed',
+        error: e,
+        stackTrace: st,
+      );
       return [];
     }
   }
@@ -76,8 +82,14 @@ class HiveDashboardRepository implements IDashboardRepository {
       final data = _dataMapper.serializeDashboardItems(items);
       await box.put('config', data);
       _cacheManager.updateCache(items);
-    } catch (e) {
+      AppLogger.event('dashboard_repository_config_saved', params: {'count': items.length});
+    } catch (e, st) {
       _cacheManager.invalidateCache();
+      await AppLogger.error(
+        'dashboard_repository_save_config_failed',
+        error: e,
+        stackTrace: st,
+      );
       rethrow;
     }
   }
@@ -88,6 +100,10 @@ class HiveDashboardRepository implements IDashboardRepository {
     final items = await loadConfig();
     items.add(item);
     await saveConfig(items);
+    AppLogger.event('dashboard_repository_item_added', params: {
+      'widgetType': item.widgetType.name,
+      'count': items.length,
+    });
   }
 
   @override
@@ -97,7 +113,17 @@ class HiveDashboardRepository implements IDashboardRepository {
     if (index >= 0 && index < items.length) {
       items.removeAt(index);
       await saveConfig(items);
+      AppLogger.event('dashboard_repository_item_removed', params: {
+        'index': index,
+        'count': items.length,
+      });
+      return;
     }
+
+    AppLogger.warning('dashboard_repository_remove_item_invalid_index', params: {
+      'index': index,
+      'count': items.length,
+    });
   }
 
   @override
@@ -110,7 +136,16 @@ class HiveDashboardRepository implements IDashboardRepository {
         position: position,
       );
       await saveConfig(items);
+      AppLogger.event('dashboard_repository_item_position_updated', params: {
+        'index': index,
+      });
+      return;
     }
+
+    AppLogger.warning('dashboard_repository_update_position_invalid_index', params: {
+      'index': index,
+      'count': items.length,
+    });
   }
 
   @override
@@ -122,7 +157,12 @@ class HiveDashboardRepository implements IDashboardRepository {
         return _dataMapper.deserializeDashboardTemplates(data);
       }
       return [];
-    } catch (e) {
+    } catch (e, st) {
+      await AppLogger.error(
+        'dashboard_repository_load_templates_failed',
+        error: e,
+        stackTrace: st,
+      );
       return [];
     }
   }
@@ -133,7 +173,13 @@ class HiveDashboardRepository implements IDashboardRepository {
       final box = await Hive.openBox<List>(_templatesBoxName);
       final data = _dataMapper.serializeDashboardTemplates(templates);
       await box.put('templates', data);
-    } catch (e) {
+      AppLogger.event('dashboard_repository_templates_saved', params: {'count': templates.length});
+    } catch (e, st) {
+      await AppLogger.error(
+        'dashboard_repository_save_templates_failed',
+        error: e,
+        stackTrace: st,
+      );
       rethrow;
     }
   }
@@ -182,6 +228,7 @@ class HiveDashboardRepository implements IDashboardRepository {
       list.add(req);
     }
     await saveRequirements(list);
+    AppLogger.event('dashboard_repository_requirement_saved', params: {'id': req.id});
   }
 
   @override
@@ -227,8 +274,12 @@ class HiveDashboardRepository implements IDashboardRepository {
       if (pendingChangesBox.isOpen) {
         await pendingChangesBox.close();
       }
-    } catch (e) {
-      // Ignore close errors
+    } catch (e, st) {
+      await AppLogger.error(
+        'dashboard_repository_close_failed',
+        error: e,
+        stackTrace: st,
+      );
     }
   }
 }
@@ -264,7 +315,12 @@ class _DataMapper {
         return data.map((map) => Requirement.fromJson(map as Map<String, dynamic>)).toList();
       }
       return [];
-    } catch (e) {
+    } catch (e, st) {
+      await AppLogger.error(
+        'dashboard_repository_load_requirements_failed',
+        error: e,
+        stackTrace: st,
+      );
       return [];
     }
   }
@@ -275,8 +331,13 @@ class _DataMapper {
       final box = await Hive.openBox<List>('requirements');
       final data = requirements.map((req) => req.toJson()).toList();
       await box.put('requirements', data);
-    } catch (e) {
-      // Ignore save errors
+      AppLogger.event('dashboard_repository_requirements_saved', params: {'count': requirements.length});
+    } catch (e, st) {
+      await AppLogger.error(
+        'dashboard_repository_save_requirements_failed',
+        error: e,
+        stackTrace: st,
+      );
     }
   }
 
@@ -289,7 +350,12 @@ class _DataMapper {
         return SharedDashboard.fromJson(data as Map<String, dynamic>);
       }
       return null;
-    } catch (e) {
+    } catch (e, st) {
+      await AppLogger.error(
+        'dashboard_repository_load_local_shared_dashboard_failed',
+        error: e,
+        stackTrace: st,
+      );
       return null;
     }
   }
@@ -299,8 +365,13 @@ class _DataMapper {
     try {
       final box = await Hive.openBox<Map>('shared_dashboards');
       await box.put('shared_${dashboard.id}', dashboard.toJson());
-    } catch (e) {
-      // Ignore local save errors
+      AppLogger.event('dashboard_repository_local_shared_dashboard_saved', params: {'shareId': dashboard.id});
+    } catch (e, st) {
+      await AppLogger.error(
+        'dashboard_repository_save_local_shared_dashboard_failed',
+        error: e,
+        stackTrace: st,
+      );
     }
   }
 }
@@ -361,8 +432,13 @@ class _OfflineQueueManager {
       final data = box.get('changes') ?? [];
       data.add(change);
       await box.put('changes', data);
-    } catch (e) {
-      // Ignore queue errors
+      AppLogger.event('dashboard_repository_pending_change_queued', params: {'count': data.length});
+    } catch (e, st) {
+      await AppLogger.error(
+        'dashboard_repository_queue_pending_change_failed',
+        error: e,
+        stackTrace: st,
+      );
     }
   }
 
@@ -374,9 +450,14 @@ class _OfflineQueueManager {
       if (data.isNotEmpty) {
         // Assume sync successful
         await box.put('changes', []);
+        AppLogger.event('dashboard_repository_pending_changes_cleared', params: {'count': data.length});
       }
-    } catch (e) {
-      // Ignore sync errors
+    } catch (e, st) {
+      await AppLogger.error(
+        'dashboard_repository_process_pending_sync_failed',
+        error: e,
+        stackTrace: st,
+      );
     }
   }
 }
@@ -388,7 +469,12 @@ class _SupabaseSyncManager {
     try {
       final response = await Supabase.instance.client.from('shared_dashboards').select().eq('id', shareId).single();
       return SharedDashboard.fromJson(response);
-    } catch (e) {
+    } catch (e, st) {
+      await AppLogger.error(
+        'dashboard_repository_fetch_shared_dashboard_failed',
+        error: e,
+        stackTrace: st,
+      );
       return null;
     }
   }
@@ -396,10 +482,15 @@ class _SupabaseSyncManager {
   /// Save shared dashboard to Supabase
   Future<void> saveSharedDashboard(SharedDashboard dashboard) async {
     await Supabase.instance.client.from('shared_dashboards').upsert(dashboard.toJson());
+    AppLogger.event('dashboard_repository_shared_dashboard_saved', params: {'shareId': dashboard.id});
   }
 
   /// Update shared permissions in Supabase
   Future<void> updateSharedPermissions(String shareId, Map<String, String> permissions) async {
     await Supabase.instance.client.from('shared_dashboards').update({'permissions': permissions}).eq('id', shareId);
+    AppLogger.event('dashboard_repository_shared_permissions_updated', params: {
+      'shareId': shareId,
+      'count': permissions.length,
+    });
   }
 }

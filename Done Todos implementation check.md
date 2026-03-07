@@ -846,16 +846,20 @@
 
 ## 025 - Error handling en logging toevoegen voor dashboard providers
 
+### Opvolging status
+
+- DONE (afgewerkt op 2026-03-07): stille repository-catches vervangen door gestructureerde logging in `HiveDashboardRepository` en helperklassen; belangrijke repository-mutaties loggen nu ook events voor betere traceability.
+
 ### Wat is correct geimplementeerd
 
 - Dashboard provider gebruikt uitgebreid `try/catch`, `_logError`, `_logEvent`, en `dashboardErrorProvider` statuscodes op meerdere IO-acties.
 - Tests aanwezig voor failure-paden (`loadConfig`, `saveConfig`, `addItem`, `removeItem`, `updateItemPosition`, `createCustomWidget`) in `test/dashboard_providers_test.dart`.
+- Repositorylaag logt fouten nu consequent via `AppLogger.error` in eerder stille fallback-paden (`loadConfig`, `loadTemplates`, `loadRequirements`, local/shared dashboard IO, pending sync queue, Supabase fetch) zonder bestaand fallback-gedrag te breken.
+- Belangrijke repository-mutaties loggen nu events (`config/templates/requirements/shared updates`, item add/remove/update) voor observability.
 
 ### Wat ik nog zou wijzigen
 
-- Repositorylaag slikt op meerdere plekken exceptions zonder log of propagate (bijv. verschillende `catch (e) { return []; }` of no-op catches in `HiveDashboardRepository`).
-  Dat ondergraaft observability vanuit providerlaag.
-  Advies: minimaal `AppLogger.warning/error` toevoegen in repository catches.
+- Uniform error taxonomy (gedeelde operation-codes + contextvelden) expliciet centraliseren zodat providerstatus, logs en eventuele analytics exact dezelfde sleutelset gebruiken.
 
 ### Wat ik nog zou toevoegen
 
@@ -863,7 +867,7 @@
 
 ### Wat ik nog zou verwijderen
 
-- Stille catches zonder logging in repository helperklassen.
+- Inconsistente eventnaamgeving tussen provider- en repositorylaag als vervolgopschoning.
 
 ### Impact van jongere TODO op oudere TODO
 
@@ -873,12 +877,12 @@
 
 ## Samenvatting batch 021-025
 
-- Volledig functioneel: TODO 021 (kern), TODO 022 (kern), TODO 023 (kern), TODO 025 (providerlaag)
+- Volledig functioneel: TODO 021 (kern), TODO 022 (kern), TODO 023 (kern), TODO 025 (provider + repository logging)
 - Functioneel maar met duidelijke diepgangstekorten: TODO 024
 - Belangrijkste restwerk:
   - permissiehiërarchie in sharing aanscherpen,
   - integratietests voor collaboration verdiepen,
-  - stille repository-catches vervangen door gestructureerde logging,
+- error taxonomy centraliseren voor dashboard errors/logs,
   - undo/redo indexbeheer robuuster maken tegen toekomstige save-flow veranderingen.
 
 ---
