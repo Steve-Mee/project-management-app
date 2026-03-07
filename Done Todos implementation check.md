@@ -1757,17 +1757,15 @@
 
 ### Wat ik nog zou wijzigen
 
-- Acceptance vroeg `intl: ^0.19.0`; in zowel root als `packages/pma_core/pubspec.yaml` staat nog `intl: any`.
-- Acceptance vroeg GitHub homepage/repository met `project-management-app` (streepjes), terwijl huidige waarden `myprojectmanagementapp.com` en `project_management_app` (underscore) gebruiken.
+- Geen blocker meer op metadata/dependency alignment: `intl` is vastgezet op SDK-compatibele `^0.20.2` en GitHub URLs gebruiken nu consequent `project-management-app`.
 
 ### Wat ik nog zou toevoegen
 
-- Eenduidige metadata-alignment met de afgesproken GitHub URL-conventie (hyphenated repo pad).
-- Vastgepinde `intl` versie volgens l10n-vereiste.
+- Eventueel periodieke dependency-audit (`flutter pub outdated`) als onderhoudstaak, buiten scope van TODO 051.
 
 ### Wat ik nog zou verwijderen
 
-- Losse/ambigue `intl: any` om dependency drift te beperken.
+- Geen directe verwijdering meer vereist voor TODO 051.
 
 ---
 

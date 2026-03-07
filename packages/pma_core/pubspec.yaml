@@ -3,8 +3,8 @@ description: Shared core package for the Project Management App.
 version: 0.1.0
 publish_to: 'none'
 
-homepage: https://myprojectmanagementapp.com
-repository: https://github.com/Steve-Mee/project_management_app
+homepage: https://github.com/Steve-Mee/project-management-app
+repository: https://github.com/Steve-Mee/project-management-app
 
 environment:
   sdk: '>=3.0.0 <4.0.0'
@@ -42,7 +42,7 @@ dependencies:
   local_auth: ^3.0.0
   json_annotation: ^4.9.0
   freezed_annotation: ^3.1.0
-  intl: any
+  intl: ^0.20.2
   flutter_gcaptcha_v3: ^2.1.1
 
 dev_dependencies:

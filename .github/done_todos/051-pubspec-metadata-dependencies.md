@@ -12,3 +12,7 @@
 - [x] DONE: Add repository: "https://github.com/Steve-Mee/project-management-app"
 - [x] DONE: Remove unused deps if present (check with flutter pub deps --style=compact)
 - [x] DONE: Run flutter pub get + commit
+
+**Verification Notes:**
+- Root and `packages/pma_core` pubspec metadata now use the hyphenated GitHub URL convention.
+- `intl` is pinned to `^0.20.2` in both pubspec files to match Flutter SDK (`flutter_localizations`) constraints and avoid dependency drift.
