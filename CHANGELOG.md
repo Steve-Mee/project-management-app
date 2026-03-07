@@ -1,3 +1,10 @@
+## [1.0.1](https://github.com/Steve-Mee/project-management-app/compare/v1.0.0...v1.0.1) (2026-03-07)
+
+
+### Bug Fixes
+
+* **release:** disable semantic-release issue comments ([f196408](https://github.com/Steve-Mee/project-management-app/commit/f196408aef906d5c77c26ab539452add00886343))
+
 # 1.0.0 (2026-03-07)
 
 
