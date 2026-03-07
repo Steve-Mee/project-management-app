@@ -262,6 +262,10 @@
 
 ## 008 - Breid filter-parameters voor projecten uit
 
+### Opvolging status
+
+- DONE (afgewerkt op 2026-03-07): extra filtervelden (`ownerId`, `requiredTags`, `dueDateStart`, `dueDateEnd`) zijn nu consistent actief in provider-filterpaden met bijhorende testdekking en sort-resolutie.
+
 ### Wat is correct geimplementeerd
 
 - Uitgebreide provider-filter bevat extra velden: `ownerId`, `dueDateStart`, `dueDateEnd`, `requiredTags`, `sortBy`, `sortAscending`, enz. (`packages/pma_core/lib/providers/project/project_providers.dart`).

@@ -223,9 +223,17 @@ final filteredProjectsPaginatedProvider = FutureProvider.autoDispose.family<List
   final repository = ref.watch(projectRepositoryProvider);
 
   // First get all filtered projects
-  final allFiltered = await repository.getFilteredProjects(
+  var allFiltered = await repository.getFilteredProjects(
     params.filter.toRepositoryFilter(),
     extraConditions: params.filter.extraConditions ?? [],
+  );
+
+  // Then apply provider-only filter fields and in-memory sorting.
+  allFiltered = _applyProviderOnlyFilterFields(allFiltered, params.filter);
+  allFiltered = _sortProjects(
+    allFiltered,
+    _effectiveSortBy(sortBy: params.filter.sortBy),
+    _effectiveSortAscending(sortAscending: params.filter.sortAscending),
   );
 
   // Then paginate in-memory (since we need the full filtered set for accurate pagination)
@@ -755,6 +763,59 @@ List<ProjectModel> _sortProjects(List<ProjectModel> projects, String sortBy, boo
   return projects;
 }
 
+String _effectiveSortBy({String? sortBy, String? fallbackSortBy}) {
+  if (sortBy != null && sortBy.isNotEmpty) {
+    return sortBy;
+  }
+  if (fallbackSortBy != null && fallbackSortBy.isNotEmpty) {
+    return fallbackSortBy;
+  }
+  return 'name';
+}
+
+bool _effectiveSortAscending({bool? sortAscending, bool? fallbackSortAscending}) {
+  if (sortAscending != null) {
+    return sortAscending;
+  }
+  if (fallbackSortAscending != null) {
+    return fallbackSortAscending;
+  }
+  return true;
+}
+
+List<ProjectModel> _applyProviderOnlyFilterFields(
+  List<ProjectModel> projects,
+  ProjectFilter filter,
+) {
+  var filtered = projects;
+
+  if (filter.ownerId != null && filter.ownerId!.isNotEmpty) {
+    filtered = filtered.where((p) => p.sharedUsers.contains(filter.ownerId!)).toList();
+  }
+
+  if (filter.requiredTags != null && filter.requiredTags!.isNotEmpty) {
+    filtered = filtered
+        .where((p) => filter.requiredTags!.every(p.tags.contains))
+        .toList();
+  }
+
+  if (filter.dueDateStart != null) {
+    final from = filter.dueDateStart!;
+    filtered = filtered
+        .where((p) => p.dueDate != null && !p.dueDate!.isBefore(from))
+        .toList();
+  }
+
+  if (filter.dueDateEnd != null) {
+    final to = filter.dueDateEnd!;
+    filtered = filtered
+        .where((p) => p.dueDate != null && !p.dueDate!.isAfter(to))
+        .toList();
+  }
+
+  return filtered;
+}
+
 /// Combined projects provider with pagination, filtering and sorting
 final projectsCombinedProvider = FutureProvider.autoDispose.family<List<ProjectModel>, ProjectParams>(
   (ref, params) async {
@@ -764,13 +825,19 @@ final projectsCombinedProvider = FutureProvider.autoDispose.family<List<ProjectM
     final repoFilter = params.filter.toRepositoryFilter();
 
     var filtered = await repository.getFilteredProjects(repoFilter);
-    // provider-level ownerId filter; repo doesn't handle shared-users
-    if (params.filter.ownerId != null) {
-      filtered = filtered.where((p) => p.sharedUsers.contains(params.filter.ownerId!)).toList();
-    }
+    filtered = _applyProviderOnlyFilterFields(filtered, params.filter);
+
+    final sortBy = _effectiveSortBy(
+      sortBy: params.filter.sortBy,
+      fallbackSortBy: params.sortBy,
+    );
+    final sortAscending = (params.filter.sortBy != null &&
+            params.filter.sortBy!.isNotEmpty)
+        ? params.filter.sortAscending
+        : params.sortAscending;
 
     // sort in-memory (dataset is expected to be moderate in size)
-    filtered = _sortProjects(filtered, params.sortBy, params.sortAscending);
+    filtered = _sortProjects(filtered, sortBy, sortAscending);
 
     // paginate
     final startIndex = (params.page - 1) * params.limit;
