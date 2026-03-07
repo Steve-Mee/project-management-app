@@ -2055,7 +2055,7 @@
 
 ### Wat ik nog zou toevoegen
 
-- Korte workflowmatrix in docs die per workflow de trigger en het doel toont, zodat "wat draait wanneer" expliciet is.
+- DONE: workflowmatrix toegevoegd in `docs/ci-cd-workflows.md` met triggers en doel per workflow.
 
 ### Wat ik nog zou verwijderen
 

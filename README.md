@@ -205,6 +205,7 @@ For acceptance checklist, verification flow, and install steps, see [`docs/pwa-s
 | [docs/legacy-ui-kit-removal.md](docs/legacy-ui-kit-removal.md) | Issue #056 migration note and replacement checklist for removing legacy UI kit/GetX usage |
 | [docs/supabase_fcm_setup.md](docs/supabase_fcm_setup.md) | Issue #058 end-to-end Supabase Edge Function to FCM setup, payload shape, and production checklist |
 | [docs/golden-tests.md](docs/golden-tests.md) | Issue #060 local golden-test workflow, baseline update flow, and review checklist |
+| [docs/ci-cd-workflows.md](docs/ci-cd-workflows.md) | Issue #061 workflow matrix with triggers, responsibilities, and release gating notes |
 | [NAVIGATION_GUIDE.md](NAVIGATION_GUIDE.md) | Guide for navigating the application |
 | [QUICK_REFERENCE.md](QUICK_REFERENCE.md) | Quick reference for key features |
 | [TODO.md](TODO.md) | List of tasks and todos |
