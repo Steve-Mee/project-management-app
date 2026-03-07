@@ -7,6 +7,7 @@ import 'package:pma_core/auth/permissions.dart';
 import 'package:pma_core/auth/role_models.dart';
 import 'package:pma_core/providers/auth_providers.dart';
 import 'package:pma_core/providers/ai_providers.dart';
+import 'package:pma_core/core/services/analytics_events.dart';
 import 'package:pma_core/auth/auth_user.dart';
 import 'package:project_management_app/generated/app_localizations.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -200,15 +201,17 @@ class _AdminScreenState extends ConsumerState<AdminScreen> {
     BuildContext context,
     Map<String, dynamic> row,
   ) {
-    final metadata = row['metadata'] is Map
+    final parameters = row['parameters'] is Map
+      ? Map<String, dynamic>.from(row['parameters'] as Map)
+      : row['metadata'] is Map
         ? Map<String, dynamic>.from(row['metadata'] as Map)
         : const <String, dynamic>{};
 
-    final flagKey = metadata['flag_key']?.toString() ?? 'unknown_flag';
-    final previousEnabled = metadata['previous_enabled'];
-    final nextEnabled = metadata['next_enabled'];
-    final previousValue = metadata['previous_value'];
-    final nextValue = metadata['next_value'];
+    final flagKey = parameters['flag_key']?.toString() ?? 'unknown_flag';
+    final previousEnabled = parameters['previous_enabled'];
+    final nextEnabled = parameters['next_enabled'];
+    final previousValue = parameters['previous_value'];
+    final nextValue = parameters['next_value'];
     final userId = row['user_id']?.toString() ?? 'unknown_user';
     final timestamp = _formatAuditTimestamp(row['timestamp']);
 
@@ -280,9 +283,9 @@ class _AdminScreenState extends ConsumerState<AdminScreen> {
   Future<List<Map<String, dynamic>>> _loadFeatureFlagAuditEvents() async {
     final client = Supabase.instance.client;
     final response = await client
-        .from('analytics')
-        .select('event, user_id, timestamp, metadata')
-        .eq('event', 'feature_flag_changed')
+      .from('analytics_events')
+      .select('event, user_id, timestamp, parameters')
+        .eq('event', AnalyticsEventName.featureFlagChanged)
         .order('timestamp', ascending: false)
         .limit(20);
 

@@ -6,6 +6,7 @@ ALTER TABLE project_members ENABLE ROW LEVEL SECURITY;
 ALTER TABLE tasks ENABLE ROW LEVEL SECURITY;
 ALTER TABLE invitations ENABLE ROW LEVEL SECURITY;
 ALTER TABLE analytics ENABLE ROW LEVEL SECURITY;
+ALTER TABLE analytics_events ENABLE ROW LEVEL SECURITY;
 ALTER TABLE user_views ENABLE ROW LEVEL SECURITY;
 ALTER TABLE ai_usage ENABLE ROW LEVEL SECURITY;
 ALTER TABLE feature_flags ENABLE ROW LEVEL SECURITY;
@@ -35,6 +36,12 @@ CREATE POLICY "analytics_insert_policy" ON analytics
 FOR INSERT WITH CHECK (auth.uid() = user_id);
 
 CREATE POLICY "analytics_select_policy" ON analytics
+FOR SELECT USING (auth.uid() = user_id);
+
+CREATE POLICY "analytics_events_insert_policy" ON analytics_events
+FOR INSERT WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "analytics_events_select_policy" ON analytics_events
 FOR SELECT USING (auth.uid() = user_id);
 
 -- Projects policies

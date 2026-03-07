@@ -3,6 +3,8 @@ import 'dart:async';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:pma_core/core/feature_flags/feature_flag.dart';
 import 'package:pma_core/core/feature_flags/feature_flag_resolver.dart';
+import 'package:pma_core/core/services/analytics_events.dart';
+import 'package:pma_core/core/services/analytics_service.dart';
 import 'package:pma_core/services/app_logger.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -25,15 +27,20 @@ abstract class FeatureFlagServiceBase {
 class FeatureFlagService implements FeatureFlagServiceBase {
   FeatureFlagService({
     required SupabaseClient supabaseClient,
+    AnalyticsService? analyticsService,
     Future<List<Map>> Function()? remoteFetchOverride,
-      bool useFlutterHiveInit = true,
+    bool useFlutterHiveInit = true,
   })  : _supabase = supabaseClient,
+        _analyticsService =
+            analyticsService ??
+          SupabaseAnalyticsService(supabaseClient),
       _remoteFetchOverride = remoteFetchOverride,
       _useFlutterHiveInit = useFlutterHiveInit;
 
   final SupabaseClient _supabase;
+  final AnalyticsService _analyticsService;
   final Future<List<Map>> Function()? _remoteFetchOverride;
-    final bool _useFlutterHiveInit;
+  final bool _useFlutterHiveInit;
 
   static const String _boxName = 'feature_flags';
   static const String _flagsCacheKey = 'flags';
@@ -360,28 +367,20 @@ class FeatureFlagService implements FeatureFlagServiceBase {
     required Object? previousValue,
     required Object? nextValue,
   }) async {
-    final currentUser = _supabase.auth.currentUser;
-    if (currentUser == null) {
-      return;
-    }
-
     try {
-      await _supabase.from('analytics').insert({
-        'event': 'feature_flag_changed',
-        'user_id': currentUser.id,
-        'metadata': {
+      await _analyticsService.logEvent(
+        AnalyticsEventName.featureFlagChanged,
+        parameters: {
           'flag_key': key,
           'previous_enabled': previousEnabled,
           'next_enabled': nextEnabled,
           'previous_value': previousValue,
           'next_value': nextValue,
         },
-        'minimal': false,
-      });
+      );
 
       AppLogger.event('feature_flag_audit_logged', params: {
         'key': key,
-        'user_id': currentUser.id,
       });
     } catch (error, stackTrace) {
       // Audit logging must never block successful flag writes.

@@ -1,5 +1,7 @@
 // ignore_for_file: prefer_const_constructors
 import 'package:pma_core/models/project_invitation.dart';
+import 'package:pma_core/core/services/analytics_events.dart';
+import 'package:pma_core/core/services/analytics_service.dart';
 import 'package:pma_core/services/app_logger.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:uuid/uuid.dart';
@@ -7,9 +9,15 @@ import 'package:uuid/uuid.dart';
 /// Service for managing project invitations
 class ProjectInvitationService {
   final SupabaseClient _supabaseClient;
+  final AnalyticsService _analyticsService;
   static const Uuid _uuid = Uuid();
 
-  ProjectInvitationService(this._supabaseClient);
+  ProjectInvitationService(
+    this._supabaseClient, {
+    AnalyticsService? analyticsService,
+  }) : _analyticsService =
+            analyticsService ??
+            SupabaseAnalyticsService(_supabaseClient);
 
   /// Send an invitation to a user for a project
   Future<String> sendInvitation(
@@ -64,6 +72,15 @@ class ProjectInvitationService {
     );
 
     await _supabaseClient.from('invitations').insert(invitation.toJson()).select('minimal');
+
+    await _analyticsService.logEvent(
+      AnalyticsEventName.inviteSent,
+      parameters: {
+        'project_id': projectId,
+        'email': email,
+        'role': role,
+      },
+    );
 
     AppLogger.instance.i('Sent invitation to $email for project $projectId with role $role');
 

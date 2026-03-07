@@ -1,4 +1,5 @@
-import 'dart:convert';
+import 'package:pma_core/core/services/analytics_events.dart';
+import 'package:pma_core/core/services/analytics_service.dart';
 import 'package:pma_core/services/app_logger.dart';
 import 'package:pma_core/models/project_model.dart';
 import 'package:pma_core/repository/impl/hive_project_repository.dart';
@@ -7,8 +8,16 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 /// Stub for future cloud sync (Supabase/etc.).
 class CloudSyncService {
   final HiveProjectRepository? repository;
+  AnalyticsService? _analyticsService;
 
-  CloudSyncService({this.repository});
+  CloudSyncService({
+    this.repository,
+    AnalyticsService? analyticsService,
+  }) : _analyticsService = analyticsService;
+
+  AnalyticsService get _analytics =>
+      _analyticsService ??=
+        SupabaseAnalyticsService(Supabase.instance.client);
 
   static final RegExp _uuidRegex = RegExp(
     r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-'
@@ -26,55 +35,26 @@ class CloudSyncService {
     String? userId,
     Map<String, Object?>? metadata,
   }) async {
-    try {
-      final supabase = Supabase.instance.client;
-
-      // Optioneel: check auth status
-      final currentUser = supabase.auth.currentUser;
-      if (currentUser == null) {
-        AppLogger.instance.w('Skipping analytics: no authenticated user');
-        return;
-      }
-
-      // JWT claim check (om te debuggen of hook werkt)
-      final session = supabase.auth.currentSession;
-      final token = session?.accessToken;
-      if (token != null) {
-        final payloadStr = token.split('.')[1];
-        final payload = utf8.decode(base64Url.decode(base64Url.normalize(payloadStr)));
-        AppLogger.instance.d('JWT payload: $payload');  // Check op "app_role"
-      }
-
-      final payload = <String, Object?>{
-        'event': event,
-        'timestamp': DateTime.now().toIso8601String(),
-        'user_id': currentUser.id,  // altijd user_id van authenticated user
-      };
-
-      if (entityId != null && entityId.isNotEmpty) {
-        payload['entity_id'] = entityId;
-      }
-
-      if (projectId != null && projectId.isNotEmpty) {
-        if (!_isValidUuid(projectId)) {
-          AppLogger.instance.w('Invalid project_id $projectId for event $event');
-          return;
-        }
-        payload['project_id'] = projectId;
-      } // else: geen project_id → alleen als policy dat toelaat
-
-      if (metadata != null && metadata.isNotEmpty) {
-        payload['metadata'] = metadata;
-      }
-
-      AppLogger.instance.d('Attempting analytics insert: $payload');
-
-      await supabase.from('analytics').insert(payload);
-
-      AppLogger.event(event, params: payload);
-    } catch (e, stack) {
-      AppLogger.instance.w('Analytics insert failed for $event', error: e, stackTrace: stack);
+    if (projectId != null && projectId.isNotEmpty && !_isValidUuid(projectId)) {
+      AppLogger.instance.w('Invalid project_id $projectId for event $event');
+      return;
     }
+
+    await _analytics.logEvent(
+      event,
+      parameters: {
+        if (entityId != null && entityId.isNotEmpty) 'entity_id': entityId,
+        if (projectId != null && projectId.isNotEmpty) 'project_id': projectId,
+        if (userId != null && userId.isNotEmpty) 'actor_user_id': userId,
+        if (metadata != null && metadata.isNotEmpty) ...metadata,
+      },
+    );
+
+    AppLogger.event(event, params: {
+      if (entityId != null && entityId.isNotEmpty) 'entity_id': entityId,
+      if (projectId != null && projectId.isNotEmpty) 'project_id': projectId,
+      if (userId != null && userId.isNotEmpty) 'actor_user_id': userId,
+    });
   }
 
   Future<void> syncProjectCreate(
@@ -120,14 +100,8 @@ class CloudSyncService {
       rethrow;
     }
 
-    // Then analytics
-    await _insertAnalytics(
-      'project_created',
-      entityId: projectId,
-      projectId: projectId,
-      userId: currentUser.id,
-      metadata: metadata,
-    );
+    // Canonical `project_created` analytics is logged at repository create callsite
+    // to prevent duplicate counting during sync operations.
   }
 
   Future<void> syncProjectUpdate(
@@ -161,7 +135,7 @@ class CloudSyncService {
     }
 
     await _insertAnalytics(
-      'project_updated',
+      AnalyticsEventName.projectUpdated,
       entityId: projectId,
       projectId: projectId,
       userId: currentUser.id,
@@ -189,7 +163,7 @@ class CloudSyncService {
     }
 
     await _insertAnalytics(
-      'project_deleted',
+      AnalyticsEventName.projectDeleted,
       entityId: projectId,
       projectId: projectId,
       userId: currentUser.id,
@@ -206,7 +180,7 @@ class CloudSyncService {
 
     // NOTE: Vervang door Supabase call later; controleer auth sessie.
     AppLogger.instance.i('Placeholder sync bulk delete');
-    await _insertAnalytics('project_bulk_deleted', userId: currentUser.id);
+    await _insertAnalytics(AnalyticsEventName.projectBulkDeleted, userId: currentUser.id);
   }
 
   Future<void> syncAll({String? userId}) async {
@@ -258,7 +232,7 @@ class CloudSyncService {
       AppLogger.instance.w('Failed to sync projects', error: e);
     }
 
-    await _insertAnalytics('sync_all', userId: currentUser.id);
+    await _insertAnalytics(AnalyticsEventName.syncAll, userId: currentUser.id);
   }
 
   // Fully implemented in 040-supabase-sync-cleanup.md
@@ -281,7 +255,7 @@ class CloudSyncService {
     // NOTE: Vervang door Supabase auth sign-in; bewaar sessie.
     AppLogger.instance.i('Placeholder auth sign-in: $userId');
     await _insertAnalytics(
-      'auth_sign_in',
+      AnalyticsEventName.authSignIn,
       userId: userId,
       metadata: metadata,
     );
@@ -290,6 +264,6 @@ class CloudSyncService {
   Future<void> authSignOutPlaceholder({String? userId}) async {
     // NOTE: Vervang door Supabase auth sign-out; clear sessie.
     AppLogger.instance.i('Placeholder auth sign-out');
-    await _insertAnalytics('auth_sign_out', userId: userId);
+    await _insertAnalytics(AnalyticsEventName.authSignOut, userId: userId);
   }
 }

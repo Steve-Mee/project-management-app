@@ -131,6 +131,16 @@ CREATE TABLE IF NOT EXISTS analytics (
   minimal BOOLEAN DEFAULT false
 );
 
+-- Analytics events table (issue #073 canonical sink)
+CREATE TABLE IF NOT EXISTS analytics_events (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  event TEXT NOT NULL,
+  user_id UUID,
+  timestamp TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  parameters JSONB,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
 -- A/B testing configurations table
 CREATE TABLE IF NOT EXISTS ab_configs (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
@@ -207,6 +217,7 @@ ALTER TABLE project_members ENABLE ROW LEVEL SECURITY;
 ALTER TABLE tasks ENABLE ROW LEVEL SECURITY;
 ALTER TABLE invitations ENABLE ROW LEVEL SECURITY;
 ALTER TABLE analytics ENABLE ROW LEVEL SECURITY;
+ALTER TABLE analytics_events ENABLE ROW LEVEL SECURITY;
 ALTER TABLE user_views ENABLE ROW LEVEL SECURITY;
 ALTER TABLE ai_usage ENABLE ROW LEVEL SECURITY;
 ALTER TABLE feature_flags ENABLE ROW LEVEL SECURITY;
@@ -250,7 +261,7 @@ Note:
 - The UI will report save failures and keep local state consistent.
 - For real writes, the auth token `app_metadata` must include the `admin` role claim.
 - Without that claim, the admin UI shows a clean error and intentionally does not mutate data.
-- On successful writes, the app records `feature_flag_changed` audit events in `analytics` for the authenticated user.
+- On successful writes, the app records `feature_flag_changed` audit events in `analytics_events` for the authenticated user.
 
 ### `analytics`
 
@@ -263,6 +274,20 @@ CREATE POLICY "analytics_insert_policy" ON analytics
 FOR INSERT WITH CHECK (auth.uid() = user_id);
 
 CREATE POLICY "analytics_select_policy" ON analytics
+FOR SELECT USING (auth.uid() = user_id);
+```
+
+### `analytics_events`
+
+Policy summary:
+- `analytics_events_insert_policy`: users can only insert analytics rows where `user_id` matches `auth.uid()`.
+- `analytics_events_select_policy`: users can only read their own analytics rows.
+
+```sql
+CREATE POLICY "analytics_events_insert_policy" ON analytics_events
+FOR INSERT WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "analytics_events_select_policy" ON analytics_events
 FOR SELECT USING (auth.uid() = user_id);
 ```
 

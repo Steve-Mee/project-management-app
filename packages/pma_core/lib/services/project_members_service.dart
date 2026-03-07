@@ -1,8 +1,19 @@
+import 'package:pma_core/core/services/analytics_events.dart';
+import 'package:pma_core/core/services/analytics_service.dart';
 import 'package:pma_core/services/app_logger.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 /// Service for managing project memberships and invitations
 class ProjectMembersService {
+  AnalyticsService? _analyticsService;
+
+  ProjectMembersService({AnalyticsService? analyticsService})
+    : _analyticsService = analyticsService;
+
+  AnalyticsService get _analytics =>
+    _analyticsService ??=
+      SupabaseAnalyticsService(Supabase.instance.client);
+
   /// Invite a user to a project by email
   Future<void> inviteUser({
     required String email,
@@ -51,6 +62,15 @@ class ProjectMembersService {
       'status': 'pending',
       'created_at': DateTime.now().toIso8601String(),
     }).select('minimal');
+
+    await _analytics.logEvent(
+      AnalyticsEventName.inviteSent,
+      parameters: {
+        'project_id': projectId,
+        'email': email,
+        'role': role,
+      },
+    );
 
     AppLogger.instance.i('Invited $email to project $projectId with role $role');
   }

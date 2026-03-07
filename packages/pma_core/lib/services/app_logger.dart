@@ -22,6 +22,20 @@ class AppLogger {
   // error logs are consistently forwarded to Sentry.
   static final SentryAwareLogger instance = SentryAwareLogger(_logger);
 
+  /// Backward-compatible event logging for diagnostics and breadcrumbs.
+  ///
+  /// Prefer `AnalyticsService.logEvent(...)` for product analytics so event
+  /// storage backend can be switched (for example Supabase to Firebase)
+  /// without updating feature callsites.
+  ///
+  /// Example migration-safe usage:
+  /// ```dart
+  /// AppLogger.event('task_completed', params: {'taskId': task.id});
+  /// await ref.read(analyticsServiceProvider).logEvent(
+  ///   'task_completed',
+  ///   parameters: {'task_id': task.id, 'project_id': task.projectId},
+  /// );
+  /// ```
   static void event(String name, {Map<String, Object?>? params}) {
     final payload = params ?? const {};
     if (payload.isEmpty) {

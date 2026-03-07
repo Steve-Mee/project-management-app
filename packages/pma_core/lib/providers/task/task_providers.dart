@@ -2,7 +2,11 @@
 /// (moved from providers.dart – part 2/4)
 library;
 
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:pma_core/core/services/analytics_events.dart';
+import 'package:pma_core/core/providers.dart' as core_providers;
 import 'package:pma_core/providers/project/project_providers.dart' show projectRepositoryProvider, projectByIdProvider;
 import 'package:pma_core/providers/notification/notification_providers.dart';
 import 'package:pma_core/services/app_logger.dart';
@@ -235,6 +239,21 @@ class TaskNotifier extends AsyncNotifier<List<Task>> {
         'projectId': updatedTask.projectId,
       },
     );
+
+    if (newStatus == TaskStatus.done) {
+      // Issue #073: canonical analytics event for completed tasks.
+      unawaited(
+        ref.read(core_providers.analyticsServiceProvider).logEvent(
+          AnalyticsEventName.taskCompleted,
+          parameters: {
+            'task_id': updatedTask.id,
+            'project_id': updatedTask.projectId,
+            'title': updatedTask.title,
+          },
+        ),
+      );
+    }
+
     _syncTaskNotification(updatedTask);
   }
 
@@ -244,6 +263,10 @@ class TaskNotifier extends AsyncNotifier<List<Task>> {
     if (tasks == null) {
       return;
     }
+
+    final previousTaskIndex = tasks.indexWhere((task) => task.id == updatedTask.id);
+    final previousTask =
+      previousTaskIndex >= 0 ? tasks[previousTaskIndex] : null;
 
     final projectId = _activeProjectId;
 
@@ -282,6 +305,23 @@ class TaskNotifier extends AsyncNotifier<List<Task>> {
         'projectId': updatedTask.projectId,
       },
     );
+
+    if (previousTask != null &&
+        previousTask.status != TaskStatus.done &&
+        updatedTask.status == TaskStatus.done) {
+      // Also track completion when task state transitions via full update path.
+      unawaited(
+        ref.read(core_providers.analyticsServiceProvider).logEvent(
+          AnalyticsEventName.taskCompleted,
+          parameters: {
+            'task_id': updatedTask.id,
+            'project_id': updatedTask.projectId,
+            'title': updatedTask.title,
+          },
+        ),
+      );
+    }
+
     await _syncTaskNotification(updatedTask);
   }
 

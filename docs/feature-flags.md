@@ -35,7 +35,7 @@ Migration note:
 - AI, Gantt, and onboarding use graceful degradation when flags are disabled or still loading.
 - For write operations, Supabase RLS requires JWT `app_metadata.role == 'admin'`.
 - Without that claim, the admin UI shows an error and no data mutation occurs (intentional safe behavior).
-- Successful flag writes also create an audit event in `analytics` (`event = feature_flag_changed`).
+- Successful flag writes also create an audit event in `analytics_events` (`event = feature_flag_changed`).
 - Audit metadata includes `flag_key`, previous/new enabled state, and previous/new value.
 - Observability events now include `feature_flag_evaluated`, `feature_flag_fallback_cache`, and `feature_flag_default_used`.
 

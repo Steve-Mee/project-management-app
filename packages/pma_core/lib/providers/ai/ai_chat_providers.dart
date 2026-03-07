@@ -4,6 +4,8 @@ import 'dart:math';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import '../../services/app_logger.dart';
+import '../../core/services/analytics_events.dart';
+import '../../core/providers.dart' as core_providers;
 import '../../core/config/ai_config.dart' as ai_config;
 import './ai_usage_providers.dart';
 import './ai_providers.dart';
@@ -681,6 +683,18 @@ class AiChatNotifier extends AsyncNotifier<AiChatState> {
       final estimatedOutput = _estimateTokenCount(result);
       final estimatedTotalTokens = estimatedInput + estimatedOutput;
       ref.read(aiUsageUpdateProvider(estimatedTotalTokens));
+
+      // Issue #073: canonical analytics event for successful AI usage.
+      await ref.read(core_providers.analyticsServiceProvider).logEvent(
+        AnalyticsEventName.aiUsed,
+        parameters: {
+          'project_id': request.payload['projectId'] as String?,
+          'request_id': request.id,
+          'input_tokens_estimated': estimatedInput,
+          'output_tokens_estimated': estimatedOutput,
+          'total_tokens_estimated': estimatedTotalTokens,
+        },
+      );
 
       // Update total tokens used with actual tokens
       _totalTokensUsedToday += estimatedTotalTokens;

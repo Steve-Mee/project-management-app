@@ -60,6 +60,16 @@ CREATE TABLE IF NOT EXISTS analytics (
   minimal BOOLEAN DEFAULT false
 );
 
+-- Analytics events table (issue #073 canonical sink)
+CREATE TABLE IF NOT EXISTS analytics_events (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  event TEXT NOT NULL,
+  user_id UUID,
+  timestamp TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  parameters JSONB,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
 -- A/B testing configurations table
 CREATE TABLE IF NOT EXISTS ab_configs (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
@@ -112,6 +122,9 @@ CREATE INDEX IF NOT EXISTS idx_tasks_project_id ON tasks(project_id);
 CREATE INDEX IF NOT EXISTS idx_analytics_event ON analytics(event);
 CREATE INDEX IF NOT EXISTS idx_analytics_user_id ON analytics(user_id);
 CREATE INDEX IF NOT EXISTS idx_analytics_timestamp ON analytics(timestamp);
+CREATE INDEX IF NOT EXISTS idx_analytics_events_event ON analytics_events(event);
+CREATE INDEX IF NOT EXISTS idx_analytics_events_user_id ON analytics_events(user_id);
+CREATE INDEX IF NOT EXISTS idx_analytics_events_timestamp ON analytics_events(timestamp DESC);
 CREATE INDEX IF NOT EXISTS idx_user_views_user_id ON user_views(user_id);
 CREATE INDEX IF NOT EXISTS idx_user_views_view_name ON user_views(view_name);
 CREATE INDEX IF NOT EXISTS idx_ai_usage_user_id ON ai_usage(user_id);

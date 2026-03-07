@@ -4,6 +4,8 @@ import 'package:pma_core/models/project_filter.dart' as models;
 import 'package:pma_core/services/cloud_sync_service.dart';
 import 'package:pma_core/services/project_members_service.dart';
 import 'package:pma_core/services/app_logger.dart';
+import 'package:pma_core/core/services/analytics_events.dart';
+import 'package:pma_core/core/services/analytics_service.dart';
 import 'package:uuid/uuid.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:pma_core/repository/i_project_repository.dart';
@@ -23,6 +25,7 @@ class HiveProjectRepository implements IProjectRepository {
   late Box<Map<dynamic, dynamic>> _projectsBox;
   final CloudSyncService _cloudSync;
   final ProjectMembersService _membersService;
+  final AnalyticsService? _analyticsService;
   final bool _isTestMode;
 
   /// Helper class for data mapping operations
@@ -34,9 +37,11 @@ class HiveProjectRepository implements IProjectRepository {
   HiveProjectRepository({
     CloudSyncService? cloudSync,
     ProjectMembersService? membersService,
+    AnalyticsService? analyticsService,
     bool isTestMode = false,
   })  : _cloudSync = cloudSync ?? CloudSyncService(),
         _membersService = membersService ?? ProjectMembersService(),
+      _analyticsService = analyticsService,
         _isTestMode = isTestMode;
 
   /// Initialize Hive and open the projects box
@@ -132,6 +137,17 @@ class HiveProjectRepository implements IProjectRepository {
     if (_isTestMode) {
       return;
     }
+
+    final analytics =
+        _analyticsService ?? SupabaseAnalyticsService(Supabase.instance.client);
+    await analytics.logEvent(
+      AnalyticsEventName.projectCreated,
+      parameters: {
+        'project_id': resolved.id,
+        'name': resolved.name,
+        'source': 'hive_project_repository',
+      },
+    );
 
     final currentUser = Supabase.instance.client.auth.currentUser;
     if (currentUser == null) {

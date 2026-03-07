@@ -119,9 +119,20 @@ Operational behavior:
 - Auto-refresh every 30 minutes and refresh on app resume
 - Fail-open defaults in UI flows while flags are loading/unavailable
 - Supabase RLS-protected writes (JWT `app_metadata.role == 'admin'`)
-- Audit events recorded in `analytics` as `feature_flag_changed`
+- Audit events recorded in `analytics_events` as `feature_flag_changed`
 
 See [`docs/feature-flags.md`](docs/feature-flags.md) for the implementation checklist and acceptance criteria mapping.
+
+## Analytics
+
+Issue `#073-analytics-implementation` introduces a backend-agnostic analytics layer.
+
+- Abstract contract: `packages/pma_core/lib/core/services/analytics_service.dart` (`AnalyticsService`)
+- Default implementation: `SupabaseAnalyticsService`
+- Riverpod provider: `analyticsServiceProvider` in `packages/pma_core/lib/core/providers.dart`
+- Tracked issue events: `project_created`, `task_completed`, `ai_used`, `invite_sent`
+
+Implementation details, event mapping, and schema suggestions are documented in [`docs/analytics.md`](docs/analytics.md).
 
 ## Error Handling
 
@@ -149,6 +160,7 @@ Implementation checklist and test steps are documented in [`docs/error-boundary.
 | [INTEGRATION_GUIDE.md](INTEGRATION_GUIDE.md) | Guide for integrating various components |
 | [docs/gantt-chart.md](docs/gantt-chart.md) | Gantt upgrade checklist, architecture notes, and verification |
 | [docs/feature-flags.md](docs/feature-flags.md) | Supabase feature flag checklist, provider/service summary, and acceptance mapping |
+| [docs/analytics.md](docs/analytics.md) | Issue #073 analytics checklist, event mapping, service usage, and `analytics_events` schema suggestion |
 | [docs/error-boundary.md](docs/error-boundary.md) | Global error boundary acceptance checklist, test procedure, and AppLogger/Sentry integration notes |
 | [docs/modularization.md](docs/modularization.md) | Issue #070 modularization acceptance checklist and deferred routing summary |
 | [NAVIGATION_GUIDE.md](NAVIGATION_GUIDE.md) | Guide for navigating the application |
