@@ -24,7 +24,6 @@ import 'package:pma_core/repository/impl/hive_project_repository.dart';
 import 'core/routes.dart';
 import 'package:pma_core/widgets/offline_indicator.dart';
 import 'package:pma_core/repository/hive_initializer.dart';
-import 'package:pma_core/repository/encrypted_hive_box.dart';
 import 'package:pma_core/core/services/feature_flag_service.dart';
 import 'package:pma_core/services/app_logger.dart';
 import 'package:pma_core/services/login_rate_limiter.dart';
@@ -101,20 +100,9 @@ void main() async {
     Hive.registerAdapter<CommentModel>(CommentModelAdapter());
     registerSafeMigratedModelAdapters();
     await Hive.initFlutter();
-    await EncryptedHiveBox(
-      boxName: 'settings',
-      encryptionKey: 'hive_encryption_key_settings',
-    ).open();
-    await EncryptedHiveBox(
-      boxName: 'auth',
-      encryptionKey: 'hive_encryption_key_auth',
-    ).open();
-    await EncryptedHiveBox(
-      boxName: 'local_tokens',
-      encryptionKey: 'hive_encryption_key_local_tokens',
-    ).open();
     await Hive.openBox('groups');
     await Hive.openBox('roles');
+    // Canonical box initialization (encrypted + performance boxes).
     await HiveInitializer.initialize();
     await LoginRateLimiter.instance.initialize();
 
