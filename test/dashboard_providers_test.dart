@@ -707,34 +707,34 @@ void main() {
       expect(uuid.length, 36); // UUID v4 length
     });
 
-    test('hasPermission returns true for owner', () async {
-      // Test logic: owner always has permission
-      final permissions = <String, String>{};
-      const ownerId = 'owner123';
-      const userId = 'owner123';
-      const required = DashboardPermission.view;
-
-      // Simulate owner check
-      if (userId == ownerId) {
-        expect(true, isTrue);
-      } else {
-        final userPerm = permissions[userId];
-        expect(userPerm == required.name, isTrue);
-      }
+    test('permission hierarchy: edit implies view', () async {
+      expect(
+        hasSufficientDashboardPermission('edit', DashboardPermission.view),
+        isTrue,
+      );
+      expect(
+        hasSufficientDashboardPermission('edit', DashboardPermission.edit),
+        isTrue,
+      );
     });
 
-    test('hasPermission returns correct for viewer/editor', () async {
-      final permissions = {'user456': 'view'};
-      const ownerId = 'owner123';
-      const userId = 'user456';
-      const required = DashboardPermission.view;
-
-      if (userId == ownerId) {
-        expect(true, isTrue);
-      } else {
-        final userPerm = permissions[userId];
-        expect(userPerm == required.name, isTrue);
-      }
+    test('permission hierarchy: view does not imply edit', () async {
+      expect(
+        hasSufficientDashboardPermission('view', DashboardPermission.view),
+        isTrue,
+      );
+      expect(
+        hasSufficientDashboardPermission('view', DashboardPermission.edit),
+        isFalse,
+      );
+      expect(
+        hasSufficientDashboardPermission(null, DashboardPermission.view),
+        isFalse,
+      );
+      expect(
+        hasSufficientDashboardPermission('unknown', DashboardPermission.view),
+        isFalse,
+      );
     });
 
     test('loadSharedDashboard merges data with last-write-wins', () async {

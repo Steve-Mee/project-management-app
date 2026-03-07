@@ -500,9 +500,7 @@ class DashboardConfigNotifier extends AsyncNotifier<List<DashboardItem>> {
     if (dashboard.ownerId == currentUserId) return true;
 
     final userPerm = dashboard.permissions[currentUserId];
-    if (userPerm == null) return false;
-
-    return userPerm == required.name;
+    return hasSufficientDashboardPermission(userPerm, required);
   }
 
   Future<String> generateShareLink(String title) async {
@@ -665,6 +663,22 @@ final dashboardRepositoryProvider = Provider<IDashboardRepository>((ref) {
 
 /// Provider for dashboard error state
 final dashboardErrorProvider = StateProvider<String?>((ref) => null);
+
+/// Permission hierarchy for shared dashboards.
+/// `edit` implies `view`, while `view` stays read-only.
+bool hasSufficientDashboardPermission(
+  String? grantedPermission,
+  DashboardPermission required,
+) {
+  switch (grantedPermission) {
+    case 'edit':
+      return true;
+    case 'view':
+      return required == DashboardPermission.view;
+    default:
+      return false;
+  }
+}
 
 /// Resolves project name by ID from projects list, with fallback "Unknown Project"
 /// See .github/issues/029-dashboard-import-projects-provider.md

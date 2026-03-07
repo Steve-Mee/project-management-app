@@ -809,6 +809,10 @@
 
 ## 024 - Collaborative dashboard sharing
 
+### Opvolging status
+
+- DONE (afgewerkt op 2026-03-07): permissiehiërarchie in sharing aangescherpt; `hasPermission` respecteert nu dat `edit` ook `view` toestaat (i.p.v. exacte stringmatch), met expliciete hiërarchie-tests.
+
 ### Wat is correct geimplementeerd
 
 - Core sharing flows bestaan in provider:
