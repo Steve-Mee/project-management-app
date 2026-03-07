@@ -955,32 +955,35 @@
 
 ## 028 - Offline opslag voor requirements (Hive)
 
+### Opvolging status
+
+- DONE (afgewerkt op 2026-03-07): offline requirements queue verwerkt nu echte replay per item met behoud van mislukte/onbekende changes, plus regressietests.
+
 ### Wat is correct geimplementeerd
 
 - Requirements-opslag in Hive is aanwezig (`requirements_box`) in `packages/pma_core/lib/repository/impl/hive_dashboard_repository.dart`.
 - Er is een pending changes queue (`pending_requirements_changes`) met methoden `queuePendingChange` en `processPendingSync`.
 - Provider respecteert offline mode en queued wijzigingen via `saveRequirement` wanneer `_isOffline == true` (`packages/pma_core/lib/providers/dashboard/dashboard_providers.dart`).
+- `processPendingSync` doet nu replay per queued change in plaats van blind queue-leegmaken; succesvolle changes worden toegepast, mislukte/onbekende blijven queued voor volgende retry.
+- Connectiviteitsherstel triggert sync al via bestaande providerlistener (`wasOffline && !_isOffline`).
+- Testdekking toegevoegd in `test/hive_dashboard_repository_test.dart` voor replay en queue-retentie.
 
 ### Wat ik nog zou wijzigen
 
-- Sync-logica is momenteel simplistisch: `processPendingSync` leegt vooral de queue zonder echte remote replay/mergeflow.
-- Connectiviteitsgedreven sync-triggering ontbreekt als robuust mechanisme; flow hangt af van provider-level toggles.
-- Geen zichtbaar migratiepad voor requirements schema-evoluties in Hive (versioning/migratie-afhandeling).
+- Eventuele vervolgstap: queue-items uitbreiden met expliciete `operationId` + retry-metadata voor nog sterkere idempotentie en conflictanalyse.
+- Migratiepad voor requirements schema-evoluties expliciet documenteren (Hive adapter/version bump), indien model uitgebreider wordt.
 
 ### Wat ik nog zou toevoegen
 
-- Echte replay-sync naar remote backend met idempotente operatie-IDs en foutafhandeling per queued item.
-- Connectiviteitslistener die `processPendingSync` triggert bij online herstel.
-- Tests voor offline->online replay, conflicten en queue-herstel na app-restart.
-- Expliciet migratieplan voor requirements data model (Hive adapter/version bump pad).
+- Optioneel: extra tests voor queue-herstel over app-restart en mixed success/failure batches.
 
 ### Wat ik nog zou verwijderen
 
-- "Assume sync successful"-achtige aannames in sync manager zodra echte replaylogica actief is.
+- Geen directe verwijdering nodig.
 
 ### Impact van jongere TODO op oudere TODO
 
-- TODO 025 (error handling/logging) en TODO 024 (sharing/sync context) verhogen de noodzaak van observeerbare sync; stille/no-op syncpaden uit TODO 028 beperken nu die betrouwbaarheid.
+- TODO 025 (error handling/logging) versterkt TODO 028 direct: replayfouten zijn nu zichtbaar en blokkeren niet automatisch de hele queue.
 
 ---
 
@@ -1042,11 +1045,8 @@
 
 ## Samenvatting batch 026-030
 
-- Volledig functioneel: TODO 026, TODO 029, TODO 030
-- Gedeeltelijk functioneel met afwerking nodig: TODO 027, TODO 028
+- Volledig functioneel: TODO 026, TODO 027, TODO 028, TODO 029, TODO 030
 - Belangrijkste restwerk:
-  - echte TTL-cache voor requirements toevoegen,
-  - offline requirements sync van queue-leegmaak naar echte replay/merge brengen,
   - dashboard-project koppeling verder doortrekken naar item-level weergave,
   - AI legacy/current provider drift reduceren rond rate-limit policy.
 

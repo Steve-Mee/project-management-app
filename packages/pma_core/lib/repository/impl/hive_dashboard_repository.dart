@@ -31,7 +31,7 @@ class HiveDashboardRepository implements IDashboardRepository {
   final _CacheManager _cacheManager = _CacheManager();
 
   /// Helper class for offline queue management
-  final _OfflineQueueManager _offlineQueueManager = _OfflineQueueManager();
+  late final _OfflineQueueManager _offlineQueueManager;
 
   /// Helper class for Supabase sync operations
   final _SupabaseSyncManager _supabaseSyncManager = _SupabaseSyncManager();
@@ -42,7 +42,9 @@ class HiveDashboardRepository implements IDashboardRepository {
     DateTime Function()? nowProvider,
   })  : _requirementsService = requirementsService ?? RequirementsService(),
         _requirementsCacheTTL = requirementsCacheTTL,
-        _now = nowProvider ?? DateTime.now;
+        _now = nowProvider ?? DateTime.now {
+    _offlineQueueManager = _OfflineQueueManager(_applyPendingRequirementChange);
+  }
 
   /// Preloads the dashboard config into cache for improved performance.
   /// Can be called optionally during app initialization.
@@ -306,6 +308,21 @@ class HiveDashboardRepository implements IDashboardRepository {
   bool _isRequirementsCacheValid(_CacheEntry<ProjectRequirements> entry) {
     return _now().difference(entry.timestamp) < _requirementsCacheTTL;
   }
+
+  Future<void> _applyPendingRequirementChange(Map<String, dynamic> change) async {
+    final type = change['type'] as String?;
+    if (type != 'save_requirement') {
+      throw UnsupportedError('Unsupported pending change type: $type');
+    }
+
+    final rawData = change['data'];
+    if (rawData is! Map) {
+      throw FormatException('Pending requirement change data is invalid');
+    }
+
+    final req = Requirement.fromJson(Map<String, dynamic>.from(rawData));
+    await saveRequirement(req);
+  }
 }
 
 class _CacheEntry<T> {
@@ -455,6 +472,9 @@ class _CacheManager {
 /// Helper class for offline queue management operations
 class _OfflineQueueManager {
   static const String _pendingChangesBoxName = 'pending_requirements_changes';
+  final Future<void> Function(Map<String, dynamic>) _applyChange;
+
+  _OfflineQueueManager(this._applyChange);
 
   /// Queue a pending change for offline processing
   Future<void> queuePendingChange(Map<String, dynamic> change) async {
@@ -477,11 +497,40 @@ class _OfflineQueueManager {
   Future<void> processPendingSync() async {
     try {
       final box = await Hive.openBox<List>(_pendingChangesBoxName);
-      final data = box.get('changes') ?? [];
-      if (data.isNotEmpty) {
-        // Assume sync successful
-        await box.put('changes', []);
-        AppLogger.event('dashboard_repository_pending_changes_cleared', params: {'count': data.length});
+      final rawData = box.get('changes') ?? [];
+      final queuedChanges = rawData
+          .whereType<Map>()
+          .map((entry) => Map<String, dynamic>.from(entry))
+          .toList();
+
+      if (queuedChanges.isEmpty) {
+        return;
+      }
+
+      final remaining = <Map<String, dynamic>>[];
+      var processedCount = 0;
+
+      for (final change in queuedChanges) {
+        try {
+          await _applyChange(change);
+          processedCount++;
+        } catch (e, st) {
+          remaining.add(change);
+          await AppLogger.error(
+            'dashboard_repository_pending_change_apply_failed',
+            error: e,
+            stackTrace: st,
+          );
+        }
+      }
+
+      await box.put('changes', remaining);
+
+      if (processedCount > 0) {
+        AppLogger.event('dashboard_repository_pending_changes_processed', params: {
+          'processed': processedCount,
+          'remaining': remaining.length,
+        });
       }
     } catch (e, st) {
       await AppLogger.error(
