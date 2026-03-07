@@ -20,7 +20,7 @@ import 'package:project_management_app/features/project/project_chat.dart';
 import 'package:project_management_app/features/project/task_help_dialog.dart';
 import 'package:project_management_app/features/project/requirements_icon_list_view.dart';
 
-// Caching integrated – projectByIdProvider now uses 5-minute TTL cache (issue 006 part 5/5)
+// Caching integrated: projectByIdProvider uses a 5-minute TTL cache.
 
 /// Project detail screen with responsive layout
 class ProjectDetailScreen extends ConsumerStatefulWidget {
@@ -192,7 +192,7 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen>
   @override
   Widget build(BuildContext context) {
     final projectAsync = ref.watch(projectByIdProvider(widget.projectId));
-    final isFromCache = ref.watch(projectCacheProvider(widget.projectId)) != null;
+    final isFromCache = ref.watch(projectIsCachedProvider(widget.projectId));
 
     return projectAsync.when(
       loading: () => const Scaffold(

@@ -46,15 +46,28 @@ class _CacheEntry<T> {
 
 // IProjectRepository has been moved to `lib/core/repository/i_project_repository.dart`
 
-/// In-memory cache for individual projects (key = project ID)
-final projectCacheProvider = StateProvider.family<ProjectModel?, String>((ref, id) {
-  // Auto-expire cache after 5 minutes
-  ref.onDispose(() {
-    Future.delayed(const Duration(minutes: 5), () {
-      ref.invalidateSelf();
-    });
-  });
-  return null;
+/// TTL used by individual project cache.
+final projectByIdCacheTtlProvider = Provider<Duration>((ref) {
+  return const Duration(minutes: 5);
+});
+
+/// In-memory cache value for individual projects (key = project ID).
+final projectCacheProvider = StateProvider.family<ProjectModel?, String>((ref, id) => null);
+
+/// Cache timestamp for individual projects (key = project ID).
+final projectCacheTimestampProvider =
+    StateProvider.family<DateTime?, String>((ref, id) => null);
+
+/// Exposes whether the project cache currently has a non-expired value.
+final projectIsCachedProvider = Provider.family<bool, String>((ref, id) {
+  final cached = ref.watch(projectCacheProvider(id));
+  final cachedAt = ref.watch(projectCacheTimestampProvider(id));
+  if (cached == null || cachedAt == null) {
+    return false;
+  }
+
+  final ttl = ref.watch(projectByIdCacheTtlProvider);
+  return DateTime.now().difference(cachedAt) <= ttl;
 });
 
 /// Provider for project repository with abstract interface
@@ -72,11 +85,40 @@ final projectsProvider = AsyncNotifierProvider<ProjectsNotifier, List<ProjectMod
 );
 
 
-/// Cached individual project provider (keeps alive for 5 minutes)
-final projectByIdProvider = FutureProvider.autoDispose.family<ProjectModel, String>((ref, id) async {
-  final repository = ref.watch(projectRepositoryProvider);
-  return repository.getProjectById(id);
-});
+/// Cached individual project provider (read-through/write-through with TTL).
+final projectByIdProvider =
+    FutureProvider.autoDispose.family<ProjectModel, String>((ref, id) async {
+      final ttl = ref.watch(projectByIdCacheTtlProvider);
+      final cachedProject = ref.read(projectCacheProvider(id));
+      final cachedAt = ref.read(projectCacheTimestampProvider(id));
+
+      if (cachedProject != null && cachedAt != null) {
+        final age = DateTime.now().difference(cachedAt);
+        if (age <= ttl) {
+          return cachedProject;
+        }
+      }
+
+      final repository = ref.watch(projectRepositoryProvider);
+      final project = await repository.getProjectById(id);
+
+      // Defer write-through update to avoid cross-provider writes during build.
+      Future<void>.microtask(() {
+        try {
+          ref.read(projectCacheProvider(id).notifier).state = project;
+          ref.read(projectCacheTimestampProvider(id).notifier).state = DateTime.now();
+        } catch (_) {
+          // Container/provider may already be disposed; ignore late cache writes.
+        }
+      });
+
+      // Keep this family instance alive for the TTL window.
+      final link = ref.keepAlive();
+      final disposeTimer = Timer(ttl, link.close);
+      ref.onDispose(disposeTimer.cancel);
+
+      return project;
+    });
 
 /// Family provider for filtered projects (synchronous filtering)
 /// Uses the projectsProvider for data and filters synchronously
@@ -432,6 +474,12 @@ class ProjectsNotifier extends AsyncNotifier<List<ProjectModel>> {
     loadMoreError = null;
   }
 
+  void _invalidateProjectCache(String projectId) {
+    ref.invalidate(projectByIdProvider(projectId));
+    ref.read(projectCacheProvider(projectId).notifier).state = null;
+    ref.read(projectCacheTimestampProvider(projectId).notifier).state = null;
+  }
+
   Future<void> addProject(ProjectModel project) async {
     state = const AsyncValue.loading();
     state = await AsyncValue.guard(() async {
@@ -478,6 +526,7 @@ class ProjectsNotifier extends AsyncNotifier<List<ProjectModel>> {
         'project_progress_updated',
         params: {'id': projectId, 'progress': newProgress},
       );
+      _invalidateProjectCache(projectId);
       _cache = null;
       return _loadInitialPage();
     });
@@ -498,6 +547,7 @@ class ProjectsNotifier extends AsyncNotifier<List<ProjectModel>> {
         metadata: {'action': 'update_directory_path'},
       );
       AppLogger.event('project_directory_updated', params: {'id': projectId});
+      _invalidateProjectCache(projectId);
       _cache = null;
       return _loadInitialPage();
     });
@@ -532,6 +582,7 @@ class ProjectsNotifier extends AsyncNotifier<List<ProjectModel>> {
           'change_description': changeDescription,
         },
       );
+      _invalidateProjectCache(projectId);
       _cache = null;
       return _loadInitialPage();
     });
@@ -568,6 +619,7 @@ class ProjectsNotifier extends AsyncNotifier<List<ProjectModel>> {
       ) ?? 'system';
       await _repository.deleteProject(projectId, userId: userId);
       AppLogger.event('project_deleted', params: {'id': projectId});
+      _invalidateProjectCache(projectId);
       _cache = null;
       return _loadInitialPage();
     });
@@ -588,6 +640,7 @@ class ProjectsNotifier extends AsyncNotifier<List<ProjectModel>> {
         metadata: {'action': 'update_tasks'},
       );
       AppLogger.event('project_tasks_updated', params: {'id': projectId});
+      _invalidateProjectCache(projectId);
       _cache = null;
       return _loadInitialPage();
     });
@@ -608,6 +661,7 @@ class ProjectsNotifier extends AsyncNotifier<List<ProjectModel>> {
         metadata: {'action': 'update_plan_json'},
       );
       AppLogger.event('project_plan_updated', params: {'id': projectId});
+      _invalidateProjectCache(projectId);
       _cache = null;
       return _loadInitialPage();
     });

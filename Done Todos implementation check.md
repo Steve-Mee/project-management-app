@@ -196,6 +196,10 @@
 
 ## 006 - Voeg caching toe voor individuele projecten
 
+### Opvolging status
+
+- DONE (afgewerkt op 2026-03-07): projectById TTL read-through/write-through cache gekoppeld, cache-statusprovider toegevoegd en mutatie-invalidatie op project-id niveau afgedwongen.
+
 ### Wat is correct geimplementeerd
 
 - `projectByIdProvider` bestaat en haalt direct een enkel project op via repository (`packages/pma_core/lib/providers/project/project_providers.dart`).
