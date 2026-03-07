@@ -15,3 +15,4 @@ Dit bestand bevat de nog openstaande, technisch valide punten uit `Done Todos im
 
 - [x] 7. Centraliseer dashboard error/status codes in een gedeelde taxonomie en vervang losse string literals.
 - [x] 8. Verwijder ongebruikte app-level duplicate `project_filter` modelbestanden en behoud `pma_core` als canonieke bron.
+- [x] 9. Voeg contractguard-test toe die afdwingt dat `HiveAuthRepository` alle auth subinterfaces implementeert.
