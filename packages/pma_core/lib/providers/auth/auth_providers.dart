@@ -66,11 +66,8 @@ final settingsRepositoryProvider = FutureProvider<HiveSettingsRepository>((ref) 
 final loginRateLimiterProvider = Provider<LoginRateLimiter>((ref) => LoginRateLimiter.instance);
 
 /// Provider for RecaptchaService
-final recaptchaServiceProvider = Provider<RecaptchaService>((ref) {
-  final settings = ref.watch(settingsRepositoryProvider).maybeWhen(
-    data: (settings) => settings,
-    orElse: HiveSettingsRepository.new, // Fallback if not initialized
-  );
+final recaptchaServiceProvider = FutureProvider<RecaptchaService>((ref) async {
+  final settings = await ref.read(settingsRepositoryProvider.future);
   return RecaptchaService(settings);
 });
 
@@ -258,7 +255,7 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
 
     // Check if captcha is required (3+ failed attempts)
     if (!skipCaptchaCheck && attemptCount >= 3) {
-      final recaptchaService = ref.read(recaptchaServiceProvider);
+      final recaptchaService = await ref.read(recaptchaServiceProvider.future);
       final token = await recaptchaService.getRecaptchaToken();
       AppLogger.event('captcha_attempt', params: {'email': username, 'attempts': attemptCount, 'timestamp': DateTime.now().toIso8601String(), 'has_token': token != null});
       if (token == null) {
@@ -308,7 +305,7 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
         // Update auto-login settings using async settings provider
         try {
           // Use centralized async settings access (see 018-auth-settings-repo-access.md)
-          final settingsRepo = await ref.watch(settingsRepositoryProvider.future);
+          final settingsRepo = await ref.read(settingsRepositoryProvider.future);
           if (enableAutoLogin || settingsRepo.getLastLoginTime() == null) {
             await settingsRepo.setAutoLoginEnabled(true);
           }

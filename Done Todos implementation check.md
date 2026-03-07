@@ -546,6 +546,10 @@
 
 ## 016 - Async ophalen van instellingen in auth providers
 
+### Opvolging status
+
+- DONE (afgewerkt op 2026-03-07): `recaptchaServiceProvider` gebruikt nu uitsluitend async settings-initialisatie (`FutureProvider` + `settingsRepositoryProvider.future`) en de login-captcha-flow wacht expliciet op provider-resolutie; sync fallback met `HiveSettingsRepository.new` is verwijderd.
+
 ### Wat is correct geimplementeerd
 
 - Groot deel van auth/settings-reads gebruikt nu het async patroon met `await ref.read(settingsRepositoryProvider.future)` in notifiers en auth flow (`packages/pma_core/lib/providers/auth/auth_providers.dart`).
