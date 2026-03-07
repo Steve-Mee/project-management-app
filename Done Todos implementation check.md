@@ -1098,14 +1098,20 @@
 
 ## 032 - Voeg exponential backoff toe bij rate-limits
 
+### Opvolging status
+
+- DONE (afgewerkt op 2026-03-07): throttling-specifieke exponential backoff toegevoegd in actieve queue-worker, met observability-event en testdekking.
+
 ### Wat is correct geimplementeerd
 
 - Exponential backoff met jitter bestaat in actieve provider via `_calculateBackoffDelay` + retry in queue-worker (`packages/pma_core/lib/providers/ai/ai_chat_providers.dart`).
 - Legacy provider bevat throttling-specifieke retry met backoff en retry logging (`_callAiWithRetry`, `ai_retry_attempt`) in `packages/pma_core/lib/providers/ai_legacy/ai_chat_providers.dart`.
+- Actieve provider plant nu ook backoff bij throttling zelf (niet alleen bij execution failures) met event `ai_rate_limit_backoff_scheduled`.
+- Backoff/retry parameters zijn config-gedreven (`backoffBaseDelay`, `backoffMaxDelay`, `maxRetryAttempts`).
+- Testdekking toegevoegd in `test/ai_chat_backoff_policy_test.dart`.
 
 ### Wat ik nog zou wijzigen
 
-- In de actieve provider is retry/backoff niet throttling-specifiek, maar generiek op queue failures; dat wijkt af van de TODO-intentie (rate-limit gedreven backoff).
 - Actieve provider gebruikt nu config-gedreven `maxRetryAttempts` op runtime; throttling-specifieke semantiek kan nog verder worden aangescherpt.
 
 ### Wat ik nog zou toevoegen
@@ -1209,11 +1215,10 @@
 ## Samenvatting batch 031-035
 
 - Volledig functioneel: TODO 035
-- Volledig functioneel: TODO 031, TODO 035
-- Functioneel maar met belangrijke runtime-gaten in actieve provider: TODO 032, TODO 033, TODO 034
+- Volledig functioneel: TODO 031, TODO 032, TODO 035
+- Functioneel maar met belangrijke runtime-gaten in actieve provider: TODO 033, TODO 034
 - Belangrijkste restwerk:
   - runtime enforcement van `perOperationLimits` in de actieve AI-provider,
-  - throttling-specifieke backoff en config-gedreven retrylimieten harmoniseren,
   - `queueEnabled` daadwerkelijk laten doorwerken in runtimegedrag,
   - gerichte queue/backoff/per-operation integratietests toevoegen.
 

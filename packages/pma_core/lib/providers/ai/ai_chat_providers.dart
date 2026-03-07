@@ -1,6 +1,7 @@
 // ignore_for_file: prefer_const_constructors
 import 'dart:async';
 import 'dart:math';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import '../../services/app_logger.dart';
@@ -79,7 +80,9 @@ class AiChatState {
 /// tracking for UI feedback.
 /// See .github/issues/033-ai-request-queue.md for queue implementation details.
 class AiChatNotifier extends AsyncNotifier<AiChatState> {
-  AiChatNotifier([AiService? aiService]) : _aiService = aiService;
+  AiChatNotifier([AiService? aiService, Random? random])
+      : _aiService = aiService,
+        _random = random ?? Random();
 
   AiService? _aiService;
   AiRateLimitsConfig? _rateLimitsConfig;
@@ -90,12 +93,16 @@ class AiChatNotifier extends AsyncNotifier<AiChatState> {
   int _totalTokensUsedToday = 0;
   DateTime? _lastTokenResetDate;
   final AiRequestQueue _requestQueue = AiRequestQueue();
+  final Random _random;
   Timer? _workerTimer;
   // Queue metrics tracking (see .github/issues/033-ai-request-queue.md)
   int _processedToday = 0;
   int _droppedCount = 0;
   // Maximum queue size to prevent unbounded growth
   static const int _maxQueueSize = 100;
+  static const int _maxRateLimitBackoffAttempts = 16;
+  int _rateLimitBackoffAttempt = 0;
+  DateTime? _nextRateLimitRetryAt;
 
   /// Get rate limits based on subscription level
   AiRateLimitsConfig _getSubscriptionBasedRateLimits(AiRateLimitsConfig baseConfig, String? subscriptionLevel) {
@@ -568,9 +575,31 @@ class AiChatNotifier extends AsyncNotifier<AiChatState> {
 
   /// Process queued requests respecting rate limits and exponential backoff
   Future<void> _processQueue() async {
-    if (!_requestQueue.hasPending || _isAnyRateLimited(_rateLimitsConfig!)) {
-      return; // Nothing to process or rate limited
+    if (!_requestQueue.hasPending) {
+      return;
     }
+
+    final now = DateTime.now();
+    if (_nextRateLimitRetryAt != null && now.isBefore(_nextRateLimitRetryAt!)) {
+      return;
+    }
+
+    if (_isAnyRateLimited(_rateLimitsConfig!)) {
+      final backoffDelay = _calculateBackoffDelay(_rateLimitBackoffAttempt);
+      _nextRateLimitRetryAt = now.add(backoffDelay);
+      _rateLimitBackoffAttempt =
+          (_rateLimitBackoffAttempt + 1).clamp(0, _maxRateLimitBackoffAttempts);
+
+      AppLogger.event('ai_rate_limit_backoff_scheduled', params: {
+        'attempt': _rateLimitBackoffAttempt,
+        'delay_ms': backoffDelay.inMilliseconds,
+        'queue_length': _requestQueue.metrics.queueLength,
+      });
+      return;
+    }
+
+    _rateLimitBackoffAttempt = 0;
+    _nextRateLimitRetryAt = null;
 
     final request = _requestQueue.dequeue();
     if (request == null) return;
@@ -801,9 +830,19 @@ class AiChatNotifier extends AsyncNotifier<AiChatState> {
     final baseDelay = config.backoffBaseDelay;
     final maxDelay = config.backoffMaxDelay;
     final exponentialDelay = baseDelay * pow(2, retryCount).toInt();
-    final jitter = Duration(milliseconds: Random().nextInt(1000)); // 0-1 second jitter
+    final jitter = Duration(milliseconds: _random.nextInt(1000)); // 0-1 second jitter
     final candidate = exponentialDelay + jitter;
     return candidate > maxDelay ? maxDelay : candidate;
+  }
+
+  @visibleForTesting
+  Duration calculateBackoffDelayForAttempt(int retryCount) {
+    return _calculateBackoffDelay(retryCount);
+  }
+
+  @visibleForTesting
+  void setRateLimitsConfigForTest(AiRateLimitsConfig config) {
+    _rateLimitsConfig = config;
   }
 
   /// Clear all pending requests from the queue
