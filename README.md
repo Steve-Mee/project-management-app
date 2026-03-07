@@ -18,6 +18,42 @@ Flutter-based Project Management App for tracking projects, tasks, and sub-tasks
 - `semantic_pr.yml`: Validates pull request titles using conventional commit semantics.
 - `release.yml`: Runs semantic-release automation on pushes to `main`.
 
+## Release Pipeline
+
+Release pipeline documentation for issue `#075-release-pipeline-preparation` is available in [`docs/release-pipeline.md`](docs/release-pipeline.md).
+
+Quick flow:
+
+1. Conventional Commit merged to `main`.
+2. `release.yml` runs semantic-release.
+3. semantic-release updates `CHANGELOG.md`, bumps `pubspec.yaml`, and publishes GitHub Release.
+4. Published release triggers `fastlane.yml` to distribute iOS TestFlight beta, Android internal track beta, and desktop artifacts.
+5. Manual beta distribution is available via `Fastlane Distribution` workflow dispatch.
+
+### Fastlane Release Automation
+
+Issue `#075-release-pipeline-preparation` adds Fastlane lanes for iOS, Android, and desktop release builds.
+
+- Fastlane configuration: `fastlane/Fastfile`
+- Fastlane app metadata defaults: `fastlane/Appfile`
+- Ruby dependencies: `Gemfile`, `fastlane/Pluginfile`
+
+Available lanes:
+
+- `bundle exec fastlane beta`: Runs iOS TestFlight internal upload + Android internal track upload + desktop (macOS/Windows) builds.
+- `bundle exec fastlane release`: Runs iOS App Store Connect upload + Android production upload + desktop (macOS/Windows) builds.
+- `bundle exec fastlane ios beta`: iOS internal beta only.
+- `bundle exec fastlane android beta`: Android internal beta only.
+- `bundle exec fastlane desktop_beta`: Desktop release artifacts only.
+
+Required environment variables:
+
+- `IOS_APP_IDENTIFIER`: iOS bundle ID (example: `com.example.projectManagementApp`).
+- `APPLE_ID`: Apple developer account email.
+- `APPLE_TEAM_ID`: Apple developer team ID.
+- `ANDROID_PACKAGE_NAME`: Android application ID.
+- `SUPPLY_JSON_KEY`: Absolute path to Google Play service account JSON key file.
+
 ## Screenshots
 
 ### Dashboard Light
@@ -174,6 +210,8 @@ For acceptance checklist, verification flow, and install steps, see [`docs/pwa-s
 | [docs/analytics.md](docs/analytics.md) | Issue #073 analytics checklist, event mapping, service usage, and `analytics_events` schema suggestion |
 | [docs/error-boundary.md](docs/error-boundary.md) | Global error boundary acceptance checklist, test procedure, and AppLogger/Sentry integration notes |
 | [docs/pwa-support.md](docs/pwa-support.md) | Issue #074 PWA checklist, offline test steps, and Chrome install instructions |
+| [docs/release-pipeline.md](docs/release-pipeline.md) | Issue #075 release checklist, semantic-release/Fastlane flow, manual beta trigger, and secrets |
+| [docs/release-hardening-checklist.md](docs/release-hardening-checklist.md) | Handover checklist met Done/Pending External, secrets en go-live sign-off |
 | [docs/modularization.md](docs/modularization.md) | Issue #070 modularization acceptance checklist and deferred routing summary |
 | [NAVIGATION_GUIDE.md](NAVIGATION_GUIDE.md) | Guide for navigating the application |
 | [QUICK_REFERENCE.md](QUICK_REFERENCE.md) | Quick reference for key features |
@@ -234,9 +272,14 @@ For acceptance checklist, verification flow, and install steps, see [`docs/pwa-s
    flutter pub get
    ```
 
+3. Install Fastlane dependencies:
+   ```bash
+   bundle install
+   ```
+
 ### Configuration
 
-3. Set up environment variables:
+4. Set up environment variables:
    - Copy `.env.example` to `.env` in the project root
    - Fill in the required values (see `.env.example` for details)
    
@@ -251,10 +294,53 @@ For acceptance checklist, verification flow, and install steps, see [`docs/pwa-s
    - `LOG_LEVEL` - Application logging level
    - `FIREBASE_API_KEY` - For Firebase services
 
-4. Run the app:
+5. Run the app:
    ```bash
    flutter run
    ```
+
+### Fastlane Setup And Usage
+
+1. Install Ruby + Bundler.
+2. Run `bundle install` at repository root.
+3. Export required env vars (`IOS_APP_IDENTIFIER`, `APPLE_ID`, `APPLE_TEAM_ID`, `ANDROID_PACKAGE_NAME`, `SUPPLY_JSON_KEY`).
+4. Run beta pipeline: `bundle exec fastlane beta`.
+5. Run production pipeline: `bundle exec fastlane release`.
+
+### GitHub Actions Secrets (Repository Settings)
+
+Add these in `Settings -> Secrets and variables -> Actions`.
+
+iOS / TestFlight:
+
+- `IOS_APP_IDENTIFIER`
+- `APPLE_ID`
+- `APPLE_TEAM_ID`
+- `APP_STORE_CONNECT_API_KEY_ID`
+- `APP_STORE_CONNECT_API_ISSUER_ID`
+- `APP_STORE_CONNECT_API_KEY_CONTENT`
+- `IOS_P12_BASE64`
+- `IOS_P12_PASSWORD`
+- `IOS_MOBILEPROVISION_BASE64`
+- `TESTFLIGHT_INTERNAL_GROUPS` (comma-separated group names, e.g. `QA,Product`)
+
+Android / Google Play Internal Track:
+
+- `ANDROID_PACKAGE_NAME`
+- `SUPPLY_JSON_KEY_BASE64`
+- `ANDROID_KEYSTORE_BASE64`
+- `ANDROID_KEYSTORE_PASSWORD`
+- `ANDROID_KEY_ALIAS`
+- `ANDROID_KEY_PASSWORD`
+
+Semantic Release:
+
+- `GITHUB_TOKEN` (provided automatically by GitHub Actions)
+
+Notes:
+
+- iOS lanes require macOS with Xcode and valid signing configured.
+- Windows/macOS desktop lanes build artifacts only; publishing is handled outside Fastlane.
 
 ### Accessibility Contrast Checks
 

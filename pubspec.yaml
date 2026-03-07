@@ -145,6 +145,11 @@ scripts:
   build:windows: dart run tool/build.dart windows
   build:macos: dart run tool/build.dart macos
   build:linux: dart run tool/build.dart linux
+  release:beta: bundle exec fastlane beta
+  release:prod: bundle exec fastlane release
+  release:ios:beta: bundle exec fastlane ios beta
+  release:android:beta: bundle exec fastlane android beta
+  release:desktop:beta: bundle exec fastlane desktop_beta
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images

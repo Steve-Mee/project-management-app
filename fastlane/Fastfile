@@ -1,0 +1,120 @@
+fastlane_version "2.220.0"
+
+default_platform :ios
+
+private_lane :app_store_connect_api_token do
+  app_store_connect_api_key(
+    key_id: ENV["APP_STORE_CONNECT_API_KEY_ID"],
+    issuer_id: ENV["APP_STORE_CONNECT_API_ISSUER_ID"],
+    key_content: ENV["APP_STORE_CONNECT_API_KEY_CONTENT"],
+    duration: 1200,
+  )
+end
+
+private_lane :ios_beta_build_and_upload do
+  testflight_groups = (ENV["TESTFLIGHT_INTERNAL_GROUPS"] || "").split(",").map(&:strip).reject(&:empty?)
+  api_key = app_store_connect_api_token
+
+  sh("flutter build ipa --release")
+  upload_to_testflight(
+    api_key: api_key,
+    skip_waiting_for_build_processing: true,
+    groups: testflight_groups,
+    distribute_external: false,
+    notify_external_testers: false,
+  )
+end
+
+private_lane :ios_release_build_and_upload do
+  api_key = app_store_connect_api_token
+
+  sh("flutter build ipa --release")
+  upload_to_app_store(
+    api_key: api_key,
+    submit_for_review: false,
+    automatic_release: false,
+    skip_screenshots: true,
+    skip_metadata: true,
+  )
+end
+
+private_lane :android_beta_build_and_upload do
+  sh("flutter build appbundle --release")
+  upload_to_play_store(
+    track: "internal",
+    release_status: "completed",
+    changes_not_sent_for_review: true,
+    aab: "build/app/outputs/bundle/release/app-release.aab",
+    json_key: ENV["SUPPLY_JSON_KEY"],
+    package_name: ENV["ANDROID_PACKAGE_NAME"],
+    skip_upload_images: true,
+    skip_upload_screenshots: true,
+    skip_upload_metadata: true,
+  )
+end
+
+private_lane :android_release_build_and_upload do
+  sh("flutter build appbundle --release")
+  upload_to_play_store(
+    track: "production",
+    aab: "build/app/outputs/bundle/release/app-release.aab",
+    json_key: ENV["SUPPLY_JSON_KEY"],
+    package_name: ENV["ANDROID_PACKAGE_NAME"],
+    skip_upload_images: true,
+    skip_upload_screenshots: true,
+    skip_upload_metadata: true,
+  )
+end
+
+private_lane :desktop_build_release_artifacts do
+  sh("flutter build macos --release")
+  sh("flutter build windows --release")
+end
+
+platform :ios do
+  desc "Build iOS app and upload to TestFlight (internal beta)"
+  lane :beta do
+    ios_beta_build_and_upload
+  end
+
+  desc "Build iOS app and upload to App Store Connect"
+  lane :release do
+    ios_release_build_and_upload
+  end
+end
+
+platform :android do
+  desc "Build Android AAB and upload to Google Play internal track (beta)"
+  lane :beta do
+    android_beta_build_and_upload
+  end
+
+  desc "Build Android AAB and upload to Google Play production"
+  lane :release do
+    android_release_build_and_upload
+  end
+end
+
+desc "Run all beta lanes: iOS TestFlight, Android internal track, desktop builds"
+lane :beta do
+  ios_beta_build_and_upload
+  android_beta_build_and_upload
+  desktop_beta
+end
+
+desc "Run all release lanes: iOS App Store, Android production, desktop builds"
+lane :release do
+  ios_release_build_and_upload
+  android_release_build_and_upload
+  desktop_release
+end
+
+desc "Build macOS and Windows desktop release artifacts"
+lane :desktop_beta do
+  desktop_build_release_artifacts
+end
+
+desc "Build macOS and Windows desktop release artifacts"
+lane :desktop_release do
+  desktop_build_release_artifacts
+end
