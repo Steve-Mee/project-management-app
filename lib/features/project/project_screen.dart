@@ -194,8 +194,6 @@ class _ProjectScreenState extends ConsumerState<ProjectScreen> {
   // pagination state
   final List<ProjectModel> _projects = [];
   int _page = 1;
-  bool _isLoading = false;
-  bool _hasMore = true;
 
   // Focus node for search field to enable keyboard shortcuts
   final FocusNode _searchFocusNode = FocusNode();
@@ -253,7 +251,8 @@ class _ProjectScreenState extends ConsumerState<ProjectScreen> {
   }
 
   void _onScroll() {
-    if (!_scrollController.hasClients || _isLoading || !_hasMore) return;
+    final projectsNotifier = ref.read(projectsProvider.notifier);
+    if (!_scrollController.hasClients || projectsNotifier.isLoadingMore || !projectsNotifier.hasMore) return;
     final position = _scrollController.position;
     if (position.pixels >= position.maxScrollExtent - 200) {
       _loadPage();
@@ -261,12 +260,13 @@ class _ProjectScreenState extends ConsumerState<ProjectScreen> {
   }
 
   void _resetPagination() {
+    final projectsNotifier = ref.read(projectsProvider.notifier);
     setState(() {
       _page = 1;
       _projects.clear();
-      _hasMore = true;
-      _isLoading = false;
-      _loadError = null;
+      projectsNotifier.hasMore = true;
+      projectsNotifier.isLoadingMore = false;
+      projectsNotifier.loadMoreError = null;
     });
     if (_scrollController.hasClients) {
       _scrollController.jumpTo(0);
@@ -275,8 +275,12 @@ class _ProjectScreenState extends ConsumerState<ProjectScreen> {
   }
 
   Future<void> _loadPage() async {
-    if (_isLoading || !_hasMore) return;
-    setState(() => _isLoading = true);
+    final projectsNotifier = ref.read(projectsProvider.notifier);
+    if (projectsNotifier.isLoadingMore || !projectsNotifier.hasMore) return;
+    setState(() {
+      projectsNotifier.isLoadingMore = true;
+      projectsNotifier.loadMoreError = null;
+    });
     try {
       final currentFilter = ref.read(persistentProjectFilterProvider);
       final filter = ProjectFilter(
@@ -296,14 +300,18 @@ class _ProjectScreenState extends ConsumerState<ProjectScreen> {
       );
       final newItems = await ref.read(projectsCombinedProvider(params).future);
       if (newItems.isEmpty || newItems.length < _pageSize) {
-        _hasMore = false;
+        projectsNotifier.hasMore = false;
       }
       _projects.addAll(newItems);
       _page += 1;
     } catch (e) {
-      _loadError = e.toString();
+      projectsNotifier.loadMoreError = e;
     } finally {
-      if (mounted) setState(() => _isLoading = false);
+      if (mounted) {
+        setState(() {
+          projectsNotifier.isLoadingMore = false;
+        });
+      }
     }
   }
 
@@ -344,12 +352,13 @@ class _ProjectScreenState extends ConsumerState<ProjectScreen> {
     final isSelectionMode = ref.watch(isSelectionModeProvider);
     final selectedIds = ref.watch(selectedProjectIdsProvider);
     final currentFilter = ref.watch(persistentProjectFilterProvider);
+    final projectsNotifier = ref.read(projectsProvider.notifier);
 
-    if (_projects.isEmpty && _isLoading) {
+    if (_projects.isEmpty && projectsNotifier.isLoadingMore) {
       return _buildLoadingContent(context, canEditProjects);
     }
-    if (_loadError != null && _projects.isEmpty) {
-      return _buildErrorContent(context, _loadError!, canEditProjects);
+    if (projectsNotifier.loadMoreError != null && _projects.isEmpty) {
+      return _buildErrorContent(context, projectsNotifier.loadMoreError.toString(), canEditProjects);
     }
     return Shortcuts(
       shortcuts: _shortcuts,
@@ -689,9 +698,10 @@ class _ProjectScreenState extends ConsumerState<ProjectScreen> {
   }
 
   Widget _buildPaginationFooter(BuildContext context, List<ProjectModel> projects) {
+    final projectsNotifier = ref.watch(projectsProvider.notifier);
     final hasItems = projects.isNotEmpty;
 
-    if (_isLoading && hasItems) {
+    if (projectsNotifier.isLoadingMore && hasItems) {
       return const Center(
         child: Padding(
           padding: EdgeInsets.symmetric(vertical: 8),
@@ -700,7 +710,7 @@ class _ProjectScreenState extends ConsumerState<ProjectScreen> {
       );
     }
 
-    if (_loadError != null && hasItems) {
+    if (projectsNotifier.loadMoreError != null && hasItems) {
       return Center(
         child: Column(
           children: [
@@ -720,7 +730,7 @@ class _ProjectScreenState extends ConsumerState<ProjectScreen> {
       );
     }
 
-    if (!_hasMore && hasItems) {
+    if (!projectsNotifier.hasMore && hasItems) {
       return Text(
         'End reached',
         textAlign: TextAlign.center,
