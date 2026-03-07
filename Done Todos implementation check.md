@@ -2227,13 +2227,14 @@
 
 ### Wat ik nog zou wijzigen
 
-- Er is geen duidelijke dedicated testfile die first-launch persistencepad (`isFirstLaunch`/`markOnboardingCompleted`) integraal valideert.
+- DONE: dedicated onboarding persistence tests toegevoegd in `test/onboarding_provider_test.dart`.
 
 ### Wat ik nog zou toevoegen
 
-- Unit/integratietests voor onboarding persistence en bootstrap-gate gedrag:
-  - eerste run toont wizard,
-  - na completion/skip niet opnieuw tonen.
+- DONE: provider-level tests toegevoegd voor onboarding persistence:
+  - eerste run toont `isFirstLaunch == true`,
+  - na completion `isFirstLaunch == false`,
+  - persisted completion over container-herstart.
 
 ### Wat ik nog zou verwijderen
 
