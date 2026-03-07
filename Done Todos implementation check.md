@@ -492,6 +492,10 @@
 
 ## 015 - Biometrische authenticatie ondersteunen
 
+### Opvolging status
+
+- DONE (afgewerkt op 2026-03-07): biometrie achter centrale feature-flag gate gezet (`auth_biometric`), plaintext `biometric_password` opslag vervangen door refresh-token gebaseerde sessieherstel-flow, en dubbele provider-overlap geconsolideerd (`useBiometricsProvider` -> alias van `biometricLoginProvider`).
+
 ### Wat is correct geimplementeerd
 
 - `local_auth` integratie aanwezig in auth provider (`packages/pma_core/lib/providers/auth/auth_providers.dart`).

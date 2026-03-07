@@ -17,6 +17,8 @@ import 'package:pma_core/services/recaptcha_service.dart';
 import 'package:pma_core/auth/permissions.dart';
 import 'package:pma_core/core/config/ai_config.dart' as ai_config;
 import 'package:pma_core/core/config/app_config.dart';
+import 'package:pma_core/core/feature_flags/feature_flag_resolver.dart';
+import 'package:pma_core/core/providers/feature_flag_provider.dart';
 import 'package:pma_core/services/supabase_connection_diagnostics.dart';
 
 // Recommended async settings access pattern (see 018-auth-settings-repo-access.md):
@@ -42,6 +44,10 @@ class CaptchaRequiredException implements Exception {
   @override
   String toString() => 'Captcha verification required.';
 }
+
+const String _biometricFeatureFlagKey = 'auth_biometric';
+const String _biometricUsernameKey = 'biometric_username';
+const String _biometricRefreshTokenKey = 'biometric_refresh_token';
 
 /// Provider for auth repository (exposed via interface to allow swapping)
 final authRepositoryProvider = Provider<IAuthRepository>((ref) {
@@ -182,7 +188,9 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
     // Add async settings check for auto-login
     // Use centralized async settings access (see 018-auth-settings-repo-access.md)
     final settings = await ref.read(settingsRepositoryProvider.future);
-    if (settings.getAutoLoginEnabled() && settings.getEnableBiometricLogin() && await isBiometricAvailable()) {
+    if (settings.getAutoLoginEnabled() &&
+        settings.getEnableBiometricLogin() &&
+        await isBiometricAvailable()) {
       await authenticateWithBiometrics();
       return state.value!;
     }
@@ -308,7 +316,7 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
 
           // Enroll biometrics if enabled
           if (settingsRepo.getEnableBiometricLogin()) {
-            await enrollBiometrics(username, password);
+            await enrollBiometrics(username);
           }
         } catch (e) {
           AppLogger.instance.w('Settings update or biometric enrollment failed', error: e);
@@ -465,6 +473,9 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
 
   /// Check if biometric authentication is available (mobile platforms only)
   Future<bool> isBiometricAvailable() async {
+    if (!_isBiometricFeatureEnabled()) {
+      return false;
+    }
     if (kIsWeb || !(Platform.isAndroid || Platform.isIOS)) {
       return false;
     }
@@ -478,6 +489,11 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
 
   /// Authenticate using biometrics and perform login with stored credentials
   Future<bool> authenticateWithBiometrics() async {
+    if (!_isBiometricFeatureEnabled()) {
+      state = AsyncValue.data(state.value!.copyWith(error: 'Biometric authentication is disabled.'));
+      return false;
+    }
+
     if (!await isBiometricAvailable()) {
       state = AsyncValue.data(state.value!.copyWith(error: 'Biometric authentication not available.'));
       return false;
@@ -494,17 +510,31 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
         return false;
       }
 
-      // Retrieve stored credentials
-      final storedPassword = await _secureStorage.read(key: 'biometric_password');
-      final storedUsername = await _secureStorage.read(key: 'biometric_username');
+      // Retrieve enrollment state and refresh token (no password is persisted).
+      final storedUsername = await _secureStorage.read(key: _biometricUsernameKey);
+      final storedRefreshToken = await _secureStorage.read(key: _biometricRefreshTokenKey);
 
-      if (storedPassword == null || storedUsername == null) {
-        state = AsyncValue.data(state.value!.copyWith(error: 'No stored credentials for biometric login.'));
+      if (storedRefreshToken == null || storedUsername == null) {
+        state = AsyncValue.data(state.value!.copyWith(error: 'No stored biometric session for login.'));
         return false;
       }
 
-      // Perform login with stored credentials
-      return await login(storedUsername, storedPassword, enableAutoLogin: false);
+      await Supabase.instance.client.auth.refreshSession(storedRefreshToken);
+      final user = Supabase.instance.client.auth.currentUser;
+      if (user == null) {
+        state = AsyncValue.data(state.value!.copyWith(error: 'Biometric login session could not be restored.'));
+        return false;
+      }
+
+      final normalizedStoredUsername = storedUsername.trim().toLowerCase();
+      final normalizedUserEmail = (user.email ?? user.id).trim().toLowerCase();
+      if (normalizedStoredUsername != normalizedUserEmail) {
+        state = AsyncValue.data(state.value!.copyWith(error: 'Biometric credentials do not match the active account.'));
+        return false;
+      }
+
+      state = AsyncValue.data(await _createAuthenticatedState(user));
+      return true;
     } catch (e) {
       AppLogger.instance.w('Biometric authentication failed', error: e);
       state = AsyncValue.data(state.value!.copyWith(error: 'Biometric authentication error: $e'));
@@ -512,20 +542,44 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
     }
   }
 
-  /// Enroll biometrics by storing credentials after successful password login
-  Future<bool> enrollBiometrics(String username, String password) async {
+  /// Enroll biometrics by storing user identifier + refresh token after successful login.
+  Future<bool> enrollBiometrics(String username) async {
+    if (!_isBiometricFeatureEnabled()) {
+      return false;
+    }
+
     if (!await isBiometricAvailable()) {
       return false;
     }
 
     try {
-      await _secureStorage.write(key: 'biometric_username', value: username);
-      await _secureStorage.write(key: 'biometric_password', value: password);
+      final session = Supabase.instance.client.auth.currentSession;
+      final refreshToken = session?.refreshToken;
+      if (refreshToken == null || refreshToken.isEmpty) {
+        AppLogger.instance.w('Biometric enrollment skipped: no refresh token available');
+        return false;
+      }
+
+      await _secureStorage.write(key: _biometricUsernameKey, value: username.trim());
+      await _secureStorage.write(key: _biometricRefreshTokenKey, value: refreshToken);
       return true;
     } catch (e) {
       AppLogger.instance.w('Biometric enrollment failed', error: e);
       return false;
     }
+  }
+
+  bool _isBiometricFeatureEnabled() {
+    final flagsAsync = ref.read(featureFlagProvider);
+    return flagsAsync.maybeWhen(
+      data: (flags) => FeatureFlagResolver.isEnabled(
+        flags,
+        _biometricFeatureFlagKey,
+        defaultValue: true,
+      ),
+      // Keep biometric behavior enabled when flags are unavailable to avoid lockout regressions.
+      orElse: () => true,
+    );
   }
 }
 
@@ -666,25 +720,8 @@ final biometricSupportedProvider = FutureProvider<bool>((ref) async {
   }
 });
 
-class UseBiometricsNotifier extends AsyncNotifier<bool> {
-  @override
-  Future<bool> build() async {
-    // Use centralized async settings access (see 018-auth-settings-repo-access.md)
-    final settings = await ref.read(settingsRepositoryProvider.future);
-    return settings.getUseBiometricsEnabled();
-  }
-
-  Future<void> setEnabled(bool enabled) async {
-    // Use centralized async settings access (see 018-auth-settings-repo-access.md)
-    final settings = await ref.watch(settingsRepositoryProvider.future);
-    await settings.setUseBiometricsEnabled(enabled);
-    state = AsyncValue.data(enabled);
-  }
-}
-
-final useBiometricsProvider = AsyncNotifierProvider<UseBiometricsNotifier, bool>(
-  UseBiometricsNotifier.new,
-);
+@Deprecated('Use biometricLoginProvider instead.')
+final useBiometricsProvider = biometricLoginProvider;
 
 /// Private helper method for searching users by query
 List<AppUser> _searchUsers(List<AppUser> users, String query) {

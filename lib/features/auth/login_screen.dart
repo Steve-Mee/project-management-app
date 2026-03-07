@@ -294,10 +294,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
     if (result == true && mounted) {
       final username = _usernameController.text.trim();
-      final password = _passwordController.text;
       final enrolled = await ref
           .read(authProvider.notifier)
-          .enrollBiometrics(username, password);
+          .enrollBiometrics(username);
       if (enrolled) {
         await ref.read(biometricLoginProvider.notifier).setEnabled(true);
         _showSnackBar(l10n.biometric_enroll_success);
