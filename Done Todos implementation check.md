@@ -1277,6 +1277,7 @@
 - Providers bieden usage updates, history-notifier en aggregaties (per user/per project/totals) in `packages/pma_core/lib/providers/ai/ai_usage_providers.dart`.
 - Supabase pad is aanwezig voor aggregate usage (`aiUsageProvider`, `aiUsageUpdateProvider`) en realtime insert subscription in notifier.
 - Testdekking bestaat met fake repo en analytics/helpers in `test/ai_usage_provider_test.dart`.
+- E2E-providerflow is nu expliciet getest: logUsage -> filtered history -> `aiUsageUserProvider`/`aiUsageProjectProvider` totals + notifier CSV/JSON export in `test/ai_usage_provider_test.dart`.
 
 ### Wat ik nog zou wijzigen
 
@@ -1285,12 +1286,16 @@
 
 ### Wat ik nog zou toevoegen
 
-- Integratietests voor end-to-end flow: AI call -> usage record logging -> history provider -> totals met user/project filters.
 - Duidelijke datacontract-notitie: welke metrics authoritative uit Supabase komen en welke uit lokale history.
 
 ### Wat ik nog zou verwijderen
 
 - Eventuele overlappende of impliciete padclaims in comments zodra de hybride strategie expliciet is gedocumenteerd.
+
+### Opvolging status
+
+- DONE (2026-03-07): usage history tracking is functioneel afgerond met persistence model, repository, provider-endpoints en aangevulde end-to-end provider tests.
+- Open follow-up (niet blocker): expliciete authoritative-data contractnotitie voor hybride Supabase/Hive usage metrics.
 
 ---
 

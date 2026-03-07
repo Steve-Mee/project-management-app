@@ -516,6 +516,94 @@ void main() {
       expect(result['totalCost'], 0.002);
       expect(result['requestCount'], 1);
     });
+
+    test('end-to-end flow exposes user and project totals providers', () async {
+      final now = DateTime.now();
+      final records = [
+        AiUsageRecord(
+          id: 'e2e-1',
+          operation: 'chat',
+          inputTokens: 120,
+          outputTokens: 30,
+          estimatedCost: 0.003,
+          timestamp: now.subtract(const Duration(minutes: 3)),
+          success: true,
+          userId: 'user-a',
+          projectId: 'project-x',
+        ),
+        AiUsageRecord(
+          id: 'e2e-2',
+          operation: 'summarize',
+          inputTokens: 100,
+          outputTokens: 50,
+          estimatedCost: 0.002,
+          timestamp: now.subtract(const Duration(minutes: 2)),
+          success: true,
+          userId: 'user-a',
+          projectId: 'project-y',
+        ),
+        AiUsageRecord(
+          id: 'e2e-3',
+          operation: 'chat',
+          inputTokens: 80,
+          outputTokens: 20,
+          estimatedCost: 0.001,
+          timestamp: now.subtract(const Duration(minutes: 1)),
+          success: false,
+          userId: 'user-b',
+          projectId: 'project-x',
+        ),
+      ];
+
+      final notifier = container.read(aiUsageHistoryProvider.notifier);
+      for (final record in records) {
+        await notifier.logUsage(record);
+      }
+
+      await notifier.fetchHistory(userId: 'user-a');
+      final filtered = notifier.state.value!;
+      expect(filtered.length, 2);
+      expect(filtered.every((r) => r.userId == 'user-a'), isTrue);
+
+      final userTotals = await container.read(aiUsageUserProvider('user-a').future);
+      expect(userTotals['requestCount'], 2);
+      expect(userTotals['totalTokens'], 300);
+
+      final projectTotals = await container.read(aiUsageProjectProvider('project-x').future);
+      expect(projectTotals['requestCount'], 2);
+      expect(projectTotals['failedRequests'], 1);
+    });
+
+    test('exportUsageHistory exports filtered data in csv and json', () async {
+      final record = AiUsageRecord(
+        id: 'export-1',
+        operation: 'chat',
+        inputTokens: 50,
+        outputTokens: 10,
+        estimatedCost: 0.001,
+        timestamp: DateTime.now(),
+        success: true,
+        userId: 'export-user',
+        projectId: 'export-project',
+      );
+
+      final notifier = container.read(aiUsageHistoryProvider.notifier);
+      await notifier.logUsage(record);
+
+      final csv = await notifier.exportUsageHistory(
+        format: 'csv',
+        userId: 'export-user',
+      );
+      expect(csv, contains('Timestamp,Operation,Input Tokens,Output Tokens'));
+      expect(csv, contains('chat,50,10'));
+
+      final json = await notifier.exportUsageHistory(
+        format: 'json',
+        projectId: 'export-project',
+      );
+      expect(json, contains('"operation":"chat"'));
+      expect(json, contains('"projectId":"export-project"'));
+    });
   });
 
   group('Computed Providers', () {
