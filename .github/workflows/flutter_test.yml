@@ -31,11 +31,7 @@ jobs:
       - name: Create CI .env placeholder
         shell: pwsh
         run: |
-          @"
-          SUPABASE_URL=https://example.supabase.co
-          SUPABASE_ANON_KEY=test-anon-key
-          OPENAI_API_KEY=your_xai_api_key_here
-          "@ | Set-Content -Path .env -Encoding utf8
+          Copy-Item -Path .env.ci -Destination .env -Force
 
       - name: Analyze
         run: |
