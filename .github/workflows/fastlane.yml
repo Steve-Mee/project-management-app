@@ -82,7 +82,6 @@ jobs:
     runs-on: macos-latest
     needs: preflight
     if: github.event_name == 'release' || github.ref == 'refs/heads/main'
-    environment: beta
     env:
       # Fastlane/App Store Connect auth and app metadata.
       IOS_APP_IDENTIFIER: ${{ secrets.IOS_APP_IDENTIFIER }}
@@ -154,7 +153,6 @@ jobs:
     runs-on: ubuntu-latest
     needs: preflight
     if: github.event_name == 'release' || github.ref == 'refs/heads/main'
-    environment: beta
     env:
       ANDROID_PACKAGE_NAME: ${{ secrets.ANDROID_PACKAGE_NAME }}
 
@@ -229,7 +227,6 @@ jobs:
     runs-on: ${{ matrix.os }}
     needs: preflight
     if: github.event_name == 'release' || github.ref == 'refs/heads/main'
-    environment: beta
     strategy:
       fail-fast: false
       matrix:

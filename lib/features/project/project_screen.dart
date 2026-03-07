@@ -14,7 +14,7 @@ import 'package:share_plus/share_plus.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:project_management_app/features/project/pdf_export.dart';
 // ignore_for_file: use_build_context_synchronously, unnecessary_underscores
-import 'package:pma_core/models/models.dart';
+import 'package:pma_core/models/models.dart' hide ProjectFilter;
 import 'package:project_management_app/features/project/providers/index.dart';
 import 'package:project_management_app/models/project_model.dart' as app_models;
 import '../../models/project_sort.dart';

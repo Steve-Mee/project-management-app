@@ -11,7 +11,7 @@ import 'package:animate_do/animate_do.dart';
 import 'package:intl/intl.dart';
 import 'package:project_management_app/generated/app_localizations.dart';
 import 'package:pma_core/auth/permissions.dart';
-import 'package:pma_core/models/models.dart';
+import 'package:pma_core/models/models.dart' hide ProjectFilter;
 import 'package:pma_core/repository/repository.dart';
 import 'package:project_management_app/features/dashboard/providers/index.dart';
 import '../../core/theme.dart';
