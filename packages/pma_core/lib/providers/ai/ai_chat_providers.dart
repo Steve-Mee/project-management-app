@@ -90,6 +90,7 @@ class AiChatNotifier extends AsyncNotifier<AiChatState> {
   final List<DateTime> _windowRequestTimestamps = [];
   final List<DateTime> _hourlyRequestTimestamps = [];
   final List<DateTime> _dailyRequestTimestamps = [];
+  final Map<String, List<DateTime>> _operationRequestTimestamps = {};
   int _totalTokensUsedToday = 0;
   DateTime? _lastTokenResetDate;
   final AiRequestQueue _requestQueue = AiRequestQueue();
@@ -208,6 +209,7 @@ class AiChatNotifier extends AsyncNotifier<AiChatState> {
       _lastTokenResetDate = now;
       _dailyRequestTimestamps.clear();
       _windowRequestTimestamps.clear();
+      _operationRequestTimestamps.clear();
       _processedToday = 0; // Reset daily processed count
       _droppedCount = 0; // Reset dropped count for new day
     }
@@ -273,6 +275,29 @@ class AiChatNotifier extends AsyncNotifier<AiChatState> {
            _isRateLimited(_hourlyRequestTimestamps, config.maxRequestsPerHour, const Duration(hours: 1)) ||
            _isRateLimited(_dailyRequestTimestamps, config.maxRequestsPerDay, const Duration(days: 1)) ||
            _totalTokensUsedToday >= config.maxTotalTokensPerDay;
+  }
+
+  bool _isOperationRateLimited(String operation, AiRateLimitsConfig config) {
+    final timestamps = _operationRequestTimestamps.putIfAbsent(
+      operation,
+      () => <DateTime>[],
+    );
+    final now = DateTime.now();
+    timestamps.removeWhere((timestamp) =>
+        now.difference(timestamp) > config.timeWindowDuration);
+
+    final limit = config.perOperationLimits[operation] ?? config.maxRequestsPerWindow;
+    return timestamps.length >= limit;
+  }
+
+  void _recordRequestForRateLimits(String operation, DateTime timestamp) {
+    _requestTimestamps.add(timestamp);
+    _windowRequestTimestamps.add(timestamp);
+    _hourlyRequestTimestamps.add(timestamp);
+    _dailyRequestTimestamps.add(timestamp);
+    _operationRequestTimestamps
+        .putIfAbsent(operation, () => <DateTime>[])
+        .add(timestamp);
   }
 
   /// Estimate token count for a message (rough approximation)
@@ -612,13 +637,31 @@ class AiChatNotifier extends AsyncNotifier<AiChatState> {
       return;
     }
 
-    if (_isAnyRateLimited(_rateLimitsConfig!)) {
+    final config = _rateLimitsConfig ?? const AiRateLimitsConfig();
+
+    if (_isAnyRateLimited(config)) {
       final backoffDelay = _calculateBackoffDelay(_rateLimitBackoffAttempt);
       _nextRateLimitRetryAt = now.add(backoffDelay);
       _rateLimitBackoffAttempt =
           (_rateLimitBackoffAttempt + 1).clamp(0, _maxRateLimitBackoffAttempts);
 
       AppLogger.event('ai_rate_limit_backoff_scheduled', params: {
+        'attempt': _rateLimitBackoffAttempt,
+        'delay_ms': backoffDelay.inMilliseconds,
+        'queue_length': _requestQueue.metrics.queueLength,
+      });
+      return;
+    }
+
+    final nextRequest = _requestQueue.peek();
+    if (nextRequest != null && _isOperationRateLimited(nextRequest.action, config)) {
+      final backoffDelay = _calculateBackoffDelay(_rateLimitBackoffAttempt);
+      _nextRateLimitRetryAt = now.add(backoffDelay);
+      _rateLimitBackoffAttempt =
+          (_rateLimitBackoffAttempt + 1).clamp(0, _maxRateLimitBackoffAttempts);
+
+      AppLogger.event('ai_operation_rate_limited_backoff_scheduled', params: {
+        'action': nextRequest.action,
         'attempt': _rateLimitBackoffAttempt,
         'delay_ms': backoffDelay.inMilliseconds,
         'queue_length': _requestQueue.metrics.queueLength,
@@ -633,6 +676,7 @@ class AiChatNotifier extends AsyncNotifier<AiChatState> {
     if (request == null) return;
 
     final startTime = DateTime.now();
+    _recordRequestForRateLimits(request.action, startTime);
 
     try {
       await _executeQueuedRequest(request);
@@ -703,13 +747,6 @@ class AiChatNotifier extends AsyncNotifier<AiChatState> {
   /// Execute a chat request with UI updates
   Future<void> _executeChatRequest(AiRequest request) async {
     final userMessage = request.payload['userMessage'] as String;
-    
-    // Record this request in rate limiting windows (now that we're actually processing)
-    final now = DateTime.now();
-    _requestTimestamps.add(now);
-    _windowRequestTimestamps.add(now);
-    _hourlyRequestTimestamps.add(now);
-    _dailyRequestTimestamps.add(now);
 
     try {
       // Anonymize the message for compliance
@@ -880,6 +917,17 @@ class AiChatNotifier extends AsyncNotifier<AiChatState> {
 
   @visibleForTesting
   int get queueLengthForTest => _requestQueue.metrics.queueLength;
+
+  @visibleForTesting
+  void recordOperationForTest(String operation) {
+    _recordRequestForRateLimits(operation, DateTime.now());
+  }
+
+  @visibleForTesting
+  bool isOperationRateLimitedForTest(String operation) {
+    final config = _rateLimitsConfig ?? const AiRateLimitsConfig();
+    return _isOperationRateLimited(operation, config);
+  }
 
   /// Clear all pending requests from the queue
   ///

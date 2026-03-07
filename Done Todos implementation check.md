@@ -1163,25 +1163,30 @@
 
 ## 034 - Per-operation rate limits voor AI
 
+### Opvolging status
+
+- DONE (afgewerkt op 2026-03-07): operation-based throttling wordt nu in actieve AI-provider afgedwongen met queue-integratie en fallback naar globale limiet.
+
 ### Wat is correct geimplementeerd
 
 - `AiRateLimitsConfig` ondersteunt `perOperationLimits` inclusief validatie en JSON mapping (`packages/pma_core/lib/models/ai_rate_limits_config.dart`).
 - Settings kan per-operation limieten opslaan/lezen en UI bewerken (`lib/features/settings/settings_screen.dart`, `packages/pma_core/lib/providers/settings/settings_providers.dart`).
 - Legacy provider implementeert operation-based checks (`isOperationRateLimited`, operation counters) in `packages/pma_core/lib/providers/ai_legacy/ai_chat_providers.dart`.
+- Actieve provider implementeert nu operation-based checks in queue processing via `_operationRequestTimestamps` en `_isOperationRateLimited(...)`.
+- Queue verwerkt operation-specific throttling met backoff-event (`ai_operation_rate_limited_backoff_scheduled`) en behoudt fallback naar `maxRequestsPerWindow`.
+- Testdekking toegevoegd in `test/ai_operation_rate_limit_test.dart`.
 
 ### Wat ik nog zou wijzigen
 
-- Actieve provider schaalt `perOperationLimits` wel bij subscription, maar gebruikt ze niet in daadwerkelijke operation-based throttling bij queue processing.
-- TODO vroeg ook queue-aanpassing op operation-basis; dat gedrag zit nu vooral in legacy, niet in de actieve runtimeflow.
+- Eventuele vervolgstap: queue scheduler optimaliseren om bij operation-throttle ook latere niet-throttled actions te kunnen verwerken (head-of-line blocking verminderen).
 
 ### Wat ik nog zou toevoegen
 
-- Operation-aware limiter in actieve provider (bijv. aparte counters per `request.action`).
-- Tests per actie (`chat`, `generate_questions`, `generate_proposals`, `generate_final_plan`) die limieten en fallback naar global limit valideren.
+- Optioneel: extra integratietests die volledige workerflow per actie simuleren met fake `AiService`.
 
 ### Wat ik nog zou verwijderen
 
-- Schijnconfiguratie waarbij UI wel per-operation limieten toont maar runtime deze beperkt gebruikt.
+- Geen directe verwijdering nodig.
 
 ### Impact van jongere TODO op oudere TODO
 
@@ -1538,9 +1543,8 @@
 
 - Volledig functioneel: TODO 045
 - Functioneel met inhoudelijke afwerking nodig: TODO 041, TODO 042, TODO 043
-- Deels/vooral demo-georienteerd en nog niet production-grade: TODO 044
+- Volledig functioneel: TODO 031, TODO 032, TODO 033, TODO 034, TODO 035
 - Belangrijkste restwerk:
-  - AI usage pricing + history architectuur expliciet finaliseren,
   - "fuzzy" search claim aligneren met echte searchstrategie,
   - dashboard undo/redo ook in customize UI ontsluiten,
   - Stripe flow van demo naar echte checkout/signature-verified webhook brengen.
