@@ -1,3 +1,9 @@
+## [1.5.0](https://github.com/Steve-Mee/project-management-app/compare/v1.4.0...v1.5.0) (2026-03-07)
+
+### Features
+
+* **todo-003:** unify repository filtering semantics ([87c7907](https://github.com/Steve-Mee/project-management-app/commit/87c7907da1a26945512035d13cee93e6c96feb35))
+
 ## [1.4.0](https://github.com/Steve-Mee/project-management-app/compare/v1.3.0...v1.4.0) (2026-03-07)
 
 ### Features
