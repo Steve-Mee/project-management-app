@@ -170,6 +170,12 @@ class InMemoryAuthRepository implements IAuthRepository {
   }
 
   @override
+  Future<void> inviteUser(String email) async {}
+
+  @override
+  Future<void> resetPassword(String email) async {}
+
+  @override
   Future<bool> isLoggedIn() async => _currentUser != null;
 
   @override
@@ -269,6 +275,11 @@ void runAuthRepositorySessionContract(
       await Future<void>.delayed(const Duration(milliseconds: 1));
       expect(events, isNotEmpty);
       expect(events.last, isNull);
+    });
+
+    test('inviteUser and resetPassword contract methods are callable', () async {
+      await repository.inviteUser('alice@example.com');
+      await repository.resetPassword('alice@example.com');
     });
   });
 }

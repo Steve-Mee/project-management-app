@@ -1710,25 +1710,21 @@
 
 ### Wat ik nog zou wijzigen
 
-- Acceptance item "invite user en reset password methoden" is niet volledig afgedekt in auth repository-interface:
-  - geen expliciete `inviteUser(...)`/`resetPassword(...)` methoden in `IAuthRepository`,
-  - in providerlaag ontbreken dedicated reset/invite auth-methoden.
-- "Sync capabilities voor auth data" loopt nog via placeholder cloud sync calls (`authSignInPlaceholder`, `authSignOutPlaceholder`) i.p.v. echte auth-sync contracten.
-- Testen voor backend integratie zijn deels documentair/oppervlakkig (`test/auth_providers_test.dart` noemt expliciet beperkte mockbaarheid).
+- Belangrijkste contractgaten zijn gedicht: `inviteUser(...)` en `resetPassword(...)` zitten nu expliciet in `IAuthRepository` en in `AuthNotifier`.
+- Placeholder auth-sync wrappers zijn verwijderd; alleen canonieke `authSignIn`/`authSignOut` blijven over.
+- Verdere verdieping kan nog met extra backend-integratietests rond invite/reset foutpaden.
 
 ### Wat ik nog zou toevoegen
 
-- Expliciete interface-methoden voor invite/reset met concrete Supabase-implementaties.
-- Echte auth sync-methoden (geen placeholders) of verwijdering van sync-claims als dat buiten scope valt.
-- Integratietests voor kritieke backend-auth scenario's (signup/login/logout/reset).
+- Extra integratietests voor backend-auth scenario's (met nadruk op invite/reset failure handling en provider UX-meldingen).
 
 ### Wat ik nog zou verwijderen
 
-- Placeholder auth-sync calls zodra productie-equivalent beschikbaar is.
+- Geen directe verwijdering meer vereist voor TODO 050.
 
 ### Impact van jongere TODO op oudere TODO
 
-- TODO 050 versterkt TODO 013/040 richting backend-first auth, maar laat nog openstaande gaten rond invite/reset en auth-sync hardening.
+- TODO 050 versterkt TODO 013/040 richting backend-first auth en sluit nu expliciet de invite/reset + auth-sync placeholder contractgaten.
 
 ---
 

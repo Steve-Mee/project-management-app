@@ -92,6 +92,12 @@ class FakeAuthRepository implements IAuthRepository {
   Future<void> register(String email, String password) async {}
 
   @override
+  Future<void> inviteUser(String email) async {}
+
+  @override
+  Future<void> resetPassword(String email) async {}
+
+  @override
   Future<bool> isLoggedIn() async => false;
 
   @override

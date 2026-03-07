@@ -431,6 +431,52 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
     return false;
   }
 
+  /// Invite a user via backend auth provider.
+  Future<bool> inviteUser(String email) async {
+    final trimmedEmail = email.trim();
+    if (trimmedEmail.isEmpty) {
+      state = AsyncValue.data(
+        state.value!.copyWith(error: 'Email is required.'),
+      );
+      return false;
+    }
+
+    try {
+      final repo = ref.read(authRepositoryProvider);
+      await repo.inviteUser(trimmedEmail);
+      return true;
+    } catch (e) {
+      AppLogger.instance.w('Invite user failed', error: e);
+      state = AsyncValue.data(
+        state.value!.copyWith(error: 'Invite failed: $e'),
+      );
+      return false;
+    }
+  }
+
+  /// Trigger backend password reset flow for an email address.
+  Future<bool> resetPassword(String email) async {
+    final trimmedEmail = email.trim();
+    if (trimmedEmail.isEmpty) {
+      state = AsyncValue.data(
+        state.value!.copyWith(error: 'Email is required.'),
+      );
+      return false;
+    }
+
+    try {
+      final repo = ref.read(authRepositoryProvider);
+      await repo.resetPassword(trimmedEmail);
+      return true;
+    } catch (e) {
+      AppLogger.instance.w('Password reset failed', error: e);
+      state = AsyncValue.data(
+        state.value!.copyWith(error: 'Password reset failed: $e'),
+      );
+      return false;
+    }
+  }
+
   /// Delete user with permission checking
   Future<void> deleteUser(String username) async {
     try {

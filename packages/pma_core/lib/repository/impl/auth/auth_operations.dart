@@ -54,6 +54,14 @@ class AuthOperations {
     await remote.registerUser(email, password);
   }
 
+  Future<void> inviteUser(String email, RemoteAuthService remote) async {
+    await remote.inviteUser(email);
+  }
+
+  Future<void> resetPassword(String email, RemoteAuthService remote) async {
+    await remote.resetPassword(email);
+  }
+
   Future<bool> isLoggedIn() async {
     return Supabase.instance.client.auth.currentSession != null;
   }

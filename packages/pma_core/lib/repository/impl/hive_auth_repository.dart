@@ -214,6 +214,16 @@ class HiveAuthRepository implements IAuthRepository {
   }
 
   @override
+  Future<void> inviteUser(String email) async {
+    return _authOperations.inviteUser(email, _remote);
+  }
+
+  @override
+  Future<void> resetPassword(String email) async {
+    return _authOperations.resetPassword(email, _remote);
+  }
+
+  @override
   Future<bool> isLoggedIn() async {
     return _authOperations.isLoggedIn();
   }

@@ -20,4 +20,15 @@ class RemoteAuthService {
       password: password,
     );
   }
+
+  Future<void> inviteUser(String email) async {
+    await Supabase.instance.client.auth.signInWithOtp(
+      email: email.trim(),
+      shouldCreateUser: true,
+    );
+  }
+
+  Future<void> resetPassword(String email) async {
+    await Supabase.instance.client.auth.resetPasswordForEmail(email.trim());
+  }
 }

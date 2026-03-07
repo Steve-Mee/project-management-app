@@ -264,17 +264,4 @@ class CloudSyncService {
     AppLogger.instance.i('Auth sign-out sync event');
     await _insertAnalytics(AnalyticsEventName.authSignOut, userId: userId);
   }
-
-  @Deprecated('Use authSignIn')
-  Future<void> authSignInPlaceholder(
-    String userId, {
-    Map<String, Object?>? metadata,
-  }) {
-    return authSignIn(userId, metadata: metadata);
-  }
-
-  @Deprecated('Use authSignOut')
-  Future<void> authSignOutPlaceholder({String? userId}) {
-    return authSignOut(userId: userId);
-  }
 }

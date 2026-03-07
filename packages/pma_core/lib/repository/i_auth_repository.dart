@@ -25,6 +25,12 @@ abstract class IAuthSessionRepository {
   /// Register.
   Future<void> register(String email, String password);
 
+  /// Invite a user via backend auth provider.
+  Future<void> inviteUser(String email);
+
+  /// Send password reset instructions via backend auth provider.
+  Future<void> resetPassword(String email);
+
   /// Check if logged in.
   Future<bool> isLoggedIn();
 

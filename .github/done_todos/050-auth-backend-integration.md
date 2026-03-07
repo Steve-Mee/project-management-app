@@ -10,3 +10,8 @@
 - [x] DONE: Add sync capabilities for authentication data
 - [x] DONE: Update auth_repository.dart with actual backend calls
 - [x] DONE: Implement invite user and reset password methods
+
+**Verification Notes:**
+- Added `inviteUser(...)` and `resetPassword(...)` to `IAuthRepository` and implemented them in Supabase-backed auth flow.
+- `AuthNotifier` now exposes dedicated `inviteUser` and `resetPassword` methods.
+- Removed deprecated `authSignInPlaceholder` and `authSignOutPlaceholder` wrappers from `CloudSyncService`.
