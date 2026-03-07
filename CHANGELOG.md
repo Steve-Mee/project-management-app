@@ -1,3 +1,10 @@
+## [1.1.2](https://github.com/Steve-Mee/project-management-app/compare/v1.1.1...v1.1.2) (2026-03-07)
+
+
+### Bug Fixes
+
+* **ci:** create .env placeholder in workflows ([bf03c44](https://github.com/Steve-Mee/project-management-app/commit/bf03c448e25c818c0360ee39b4d498756b5364b8))
+
 ## [1.1.1](https://github.com/Steve-Mee/project-management-app/compare/v1.1.0...v1.1.1) (2026-03-07)
 
 
