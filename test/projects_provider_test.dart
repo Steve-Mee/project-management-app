@@ -19,6 +19,7 @@ class FakeAuthNotifier extends AuthNotifier {
 
 class FakeProjectRepository implements IProjectRepository {
   final Map<String, ProjectModel> _store = {};
+  int getProjectByIdCallCount = 0;
 
   FakeProjectRepository({List<ProjectModel>? seed}) {
     if (seed != null) {
@@ -44,6 +45,7 @@ class FakeProjectRepository implements IProjectRepository {
 
   @override
   Future<ProjectModel> getProjectById(String id) async {
+    getProjectByIdCallCount += 1;
     final project = _store[id];
     if (project == null) {
       throw Exception('Project with id $id not found');
@@ -523,5 +525,79 @@ void main() {
     expect(repoFilter.startDate, DateTime(2026, 1, 1));
     expect(repoFilter.endDate, DateTime(2026, 1, 31));
     expect(repoFilter.tags, const <String>['mobile']);
+  });
+
+  test('projectByIdProvider uses per-project cache after provider invalidation', () async {
+    final repository = FakeProjectRepository(seed: const [
+      ProjectModel(id: 'p-cache-1', name: 'Cache One', progress: 0.1, status: 'In Progress'),
+    ]);
+
+    final container = ProviderContainer(overrides: [
+      projectRepositoryProvider.overrideWithValue(repository),
+      authProvider.overrideWith(() => FakeAuthNotifier()),
+      projectByIdCacheTtlProvider.overrideWithValue(const Duration(minutes: 5)),
+    ]);
+    addTearDown(container.dispose);
+
+    final first = await container.read(projectByIdProvider('p-cache-1').future);
+    expect(first.name, 'Cache One');
+    expect(repository.getProjectByIdCallCount, 1);
+    expect(container.read(projectIsCachedProvider('p-cache-1')), isTrue);
+
+    container.invalidate(projectByIdProvider('p-cache-1'));
+
+    final second = await container.read(projectByIdProvider('p-cache-1').future);
+    expect(second.name, 'Cache One');
+    expect(repository.getProjectByIdCallCount, 1);
+  });
+
+  test('projectByIdProvider refreshes when TTL expired', () async {
+    final repository = FakeProjectRepository(seed: const [
+      ProjectModel(id: 'p-cache-2', name: 'Cache Two', progress: 0.2, status: 'Planning'),
+    ]);
+
+    final container = ProviderContainer(overrides: [
+      projectRepositoryProvider.overrideWithValue(repository),
+      authProvider.overrideWith(() => FakeAuthNotifier()),
+      projectByIdCacheTtlProvider.overrideWithValue(Duration.zero),
+    ]);
+    addTearDown(container.dispose);
+
+    await container.read(projectByIdProvider('p-cache-2').future);
+    expect(repository.getProjectByIdCallCount, 1);
+
+    await Future<void>.delayed(const Duration(milliseconds: 2));
+    container.invalidate(projectByIdProvider('p-cache-2'));
+    await container.read(projectByIdProvider('p-cache-2').future);
+
+    expect(repository.getProjectByIdCallCount, 2);
+  });
+
+  test('mutations invalidate cached projectById entry', () async {
+    final repository = FakeProjectRepository(seed: const [
+      ProjectModel(id: 'p-cache-3', name: 'Cache Three', progress: 0.3, status: 'In Progress'),
+    ]);
+
+    final container = ProviderContainer(overrides: [
+      projectRepositoryProvider.overrideWithValue(repository),
+      authProvider.overrideWith(() => FakeAuthNotifier()),
+      projectByIdCacheTtlProvider.overrideWithValue(const Duration(minutes: 5)),
+    ]);
+    addTearDown(container.dispose);
+
+    await container.read(projectByIdProvider('p-cache-3').future);
+    expect(repository.getProjectByIdCallCount, 1);
+    expect(container.read(projectIsCachedProvider('p-cache-3')), isTrue);
+
+    await container.read(projectsProvider.notifier).updateProgress('p-cache-3', 0.95);
+
+    expect(container.read(projectCacheProvider('p-cache-3')), isNull);
+    expect(container.read(projectCacheTimestampProvider('p-cache-3')), isNull);
+
+    container.invalidate(projectByIdProvider('p-cache-3'));
+    final refreshed = await container.read(projectByIdProvider('p-cache-3').future);
+
+    expect(refreshed.progress, 0.95);
+    expect(repository.getProjectByIdCallCount, 2);
   });
 }
