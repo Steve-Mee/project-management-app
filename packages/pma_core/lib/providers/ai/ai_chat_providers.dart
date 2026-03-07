@@ -219,7 +219,16 @@ class AiChatNotifier extends AsyncNotifier<AiChatState> {
   /// daily processed count, and dropped request count.
   /// See .github/issues/033-ai-request-queue.md for metrics requirements.
   void _updateQueueMetrics() {
-    final currentState = state.value;
+    AiChatState? currentState;
+    try {
+      currentState = state.value;
+    } catch (e) {
+      // Notifier can be exercised in isolated unit tests before being mounted.
+      if (e is Error && e.toString().contains('LateInitializationError')) {
+        return;
+      }
+      rethrow;
+    }
     if (currentState != null) {
       state = AsyncValue.data(currentState.copyWith(
         queueLength: _requestQueue.metrics.queueLength,
@@ -361,6 +370,25 @@ class AiChatNotifier extends AsyncNotifier<AiChatState> {
   /// Includes overflow protection to prevent unbounded queue growth.
   /// See .github/issues/033-ai-request-queue.md for queue metrics tracking.
   Future<void> _enqueueRequest(AiRequest request) async {
+    final config = _rateLimitsConfig ?? const AiRateLimitsConfig();
+
+    if (!config.queueEnabled) {
+      AppLogger.event('ai_queue_bypassed', params: {'action': request.action});
+      final startedAt = DateTime.now();
+      await _executeQueuedRequest(request);
+      final processingTime = DateTime.now().difference(startedAt);
+      _processedToday++;
+      _updateQueueMetrics();
+      AppLogger.event('ai_queue_processed', params: {
+        'queueLength': _requestQueue.metrics.queueLength,
+        'success': true,
+        'action': request.action,
+        'processingTimeMs': processingTime.inMilliseconds,
+        'mode': 'immediate',
+      });
+      return;
+    }
+
     // Check for queue overflow
     if (_requestQueue.metrics.queueLength >= _maxQueueSize) {
       _droppedCount++; // Track dropped requests
@@ -844,6 +872,14 @@ class AiChatNotifier extends AsyncNotifier<AiChatState> {
   void setRateLimitsConfigForTest(AiRateLimitsConfig config) {
     _rateLimitsConfig = config;
   }
+
+  @visibleForTesting
+  Future<void> enqueueRequestForTest(AiRequest request) {
+    return _enqueueRequest(request);
+  }
+
+  @visibleForTesting
+  int get queueLengthForTest => _requestQueue.metrics.queueLength;
 
   /// Clear all pending requests from the queue
   ///

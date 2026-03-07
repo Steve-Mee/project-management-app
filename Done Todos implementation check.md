@@ -1131,16 +1131,23 @@
 
 ## 033 - Request queuing voor AI burst handling
 
+### Opvolging status
+
+- DONE (afgewerkt op 2026-03-07): queue runtimegedrag is nu configuratiegedreven (`queueEnabled`) met expliciete tests voor queue-on en queue-off paden.
+
 ### Wat is correct geimplementeerd
 
 - Request-queue model staat in `packages/pma_core/lib/models/ai_request_queue.dart` met priority/FIFO gedrag, metrics en serialization.
 - Actieve provider heeft background worker (`_startWorker`, `_processQueue`) en queue-metrics (`queueLength`, `processedToday`, `droppedCount`).
 - Queue persistence hooks bestaan (`persistQueue`, `restoreQueue`) in `packages/pma_core/lib/providers/ai/ai_chat_providers.dart`.
 - Settings UI toont queue status en biedt queue clear actie (`lib/features/settings/settings_screen.dart`).
+- `queueEnabled` wordt nu runtime afgedwongen in actieve provider:
+  - enabled -> enqueue/worker pad,
+  - disabled -> directe verwerking zonder queue.
+- Tests toegevoegd in `test/ai_queue_behavior_test.dart` voor beide paden.
 
 ### Wat ik nog zou wijzigen
 
-- `queueEnabled` configuratie bestaat, maar wordt in de actieve provider niet afgedwongen (requests worden altijd gequeued).
 - Observability en testdekking voor queuepad zijn relatief dun t.o.v. de complexiteit (nauwelijks dedicated queue tests in `test/`).
 
 ### Wat ik nog zou toevoegen
@@ -1216,10 +1223,10 @@
 
 - Volledig functioneel: TODO 035
 - Volledig functioneel: TODO 031, TODO 032, TODO 035
-- Functioneel maar met belangrijke runtime-gaten in actieve provider: TODO 033, TODO 034
+- Volledig functioneel: TODO 031, TODO 032, TODO 033, TODO 035
+- Functioneel maar met belangrijke runtime-gaten in actieve provider: TODO 034
 - Belangrijkste restwerk:
   - runtime enforcement van `perOperationLimits` in de actieve AI-provider,
-  - `queueEnabled` daadwerkelijk laten doorwerken in runtimegedrag,
   - gerichte queue/backoff/per-operation integratietests toevoegen.
 
 ---
