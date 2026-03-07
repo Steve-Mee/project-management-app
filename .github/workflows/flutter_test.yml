@@ -28,6 +28,13 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
 
+      - name: Create CI .env placeholder
+        shell: pwsh
+        run: |
+          if (-not (Test-Path '.env')) {
+            New-Item -Path .env -ItemType File | Out-Null
+          }
+
       - name: Analyze
         run: |
           flutter analyze || (

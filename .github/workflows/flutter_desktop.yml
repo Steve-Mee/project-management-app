@@ -34,6 +34,13 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
 
+      - name: Create CI .env placeholder
+        shell: pwsh
+        run: |
+          if (-not (Test-Path '.env')) {
+            New-Item -Path .env -ItemType File | Out-Null
+          }
+
       - name: Build Windows
         if: matrix.os == 'windows-latest'
         run: flutter build windows --release
