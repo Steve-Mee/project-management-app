@@ -578,7 +578,22 @@ class _ProjectScreenState extends ConsumerState<ProjectScreen> {
           // View mode content
           return Padding(
             padding: EdgeInsets.only(top: 16.h),
-            child: _buildViewContent(context, sorted, metaByProjectId, canEditProjects, isSelectionMode, selectedIds, viewMode),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                _buildViewContent(
+                  context,
+                  sorted,
+                  metaByProjectId,
+                  canEditProjects,
+                  isSelectionMode,
+                  selectedIds,
+                  viewMode,
+                ),
+                SizedBox(height: 12.h),
+                _buildPaginationFooter(context, sorted),
+              ],
+            ),
           );
         }
         // This should never be reached, but satisfies the analyzer
@@ -671,6 +686,49 @@ class _ProjectScreenState extends ConsumerState<ProjectScreen> {
           onStatusChanged: (projectId, newStatus) => _updateProjectStatus(projectId, newStatus),
         );
     }
+  }
+
+  Widget _buildPaginationFooter(BuildContext context, List<ProjectModel> projects) {
+    final hasItems = projects.isNotEmpty;
+
+    if (_isLoading && hasItems) {
+      return const Center(
+        child: Padding(
+          padding: EdgeInsets.symmetric(vertical: 8),
+          child: CircularProgressIndicator(),
+        ),
+      );
+    }
+
+    if (_loadError != null && hasItems) {
+      return Center(
+        child: Column(
+          children: [
+            Text(
+              'Load more failed',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: Theme.of(context).colorScheme.error,
+                  ),
+            ),
+            const SizedBox(height: 6),
+            OutlinedButton(
+              onPressed: _loadPage,
+              child: const Text('Retry'),
+            ),
+          ],
+        ),
+      );
+    }
+
+    if (!_hasMore && hasItems) {
+      return Text(
+        'End reached',
+        textAlign: TextAlign.center,
+        style: Theme.of(context).textTheme.bodySmall,
+      );
+    }
+
+    return const SizedBox.shrink();
   }
 
   Future<void> _updateProjectStatus(String projectId, String newStatus) async {

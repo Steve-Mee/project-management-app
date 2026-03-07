@@ -2129,14 +2129,12 @@
 
 ### Wat ik nog zou wijzigen
 
-- Voor ProjectsList is de implementatie niet volledig aligned met acceptance:
-  - `ProjectScreen` gebruikt eigen lokale paginatiestaat (`_page`, `_hasMore`, `_isLoading`) i.p.v. direct `ProjectsNotifier.loadMoreProjects()`.
-  - expliciete "end reached" boodschap voor projecten ontbreekt; vooral loading-state is zichtbaar.
-- TODO spreekt over ProjectsList + TasksList; huidige "end reached"-UX is duidelijker aanwezig bij tasks dan bij projects.
+- Voor ProjectsList blijft een lokaal paginatiepad bestaan (`_page`, `_hasMore`, `_isLoading`) naast provider-pagination; functioneel werkend maar architecturaal nog niet volledig geconsolideerd.
+- DONE: expliciete project-footer toegevoegd met loading, retry bij loadMore-fout en "End reached" melding, zodat UX nu op beide lijsten aanwezig is.
 
 ### Wat ik nog zou toevoegen
 
-- Eenduidige projectlist-footer met `end reached`-melding + retry bij loadMore fout, analoog aan tasks.
+- DONE: projectlist-footer met `end reached`-melding + retry bij loadMore fout toegevoegd.
 - Widget/integratietests voor project infinite-scroll gedrag (append, hasMore=false, fout+retry).
 
 ### Wat ik nog zou verwijderen
