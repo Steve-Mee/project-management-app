@@ -45,6 +45,14 @@ void main() {
       expect(await LoginRateLimiter.instance.isBlocked(testEmail), true);
     });
 
+    test('requires captcha after threshold attempts', () async {
+      for (int i = 0; i < LoginRateLimiter.captchaThreshold; i++) {
+        await LoginRateLimiter.instance.recordAttempt(testEmail);
+      }
+
+      expect(await LoginRateLimiter.instance.shouldRequireCaptcha(testEmail), true);
+    });
+
     test('successful login resets counter', () async {
       // Record 5 attempts to trigger block
       for (int i = 0; i < 5; i++) {

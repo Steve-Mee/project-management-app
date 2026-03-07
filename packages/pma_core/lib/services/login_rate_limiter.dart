@@ -11,6 +11,7 @@ import 'package:pma_core/services/app_logger.dart';
 class LoginRateLimiter {
   static const String _boxName = 'login_attempts';
   static const int maxAttempts = 5;
+  static const int captchaThreshold = 3;
   static const int windowSeconds = 60;
   static const List<Duration> _backoffDurations = [
     Duration(seconds: 30), // 1st exceed: 30 seconds
@@ -128,6 +129,12 @@ class LoginRateLimiter {
       AppLogger.instance.e('Error getting attempt count for $email', error: e, stackTrace: stack);
       return 0;
     }
+  }
+
+  /// Returns true when CAPTCHA should be required before another login attempt.
+  Future<bool> shouldRequireCaptcha(String email) async {
+    final attemptCount = await getAttemptCount(email);
+    return attemptCount >= captchaThreshold;
   }
 
   /// Gets the current backoff duration if blocked, null otherwise.

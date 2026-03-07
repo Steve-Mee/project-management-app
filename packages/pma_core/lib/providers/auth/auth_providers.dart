@@ -247,6 +247,7 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
 
     // Check rate limiting
     final attemptCount = await limiter.getAttemptCount(username);
+    final captchaRequired = await limiter.shouldRequireCaptcha(username);
     final backoffDuration = await limiter.getBackoffDuration(username);
     if (backoffDuration != null) {
       AppLogger.event('rate_limit_triggered', params: {'email': username, 'backoff_seconds': backoffDuration.inSeconds, 'timestamp': DateTime.now().toIso8601String()});
@@ -254,7 +255,7 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
     }
 
     // Check if captcha is required (3+ failed attempts)
-    if (!skipCaptchaCheck && attemptCount >= 3) {
+    if (!skipCaptchaCheck && captchaRequired) {
       final recaptchaService = await ref.read(recaptchaServiceProvider.future);
       final token = await recaptchaService.getRecaptchaToken();
       AppLogger.event('captcha_attempt', params: {'email': username, 'attempts': attemptCount, 'timestamp': DateTime.now().toIso8601String(), 'has_token': token != null});

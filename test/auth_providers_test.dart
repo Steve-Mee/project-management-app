@@ -9,6 +9,7 @@ import 'package:pma_core/repository/settings_repository.dart';
 import 'package:pma_core/auth/auth_user.dart';
 import 'package:pma_core/auth/role_models.dart';
 import 'package:pma_core/providers/auth_providers.dart';
+import 'package:pma_core/services/login_rate_limiter.dart';
 import 'package:pma_core/services/recaptcha_service.dart';
 import 'package:pma_core/core/config/ai_config.dart' as ai_config;
 
@@ -68,18 +69,20 @@ class TestAuthNotifier extends AuthNotifier {
     // Check rate limiting and captcha based on attempts
     final attempts = testBox.get(key) ?? [];
     final now = DateTime.now();
-    final cleaned = attempts.where((t) => !t.isBefore(now.subtract(const Duration(seconds: 60)))).toList();
+    final cleaned = attempts
+      .where((t) => !t.isBefore(now.subtract(const Duration(seconds: LoginRateLimiter.windowSeconds))))
+      .toList();
     
     // Update cleaned attempts if needed
     await testBox.put(key, cleaned);
     
     // Check rate limiting (5+ attempts)
-    if (cleaned.length >= 5) {
+    if (cleaned.length >= LoginRateLimiter.maxAttempts) {
       throw RateLimitExceededException(const Duration(seconds: 60));
     }
     
     // Check captcha (3+ attempts) - use fake RecaptchaService for testing
-    if (!skipCaptchaCheck && cleaned.length >= 3) {
+    if (!skipCaptchaCheck && cleaned.length >= LoginRateLimiter.captchaThreshold) {
       // Check if reCAPTCHA is configured (skip in dev mode)
       final siteKey = settingsRepo.getRecaptchaSiteKey();
       if (siteKey.isNotEmpty) {

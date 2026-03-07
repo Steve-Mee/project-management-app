@@ -575,6 +575,10 @@
 
 ## 017 - Specificeer en implementeer: max 5 login attempts per minuut
 
+### Opvolging status
+
+- DONE (afgewerkt op 2026-03-07): rate-limit policycontract verder gecentraliseerd via `LoginRateLimiter` constants + `shouldRequireCaptcha`, auth-login gebruikt geen hardcoded captcha-threshold meer, en testdekking is uitgebreid met expliciete threshold-assertie.
+
 ### Wat is correct geimplementeerd
 
 - Concrete policy staat in `LoginRateLimiter`:
