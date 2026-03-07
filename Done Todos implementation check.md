@@ -372,6 +372,10 @@
 
 ## 011 - Verwijderen/aanpassen van ProjectsNotifier.initialize() test-compatibiliteit
 
+### Opvolging status
+
+- DONE (afgewerkt op 2026-03-07): verouderde `initialize()`-verwijzingen vervangen door migratienota naar provider-overrides + `build()` lifecycle, inclusief test-guideline voor fake-repo injectie en async state-awaiting.
+
 ### Wat is correct geimplementeerd
 
 - In de huidige code bestaat `ProjectsNotifier.initialize()` niet meer; de notifier gebruikt `build()` + provider-overrides als teststrategie (`packages/pma_core/lib/providers/project/project_providers.dart`).

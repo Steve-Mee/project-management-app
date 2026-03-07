@@ -1,13 +1,21 @@
 # Verwijderen/aanpassen van `ProjectsNotifier.initialize()` test-compatibiliteit
 
-Bronbestand: `lib/core/providers/project_providers.dart`
+Status: Voltooid
+
+Afgewerkt na audit-opvolging: 2026-03-07
+
+Bronbestand: `packages/pma_core/lib/providers/project/project_providers.dart`
 
 Beschrijving:
-`ProjectsNotifier.initialize()` is momenteel aanwezig vanwege oude tests; wanneer tests worden bijgewerkt kan deze methode verwijderd of gemarkeerd worden als legacy.
+`ProjectsNotifier.initialize()` bestaat niet meer in de huidige architectuur. Projectproviders gebruiken de Riverpod `build()` lifecycle en testinjectie via provider-overrides.
 
 Wat toe te voegen/aanpassen:
-- Scan tests die `initialize()` aanroepen en update die tests om `projectRepositoryProvider` te mocken of `ref.read(...).initialize()` te gebruiken.
-- Markeer `initialize()` met `@visibleForTesting` of plan verwijdering en noteer breaking change.
+- Vervang verouderde verwijzingen naar `initialize()` door een migratienota op basis van provider-overrides.
+- Documenteer teststrategie: fake repository via `projectRepositoryProvider.overrideWithValue(...)` en async state afwachten via `await container.read(projectsProvider.future)`.
+
+Audit-opvolging uitgevoerd:
+- TODO-tekst gemigreerd naar de actuele provider-lifecycle (`build()` + overrides) in plaats van een niet-bestaande `initialize()` methode.
+- Verouderde maintainance-aanwijzingen rond `initialize()` verwijderd om toekomstige verwarring te voorkomen.
 
 Prioriteit: Laag
 
