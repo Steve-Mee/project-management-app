@@ -115,6 +115,20 @@ Run these once in GitHub Actions before marking pipeline fully production-verifi
 5. Verify build appears in Google Play internal track.
 6. Download one desktop artifact from workflow artifacts and smoke-test launch.
 
+## Release Evidence Log Template
+
+Use this table after the first live distribution run to keep an auditable trail.
+
+| Date | GitHub Release Tag | release.yml Run URL/ID | fastlane.yml Run URL/ID | TestFlight Evidence | Play Internal Evidence | Desktop Artifact Evidence | Notes |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| YYYY-MM-DD | vX.Y.Z | <link-or-id> | <link-or-id> | <build number / screenshot ref> | <release name / screenshot ref> | <artifact name + smoke test result> | <optional> |
+
+Recommended attachments:
+
+- Screenshot or export from TestFlight internal group build list.
+- Screenshot or export from Google Play internal testing release details.
+- Link to downloaded desktop artifact validation notes.
+
 ## Rollback Runbook
 
 Use this if a release is incorrect or a distribution step fails:

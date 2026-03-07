@@ -2452,7 +2452,8 @@
 
 ### Wat ik nog zou toevoegen
 
-- Na eerste live run: evidence links (run IDs, release tag, store screenshots) toevoegen in docs voor audittrail.
+- DONE: evidence-log template toegevoegd in `docs/release-pipeline.md` voor run IDs, release tag en store/artifact bewijs.
+- Rest na live run: template met echte links/screenshots invullen.
 
 ### Wat ik nog zou verwijderen
 
@@ -2465,7 +2466,7 @@
 - Volledig functioneel: TODO 071, TODO 072, TODO 073, TODO 074
 - Configuratief volledig in repo, operationeel deels afhankelijk van externe platform-setup: TODO 075
 - Belangrijkste restwerk:
-  - release pipeline na eerste live distributierun voorzien van verifieerbare evidence links.
+  - release evidence-template invullen na eerste live distributierun.
 
 ---
 
