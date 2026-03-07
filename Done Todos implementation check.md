@@ -232,6 +232,10 @@
 
 ## 007 - Efficient getProjectById implementatie
 
+### Opvolging status
+
+- DONE (afgewerkt op 2026-03-07): `getProjectById` contract expliciet gemaakt als throwing (niet-null return), documentatie geharmoniseerd en provider/UI not-found foutpad afgedekt met widget test.
+
 ### Wat is correct geimplementeerd
 
 - Interface bevat `Future<ProjectModel> getProjectById(String id)` (`packages/pma_core/lib/repository/i_project_repository.dart`).

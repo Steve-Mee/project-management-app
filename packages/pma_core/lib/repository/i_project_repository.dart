@@ -50,8 +50,9 @@ abstract class IProjectRepository {
     Map<String, Object?>? metadata,
   });
 
-  /// Efficient direct fetch of a single project by ID (Hive box.get)
-  /// Preferred over loading all projects
+  /// Efficient direct fetch of a single project by ID (Hive box.get).
+  /// Preferred over loading all projects.
+  /// Throws when the project does not exist.
   Future<ProjectModel> getProjectById(String id);
 
   // These helpers are present because some repository implementations

@@ -308,7 +308,8 @@ class HiveProjectRepository implements IProjectRepository {
     return filtered;
   }
 
-  /// Get a single project by ID
+  /// Get a single project by ID.
+  /// Throws when no project exists for [id].
   @override
   Future<ProjectModel> getProjectById(String id) async {
     await _ensureProjectsBoxReady();
