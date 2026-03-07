@@ -1,3 +1,10 @@
+## [1.2.1](https://github.com/Steve-Mee/project-management-app/compare/v1.2.0...v1.2.1) (2026-03-07)
+
+
+### Bug Fixes
+
+* **ci:** stabilize tests and linux desktop build ([de5c489](https://github.com/Steve-Mee/project-management-app/commit/de5c48948488d0f0cd0caaae07cece2753b3c3f7))
+
 # [1.2.0](https://github.com/Steve-Mee/project-management-app/compare/v1.1.2...v1.2.0) (2026-03-07)
 
 
