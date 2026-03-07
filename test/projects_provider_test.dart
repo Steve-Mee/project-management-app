@@ -600,4 +600,139 @@ void main() {
     expect(refreshed.progress, 0.95);
     expect(repository.getProjectByIdCallCount, 2);
   });
+
+  test('filteredProjectsPaginatedProvider applies owner/requiredTags/dueDate range', () async {
+    final repository = FakeProjectRepository(seed: [
+      ProjectModel(
+        id: 'p-f1',
+        name: 'Alpha',
+        progress: 0.2,
+        status: 'In Progress',
+        sharedUsers: <String>['owner-1'],
+        tags: <String>['mobile', 'urgent'],
+        dueDate: DateTime(2026, 2, 10),
+      ),
+      ProjectModel(
+        id: 'p-f2',
+        name: 'Beta',
+        progress: 0.3,
+        status: 'In Progress',
+        sharedUsers: <String>['owner-1'],
+        tags: <String>['mobile'],
+        dueDate: DateTime(2026, 2, 10),
+      ),
+      ProjectModel(
+        id: 'p-f3',
+        name: 'Gamma',
+        progress: 0.4,
+        status: 'In Progress',
+        sharedUsers: <String>['owner-2'],
+        tags: <String>['mobile', 'urgent'],
+        dueDate: DateTime(2026, 2, 10),
+      ),
+    ]);
+
+    final container = ProviderContainer(overrides: [
+      projectRepositoryProvider.overrideWithValue(repository),
+      authProvider.overrideWith(() => FakeAuthNotifier()),
+    ]);
+    addTearDown(container.dispose);
+
+    final params = FilteredPaginationParams(
+      filter: ProjectFilter(
+        ownerId: 'owner-1',
+        requiredTags: const <String>['mobile', 'urgent'],
+        dueDateStart: DateTime(2026, 2, 10),
+        dueDateEnd: DateTime(2026, 2, 10),
+        sortBy: 'name',
+        sortAscending: true,
+      ),
+      page: 1,
+      limit: 10,
+    );
+
+    final result = await container.read(filteredProjectsPaginatedProvider(params).future);
+
+    expect(result.length, 1);
+    expect(result.first.id, 'p-f1');
+  });
+
+  test('projectsCombinedProvider applies dueDate boundaries and requiredTags', () async {
+    final repository = FakeProjectRepository(seed: [
+      ProjectModel(
+        id: 'p-c1',
+        name: 'One',
+        progress: 0.1,
+        status: 'In Progress',
+        sharedUsers: <String>['owner-1'],
+        tags: <String>['alpha', 'beta'],
+        dueDate: DateTime(2026, 3, 15),
+      ),
+      ProjectModel(
+        id: 'p-c2',
+        name: 'Two',
+        progress: 0.1,
+        status: 'In Progress',
+        sharedUsers: <String>['owner-1'],
+        tags: <String>['alpha'],
+        dueDate: DateTime(2026, 3, 15),
+      ),
+      ProjectModel(
+        id: 'p-c3',
+        name: 'Three',
+        progress: 0.1,
+        status: 'In Progress',
+        sharedUsers: <String>['owner-1'],
+        tags: <String>['alpha', 'beta'],
+        dueDate: DateTime(2026, 3, 16),
+      ),
+    ]);
+
+    final container = ProviderContainer(overrides: [
+      projectRepositoryProvider.overrideWithValue(repository),
+      authProvider.overrideWith(() => FakeAuthNotifier()),
+    ]);
+    addTearDown(container.dispose);
+
+    final params = ProjectParams(
+      page: 1,
+      limit: 10,
+      filter: ProjectFilter(
+        ownerId: 'owner-1',
+        requiredTags: const <String>['alpha', 'beta'],
+        dueDateStart: DateTime(2026, 3, 15),
+        dueDateEnd: DateTime(2026, 3, 15),
+      ),
+    );
+
+    final result = await container.read(projectsCombinedProvider(params).future);
+
+    expect(result.length, 1);
+    expect(result.first.id, 'p-c1');
+  });
+
+  test('projectsCombinedProvider honors filter sortBy over params sortBy', () async {
+    final repository = FakeProjectRepository(seed: const [
+      ProjectModel(id: 'p-s1', name: 'Zeta', progress: 0.1, status: 'B'),
+      ProjectModel(id: 'p-s2', name: 'Alpha', progress: 0.1, status: 'A'),
+    ]);
+
+    final container = ProviderContainer(overrides: [
+      projectRepositoryProvider.overrideWithValue(repository),
+      authProvider.overrideWith(() => FakeAuthNotifier()),
+    ]);
+    addTearDown(container.dispose);
+
+    final params = ProjectParams(
+      page: 1,
+      limit: 10,
+      filter: const ProjectFilter(sortBy: 'status', sortAscending: true),
+      sortBy: 'name',
+      sortAscending: false,
+    );
+
+    final result = await container.read(projectsCombinedProvider(params).future);
+
+    expect(result.map((p) => p.id).toList(), <String>['p-s2', 'p-s1']);
+  });
 }
