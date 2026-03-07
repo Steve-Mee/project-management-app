@@ -894,12 +894,17 @@
 
 ## 026 - Maak abstract interface voor dashboard data (testbaarheid)
 
+### Opvolging status
+
+- DONE (afgewerkt op 2026-03-07): interface-typed repository-injectie bevestigd en contractgedrag uitgebreid met roundtrip-tests voor templates en local shared dashboards.
+
 ### Wat is correct geimplementeerd
 
 - Interface bestaat als apart contract: `packages/pma_core/lib/repository/i_dashboard_repository.dart`.
 - Concrete implementatie gebruikt dat contract: `packages/pma_core/lib/repository/impl/hive_dashboard_repository.dart`.
 - Providers injecteren repository via interface-typed provider: `dashboardRepositoryProvider` in `packages/pma_core/lib/providers/dashboard/dashboard_providers.dart`.
 - Testbaarheid is effectief verbeterd: dashboard tests gebruiken fake repositories (o.a. `test/dashboard_providers_test.dart`).
+- Contractgedrag is aangescherpt met repository roundtrip-tests in `test/hive_dashboard_repository_test.dart` voor templates en local shared dashboards.
 
 ### Wat ik nog zou wijzigen
 
@@ -908,7 +913,7 @@
 
 ### Wat ik nog zou toevoegen
 
-- Kleine contracttests die voor elke implementatie dezelfde minimale gedragsverwachtingen valideren (save/load, template roundtrip, share-link lifecycle).
+- Eventuele vervolgstap: interface opsplitsen in kleinere contracten als onderdeel van een grotere repository-modularisatie.
 
 ### Wat ik nog zou verwijderen
 

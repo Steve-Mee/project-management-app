@@ -209,4 +209,56 @@ void main() {
       expect(requirements, isEmpty);
     });
   });
+
+  group('Interface contract behavior', () {
+    test('saveTemplates and loadTemplates roundtrip', () async {
+      final templates = [
+        DashboardTemplate(
+          id: 'tpl-1',
+          name: 'Contract Template',
+          items: const [
+            DashboardItem(
+              widgetType: DashboardWidgetType.metricCard,
+              position: {'x': 0, 'y': 0, 'width': 200, 'height': 120},
+            ),
+          ],
+          isPreset: false,
+          createdAt: DateTime(2026, 1, 1),
+        ),
+      ];
+
+      await repository.saveTemplates(templates);
+      final loaded = await repository.loadTemplates();
+
+      expect(loaded.length, 1);
+      expect(loaded.first.id, 'tpl-1');
+      expect(loaded.first.name, 'Contract Template');
+      expect(loaded.first.items.first.widgetType, DashboardWidgetType.metricCard);
+    });
+
+    test('saveLocalSharedDashboard and loadLocalSharedDashboard roundtrip', () async {
+      final shared = SharedDashboard(
+        id: 'share-1',
+        ownerId: 'owner-1',
+        title: 'Shared Contract Dashboard',
+        items: const [
+          DashboardItem(
+            widgetType: DashboardWidgetType.taskList,
+            position: {'x': 10, 'y': 20, 'width': 300, 'height': 200},
+          ),
+        ],
+        permissions: const {'user-1': 'edit'},
+        updatedAt: DateTime(2026, 1, 2),
+      );
+
+      await repository.saveLocalSharedDashboard(shared);
+      final loaded = await repository.loadLocalSharedDashboard('share-1');
+
+      expect(loaded, isNotNull);
+      expect(loaded!.id, 'share-1');
+      expect(loaded.ownerId, 'owner-1');
+      expect(loaded.permissions['user-1'], 'edit');
+      expect(loaded.items.first.widgetType, DashboardWidgetType.taskList);
+    });
+  });
 }
