@@ -117,7 +117,10 @@ Run these once in GitHub Actions before marking pipeline fully production-verifi
 
 ## Release Evidence Log Template
 
-Use this table after the first live distribution run to keep an auditable trail.
+Use `/.github/RELEASE_EVIDENCE_TEMPLATE.md` as the canonical template after
+each live distribution run to keep an auditable trail.
+
+Quick table variant (optional):
 
 | Date | GitHub Release Tag | release.yml Run URL/ID | fastlane.yml Run URL/ID | TestFlight Evidence | Play Internal Evidence | Desktop Artifact Evidence | Notes |
 | --- | --- | --- | --- | --- | --- | --- | --- |
