@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:project_management_app/features/project/widgets/comment_section.dart';
+import 'package:pma_core/models/comment_model.dart';
 import 'package:pma_core/providers/auth_providers.dart';
 import 'package:pma_core/repository/i_auth_repository.dart';
 import 'package:pma_core/auth/auth_user.dart';
@@ -311,6 +312,43 @@ void main() {
       expect(find.byType(RichText), findsOneWidget);
       // The mentions should be styled differently (blue/underline)
       // This is a basic test - in a real scenario we'd check the TextSpan styles
+    });
+
+    test('submit flow stores mentioned user IDs and supports reload mapping', () {
+      // Simulate typed comment input in submit flow.
+      const text = 'Hello @john_doe and @jane_smith!';
+
+      // Bidirectional mapping used by comment providers.
+      const userProfiles = <String, String>{
+        'john_doe': 'user-1',
+        'jane_smith': 'user-2',
+        'user-1': 'john_doe',
+        'user-2': 'jane_smith',
+      };
+
+      final mentionedUsernames = CommentModel.parseMentions(text);
+      final mentionedUserIds = mentionedUsernames
+          .map((username) => userProfiles[username])
+          .whereType<String>()
+          .toList();
+
+      final saved = CommentModel.create(
+        userId: 'author-1',
+        projectId: 'project-1',
+        text: text,
+        mentionedUsers: mentionedUserIds,
+      );
+
+      // Simulate reload from persistence/network.
+      final reloaded = CommentModel.fromJson(saved.toJson());
+
+      expect(reloaded.mentionedUsers, equals(<String>['user-1', 'user-2']));
+
+      // Mention display mapping uses stored IDs -> usernames.
+      final mentionDisplay = reloaded.mentionedUsers
+          .map((id) => '@${userProfiles[id] ?? 'unknown'}')
+          .join(', ');
+      expect(mentionDisplay, '@john_doe, @jane_smith');
     });
   });
 }

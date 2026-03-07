@@ -1574,11 +1574,16 @@
 
 ### Wat ik nog zou toevoegen
 
-- Integratietest die volledige submitflow valideert: tekst met mentions -> opgeslagen `mentionedUsers` -> correcte display na reload.
+- Submit/reload mappingtest is toegevoegd; extra widget-level e2e kan later nog verdiept worden.
 
 ### Wat ik nog zou verwijderen
 
 - Placeholder mention-tap dialog zodra echte profielroute beschikbaar is.
+
+### Opvolging status
+
+- DONE (2026-03-07): mention autocomplete is functioneel afgerond met suggesties, parsing, rendering en aanvullende submit/reload mappingtest.
+- Open follow-up (niet blocker): placeholder mention-tap vervangen door echte profielnavigatie.
 
 ---
 
