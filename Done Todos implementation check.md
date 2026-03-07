@@ -1068,16 +1068,22 @@
 
 ## 031 - Maak max requests per window configureerbaar
 
+### Opvolging status
+
+- DONE (afgewerkt op 2026-03-07): `maxRequestsPerWindow` wordt runtime afgedwongen in de actieve AI-provider en is extra afgedekt met configuratie-tests.
+
 ### Wat is correct geimplementeerd
 
 - Configmodel bevat `maxRequestsPerWindow` met defaults + validatie (`packages/pma_core/lib/models/ai_rate_limits_config.dart`).
 - Settingslaag ondersteunt lezen/schrijven van deze configuratie (`packages/pma_core/lib/repository/impl/hive_settings_repository.dart`).
 - Er is een settings-notifier/provider voor rate-limit configuratie (`aiRateLimitsConfigProvider` in `packages/pma_core/lib/providers/settings/settings_providers.dart`).
 - UI exposeert rate-limit instellingen in settings (incl. per-operation/global velden) in `lib/features/settings/settings_screen.dart`.
+- Actieve AI-provider gebruikt `maxRequestsPerWindow` + `timeWindowDuration` in `_isAnyRateLimited(...)` met dedicated window-timestamps.
+- Tests in `test/ai_rate_limits_config_test.dart` dekken clamping + verschillende configuraties + JSON roundtrip van window-instellingen.
 
 ### Wat ik nog zou wijzigen
 
-- De oudere provider (`packages/pma_core/lib/providers/ai_legacy/ai_chat_providers.dart`) gebruikt `maxRequestsPerWindow` wel actief, wat policy-drift veroorzaakt.
+- Policy-drift tussen actieve en legacy provider verder reduceren door legacy pad af te bouwen of expliciet te bevriezen.
 
 ### Wat ik nog zou toevoegen
 
@@ -1203,9 +1209,10 @@
 ## Samenvatting batch 031-035
 
 - Volledig functioneel: TODO 035
-- Functioneel maar met belangrijke runtime-gaten in actieve provider: TODO 031, TODO 032, TODO 033, TODO 034
+- Volledig functioneel: TODO 031, TODO 035
+- Functioneel maar met belangrijke runtime-gaten in actieve provider: TODO 032, TODO 033, TODO 034
 - Belangrijkste restwerk:
-  - runtime enforcement van `maxRequestsPerWindow` en `perOperationLimits` in de actieve AI-provider,
+  - runtime enforcement van `perOperationLimits` in de actieve AI-provider,
   - throttling-specifieke backoff en config-gedreven retrylimieten harmoniseren,
   - `queueEnabled` daadwerkelijk laten doorwerken in runtimegedrag,
   - gerichte queue/backoff/per-operation integratietests toevoegen.
