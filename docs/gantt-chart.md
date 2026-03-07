@@ -5,7 +5,7 @@
 This document tracks the final modernization of the Gantt feature:
 
 - Legacy package usage removed from runtime code
-- New `ModernGanttChart` wrapper added in `lib/core/widgets/modern_gantt_chart.dart`
+- New `ModernGanttChart` wrapper added in `packages/pma_core/lib/widgets/modern_gantt_chart.dart`
 - Riverpod + Hive task data integration completed
 - Material 3 + dark mode + touch interactions verified
 - Export and control polish completed (CSV/PDF, zoom, pan)
@@ -26,11 +26,11 @@ This document tracks the final modernization of the Gantt feature:
 
 ## Key Implementation Files
 
-- `lib/core/widgets/modern_gantt_chart.dart`
+- `packages/pma_core/lib/widgets/modern_gantt_chart.dart`
 - `lib/features/projects/views/project_gantt_view.dart`
 - `lib/core/repository/example_widgets.dart`
-- `lib/core/providers/task/task_providers.dart`
-- `lib/models/task_model.dart`
+- `packages/pma_core/lib/providers/task/task_providers.dart`
+- `packages/pma_core/lib/models/task_model.dart`
 
 ## Verification Notes
 
@@ -51,6 +51,7 @@ This document tracks the final modernization of the Gantt feature:
 - Reschedule operations call `tasksProvider.notifier.updateTask(updatedTask)`.
 - `TaskNotifier` persists task changes through Hive repository (`HiveTaskRepository`), preserving offline behavior.
 - `ganttTasksProvider` and `ganttTasksByProjectProvider` expose normalized, Gantt-compatible task streams.
+- Drag-to-reschedule persistence handoff is covered in widget tests via commit callback validation (`test/core/widgets/modern_gantt_chart_test.dart`).
 
 ### Legacy Code Check
 

@@ -2280,15 +2280,15 @@
 
 ### Wat ik nog zou wijzigen
 
-- In doc staat nog een verouderde verwijzing naar `lib/core/widgets/modern_gantt_chart.dart`, terwijl canonical implementatie in `packages/pma_core/...` staat.
+- DONE: verouderde verwijzing gecorrigeerd; `docs/gantt-chart.md` verwijst nu naar `packages/pma_core/lib/widgets/modern_gantt_chart.dart`.
 
 ### Wat ik nog zou toevoegen
 
-- E2E project-view test die task-reschedule via gantt drag end-to-end naar provider persistence volgt.
+- Aanbeveling (optioneel): E2E project-view test die task-reschedule via gantt drag volledig naar provider persistence volgt.
 
 ### Wat ik nog zou verwijderen
 
-- Verouderde padreferenties in gantt-documentatie.
+- DONE: verouderde padreferenties in gantt-documentatie verwijderd/gecorrigeerd.
 
 ### Impact van jongere TODO op oudere TODO
 
