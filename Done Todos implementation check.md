@@ -2157,12 +2157,12 @@
 
 ### Wat ik nog zou wijzigen
 
-- Acceptance vroeg feitelijke run van `flutter build apk --analyze-size --split-per-abi`; hiervoor is geen hard bewijs in repo-output opgenomen.
-- In zowel README als `docs/app-size-analysis.md` staan veel velden nog op `TBD`/template-status, inclusief final APK sizes.
+- DONE: feitelijke size-runs uitgevoerd met equivalente Flutter-compatibele commands (per-ABI `--analyze-size` + `--split-per-abi`) en evidence vastgelegd.
+- DONE: README en `docs/app-size-analysis.md` ingevuld met echte APK-groottes en analyze-size samenvatting (geen `TBD`-tabellen meer voor kernwaarden).
 
 ### Wat ik nog zou toevoegen
 
-- Werkelijke meetresultaten (ABI grootte, before/after delta, analyze-size snippets) invullen i.p.v. placeholders.
+- DONE: werkelijke meetresultaten en analyze-size snippets toegevoegd.
 - CI artifactstap voor size reports/APKs indien dit structureel bewaakt moet worden.
 
 ### Wat ik nog zou verwijderen

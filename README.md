@@ -416,12 +416,12 @@ Reference report and raw output template: [`docs/app-size-analysis.md`](docs/app
 
 | Metric | Before | After | Delta | Delta % |
 |------|------:|------:|------:|------:|
-| APK (armeabi-v7a, MB) | `TBD` | `TBD` | `TBD` | `TBD` |
-| APK (arm64-v8a, MB) | `TBD` | `TBD` | `TBD` | `TBD` |
-| APK (x86_64, MB) | `TBD` | `TBD` | `TBD` | `TBD` |
-| Dart code total | `TBD` | `TBD` | `TBD` | `TBD` |
-| Assets total | `TBD` | `TBD` | `TBD` | `TBD` |
-| Fonts total | `TBD` | `TBD` | `TBD` | `TBD` |
+| APK (armeabi-v7a, MB) | `n/a` | `35.00` | `n/a` | `n/a` |
+| APK (arm64-v8a, MB) | `n/a` | `36.94` | `n/a` | `n/a` |
+| APK (x86_64, MB) | `n/a` | `38.48` | `n/a` | `n/a` |
+| Dart code total | `n/a` | `~13-14 MB` | `n/a` | `n/a` |
+| Assets total | `n/a` | `~143 KB` | `n/a` | `n/a` |
+| Fonts total | `n/a` | `~16.9 KB` | `n/a` | `n/a` |
 
 ### Optimizations Performed
 
@@ -442,12 +442,15 @@ Reference report and raw output template: [`docs/app-size-analysis.md`](docs/app
 
 | ABI | APK File | Final Size (Bytes) | Final Size (MB) |
 |------|------|------:|------:|
-| armeabi-v7a | `app-armeabi-v7a-release.apk` | `TBD` | `TBD` |
-| arm64-v8a | `app-arm64-v8a-release.apk` | `TBD` | `TBD` |
-| x86_64 | `app-x86_64-release.apk` | `TBD` | `TBD` |
+| armeabi-v7a | `app-armeabi-v7a-release.apk` | `35000254` | `35.00` |
+| arm64-v8a | `app-arm64-v8a-release.apk` | `36940534` | `36.94` |
+| x86_64 | `app-x86_64-release.apk` | `38483552` | `38.48` |
 
 ### Re-run Analysis
 
 ```bash
-flutter build apk --analyze-size --split-per-abi
+flutter build apk --analyze-size --target-platform android-arm
+flutter build apk --analyze-size --target-platform android-arm64
+flutter build apk --analyze-size --target-platform android-x64
+flutter build apk --split-per-abi
 ```
