@@ -2011,7 +2011,7 @@
 
 ### Wat ik nog zou toevoegen
 
-- Korte README/doc sectie voor het draaien van golden tests lokaal (`flutter test --tags=golden`, update-flow met `UPDATE_GOLDENS=1`).
+- DONE: README aangevuld met golden-test commando's en update-flow; uitgebreide runbook toegevoegd in `docs/golden-tests.md`.
 
 ### Wat ik nog zou verwijderen
 

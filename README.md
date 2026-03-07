@@ -204,6 +204,7 @@ For acceptance checklist, verification flow, and install steps, see [`docs/pwa-s
 | [docs/model-location-policy.md](docs/model-location-policy.md) | Canonical model ownership policy (`pma_core` as source of truth) and de-duplication plan |
 | [docs/legacy-ui-kit-removal.md](docs/legacy-ui-kit-removal.md) | Issue #056 migration note and replacement checklist for removing legacy UI kit/GetX usage |
 | [docs/supabase_fcm_setup.md](docs/supabase_fcm_setup.md) | Issue #058 end-to-end Supabase Edge Function to FCM setup, payload shape, and production checklist |
+| [docs/golden-tests.md](docs/golden-tests.md) | Issue #060 local golden-test workflow, baseline update flow, and review checklist |
 | [NAVIGATION_GUIDE.md](NAVIGATION_GUIDE.md) | Guide for navigating the application |
 | [QUICK_REFERENCE.md](QUICK_REFERENCE.md) | Quick reference for key features |
 | [TODO.md](TODO.md) | List of tasks and todos |
@@ -346,6 +347,22 @@ Run the same check with coverage output:
 ```bash
 flutter test --coverage test/core/theme_contrast_test.dart
 ```
+
+### Golden Tests
+
+Run all golden tests:
+
+```bash
+flutter test --tags=golden
+```
+
+Update golden baselines when a visual change is intentional:
+
+```bash
+UPDATE_GOLDENS=1 flutter test --tags=golden
+```
+
+Detailed guide: [`docs/golden-tests.md`](docs/golden-tests.md)
 
 ### Accessibility
 
