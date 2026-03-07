@@ -17,3 +17,4 @@ Dit bestand bevat de nog openstaande, technisch valide punten uit `Done Todos im
 - [x] 8. Verwijder ongebruikte app-level duplicate `project_filter` modelbestanden en behoud `pma_core` als canonieke bron.
 - [x] 9. Voeg contractguard-test toe die afdwingt dat `HiveAuthRepository` alle auth subinterfaces implementeert.
 - [x] 10. Leg AI usage source-of-truth contract expliciet vast (Supabase aggregate vs Hive history) en koppel dit in docs.
+- [x] 11. Vervang mention-tap placeholder door echte profieldetail-navigatie.

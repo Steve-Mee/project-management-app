@@ -424,18 +424,18 @@ class _CommentSectionState extends ConsumerState<CommentSection> {
   }
 
   void _onMentionTap(BuildContext context, String username, String userId) {
-    // Issue 045: Navigate to user profile (placeholder dialog until profile screen exists)
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text('User: $username'),
-        content: Text('User ID: $userId'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('OK'),
-          ),
-        ],
+    final user = _allUsers.firstWhere(
+      (u) => u.username == username,
+      orElse: () => AppUser(username: username, password: '', roleId: ''),
+    );
+
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => _MentionedUserProfileScreen(
+          username: username,
+          userId: userId,
+          roleId: user.roleId,
+        ),
       ),
     );
   }
@@ -542,5 +542,48 @@ class _CommentSectionState extends ConsumerState<CommentSection> {
     } else {
       return 'Just now';
     }
+  }
+}
+
+class _MentionedUserProfileScreen extends StatelessWidget {
+  const _MentionedUserProfileScreen({
+    required this.username,
+    required this.userId,
+    required this.roleId,
+  });
+
+  final String username;
+  final String userId;
+  final String roleId;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('User Profile'),
+      ),
+      body: Padding(
+        padding: EdgeInsets.all(16.w),
+        child: Card(
+          child: Padding(
+            padding: EdgeInsets.all(16.w),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  '@$username',
+                  style: Theme.of(context).textTheme.titleLarge,
+                ),
+                SizedBox(height: 12.h),
+                Text('User ID: ${userId.isEmpty ? 'unknown' : userId}'),
+                SizedBox(height: 8.h),
+                Text('Role: ${roleId.isEmpty ? 'unknown' : roleId}'),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
   }
 }
