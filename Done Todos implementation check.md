@@ -725,6 +725,10 @@
 
 ## 021 - Position constraints en boundaries voor dashboard widgets
 
+### Opvolging status
+
+- DONE (afgewerkt op 2026-03-07): `_clampPosition` verhard met extra guards voor oversize widgets (`width/height` worden op container begrensd) en finale non-negatieve `x/y` clamp; edge-case test toegevoegd voor `width > containerWidth` en `height > containerHeight`.
+
 ### Wat is correct geimplementeerd
 
 - Dashboard position constraints zijn aanwezig via constants (`kDashboardMinX`, `kDashboardMinY`, `kDashboardMinWidth`, `kDashboardMinHeight`, container bounds).

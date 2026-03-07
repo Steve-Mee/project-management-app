@@ -314,6 +314,18 @@ void main() {
       expect(result['y'], 650);  // 800 - 150
     });
 
+    test('enforcePositionConstraints clamps oversize width/height to container and keeps x/y non-negative', () async {
+      final result = await notifier.enforcePositionConstraints(
+        {'x': 100, 'y': 100, 'width': 1400, 'height': 900},
+        containerWidth: 1200,
+        containerHeight: 800,
+      );
+      expect(result['width'], 1200);
+      expect(result['height'], 800);
+      expect(result['x'], 0);
+      expect(result['y'], 0);
+    });
+
     test('enforcePositionConstraints leaves normal position unchanged', () async {
       final original = {'x': 100, 'y': 100, 'width': 200, 'height': 150};
       final result = await notifier.enforcePositionConstraints(

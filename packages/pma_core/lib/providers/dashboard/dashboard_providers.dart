@@ -284,12 +284,30 @@ class DashboardConfigNotifier extends AsyncNotifier<List<DashboardItem>> {
       height = kDashboardMinHeight;
       clamped = true;
     }
+    if (width > containerWidth) {
+      width = containerWidth;
+      clamped = true;
+    }
+    if (height > containerHeight) {
+      height = containerHeight;
+      clamped = true;
+    }
     if (x + width > containerWidth) {
       x = containerWidth - width;
       clamped = true;
     }
     if (y + height > containerHeight) {
       y = containerHeight - height;
+      clamped = true;
+    }
+
+    // Final guard for extreme overflow cases where width/height exceeded container bounds.
+    if (x < 0) {
+      x = 0;
+      clamped = true;
+    }
+    if (y < 0) {
+      y = 0;
       clamped = true;
     }
 
