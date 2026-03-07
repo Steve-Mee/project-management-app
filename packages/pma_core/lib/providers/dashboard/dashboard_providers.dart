@@ -15,6 +15,7 @@ import 'package:pma_core/providers/auth/auth_providers.dart';
 import 'package:pma_core/models/dashboard_types.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:pma_core/providers/connectivity/connectivity_providers.dart';
+import 'package:pma_core/providers/offline_status_providers.dart';
 import 'package:pma_core/models/requirements.dart';
 
 /// DashboardItem
@@ -132,12 +133,12 @@ class DashboardConfigNotifier extends AsyncNotifier<List<DashboardItem>> {
       final wasOffline = _isOffline;
       _isOffline = !(next.hasValue && (next.value == ConnectivityResult.wifi || next.value == ConnectivityResult.mobile));
       if (wasOffline && !_isOffline) {
-        ref.read(offlineSyncStatusProvider.notifier).state = true;
+        ref.read(offlineStatusProvider.notifier).markSyncStarted();
         _repository.processPendingSync().then((_) {
-          ref.read(offlineSyncStatusProvider.notifier).state = false;
+          ref.read(offlineStatusProvider.notifier).markSyncSucceeded();
           ref.read(dashboardErrorProvider.notifier).state = 'offline_sync_success';
         }).catchError((error) {
-          ref.read(offlineSyncStatusProvider.notifier).state = false;
+          ref.read(offlineStatusProvider.notifier).markSyncFailed();
           ref.read(dashboardErrorProvider.notifier).state = 'dashboard_action_failed';
         });
       }
@@ -748,5 +749,8 @@ final layoutTemplatesProvider = Provider<List<DashboardTemplate>>((ref) {
 });
 
 /// Provider for tracking offline sync status
-/// Set to true when processing pending changes, false when idle
-final offlineSyncStatusProvider = StateProvider<bool>((ref) => false);
+/// Backward-compatible bool selector for UI components still expecting `bool`.
+/// Canonical status lives in `offlineStatusProvider`.
+final offlineSyncStatusProvider = Provider<bool>((ref) {
+  return ref.watch(offlineStatusProvider.select((state) => state.isSyncing));
+});

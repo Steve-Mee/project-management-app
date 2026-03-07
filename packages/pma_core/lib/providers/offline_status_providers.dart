@@ -133,6 +133,28 @@ class OfflineStatusNotifier extends Notifier<OfflineStatusState> {
     }
   }
 
+  /// Marks the global status as syncing when an online sync process starts.
+  void markSyncStarted() {
+    if (!_isOnline) {
+      state = OfflineStatusState.offline(lastSyncTime: state.lastSyncTime);
+      return;
+    }
+
+    state = OfflineStatusState.syncing(lastSyncTime: state.lastSyncTime);
+  }
+
+  /// Marks a successful sync completion and refreshes the last sync timestamp.
+  void markSyncSucceeded() {
+    state = OfflineStatusState.synced(lastSyncTime: DateTime.now());
+  }
+
+  /// Marks a failed sync while preserving connectivity semantics.
+  void markSyncFailed() {
+    state = _isOnline
+        ? OfflineStatusState.synced(lastSyncTime: state.lastSyncTime)
+        : OfflineStatusState.offline(lastSyncTime: state.lastSyncTime);
+  }
+
   void _startConnectivityListener() {
     Connectivity().checkConnectivity().then(_handleConnectivityResults);
     _connectivitySubscription = Connectivity()
