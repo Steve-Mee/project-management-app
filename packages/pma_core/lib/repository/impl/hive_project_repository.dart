@@ -1169,10 +1169,19 @@ class _ProjectSyncManager {
   /// Get projects stream from remote server
   Stream<List<ProjectModel>> getProjectsStream() {
     return _cloudSync.getProjectsStream().map((changes) {
-      return changes
-          .where((change) => change['id'] == change['id']) // This seems wrong, but keeping as is
-          .map(ProjectModel.fromJson)
-          .toList();
+      final mapped = <ProjectModel>[];
+      for (final change in changes) {
+        final id = change['id'];
+        if (id is! String || id.isEmpty) {
+          continue;
+        }
+        try {
+          mapped.add(ProjectModel.fromJson(change));
+        } catch (_) {
+          // Ignore malformed realtime payloads to keep stream resilient.
+        }
+      }
+      return mapped;
     });
   }
 }

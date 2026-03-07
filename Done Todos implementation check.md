@@ -1348,8 +1348,8 @@
 ### Wat ik nog zou wijzigen
 
 - Deel van de sync-tests is vooral interface/callability-georienteerd en valideert beperkte echte Supabase-integratiepaden.
-- `CloudSyncService` bevat nog placeholder-achtige paden/comments (`authSignInPlaceholder`, `authSignOutPlaceholder`, bulk delete no-op stijl), wat wijst op onvolledige hardening.
-- In `getProjectsStream()` helper in `HiveProjectRepository` staat een triviale filter (`change['id'] == change['id']`) in onderste sync-manager helper; dit is functioneel verdacht en onderhoudstechnisch ruis.
+- `CloudSyncService` bevat nog placeholder-achtige paden/comments (`authSignInPlaceholder`, `authSignOutPlaceholder`, bulk delete no-op stijl), wat wijst op resterende hardening.
+- Triviale filterruis in `getProjectsStream()` helper van `HiveProjectRepository` is opgeschoond; helper valideert nu payloads robuuster.
 
 ### Wat ik nog zou toevoegen
 
@@ -1359,6 +1359,11 @@
 ### Wat ik nog zou verwijderen
 
 - Placeholder auth sync-methoden zodra echte auth-sync flows volledig live zijn.
+
+### Opvolging status
+
+- DONE (2026-03-07): Supabase sync implementatie is functioneel afgerond met providerlaag, repository sync-contracten, conflict-resolutie, realtime stream en offline queue verwerking.
+- Open follow-up (niet blocker): placeholder auth-sync paden vervangen en integratietestdiepte voor realtime/error scenario's uitbreiden.
 
 ---
 
