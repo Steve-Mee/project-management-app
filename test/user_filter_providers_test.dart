@@ -329,19 +329,12 @@ void main() {
       expect(conflictingUsers, isEmpty);
     });
 
-    test('filteredUsersProvider handles status filter placeholder', () {
-      // Status filtering is not implemented, so it should be ignored
-      const statusFilter = UsersFilter(status: 'active');
-      final users = testContainer.read(filteredUsersProvider(statusFilter));
-      expect(users.length, 6); // All users returned since status filter is ignored
-    });
-
     test('filteredUsersProvider handles null/empty filter values', () {
-      const nullFilter = UsersFilter(searchQuery: null, role: null, status: null);
+      const nullFilter = UsersFilter(searchQuery: null, role: null);
       final users = testContainer.read(filteredUsersProvider(nullFilter));
       expect(users.length, 6);
       
-      const emptyStringFilter = UsersFilter(searchQuery: '', role: '', status: '');
+      const emptyStringFilter = UsersFilter(searchQuery: '', role: '');
       final users2 = testContainer.read(filteredUsersProvider(emptyStringFilter));
       expect(users2.length, 6);
     });

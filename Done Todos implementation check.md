@@ -642,9 +642,13 @@
 
 ## 019 - Voeg zoek- en filtermogelijkheden toe aan auth/user providers
 
+### Opvolging status
+
+- DONE (afgewerkt op 2026-03-07): API/gedragsmismatch opgelost door niet-ondersteunde `status` filter te verwijderen uit `UsersFilter` en filterlogica; tests gealigneerd op werkelijk ondersteunde filters (`searchQuery`, `role`).
+
 ### Wat is correct geimplementeerd
 
-- `UsersFilter` model bestaat met `searchQuery`, `role`, `status`.
+- `UsersFilter` model bestaat met `searchQuery` en `role`.
 - `searchUsersProvider` en `filteredUsersProvider` family providers bestaan in auth providers.
 - Relevante tests aanwezig in `test/user_filter_providers_test.dart` en aanvullend in `test/auth_providers_test.dart`.
 - UI voorbeeldcode is aanwezig in auth provider bestand (documentatieblok met component usage).

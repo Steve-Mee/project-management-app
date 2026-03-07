@@ -121,14 +121,10 @@ class UsersFilter {
   
   /// Optional role ID to filter users by their assigned role.
   final String? role;
-  
-  /// Optional status filter (reserved for future implementation when AppUser model supports status).
-  final String? status;
 
   const UsersFilter({
     this.searchQuery,
     this.role,
-    this.status,
   });
 
   /// Creates a copy of this filter with optionally updated fields.
@@ -136,12 +132,10 @@ class UsersFilter {
   UsersFilter copyWith({
     String? searchQuery,
     String? role,
-    String? status,
   }) {
     return UsersFilter(
       searchQuery: searchQuery ?? this.searchQuery,
       role: role ?? this.role,
-      status: status ?? this.status,
     );
   }
 
@@ -756,12 +750,6 @@ List<AppUser> _filterUsers(List<AppUser> users, UsersFilter filter) {
     filtered = filtered.where((user) => user.roleId == role).toList();
   }
   
-  // Filter by status (exact match, if implemented)
-  if (filter.status != null && filter.status!.trim().isNotEmpty) {
-    // Status filtering not yet implemented in AppUser model
-    AppLogger.instance.d('User filter: status filtering requested but not implemented');
-  }
-  
   AppLogger.instance.d('User filter: applied filters, found ${filtered.length} of ${users.length} users');
   return filtered;
 }
@@ -882,25 +870,6 @@ final currentUserProvider = FutureProvider<AppUser?>((ref) async {
 ///                     ],
 ///                     onChanged: (value) => setState(() {
 ///                       _currentFilter = _currentFilter.copyWith(role: value);
-///                     }),
-///                   ),
-///                 ),
-///                 const SizedBox(width: 16),
-///                 // Status Filter Dropdown (placeholder for future implementation)
-///                 Expanded(
-///                   child: DropdownButtonFormField<String?>(
-///                     decoration: InputDecoration(
-///                       labelText: l10n.filterByStatus,
-///                       border: const OutlineInputBorder(),
-///                     ),
-///                     value: _currentFilter.status,
-///                     items: const [
-///                       DropdownMenuItem(value: null, child: Text('All Statuses')),
-///                       DropdownMenuItem(value: 'active', child: Text('Active')),
-///                       DropdownMenuItem(value: 'inactive', child: Text('Inactive')),
-///                     ],
-///                     onChanged: (value) => setState(() {
-///                       _currentFilter = _currentFilter.copyWith(status: value);
 ///                     }),
 ///                   ),
 ///                 ),
