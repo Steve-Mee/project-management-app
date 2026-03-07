@@ -1,3 +1,9 @@
+## [1.7.0](https://github.com/Steve-Mee/project-management-app/compare/v1.6.0...v1.7.0) (2026-03-07)
+
+### Features
+
+* **todo-005:** add project filter bridge semantics ([d5e4333](https://github.com/Steve-Mee/project-management-app/commit/d5e4333f40eaf8fce9b6f97b878ca19d2db8aa6f))
+
 ## [1.6.0](https://github.com/Steve-Mee/project-management-app/compare/v1.5.0...v1.6.0) (2026-03-07)
 
 ### Features
