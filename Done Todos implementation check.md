@@ -1807,11 +1807,11 @@
 
 ### Wat ik nog zou toevoegen
 
-- Korte analyzegids in docs met huidige correcte analyzer-instellingen/verwachtingen (zodat backlogtekst niet misleidt).
+- Analyzegids toegevoegd in `docs/analyzer-guidelines.md` met actuele commandopolicy en lintcontext.
 
 ### Wat ik nog zou verwijderen
 
-- Verouderde verwijzingen naar niet-ondersteunde analyzer-flags in todo-documentatie.
+- Verouderde `--no-fatal-infos` verwijzingen in TODO-tracking zijn opgeschoond.
 
 ---
 

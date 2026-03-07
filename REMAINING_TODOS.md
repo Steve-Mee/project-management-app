@@ -22,7 +22,7 @@
 - **DONE: 053. analysis_options.yaml strenger maken (20 min)**  
   Voeg include: package:flutter_lints/flutter.yaml of package:very_good_analysis toe  
   Activeer regels: prefer_const_constructors, prefer_const_declarations, avoid_print: false, use_key_in_widget_constructors: false  
-  Run flutter analyze --no-fatal-infos en fix alle nieuwe warnings
+  Run flutter analyze en fix alle nieuwe warnings
 
 - **DONE: 054. Alle models migreren naar freezed + json_serializable (2-3 dagen)**  
   Voeg deps toe: freezed: ^2.5.0, freezed_annotation: ^2.4.0, json_annotation: ^4.9.0, build_runner: ^2.4.0  
