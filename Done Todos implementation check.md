@@ -1196,6 +1196,10 @@
 
 ## 035 - Implementeer XML-parsing voor AI-parsers
 
+### Opvolging status
+
+- DONE (afgewerkt op 2026-03-07): XML parserpad en testdekking bevestigd, inclusief fallback- en foutscenario's.
+
 ### Wat is correct geimplementeerd
 
 - XML dependency is toegevoegd (`xml` in zowel root `pubspec.yaml` als `packages/pma_core/pubspec.yaml`).
@@ -1226,12 +1230,8 @@
 
 ## Samenvatting batch 031-035
 
-- Volledig functioneel: TODO 035
-- Volledig functioneel: TODO 031, TODO 032, TODO 035
-- Volledig functioneel: TODO 031, TODO 032, TODO 033, TODO 035
-- Functioneel maar met belangrijke runtime-gaten in actieve provider: TODO 034
+- Volledig functioneel: TODO 031, TODO 032, TODO 033, TODO 034, TODO 035
 - Belangrijkste restwerk:
-  - runtime enforcement van `perOperationLimits` in de actieve AI-provider,
   - gerichte queue/backoff/per-operation integratietests toevoegen.
 
 ---
