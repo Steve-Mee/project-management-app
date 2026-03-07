@@ -159,6 +159,7 @@ Issue `#073-analytics-implementation` introduces a backend-agnostic analytics la
 - Tracked issue events: `project_created`, `task_completed`, `ai_used`, `invite_sent`
 
 Implementation details, event mapping, and schema suggestions are documented in [`docs/analytics.md`](docs/analytics.md).
+AI usage source-of-truth boundaries are documented in [`docs/ai-usage-data-contract.md`](docs/ai-usage-data-contract.md).
 
 ## Error Handling
 
@@ -199,12 +200,14 @@ For acceptance checklist, verification flow, and install steps, see [`docs/pwa-s
 | [docs/feature-flags.md](docs/feature-flags.md) | Supabase feature flag checklist, provider/service summary, and acceptance mapping |
 | [docs/supabase-setup.md](docs/supabase-setup.md) | Supabase setup instructions, SQL schema, RLS/storage policies, Edge Functions, and policy authoring guide |
 | [docs/analytics.md](docs/analytics.md) | Issue #073 analytics checklist, event mapping, service usage, and `analytics_events` schema suggestion |
+| [docs/ai-usage-data-contract.md](docs/ai-usage-data-contract.md) | Authoritative source-of-truth contract for AI usage aggregates (Supabase) versus detailed history (Hive) |
 | [docs/error-boundary.md](docs/error-boundary.md) | Global error boundary acceptance checklist, test procedure, and AppLogger/Sentry integration notes |
 | [docs/pwa-support.md](docs/pwa-support.md) | Issue #074 PWA checklist, offline test steps, and Chrome install instructions |
 | [docs/release-pipeline.md](docs/release-pipeline.md) | Issue #075 release checklist, semantic-release/Fastlane flow, manual beta trigger, and secrets |
 | [docs/release-hardening-checklist.md](docs/release-hardening-checklist.md) | Handover checklist met Done/Pending External, secrets en go-live sign-off |
 | [docs/modularization.md](docs/modularization.md) | Issue #070 modularization acceptance checklist and deferred routing summary |
 | [docs/model-location-policy.md](docs/model-location-policy.md) | Canonical model ownership policy (`pma_core` as source of truth) and de-duplication plan |
+| [docs/provider-import-migration.md](docs/provider-import-migration.md) | Canonical provider import paths and phased migration guidance for legacy compatibility barrels |
 | [docs/legacy-ui-kit-removal.md](docs/legacy-ui-kit-removal.md) | Issue #056 migration note and replacement checklist for removing legacy UI kit/GetX usage |
 | [docs/supabase_fcm_setup.md](docs/supabase_fcm_setup.md) | Issue #058 end-to-end Supabase Edge Function to FCM setup, payload shape, and production checklist |
 | [docs/golden-tests.md](docs/golden-tests.md) | Issue #060 local golden-test workflow, baseline update flow, and review checklist |
