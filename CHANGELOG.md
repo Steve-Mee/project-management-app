@@ -1,3 +1,10 @@
+## [1.1.1](https://github.com/Steve-Mee/project-management-app/compare/v1.1.0...v1.1.1) (2026-03-07)
+
+
+### Bug Fixes
+
+* **ci:** retry flutter analyze once on runner flake ([3c1f5dc](https://github.com/Steve-Mee/project-management-app/commit/3c1f5dc601c3d76fb23b15f3fd82f3a4ca25ed6e))
+
 # [1.1.0](https://github.com/Steve-Mee/project-management-app/compare/v1.0.1...v1.1.0) (2026-03-07)
 
 
