@@ -6,8 +6,6 @@ import 'dart:math';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -59,50 +57,6 @@ const bool _debugThrowStartupError =
   bool.fromEnvironment('DEBUG_THROW_STARTUP_ERROR', defaultValue: false);
 const bool _debugThrowPostFrameError =
   bool.fromEnvironment('DEBUG_THROW_POSTFRAME_ERROR', defaultValue: false);
-
-/// Initializes environment variables from .env file
-/// Loads dotenv for development. In production, uses secure storage if available
-/// NOTE: converted to issue 048
-Future<Map<String, String>> initEnv() async {
-  String url;
-  String anonKey;
-  
-  if (!kReleaseMode) {
-    // Debug mode: load from .env file
-    await dotenv.load();
-    url = dotenv.env['SUPABASE_URL'] ?? '';
-    anonKey = dotenv.env['SUPABASE_ANON_KEY'] ?? '';
-  } else {
-    // Release mode: Use secure storage for production security
-    const storage = FlutterSecureStorage();
-    url = await storage.read(key: 'SUPABASE_URL') ?? '';
-    anonKey = await storage.read(key: 'SUPABASE_ANON_KEY') ?? '';
-    if (url.isEmpty || anonKey.isEmpty) {
-      // Fallback to .env if secure storage is empty
-      await dotenv.load();
-      url = dotenv.env['SUPABASE_URL'] ?? '';
-      anonKey = dotenv.env['SUPABASE_ANON_KEY'] ?? '';
-    }
-  }
-  
-  if (url.isEmpty) {
-    throw Exception('SUPABASE_URL not found');
-  }
-  if (anonKey.isEmpty) {
-    throw Exception('SUPABASE_ANON_KEY not found');
-  }
-  
-  // NOTE: converted to issue 048
-  // String openaiKey = dotenv.env['OPENAI_API_KEY'] ?? '';
-  
-  return {
-    'url': url,
-    'anonKey': anonKey,
-    // 'openaiKey': openaiKey,
-  };
-}
-
-
 
 /// Main entry point of the application
 /// Initializes Riverpod for state management and ScreenUtil for responsive design

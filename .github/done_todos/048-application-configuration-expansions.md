@@ -9,3 +9,7 @@
 - [x] DONE: Update main.dart for future configuration expansions
 - [x] DONE: Ensure proper configuration loading and validation
 - [x] DONE: Add support for additional env vars in app initialization
+
+**Verification Notes:**
+- Removed legacy `initEnv()` bootstrap path from `lib/main.dart` to prevent config drift.
+- App startup now uses `AppConfig.initialize()` as the single configuration source.

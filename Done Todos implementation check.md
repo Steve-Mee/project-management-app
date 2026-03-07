@@ -1665,15 +1665,15 @@
 
 ### Wat ik nog zou wijzigen
 
-- Legacy `initEnv()` in `main.dart` is grotendeels redundante/deprecated flow (met gecommentarieerde OPENAI-key handling) nu `AppConfig` de canonieke bron is.
+- Legacy `initEnv()` pad is verwijderd; startup-configuratie loopt nu eenduidig via `AppConfig.initialize()`.
 
 ### Wat ik nog zou toevoegen
 
-- Kleine cleanup/migratienota zodat alle configuratie expliciet via `AppConfig` loopt en legacy helpers verwijderd kunnen worden.
+- Geen directe must-have meer voor 048; configuratiepad is gecentraliseerd en opgeschoond.
 
 ### Wat ik nog zou verwijderen
 
-- Verouderde `initEnv()` codepad zodra bevestigd is dat geen callsite het nog nodig heeft.
+- Geen verdere verwijdering vereist voor deze TODO.
 
 ---
 
