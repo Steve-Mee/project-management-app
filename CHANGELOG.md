@@ -1,3 +1,9 @@
+## [1.8.0](https://github.com/Steve-Mee/project-management-app/compare/v1.7.0...v1.8.0) (2026-03-07)
+
+### Features
+
+* **todo-006:** wire ttl cache for projectById provider ([7daab06](https://github.com/Steve-Mee/project-management-app/commit/7daab0655d72b1abab5dc50061885cbb5141221c))
+
 ## [1.7.0](https://github.com/Steve-Mee/project-management-app/compare/v1.6.0...v1.7.0) (2026-03-07)
 
 ### Features
