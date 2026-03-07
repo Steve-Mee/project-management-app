@@ -238,7 +238,6 @@ class _ProjectScreenState extends ConsumerState<ProjectScreen> {
 
   ProjectSort _sortBy = ProjectSort.name;
   bool _sortAscending = true;
-  String? _loadError;
 
   @override
   void dispose() {
