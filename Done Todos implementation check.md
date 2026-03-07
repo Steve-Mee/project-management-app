@@ -1327,6 +1327,11 @@
 
 - TODO 055 (barrel files) heeft TODO 038 verder gestandaardiseerd; 038 is dus niet teniet gedaan, maar in bredere providers-architectuur opgenomen.
 
+### Opvolging status
+
+- DONE (2026-03-07): providers-splitsing is functioneel afgerond met canonieke `providers/index.dart` barrel, modulebestanden en compat-barrels op de gevraagde paden.
+- Open follow-up (niet blocker): compat-barrels later uitfaseren na volledige importmigratie.
+
 ---
 
 ## 039 - Supabase sync implementation
