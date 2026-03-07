@@ -20,7 +20,7 @@ class AppLogger {
 
   // Keep existing AppLogger.instance.* callsites intact, while ensuring
   // error logs are consistently forwarded to Sentry.
-  static final _SentryAwareLogger instance = _SentryAwareLogger(_logger);
+  static final SentryAwareLogger instance = SentryAwareLogger(_logger);
 
   static void event(String name, {Map<String, Object?>? params}) {
     final payload = params ?? const {};
@@ -147,8 +147,8 @@ class AppLogger {
   }
 }
 
-class _SentryAwareLogger {
-  _SentryAwareLogger(this._delegate);
+class SentryAwareLogger {
+  SentryAwareLogger(this._delegate);
 
   final Logger _delegate;
 
