@@ -248,12 +248,11 @@ class CloudSyncService {
     return Supabase.instance.client.from('projects').stream(primaryKey: ['id']);
   }
 
-  Future<void> authSignInPlaceholder(
+  Future<void> authSignIn(
     String userId, {
     Map<String, Object?>? metadata,
   }) async {
-    // NOTE: Vervang door Supabase auth sign-in; bewaar sessie.
-    AppLogger.instance.i('Placeholder auth sign-in: $userId');
+    AppLogger.instance.i('Auth sign-in sync event: $userId');
     await _insertAnalytics(
       AnalyticsEventName.authSignIn,
       userId: userId,
@@ -261,9 +260,21 @@ class CloudSyncService {
     );
   }
 
-  Future<void> authSignOutPlaceholder({String? userId}) async {
-    // NOTE: Vervang door Supabase auth sign-out; clear sessie.
-    AppLogger.instance.i('Placeholder auth sign-out');
+  Future<void> authSignOut({String? userId}) async {
+    AppLogger.instance.i('Auth sign-out sync event');
     await _insertAnalytics(AnalyticsEventName.authSignOut, userId: userId);
+  }
+
+  @Deprecated('Use authSignIn')
+  Future<void> authSignInPlaceholder(
+    String userId, {
+    Map<String, Object?>? metadata,
+  }) {
+    return authSignIn(userId, metadata: metadata);
+  }
+
+  @Deprecated('Use authSignOut')
+  Future<void> authSignOutPlaceholder({String? userId}) {
+    return authSignOut(userId: userId);
   }
 }

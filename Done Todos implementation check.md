@@ -1381,6 +1381,7 @@
 
 - Security-hardening blijft nodig op opslagstrategie voor biometrische credentials (nu nog gevoelig designpad).
 - Dubbele/overlappende limiter logica tussen service en repository blijft risico op inconsistent gedrag.
+- Auth sync calls gebruiken nu canonieke methoden (`authSignIn`/`authSignOut`) in plaats van placeholder namen.
 
 ### Wat ik nog zou toevoegen
 
@@ -1389,11 +1390,16 @@
 
 ### Wat ik nog zou verwijderen
 
-- Eventuele resterende placeholder-achtige auth helpermethoden in sync/service lagen die niet voor productie bedoeld zijn.
+- Eventuele resterende deprecated placeholder wrappers in sync/service lagen na volledige migratie van callsites.
 
 ### Impact van jongere TODO op oudere TODO
 
 - TODO 040 concretiseert en bundelt eerdere auth-verbeteringen (TODO 014/015/016/017/018) en valideert dat die samen een security baseline vormen; het vervangt die niet maar hangt ervan af.
+
+### Opvolging status
+
+- DONE (2026-03-07): auth security baseline is functioneel afgerond met captcha-threshold, sliding-window limiter, biometrie, async settings access en canonieke cloud-sync auth calls.
+- Open follow-up (niet blocker): diepere integratietests voor lockout/backoff-recovery en verdere afbouw van deprecated auth placeholder wrappers.
 
 ---
 

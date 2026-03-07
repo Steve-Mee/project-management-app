@@ -293,7 +293,7 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
 
         AppLogger.event('auth_sign_in', params: {'id': user.id});
 
-        await _cloudSync.authSignInPlaceholder(
+        await _cloudSync.authSignIn(
           user.id,
           metadata: {'role': role?.name ?? 'Member'},
         );
@@ -338,7 +338,7 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
   Future<void> logout() async {
     final userId = state.value!.username;
     AppLogger.event('auth_sign_out');
-    await _cloudSync.authSignOutPlaceholder(userId: userId);
+    await _cloudSync.authSignOut(userId: userId);
 
     try {
       await Supabase.instance.client.auth.signOut();
