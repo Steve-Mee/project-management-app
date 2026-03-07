@@ -49,6 +49,10 @@
 
 ## 002 - Voeg paginatie API toe voor projecten
 
+### Opvolging status
+
+- DONE (afgewerkt op 2026-03-07): input-validatie, deterministische sortering en uitgebreide paginatie-edge-case tests toegevoegd.
+
 ### Wat is correct geimplementeerd
 
 - Interface bevat paginatie API: `getProjectsPaginated({int page = 1, int limit = 20, ProjectFilter? filter})` in `packages/pma_core/lib/repository/i_project_repository.dart`.

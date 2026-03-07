@@ -195,6 +195,13 @@ class HiveProjectRepository implements IProjectRepository {
     models.ProjectFilter? filter,
   }) async {
     try {
+      if (page < 1) {
+        throw ArgumentError.value(page, 'page', 'must be >= 1');
+      }
+      if (limit <= 0) {
+        throw ArgumentError.value(limit, 'limit', 'must be > 0');
+      }
+
       final allProjects = await getAllProjects();
 
       // Apply optional filters
@@ -225,6 +232,16 @@ class HiveProjectRepository implements IProjectRepository {
           filtered = filtered.where((p) => p.dueDate != null && p.dueDate!.isBefore(filter.endDate!.add(const Duration(days: 1)))).toList();
         }
       }
+
+      // Keep pagination deterministic across implementations and runtimes.
+      // Primary: name (case-insensitive), Secondary: id.
+      filtered.sort((a, b) {
+        final nameCompare = a.name.toLowerCase().compareTo(b.name.toLowerCase());
+        if (nameCompare != 0) {
+          return nameCompare;
+        }
+        return a.id.compareTo(b.id);
+      });
 
       // Pagination (page starts at 1)
       final startIndex = (page - 1) * limit;

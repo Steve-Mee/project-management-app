@@ -122,6 +122,59 @@ void main() {
     expect(page3[0].id, 'project-5');
   });
 
+  test('getProjectsPaginated throws on invalid page and limit', () async {
+    expect(
+      () => repository.getProjectsPaginated(page: 0, limit: 2),
+      throwsA(isA<ArgumentError>()),
+    );
+    expect(
+      () => repository.getProjectsPaginated(page: 1, limit: 0),
+      throwsA(isA<ArgumentError>()),
+    );
+    expect(
+      () => repository.getProjectsPaginated(page: -1, limit: -10),
+      throwsA(isA<ArgumentError>()),
+    );
+  });
+
+  test('getProjectsPaginated returns empty list for empty dataset', () async {
+    final result = await repository.getProjectsPaginated(page: 1, limit: 20);
+    expect(result, isEmpty);
+  });
+
+  test('getProjectsPaginated combines filter and pagination', () async {
+    await repository.addProject(
+      await createProject(id: 'project-1', name: 'A Project 1', status: 'In Progress'),
+    );
+    await repository.addProject(
+      await createProject(id: 'project-2', name: 'B Project 2', status: 'Completed'),
+    );
+    await repository.addProject(
+      await createProject(id: 'project-3', name: 'C Project 3', status: 'In Progress'),
+    );
+    await repository.addProject(
+      await createProject(id: 'project-4', name: 'D Project 4', status: 'In Progress'),
+    );
+
+    const filter = ProjectFilter(status: 'In Progress');
+
+    final page1 = await repository.getProjectsPaginated(
+      page: 1,
+      limit: 2,
+      filter: filter,
+    );
+    final page2 = await repository.getProjectsPaginated(
+      page: 2,
+      limit: 2,
+      filter: filter,
+    );
+
+    expect(page1.length, 2);
+    expect(page2.length, 1);
+    expect(page1.every((p) => p.status == 'In Progress'), isTrue);
+    expect(page2.every((p) => p.status == 'In Progress'), isTrue);
+  });
+
   test('getProjectById returns correct project', () async {
     final project = await createProject(id: 'test-project', name: 'Test Project');
     await repository.addProject(project);
