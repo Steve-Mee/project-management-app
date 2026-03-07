@@ -2311,7 +2311,7 @@
 
 ### Wat ik nog zou toevoegen
 
-- Consolidatieplan voor resterende duplicaten/compat exports met duidelijke removal milestones.
+- DONE: consolidatieplan met gefaseerde removal milestones toegevoegd in `docs/modularization.md`.
 
 ### Wat ik nog zou verwijderen
 
@@ -2325,12 +2325,9 @@
 
 ## Samenvatting batch 066-070
 
-- Volledig functioneel: TODO 066, TODO 067, TODO 069, TODO 070
-- Functioneel maar deels documentair bewezen en nog auditdiepte nodig: TODO 068
+- Volledig functioneel: TODO 066, TODO 067, TODO 068, TODO 069, TODO 070
 - Belangrijkste restwerk:
   - sync-status providerlandschap consolideren rond 1 canonical pad,
-  - onboarding first-launch persistence expliciet unit/integratietesten,
-  - accessibility handmatige verificaties traceerbaar vastleggen,
   - modularisatie-restduplicaten en verouderde padverwijzingen gefaseerd opschonen.
 
 ---
