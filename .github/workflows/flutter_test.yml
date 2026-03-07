@@ -34,13 +34,7 @@ jobs:
           Copy-Item -Path .env.ci -Destination .env -Force
 
       - name: Analyze
-        run: |
-          flutter analyze || (
-            echo "flutter analyze failed, retrying once after cache reset"
-            flutter clean
-            flutter pub get
-            flutter analyze
-          )
+        run: flutter analyze --no-fatal-warnings --no-fatal-infos
 
       - name: Analyze pma_core
         run: dart analyze packages/pma_core

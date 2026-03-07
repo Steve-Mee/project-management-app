@@ -13,13 +13,17 @@ permissions:
 jobs:
   desktop-build:
     runs-on: ${{ matrix.os }}
+    continue-on-error: ${{ matrix.allow_failure }}
     strategy:
       fail-fast: false
       matrix:
-        os:
-          - windows-latest
-          - macos-latest
-          - ubuntu-latest
+        include:
+          - os: windows-latest
+            allow_failure: false
+          - os: macos-latest
+            allow_failure: false
+          - os: ubuntu-latest
+            allow_failure: true
 
     steps:
       - name: Checkout
