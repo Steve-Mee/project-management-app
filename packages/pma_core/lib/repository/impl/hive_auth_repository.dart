@@ -37,6 +37,34 @@ class RemoteAuthService {
   }
 }
 
+Future<bool> _isLoginBlockedSafely(String identifier) async {
+  try {
+    await LoginRateLimiter.instance.initialize();
+    return await LoginRateLimiter.instance.isBlocked(identifier);
+  } catch (_) {
+    // Fail-open to avoid locking out users if rate limiter storage is unavailable.
+    return false;
+  }
+}
+
+Future<void> _recordLoginAttemptSafely(String identifier) async {
+  try {
+    await LoginRateLimiter.instance.initialize();
+    await LoginRateLimiter.instance.recordAttempt(identifier);
+  } catch (_) {
+    // Best-effort telemetry/rate-limit tracking.
+  }
+}
+
+Future<void> _resetLoginAttemptsSafely(String identifier) async {
+  try {
+    await LoginRateLimiter.instance.initialize();
+    await LoginRateLimiter.instance.resetOnSuccess(identifier);
+  } catch (_) {
+    // Best-effort reset.
+  }
+}
+
 
 /// Concrete implementation of IAuthRepository using Hive for local persistence
 /// and Supabase for remote authentication
@@ -176,17 +204,17 @@ class HiveAuthRepository implements IAuthRepository {
 
   @override
   Future<bool> isLoginBlocked(String email) async {
-    return await LoginRateLimiter.instance.isBlocked(email);
+    return _isLoginBlockedSafely(email);
   }
 
   @override
   Future<void> recordLoginAttempt(String email) async {
-    await LoginRateLimiter.instance.recordAttempt(email);
+    await _recordLoginAttemptSafely(email);
   }
 
   @override
   Future<void> resetLoginAttempts(String email) async {
-    await LoginRateLimiter.instance.resetOnSuccess(email);
+    await _resetLoginAttemptsSafely(email);
   }
 
   @override
@@ -220,22 +248,14 @@ class HiveAuthRepository implements IAuthRepository {
     return _authOperations.logout(_remote);
   }
 
-  // Simple in-memory rate limiter stored per-repository instance
-  final Map<String, List<DateTime>> _failedAttempts = {};
-
   @override
   Future<bool> canAttemptLogin(String identifier) async {
-    final now = DateTime.now();
-    final list = _failedAttempts.putIfAbsent(identifier, () => []);
-    list.retainWhere((t) => now.difference(t) <= const Duration(minutes: 1));
-    return list.length < 5;
+    return !(await _isLoginBlockedSafely(identifier));
   }
 
   @override
   Future<void> recordFailedLoginAttempt(String identifier) async {
-    final now = DateTime.now();
-    final list = _failedAttempts.putIfAbsent(identifier, () => []);
-    list.add(now);
+    await _recordLoginAttemptSafely(identifier);
   }
 
   Future<void> _seedDefaultsIfEmpty() async {
@@ -548,9 +568,6 @@ class _AuthDataMapper {
 
 /// Helper class for authentication operations
 class _AuthOperations {
-  // Simple in-memory rate limiter stored per-repository instance
-  final Map<String, List<DateTime>> _failedAttempts = {};
-
   AppUser? validateUser(String username, String password) {
     final dataMapper = _AuthDataMapper();
     final users = dataMapper.getUsers();
@@ -576,9 +593,10 @@ class _AuthOperations {
       await remote.signIn(email, password);
       final dataMapper = _AuthDataMapper();
       await dataMapper.setCurrentUser(email.trim());
+      await _resetLoginAttemptsSafely(email.trim().toLowerCase());
       return true;
     } catch (e) {
-      await recordFailedLoginAttempt(email.trim().toLowerCase());
+      await _recordLoginAttemptSafely(email.trim().toLowerCase());
       return false;
     }
   }
@@ -595,19 +613,6 @@ class _AuthOperations {
     await remote.signOut();
     final dataMapper = _AuthDataMapper();
     await dataMapper.setCurrentUser(null);
-  }
-
-  Future<bool> canAttemptLogin(String identifier) async {
-    final now = DateTime.now();
-    final list = _failedAttempts.putIfAbsent(identifier, () => []);
-    list.retainWhere((t) => now.difference(t) <= const Duration(minutes: 1));
-    return list.length < 5;
-  }
-
-  Future<void> recordFailedLoginAttempt(String identifier) async {
-    final now = DateTime.now();
-    final list = _failedAttempts.putIfAbsent(identifier, () => []);
-    list.add(now);
   }
 
   String _hashPassword(String password) {

@@ -460,6 +460,10 @@
 
 ## 014 - Rate limiting voor login-pogingen
 
+### Opvolging status
+
+- DONE (afgewerkt op 2026-03-07): dubbele in-memory attempt-tracking verwijderd; auth repository gebruikt nu `LoginRateLimiter` als canonieke rate-limit bron, met guard-test tegen regressie.
+
 ### Wat is correct geimplementeerd
 
 - Dedicated service aanwezig: `LoginRateLimiter` met sliding window + progressive backoff en persistent Hive-opslag (`packages/pma_core/lib/services/login_rate_limiter.dart`).
