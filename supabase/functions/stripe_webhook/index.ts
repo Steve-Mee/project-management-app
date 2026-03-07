@@ -11,11 +11,85 @@ declare const Deno: {
   };
 };
 
+const textEncoder = new TextEncoder()
+
+interface ParsedStripeSignature {
+  timestamp: number
+  signatures: string[]
+}
+
+function parseStripeSignatureHeader(signatureHeader: string): ParsedStripeSignature | null {
+  const components = signatureHeader.split(',').map((part) => part.trim())
+  const timestampPart = components.find((part) => part.startsWith('t='))
+  if (!timestampPart) {
+    return null
+  }
+
+  const timestamp = Number(timestampPart.slice(2))
+  if (!Number.isFinite(timestamp)) {
+    return null
+  }
+
+  const signatures = components
+    .filter((part) => part.startsWith('v1='))
+    .map((part) => part.slice(3))
+    .filter((value) => value.length > 0)
+
+  if (signatures.length === 0) {
+    return null
+  }
+
+  return { timestamp, signatures }
+}
+
+async function computeHmacSha256Hex(secret: string, payload: string): Promise<string> {
+  const key = await crypto.subtle.importKey(
+    'raw',
+    textEncoder.encode(secret),
+    { name: 'HMAC', hash: 'SHA-256' },
+    false,
+    ['sign'],
+  )
+
+  const signature = await crypto.subtle.sign('HMAC', key, textEncoder.encode(payload))
+  return Array.from(new Uint8Array(signature))
+    .map((byte) => byte.toString(16).padStart(2, '0'))
+    .join('')
+}
+
+function timingSafeEqual(a: string, b: string): boolean {
+  if (a.length !== b.length) {
+    return false
+  }
+
+  let mismatch = 0
+  for (let i = 0; i < a.length; i++) {
+    mismatch |= a.charCodeAt(i) ^ b.charCodeAt(i)
+  }
+  return mismatch === 0
+}
+
 // Stripe webhook signature verification
-function verifyStripeSignature(payload: string, signature: string, secret: string): boolean {
-  // In production, implement proper signature verification using crypto
-  // For now, return true for demo purposes
-  return true
+async function verifyStripeSignature(
+  payload: string,
+  signatureHeader: string,
+  secret: string,
+  toleranceSeconds = 300,
+): Promise<boolean> {
+  const parsed = parseStripeSignatureHeader(signatureHeader)
+  if (!parsed) {
+    return false
+  }
+
+  const now = Math.floor(Date.now() / 1000)
+  const age = Math.abs(now - parsed.timestamp)
+  if (age > toleranceSeconds) {
+    return false
+  }
+
+  const signedPayload = `${parsed.timestamp}.${payload}`
+  const expectedSignature = await computeHmacSha256Hex(secret, signedPayload)
+  return parsed.signatures.some((signature) => timingSafeEqual(signature, expectedSignature))
 }
 
 interface StripeWebhookEvent {
@@ -29,8 +103,8 @@ interface StripeWebhookEvent {
   livemode: boolean
   pending_webhooks: number
   request: {
-    id: string
-    idempotency_key: string
+    id: string | null
+    idempotency_key: string | null
   }
   type: string
 }
@@ -63,18 +137,20 @@ Deno.serve(async (req: Request) => {
     // Get request body as text for signature verification
     const body = await req.text()
 
-    // Get Stripe secret key from environment
+    // Get Stripe webhook secret from environment
     // @ts-ignore - Deno global
-    const stripeSecretKey = Deno.env.get('STRIPE_SECRET_KEY')
-    if (!stripeSecretKey) {
-      return new Response(JSON.stringify({ error: 'Stripe secret key not configured' }), {
+    const stripeWebhookSecret =
+      Deno.env.get('STRIPE_WEBHOOK_SECRET') ??
+      Deno.env.get('STRIPE_SECRET_KEY')
+    if (!stripeWebhookSecret) {
+      return new Response(JSON.stringify({ error: 'Stripe webhook secret not configured' }), {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       })
     }
 
     // Verify webhook signature
-    if (!verifyStripeSignature(body, signature, stripeSecretKey)) {
+    if (!await verifyStripeSignature(body, signature, stripeWebhookSecret)) {
       return new Response(JSON.stringify({ error: 'Invalid signature' }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }

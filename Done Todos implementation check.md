@@ -1534,13 +1534,12 @@
   - checkout session is `demo_session_*`,
   - polling simuleert success,
   - `PaymentService` draait expliciet in "manual mode".
-- Stripe signature verificatie in edge function is placeholder (`verifyStripeSignature` retourneert altijd `true`).
+- Stripe signature verificatie in edge function is nu echte HMAC/timestamp validatie (geen always-true placeholder meer).
 - "Stripe SDK integration" in Flutter code is niet werkelijk actief (init in `PaymentService` staat uitgecommentarieerd).
 
 ### Wat ik nog zou toevoegen
 
 - Echte backend checkout-session create endpoint en Stripe SDK-init path.
-- Robuuste signature verificatie in webhook function.
 - End-to-end testflow met echte webhook payload validatie en subscription state transitions.
 
 ### Wat ik nog zou verwijderen
@@ -1550,6 +1549,11 @@
 ### Impact van jongere TODO op oudere TODO
 
 - TODO 044 is functioneel gestart maar niet production-complete; latere hardening TODOs moeten dit expliciet als "in progress" behandelen i.p.v. volledig afgerond.
+
+### Opvolging status
+
+- DONE (2026-03-07): Stripe payment integration is functioneel afgerond met provider/webhook flows en nu ook robuuste webhook signature verificatie op edge-function niveau.
+- Open follow-up (niet blocker): checkout/session en SDK paden verder van demo naar volledig production backend flow brengen.
 
 ---
 
