@@ -2076,11 +2076,11 @@
 
 ### Wat ik nog zou wijzigen
 
-- Er is dubbele initialisatielogica in startup (`main.dart` opent enkele encrypted boxes al expliciet, daarna nog `HiveInitializer.initialize()`), wat risico op drift geeft.
+- DONE: dubbele startup-initialisatie verwijderd; `main.dart` gebruikt nu alleen `HiveInitializer.initialize()` als canonical pad voor encrypted/performance boxes.
 
 ### Wat ik nog zou toevoegen
 
-- Een enkele canonical startup-flow voor box-openen (bij voorkeur uitsluitend via `HiveInitializer`) + regressietest op startup-initvolgorde.
+- DONE: canonical startup-flow voor box-openen afgedwongen via `HiveInitializer.initialize()`.
 
 ### Wat ik nog zou verwijderen
 

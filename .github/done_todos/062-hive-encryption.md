@@ -9,3 +9,6 @@
 - [x] DONE: Create EncryptedHiveBox wrapper
 - [x] DONE: Encrypt: auth, settings, AI usage history, local tokens
 - [x] DONE: Update HiveInitializer
+
+**Completion Notes:**
+- Removed duplicate encrypted box opening in `lib/main.dart` and centralized startup initialization on `HiveInitializer.initialize()`.
