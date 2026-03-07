@@ -194,6 +194,29 @@ void main() {
       final data = box.get('changes', defaultValue: []);
       expect(data, isEmpty);
       await box.close();
+
+      final requirements = await repository.loadRequirements();
+      expect(requirements.length, 1);
+      expect(requirements.first.id, 'req-1');
+      expect(requirements.first.title, 'Test');
+    });
+
+    test('processPendingSync keeps unsupported changes queued', () async {
+      final unsupportedChange = {
+        'type': 'unsupported_change_type',
+        'data': {'id': 'req-x', 'title': 'Should remain queued'}
+      };
+      await repository.queuePendingChange(unsupportedChange);
+
+      await repository.processPendingSync();
+
+      final box = await Hive.openBox<List>('pending_requirements_changes');
+      final data = box.get('changes', defaultValue: []);
+      expect(data, isNotEmpty);
+      expect((data as List).length, 1);
+      final queued = Map<String, dynamic>.from(data.first as Map);
+      expect(queued['type'], 'unsupported_change_type');
+      await box.close();
     });
 
     test('migration: existing dashboard data still loads after requirements implementation', () async {
