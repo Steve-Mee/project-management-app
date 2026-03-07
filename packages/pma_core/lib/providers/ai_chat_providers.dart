@@ -1,5 +1,6 @@
-/// Barrel file for legacy AI chat providers (compatibility export).
-/// See issue 055-barrel-files-providers.md.
+/// Barrel file for the active AI chat providers.
+///
+/// Legacy providers remain available via `ai_legacy_providers.dart`.
 library;
 
-export 'ai_legacy/ai_chat_providers.dart';
+export 'ai/ai_chat_providers.dart';
