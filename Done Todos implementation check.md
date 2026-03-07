@@ -402,6 +402,10 @@
 
 ## 012 - Deprecate ProjectsNotifier.getProjectById in favor of projectByIdProvider
 
+### Opvolging status
+
+- DONE (afgewerkt op 2026-03-07): deprecatie aangevuld met verwijderdoelversie (`v2.1.0`) en guard-test toegevoegd die nieuw runtime-gebruik van `ProjectsNotifier.getProjectById` in project feature code blokkeert.
+
 ### Wat is correct geimplementeerd
 
 - `ProjectsNotifier.getProjectById` is gemarkeerd met `@Deprecated` en bevat duidelijke migratie-instructie naar `projectByIdProvider` (`packages/pma_core/lib/providers/project/project_providers.dart`).

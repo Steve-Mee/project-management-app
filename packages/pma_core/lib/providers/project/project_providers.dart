@@ -614,7 +614,7 @@ class ProjectsNotifier extends AsyncNotifier<List<ProjectModel>> {
     state = await AsyncValue.guard(_loadInitialPage);
   }
 
-  @Deprecated('Use projectByIdProvider(id) family provider instead. It provides better performance by only loading the specific project when needed and auto-disposing when no longer watched. Migration: replace ref.read(projectsProvider.notifier).getProjectById(id) with ref.watch(projectByIdProvider(id)) or ref.read(projectByIdProvider(id).future)')
+  @Deprecated('Use projectByIdProvider(id) family provider instead. It provides better performance by only loading the specific project when needed and auto-disposing when no longer watched. Migration: replace ref.read(projectsProvider.notifier).getProjectById(id) with ref.watch(projectByIdProvider(id)) or ref.read(projectByIdProvider(id).future). Scheduled removal: v2.1.0.')
   /// Use projectByIdProvider family provider instead for better performance and Riverpod patterns.
   Future<ProjectModel> getProjectById(String id) async {
     final projects = state.maybeWhen(
