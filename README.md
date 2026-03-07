@@ -96,6 +96,33 @@ The app now uses a modular core package (`packages/pma_core`) to separate reusab
 
 For status and acceptance checklist details, see [`docs/modularization.md`](docs/modularization.md).
 
+## Feature Flags (Supabase)
+
+Issue `#071-feature-flags-supabase` adds a Supabase-backed feature flag system with Hive cache fallback.
+
+- Core service: `packages/pma_core/lib/core/services/feature_flag_service.dart`
+- Main Riverpod provider: `packages/pma_core/lib/core/providers/feature_flag_provider.dart`
+- Shared resolver/model: `packages/pma_core/lib/core/feature_flags/feature_flag_resolver.dart`, `packages/pma_core/lib/core/feature_flags/feature_flag.dart`
+- Admin UI + route: `packages/pma_core/lib/core/widgets/feature_flags_admin.dart`, `lib/core/routes.dart` (`/admin/feature-flags`)
+- Legacy compatibility shim: `packages/pma_core/lib/services/ab_testing_service.dart` (deprecated; forwards to feature flags)
+
+Current integrated flags:
+
+- `ai_assistant_enabled`: gates AI chat send/generate actions
+- `ai_advanced_planning`: gates planning/proposals/final plan actions
+- `gantt_chart_enabled`: controls Gantt screen fallback vs chart UI
+- `onboarding_enabled`: controls onboarding wizard display/auto-skip
+
+Operational behavior:
+
+- Cache-first reads with Hive fallback (`feature_flags` box + `last_fetch`)
+- Auto-refresh every 30 minutes and refresh on app resume
+- Fail-open defaults in UI flows while flags are loading/unavailable
+- Supabase RLS-protected writes (JWT `app_metadata.role == 'admin'`)
+- Audit events recorded in `analytics` as `feature_flag_changed`
+
+See [`docs/feature-flags.md`](docs/feature-flags.md) for the implementation checklist and acceptance criteria mapping.
+
 ## Documentation
 
 | File | Description |
@@ -105,6 +132,7 @@ For status and acceptance checklist details, see [`docs/modularization.md`](docs
 | [IMPLEMENTATION_SUMMARY.md](IMPLEMENTATION_SUMMARY.md) | Summary of the implementation details |
 | [INTEGRATION_GUIDE.md](INTEGRATION_GUIDE.md) | Guide for integrating various components |
 | [docs/gantt-chart.md](docs/gantt-chart.md) | Gantt upgrade checklist, architecture notes, and verification |
+| [docs/feature-flags.md](docs/feature-flags.md) | Supabase feature flag checklist, provider/service summary, and acceptance mapping |
 | [docs/modularization.md](docs/modularization.md) | Issue #070 modularization acceptance checklist and deferred routing summary |
 | [NAVIGATION_GUIDE.md](NAVIGATION_GUIDE.md) | Guide for navigating the application |
 | [QUICK_REFERENCE.md](QUICK_REFERENCE.md) | Quick reference for key features |

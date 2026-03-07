@@ -14,6 +14,7 @@ import '../../services/ai/ai_service.dart';
 import '../../models/ai_rate_limits_config.dart';
 import '../../models/ai_request_queue.dart';
 import '../auth_providers.dart';
+import '../../core/providers/feature_flag_provider.dart';
 
 /// State class for AI chat
 /// 
@@ -267,6 +268,12 @@ class AiChatNotifier extends AsyncNotifier<AiChatState> {
   }) async {
     if (userMessage.trim().isEmpty) return;
 
+    // Issue #071: global assistant kill-switch from feature flags.
+    if (!await _isAssistantEnabled()) {
+      _setFeatureDisabledMessage('AI is currently disabled by admin');
+      return;
+    }
+
     // Ensure we have the latest state
     final currentState = state.value ?? const AiChatState();
 
@@ -372,6 +379,16 @@ class AiChatNotifier extends AsyncNotifier<AiChatState> {
 
   /// Generate project plan from idea using modular helpers
   Future<void> generateProjectPlan(String projectIdea) async {
+    if (!await _isAssistantEnabled()) {
+      _setFeatureDisabledMessage('AI is currently disabled by admin');
+      return;
+    }
+    // Issue #071: advanced planning can be toggled independently.
+    if (!await _isAdvancedPlanningEnabled()) {
+      _setFeatureDisabledMessage('Advanced AI planning is currently disabled by admin');
+      return;
+    }
+
     final prompt = 'Genereer stappenplan voor project: $projectIdea';
     await sendMessage(prompt);
   }
@@ -386,6 +403,15 @@ class AiChatNotifier extends AsyncNotifier<AiChatState> {
     Map<String, dynamic> projectData,
     ai_config.HelpLevel helpLevel,
   ) async {
+    if (!await _isAssistantEnabled()) {
+      _setFeatureDisabledMessage('AI is currently disabled by admin');
+      return const [];
+    }
+    if (!await _isAdvancedPlanningEnabled()) {
+      _setFeatureDisabledMessage('Advanced AI planning is currently disabled by admin');
+      return const [];
+    }
+
     final completer = Completer<List<String>>();
     final request = AiRequest(
       id: DateTime.now().millisecondsSinceEpoch.toString(),
@@ -408,6 +434,15 @@ class AiChatNotifier extends AsyncNotifier<AiChatState> {
     ai_config.HelpLevel helpLevel, {
     List<String>? answers,
   }) async {
+    if (!await _isAssistantEnabled()) {
+      _setFeatureDisabledMessage('AI is currently disabled by admin');
+      return const [];
+    }
+    if (!await _isAdvancedPlanningEnabled()) {
+      _setFeatureDisabledMessage('Advanced AI planning is currently disabled by admin');
+      return const [];
+    }
+
     final completer = Completer<List<String>>();
     final request = AiRequest(
       id: DateTime.now().millisecondsSinceEpoch.toString(),
@@ -427,6 +462,15 @@ class AiChatNotifier extends AsyncNotifier<AiChatState> {
 
   /// Generate final project plan using background queue
   Future<ProjectPlan> generateFinalPlan(Map<String, dynamic> projectData) async {
+    if (!await _isAssistantEnabled()) {
+      _setFeatureDisabledMessage('AI is currently disabled by admin');
+      throw StateError('AI is currently disabled by admin');
+    }
+    if (!await _isAdvancedPlanningEnabled()) {
+      _setFeatureDisabledMessage('Advanced AI planning is currently disabled by admin');
+      throw StateError('Advanced AI planning is currently disabled by admin');
+    }
+
     final completer = Completer<ProjectPlan>();
     final request = AiRequest(
       id: DateTime.now().millisecondsSinceEpoch.toString(),
@@ -727,6 +771,37 @@ class AiChatNotifier extends AsyncNotifier<AiChatState> {
     _requestQueue.clear();
     _updateQueueMetrics(); // Update UI with cleared queue
     AppLogger.event('ai_queue_cleared', params: {'wasCleared': true});
+  }
+
+  /// Resolves a boolean feature flag with a safe fail-open default.
+  Future<bool> _isFeatureEnabled(String key, {bool defaultValue = true}) async {
+    try {
+      await ref.read(featureFlagProvider.future);
+      return ref.read(featureFlagProvider.notifier).isEnabled(key);
+    } catch (e, stackTrace) {
+      AppLogger.instance.w(
+        'Feature flag lookup failed for $key, using default',
+        error: e,
+        stackTrace: stackTrace,
+      );
+      return defaultValue;
+    }
+  }
+
+  Future<bool> _isAssistantEnabled() {
+    return _isFeatureEnabled('ai_assistant_enabled', defaultValue: true);
+  }
+
+  Future<bool> _isAdvancedPlanningEnabled() {
+    return _isFeatureEnabled('ai_advanced_planning', defaultValue: true);
+  }
+
+  void _setFeatureDisabledMessage(String message) {
+    final currentState = state.value ?? const AiChatState();
+    state = AsyncValue.data(currentState.copyWith(
+      isLoading: false,
+      error: message,
+    ));
   }
 }
 

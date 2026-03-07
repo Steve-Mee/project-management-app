@@ -1,12 +1,17 @@
 // ignore_for_file: prefer_const_constructors
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
 import 'package:pma_core/auth/permissions.dart';
 import 'package:pma_core/auth/role_models.dart';
 import 'package:pma_core/providers/auth_providers.dart';
 import 'package:pma_core/providers/ai_providers.dart';
 import 'package:pma_core/auth/auth_user.dart';
 import 'package:project_management_app/generated/app_localizations.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+
+import '../../core/routes.dart';
 class AdminScreen extends ConsumerStatefulWidget {
   const AdminScreen({super.key});
   @override
@@ -14,6 +19,13 @@ class AdminScreen extends ConsumerStatefulWidget {
 }
 class _AdminScreenState extends ConsumerState<AdminScreen> {
   String _userFilter = '';
+  late Future<List<Map<String, dynamic>>> _featureFlagAuditFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _featureFlagAuditFuture = _loadFeatureFlagAuditEvents();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -40,6 +52,26 @@ class _AdminScreenState extends ConsumerState<AdminScreen> {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
+          _buildSectionHeader(
+            context,
+            'Feature Flags',
+            onAdd: () {},
+          ),
+          const SizedBox(height: 8),
+          Card(
+            child: ListTile(
+              leading: const Icon(Icons.flag_outlined),
+              title: const Text('Feature Flags (Admin)'),
+              subtitle: const Text(
+                'Toggle feature flags with Supabase RLS-protected writes',
+              ),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => context.push(AppRoutes.featureFlagsAdmin),
+            ),
+          ),
+          const SizedBox(height: 12),
+          _buildFeatureFlagAuditSection(context),
+          const SizedBox(height: 24),
           _buildSectionHeader(
             context,
             l10n.rolesTitle,
@@ -101,6 +133,193 @@ class _AdminScreenState extends ConsumerState<AdminScreen> {
           ),
         );
   }
+
+  Widget _buildFeatureFlagAuditSection(BuildContext context) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    'Feature Flag Audit (last 20)',
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
+                ),
+                IconButton(
+                  tooltip: 'Refresh audit logs',
+                  onPressed: () {
+                    setState(() {
+                      _featureFlagAuditFuture = _loadFeatureFlagAuditEvents();
+                    });
+                  },
+                  icon: const Icon(Icons.refresh),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            FutureBuilder<List<Map<String, dynamic>>>(
+              future: _featureFlagAuditFuture,
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 12),
+                    child: Center(child: CircularProgressIndicator()),
+                  );
+                }
+
+                if (snapshot.hasError) {
+                  return Text(
+                    'Could not load audit logs: ${snapshot.error}',
+                    style: Theme.of(context).textTheme.bodyMedium,
+                  );
+                }
+
+                final rows = snapshot.data ?? const <Map<String, dynamic>>[];
+                if (rows.isEmpty) {
+                  return const Text('No feature flag audit events found.');
+                }
+
+                return Column(
+                  children: rows
+                      .map((row) => _buildFeatureFlagAuditTile(context, row))
+                      .toList(),
+                );
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFeatureFlagAuditTile(
+    BuildContext context,
+    Map<String, dynamic> row,
+  ) {
+    final metadata = row['metadata'] is Map
+        ? Map<String, dynamic>.from(row['metadata'] as Map)
+        : const <String, dynamic>{};
+
+    final flagKey = metadata['flag_key']?.toString() ?? 'unknown_flag';
+    final previousEnabled = metadata['previous_enabled'];
+    final nextEnabled = metadata['next_enabled'];
+    final previousValue = metadata['previous_value'];
+    final nextValue = metadata['next_value'];
+    final userId = row['user_id']?.toString() ?? 'unknown_user';
+    final timestamp = _formatAuditTimestamp(row['timestamp']);
+
+    return ListTile(
+      dense: true,
+      contentPadding: EdgeInsets.zero,
+      leading: const Icon(Icons.history),
+      title: Text(
+        '$flagKey: ${_boolToLabel(previousEnabled)} -> ${_boolToLabel(nextEnabled)}',
+      ),
+      subtitle: Text('$timestamp | user: $userId'),
+      onTap: () => _showFeatureFlagAuditDetails(
+        context,
+        flagKey: flagKey,
+        userId: userId,
+        timestamp: timestamp,
+        previousEnabled: previousEnabled,
+        nextEnabled: nextEnabled,
+        previousValue: previousValue,
+        nextValue: nextValue,
+      ),
+    );
+  }
+
+  Future<void> _showFeatureFlagAuditDetails(
+    BuildContext context, {
+    required String flagKey,
+    required String userId,
+    required String timestamp,
+    required Object? previousEnabled,
+    required Object? nextEnabled,
+    required Object? previousValue,
+    required Object? nextValue,
+  }) {
+    return showDialog<void>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: const Text('Feature Flag Change Details'),
+          content: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text('Flag: $flagKey'),
+                Text('User: $userId'),
+                Text('Time: $timestamp'),
+                const SizedBox(height: 12),
+                Text('Previous enabled: ${_boolToLabel(previousEnabled)}'),
+                Text('Next enabled: ${_boolToLabel(nextEnabled)}'),
+                const SizedBox(height: 12),
+                Text('Previous value: ${_valueToPreview(previousValue)}'),
+                const SizedBox(height: 8),
+                Text('Next value: ${_valueToPreview(nextValue)}'),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: const Text('Close'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Future<List<Map<String, dynamic>>> _loadFeatureFlagAuditEvents() async {
+    final client = Supabase.instance.client;
+    final response = await client
+        .from('analytics')
+        .select('event, user_id, timestamp, metadata')
+        .eq('event', 'feature_flag_changed')
+        .order('timestamp', ascending: false)
+        .limit(20);
+
+    final rows = response as List;
+    return rows
+        .whereType<Map>()
+        .map((row) => Map<String, dynamic>.from(row))
+        .toList(growable: false);
+  }
+
+  String _formatAuditTimestamp(Object? raw) {
+    if (raw == null) {
+      return 'unknown time';
+    }
+
+    final parsed = DateTime.tryParse(raw.toString());
+    if (parsed == null) {
+      return raw.toString();
+    }
+
+    return DateFormat('yyyy-MM-dd HH:mm').format(parsed.toLocal());
+  }
+
+  String _boolToLabel(Object? value) {
+    if (value is bool) {
+      return value ? 'enabled' : 'disabled';
+    }
+    return 'unknown';
+  }
+
+  String _valueToPreview(Object? value) {
+    if (value == null) {
+      return 'null';
+    }
+    return value.toString();
+  }
+
   Widget _buildSectionHeader(
     BuildContext context,
     String title, {

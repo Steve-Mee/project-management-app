@@ -69,6 +69,17 @@ CREATE TABLE IF NOT EXISTS ab_configs (
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
+-- Feature flags table (issue #071)
+CREATE TABLE IF NOT EXISTS feature_flags (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  key TEXT NOT NULL UNIQUE,
+  enabled BOOLEAN NOT NULL DEFAULT false,
+  value JSONB,
+  description TEXT,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
 -- User saved filter views table
 CREATE TABLE IF NOT EXISTS user_views (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
@@ -104,3 +115,6 @@ CREATE INDEX IF NOT EXISTS idx_analytics_timestamp ON analytics(timestamp);
 CREATE INDEX IF NOT EXISTS idx_user_views_user_id ON user_views(user_id);
 CREATE INDEX IF NOT EXISTS idx_user_views_view_name ON user_views(view_name);
 CREATE INDEX IF NOT EXISTS idx_ai_usage_user_id ON ai_usage(user_id);
+CREATE INDEX IF NOT EXISTS idx_feature_flags_key ON feature_flags(key);
+CREATE INDEX IF NOT EXISTS idx_feature_flags_enabled ON feature_flags(enabled);
+CREATE INDEX IF NOT EXISTS idx_feature_flags_updated_at ON feature_flags(updated_at DESC);

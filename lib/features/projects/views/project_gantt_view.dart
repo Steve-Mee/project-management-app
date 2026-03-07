@@ -3,8 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:intl/intl.dart';
 import 'package:go_router/go_router.dart';
+import 'package:pma_core/core/feature_flags/feature_flag_resolver.dart';
 import 'package:pma_core/models/project_model.dart';
 import 'package:pma_core/models/task_model.dart';
+import 'package:pma_core/core/providers.dart';
 import 'package:pma_core/providers/project_providers.dart';
 import 'package:pma_core/providers/task_providers.dart';
 import 'package:pma_core/widgets/modern_gantt_chart.dart';
@@ -26,6 +28,42 @@ class _ProjectGanttViewState extends ConsumerState<ProjectGanttView> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
+    final featureFlags = ref.watch(featureFlagProvider);
+
+    // Issue #071: fail-open while flags are still loading or unavailable.
+    final isGanttEnabled = featureFlags.maybeWhen(
+      data: (flags) =>
+          FeatureFlagResolver.isEnabled(flags, 'gantt_chart_enabled', defaultValue: true),
+      orElse: () => true,
+    );
+
+    if (!isGanttEnabled) {
+      return Scaffold(
+        appBar: AppBar(title: Text(l10n.ganttViewTitle)),
+        body: Center(
+          child: Padding(
+            padding: EdgeInsets.all(24.w),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  Icons.timeline,
+                  size: 56,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
+                SizedBox(height: 12.h),
+                Text(
+                  l10n.featureFlagGanttDisabledMessage,
+                  style: Theme.of(context).textTheme.titleMedium,
+                  textAlign: TextAlign.center,
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
     final projectsAsync = ref.watch(projectsProvider);
 
     return Scaffold(

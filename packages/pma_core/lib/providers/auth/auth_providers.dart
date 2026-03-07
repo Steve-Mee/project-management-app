@@ -11,7 +11,6 @@ import 'package:pma_core/repository/i_auth_repository.dart';
 import 'package:pma_core/auth/auth_user.dart';
 import 'package:pma_core/repository/impl/hive_settings_repository.dart';
 import 'package:pma_core/services/cloud_sync_service.dart';
-import 'package:pma_core/services/ab_testing_service.dart';
 import 'package:pma_core/services/app_logger.dart';
 import 'package:pma_core/services/login_rate_limiter.dart';
 import 'package:pma_core/services/recaptcha_service.dart';
@@ -151,7 +150,6 @@ class UsersFilter {
 /// Fully integrated with backend repository per .github/issues/050-auth-backend-integration.md
 class AuthNotifier extends AsyncNotifier<AuthState> {
   final CloudSyncService _cloudSync = CloudSyncService();
-  final ABTestingService _abTesting = ABTestingService.instance;
   final LocalAuthentication _localAuth = LocalAuthentication();
   final FlutterSecureStorage _secureStorage = const FlutterSecureStorage();
   late Box<List<DateTime>> attemptsBox;
@@ -292,9 +290,6 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
         final role = localUser != null ? repo.getRoleById(localUser.roleId) : null;
 
         state = AsyncValue.data(await _createAuthenticatedState(user));
-
-        await _abTesting.initialize();
-        await _abTesting.assignGroupForUser(userEmail);
 
         AppLogger.event('auth_sign_in', params: {'id': user.id});
 

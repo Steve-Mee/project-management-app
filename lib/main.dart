@@ -28,8 +28,8 @@ import 'core/routes.dart';
 import 'package:pma_core/widgets/offline_indicator.dart';
 import 'package:pma_core/repository/hive_initializer.dart';
 import 'package:pma_core/repository/encrypted_hive_box.dart';
+import 'package:pma_core/core/services/feature_flag_service.dart';
 import 'package:pma_core/services/app_logger.dart';
-import 'package:pma_core/services/ab_testing_service.dart';
 import 'package:pma_core/services/login_rate_limiter.dart';
 import 'package:pma_core/services/recaptcha_config.dart';
 import 'package:pma_core/services/project_invitation_service.dart';
@@ -148,9 +148,9 @@ void main() async {
   await Hive.openBox('roles');
   await HiveInitializer.initialize();
   await LoginRateLimiter.instance.initialize();
-  final abTesting = ABTestingService.instance;
-  await abTesting.initialize();
-  await abTesting.fetchRemoteConfigs();
+  final featureFlags = FeatureFlagService(supabaseClient: Supabase.instance.client);
+  await featureFlags.initialize();
+  await featureFlags.refresh();
   final container = ProviderContainer();
   
   // Initialize reCAPTCHA config with settings repository

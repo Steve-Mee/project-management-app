@@ -8,10 +8,27 @@ ALTER TABLE invitations ENABLE ROW LEVEL SECURITY;
 ALTER TABLE analytics ENABLE ROW LEVEL SECURITY;
 ALTER TABLE user_views ENABLE ROW LEVEL SECURITY;
 ALTER TABLE ai_usage ENABLE ROW LEVEL SECURITY;
+ALTER TABLE feature_flags ENABLE ROW LEVEL SECURITY;
 
 -- A/B testing configs policies - allow authenticated users to read configs
 CREATE POLICY "ab_configs_select_policy" ON ab_configs
 FOR SELECT USING (auth.role() = 'authenticated');
+
+-- Feature flags policies - allow authenticated users to read flags
+CREATE POLICY "feature_flags_select_policy" ON feature_flags
+FOR SELECT USING (auth.role() = 'authenticated');
+
+-- Admin write policies for feature flags.
+-- Requires JWT app metadata claim: {"role": "admin"}
+CREATE POLICY "feature_flags_insert_policy" ON feature_flags
+FOR INSERT WITH CHECK ((auth.jwt() -> 'app_metadata' ->> 'role') = 'admin');
+
+CREATE POLICY "feature_flags_update_policy" ON feature_flags
+FOR UPDATE USING ((auth.jwt() -> 'app_metadata' ->> 'role') = 'admin')
+WITH CHECK ((auth.jwt() -> 'app_metadata' ->> 'role') = 'admin');
+
+CREATE POLICY "feature_flags_delete_policy" ON feature_flags
+FOR DELETE USING ((auth.jwt() -> 'app_metadata' ->> 'role') = 'admin');
 
 -- Analytics policies - allow authenticated users to insert their own events
 CREATE POLICY "analytics_insert_policy" ON analytics

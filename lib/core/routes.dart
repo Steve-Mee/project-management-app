@@ -17,6 +17,7 @@ import '../features/settings/settings_screen.dart' deferred as settings_feature;
 import '../features/admin/admin_screen.dart' deferred as admin_feature;
 import '../features/ai_usage/ai_usage_screen.dart' deferred as ai_usage_feature;
 import 'package:pma_core/widgets/offline_indicator.dart';
+import 'package:pma_core/core/widgets.dart';
 import 'package:pma_core/providers/auth_providers.dart';
 import 'package:pma_core/providers/theme_providers.dart';
 import 'auth/permissions.dart';
@@ -67,6 +68,7 @@ class AppRoutes {
   static const String projectDetail = '/projects/:id';
   static const String projectMembers = '/projects/:id/members';
   static const String admin = '/admin';
+  static const String featureFlagsAdmin = '/admin/feature-flags';
 
   // Private constructor to prevent instantiation
   AppRoutes._();
@@ -169,6 +171,35 @@ class AppRoutes {
                 loadLibrary: admin_feature.loadLibrary,
                 builder: () => admin_feature.AdminScreen(),
               ),
+              routes: [
+                GoRoute(
+                  path: 'feature-flags',
+                  name: 'feature-flags-admin',
+                  builder: (context, state) {
+                    final permissions =
+                        ProviderScope.containerOf(context).read(permissionsProvider);
+                    final canManageFlags =
+                        permissions.contains(AppPermissions.manageRoles) ||
+                            permissions.contains(AppPermissions.manageUsers);
+
+                    if (!canManageFlags) {
+                      return const Scaffold(
+                        body: Center(
+                          child: Padding(
+                            padding: EdgeInsets.all(16),
+                            child: Text(
+                              'Access denied: admin permissions required.',
+                              textAlign: TextAlign.center,
+                            ),
+                          ),
+                        ),
+                      );
+                    }
+
+                    return const FeatureFlagsAdminWidget();
+                  },
+                ),
+              ],
             ),
           ],
         ),

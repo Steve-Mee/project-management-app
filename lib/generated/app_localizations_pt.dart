@@ -1431,4 +1431,23 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get session_refresh_failed => 'Session refresh failed';
+
+  @override
+  String get featureFlagGanttDisabledMessage =>
+      'Gantt chart is currently disabled by admin';
+
+  @override
+  String get featureFlagOnboardingDisabledMessage =>
+      'Onboarding is currently disabled by admin';
+
+  @override
+  String get featureFlagOpeningDashboardMessage => 'Opening your dashboard...';
+
+  @override
+  String get featureFlagAiAssistantDisabledMessage =>
+      'AI is currently disabled by admin';
+
+  @override
+  String get featureFlagAiAdvancedPlanningDisabledMessage =>
+      'Advanced AI planning is currently disabled by admin';
 }

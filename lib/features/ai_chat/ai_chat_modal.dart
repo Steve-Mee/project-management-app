@@ -530,6 +530,7 @@ class _AiChatModalState extends ConsumerState<AiChatModal> {
   Future<void> _showErrorDialog(String error) async {
     final l10n = AppLocalizations.of(context)!;
     _isErrorDialogVisible = true;
+    final localizedError = _localizeAiError(error, l10n);
 
     final retryMessage = _lastUserMessage();
     await showDialog<void>(
@@ -538,7 +539,7 @@ class _AiChatModalState extends ConsumerState<AiChatModal> {
       builder: (context) {
         return AlertDialog(
           title: Text(l10n.aiResponseFailedTitle),
-          content: Text(error),
+          content: Text(localizedError),
           actions: [
             TextButton(
               onPressed: () {
@@ -562,6 +563,16 @@ class _AiChatModalState extends ConsumerState<AiChatModal> {
     );
 
     _isErrorDialogVisible = false;
+  }
+
+  String _localizeAiError(String error, AppLocalizations l10n) {
+    if (error == 'AI is currently disabled by admin') {
+      return l10n.featureFlagAiAssistantDisabledMessage;
+    }
+    if (error == 'Advanced AI planning is currently disabled by admin') {
+      return l10n.featureFlagAiAdvancedPlanningDisabledMessage;
+    }
+    return error;
   }
 
   String? _lastUserMessage() {

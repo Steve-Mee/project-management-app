@@ -140,6 +140,17 @@ CREATE TABLE IF NOT EXISTS ab_configs (
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
+-- Feature flags table (issue #071)
+CREATE TABLE IF NOT EXISTS feature_flags (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  key TEXT NOT NULL UNIQUE,
+  enabled BOOLEAN NOT NULL DEFAULT false,
+  value JSONB,
+  description TEXT,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
 -- User saved filter views table
 CREATE TABLE IF NOT EXISTS user_views (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
@@ -198,6 +209,7 @@ ALTER TABLE invitations ENABLE ROW LEVEL SECURITY;
 ALTER TABLE analytics ENABLE ROW LEVEL SECURITY;
 ALTER TABLE user_views ENABLE ROW LEVEL SECURITY;
 ALTER TABLE ai_usage ENABLE ROW LEVEL SECURITY;
+ALTER TABLE feature_flags ENABLE ROW LEVEL SECURITY;
 ```
 
 ### `ab_configs`
@@ -209,6 +221,36 @@ Policy summary:
 CREATE POLICY "ab_configs_select_policy" ON ab_configs
 FOR SELECT USING (auth.role() = 'authenticated');
 ```
+
+### `feature_flags`
+
+Policy summary:
+- `feature_flags_select_policy`: allows authenticated users to read feature flag values.
+- `feature_flags_insert_policy`: only users with JWT app metadata role `admin` can insert flags.
+- `feature_flags_update_policy`: only users with JWT app metadata role `admin` can update flags.
+- `feature_flags_delete_policy`: only users with JWT app metadata role `admin` can delete flags.
+
+```sql
+CREATE POLICY "feature_flags_select_policy" ON feature_flags
+FOR SELECT USING (auth.role() = 'authenticated');
+
+CREATE POLICY "feature_flags_insert_policy" ON feature_flags
+FOR INSERT WITH CHECK ((auth.jwt() -> 'app_metadata' ->> 'role') = 'admin');
+
+CREATE POLICY "feature_flags_update_policy" ON feature_flags
+FOR UPDATE USING ((auth.jwt() -> 'app_metadata' ->> 'role') = 'admin')
+WITH CHECK ((auth.jwt() -> 'app_metadata' ->> 'role') = 'admin');
+
+CREATE POLICY "feature_flags_delete_policy" ON feature_flags
+FOR DELETE USING ((auth.jwt() -> 'app_metadata' ->> 'role') = 'admin');
+```
+
+Note:
+- If your auth setup does not expose `app_metadata.role`, write operations will be denied (safe default).
+- The UI will report save failures and keep local state consistent.
+- For real writes, the auth token `app_metadata` must include the `admin` role claim.
+- Without that claim, the admin UI shows a clean error and intentionally does not mutate data.
+- On successful writes, the app records `feature_flag_changed` audit events in `analytics` for the authenticated user.
 
 ### `analytics`
 

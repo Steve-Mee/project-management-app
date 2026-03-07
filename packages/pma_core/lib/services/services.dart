@@ -1,5 +1,7 @@
 library;
 
+// Legacy compatibility export.
+// Do not use for new code; prefer FeatureFlagService/featureFlagProvider.
 export 'ab_testing_service.dart';
 export 'ai_parsers.dart';
 export 'ai_planning_helpers.dart';

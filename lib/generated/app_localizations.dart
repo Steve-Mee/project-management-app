@@ -2750,6 +2750,36 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Session refresh failed'**
   String get session_refresh_failed;
+
+  /// Fallback message shown when the gantt chart feature flag is disabled.
+  ///
+  /// In en, this message translates to:
+  /// **'Gantt chart is currently disabled by admin'**
+  String get featureFlagGanttDisabledMessage;
+
+  /// Fallback message shown when onboarding feature flag is disabled.
+  ///
+  /// In en, this message translates to:
+  /// **'Onboarding is currently disabled by admin'**
+  String get featureFlagOnboardingDisabledMessage;
+
+  /// Message shown while onboarding is skipped and app navigates to dashboard.
+  ///
+  /// In en, this message translates to:
+  /// **'Opening your dashboard...'**
+  String get featureFlagOpeningDashboardMessage;
+
+  /// Error message shown when AI assistant feature flag is disabled.
+  ///
+  /// In en, this message translates to:
+  /// **'AI is currently disabled by admin'**
+  String get featureFlagAiAssistantDisabledMessage;
+
+  /// Error message shown when advanced AI planning feature flag is disabled.
+  ///
+  /// In en, this message translates to:
+  /// **'Advanced AI planning is currently disabled by admin'**
+  String get featureFlagAiAdvancedPlanningDisabledMessage;
 }
 
 class _AppLocalizationsDelegate

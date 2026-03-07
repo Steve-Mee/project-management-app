@@ -1,6 +1,11 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:pma_core/core/feature_flags/feature_flag_resolver.dart';
+import 'package:pma_core/core/providers.dart';
+import 'package:project_management_app/generated/app_localizations.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../routes.dart';
@@ -38,6 +43,7 @@ class _OnboardingWizardState extends ConsumerState<OnboardingWizard> {
   int _currentStep = 0;
   bool _isSubmitting = false;
   bool _hasCreatedFirstProject = false;
+  bool _autoSkippedByFeatureFlag = false;
 
   @override
   void dispose() {
@@ -125,6 +131,57 @@ class _OnboardingWizardState extends ConsumerState<OnboardingWizard> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final featureFlags = ref.watch(featureFlagProvider);
+    // Issue #071: fail-open while flags are loading or unavailable.
+    final onboardingEnabled = featureFlags.maybeWhen(
+      data: (flags) =>
+          FeatureFlagResolver.isEnabled(flags, 'onboarding_enabled', defaultValue: true),
+      orElse: () => true,
+    );
+
+    if (!onboardingEnabled) {
+      // Graceful degradation: automatically skip onboarding if remote flag is off.
+      if (!_autoSkippedByFeatureFlag) {
+        _autoSkippedByFeatureFlag = true;
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          unawaited(_completeAndSkipWhenDisabled());
+        });
+      }
+
+      return Scaffold(
+        body: SafeArea(
+          child: Center(
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.rocket_launch_outlined,
+                    size: 52,
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    l10n.featureFlagOnboardingDisabledMessage,
+                    style: Theme.of(context).textTheme.titleMedium,
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    l10n.featureFlagOpeningDashboardMessage,
+                    style: Theme.of(context).textTheme.bodyMedium,
+                    textAlign: TextAlign.center,
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
     final progressValue = (_currentStep + 1) / _totalSteps;
     final isLastStep = _currentStep == _totalSteps - 1;
     final continueEnabled = _isSubmitting ? false : _canContinueCurrentStep;
@@ -238,6 +295,23 @@ class _OnboardingWizardState extends ConsumerState<OnboardingWizard> {
         ),
       ),
     );
+  }
+
+  Future<void> _completeAndSkipWhenDisabled() async {
+    try {
+      await ref.read(onboardingProvider.notifier).markOnboardingCompleted();
+    } catch (_) {
+      // Best-effort persistence: do not block navigation when storage fails.
+    }
+
+    if (!mounted) {
+      return;
+    }
+
+    widget.onCompleted?.call();
+    if (widget.onCompleted == null) {
+      _navigateToMainApp();
+    }
   }
 }
 
@@ -380,7 +454,7 @@ class _QuickAiDemoDialogState extends ConsumerState<_QuickAiDemoDialog> {
                 const SizedBox(height: 12),
                 if (chatState.error != null)
                   Text(
-                    chatState.error!,
+                    _localizeAiError(chatState.error!, AppLocalizations.of(context)!),
                     style: TextStyle(color: Theme.of(context).colorScheme.error),
                   ),
                 const SizedBox(height: 8),
@@ -424,6 +498,16 @@ class _QuickAiDemoDialogState extends ConsumerState<_QuickAiDemoDialog> {
       ],
     );
   }
+}
+
+String _localizeAiError(String error, AppLocalizations l10n) {
+  if (error == 'AI is currently disabled by admin') {
+    return l10n.featureFlagAiAssistantDisabledMessage;
+  }
+  if (error == 'Advanced AI planning is currently disabled by admin') {
+    return l10n.featureFlagAiAdvancedPlanningDisabledMessage;
+  }
+  return error;
 }
 
 /// Step 4: simple invite form that reuses [ProjectInvitationService].
