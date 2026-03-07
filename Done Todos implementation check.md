@@ -2107,7 +2107,7 @@
 
 ### Wat ik nog zou toevoegen
 
-- Link vanuit hoofd-README dicht bij backend setup-sectie voor snellere discoverability.
+- DONE: directe README-link toegevoegd naar `docs/supabase-setup.md` plus expliciete docs-tabelvermelding.
 
 ### Wat ik nog zou verwijderen
 

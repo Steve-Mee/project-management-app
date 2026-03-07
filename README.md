@@ -22,6 +22,8 @@ Flutter-based Project Management App for tracking projects, tasks, and sub-tasks
 
 Release pipeline documentation for issue `#075-release-pipeline-preparation` is available in [`docs/release-pipeline.md`](docs/release-pipeline.md).
 
+Supabase backend setup, schema, RLS policies, storage bucket guidance, and Edge Function deployment notes are documented in [`docs/supabase-setup.md`](docs/supabase-setup.md).
+
 Quick flow:
 
 1. Conventional Commit merged to `main`.
@@ -195,6 +197,7 @@ For acceptance checklist, verification flow, and install steps, see [`docs/pwa-s
 | [INTEGRATION_GUIDE.md](INTEGRATION_GUIDE.md) | Guide for integrating various components |
 | [docs/gantt-chart.md](docs/gantt-chart.md) | Gantt upgrade checklist, architecture notes, and verification |
 | [docs/feature-flags.md](docs/feature-flags.md) | Supabase feature flag checklist, provider/service summary, and acceptance mapping |
+| [docs/supabase-setup.md](docs/supabase-setup.md) | Supabase setup instructions, SQL schema, RLS/storage policies, Edge Functions, and policy authoring guide |
 | [docs/analytics.md](docs/analytics.md) | Issue #073 analytics checklist, event mapping, service usage, and `analytics_events` schema suggestion |
 | [docs/error-boundary.md](docs/error-boundary.md) | Global error boundary acceptance checklist, test procedure, and AppLogger/Sentry integration notes |
 | [docs/pwa-support.md](docs/pwa-support.md) | Issue #074 PWA checklist, offline test steps, and Chrome install instructions |
