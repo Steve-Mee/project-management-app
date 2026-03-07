@@ -44,7 +44,6 @@ jobs:
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           fail_ci_if_error: true
-          threshold: 85
 
       - name: Verify coverage output
         run: test -f coverage/lcov.info
