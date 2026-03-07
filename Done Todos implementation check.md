@@ -140,6 +140,10 @@
 
 ## 005 - Voeg filter-/sort-parameters toe aan providers (family)
 
+### Opvolging status
+
+- DONE (afgewerkt op 2026-03-07): expliciet type-bridge patroon toegevoegd tussen provider- en repositoryfilter, met consistente toepassing en testdekking.
+
 ### Wat is correct geimplementeerd
 
 - Providerlaag bevat uitgebreid filtertype met extra velden (o.a. owner/tags/sort/view): `ProjectFilter` in `packages/pma_core/lib/providers/project/project_providers.dart`.

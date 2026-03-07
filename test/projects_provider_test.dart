@@ -486,6 +486,7 @@ void main() {
     );
 
     final page2 = await container.read(
+      // ignore: deprecated_member_use
       paginatedProjectsProvider(
         const ProjectPaginationParams(page: 2, limit: 2),
       ).future,
@@ -495,5 +496,32 @@ void main() {
     expect(page2.length, 1);
     expect(page1.first.name, 'Alpha');
     expect(page2.first.name, 'Gamma');
+  });
+
+  test('ProjectFilter bridge maps repository-supported fields only', () {
+    final uiFilter = ProjectFilter(
+      status: 'In Progress',
+      ownerId: 'owner-1',
+      searchQuery: 'alpha',
+      priority: 'High',
+      startDate: DateTime(2026, 1, 1),
+      endDate: DateTime(2026, 1, 31),
+      dueDateStart: DateTime(2026, 2, 1),
+      dueDateEnd: DateTime(2026, 2, 28),
+      tags: const <String>['mobile'],
+      requiredTags: const <String>['urgent'],
+      sortBy: 'status',
+      sortAscending: false,
+      viewMode: 'board',
+    );
+
+    final repoFilter = uiFilter.toRepositoryFilter();
+
+    expect(repoFilter.status, 'In Progress');
+    expect(repoFilter.searchQuery, 'alpha');
+    expect(repoFilter.priority, 'High');
+    expect(repoFilter.startDate, DateTime(2026, 1, 1));
+    expect(repoFilter.endDate, DateTime(2026, 1, 31));
+    expect(repoFilter.tags, const <String>['mobile']);
   });
 }

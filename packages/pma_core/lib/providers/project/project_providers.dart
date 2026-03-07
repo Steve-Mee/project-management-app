@@ -182,14 +182,7 @@ final filteredProjectsPaginatedProvider = FutureProvider.autoDispose.family<List
 
   // First get all filtered projects
   final allFiltered = await repository.getFilteredProjects(
-    models.ProjectFilter(
-      status: params.filter.status,
-      searchQuery: params.filter.searchQuery,
-      startDate: params.filter.startDate,
-      endDate: params.filter.endDate,
-      priority: params.filter.priority,
-      tags: params.filter.tags,
-    ),
+    params.filter.toRepositoryFilter(),
     extraConditions: params.filter.extraConditions ?? [],
   );
 
@@ -296,6 +289,24 @@ abstract class ProjectFilter with _$ProjectFilter {
       isSaved: json['isSaved'] as bool? ?? false,
       viewMode: json['viewMode'] as String? ?? 'list',
       addToDashboard: json['addToDashboard'] as bool? ?? false,
+    );
+  }
+}
+
+/// Explicit bridge between provider-level filter shape and repository filter shape.
+///
+/// Repository-supported fields are mapped directly.
+/// Provider-only fields (ownerId, requiredTags, viewMode, sort metadata) remain
+/// in provider scope and are intentionally not forwarded.
+extension ProjectFilterRepositoryBridge on ProjectFilter {
+  models.ProjectFilter toRepositoryFilter() {
+    return models.ProjectFilter(
+      status: status,
+      searchQuery: searchQuery,
+      priority: priority,
+      startDate: startDate,
+      endDate: endDate,
+      tags: tags,
     );
   }
 }
@@ -680,7 +691,10 @@ List<ProjectModel> _sortProjects(List<ProjectModel> projects, String sortBy, boo
         break;
       // 'createdAt' is not on model yet; fallback to name
       default:
-        cmp = 0;
+        cmp = a.name.compareTo(b.name);
+        if (cmp == 0) {
+          cmp = a.id.compareTo(b.id);
+        }
     }
     return ascending ? cmp : -cmp;
   });
@@ -692,11 +706,8 @@ final projectsCombinedProvider = FutureProvider.autoDispose.family<List<ProjectM
   (ref, params) async {
     final repository = ref.watch(projectRepositoryProvider);
 
-    // build a repo filter from provider params
-    final repoFilter = models.ProjectFilter(
-      status: params.filter.status,
-      searchQuery: params.filter.searchQuery,
-    );
+    // build a repo filter from provider params via the canonical bridge
+    final repoFilter = params.filter.toRepositoryFilter();
 
     var filtered = await repository.getFilteredProjects(repoFilter);
     // provider-level ownerId filter; repo doesn't handle shared-users
