@@ -10,3 +10,7 @@
 - [x] DONE: Update Hive adapters (or migrate to freezed + Hive generator)
 - [x] DONE: Update all repositories, providers and tests
 - [x] DONE: Remove old model files after validation
+
+**Verification Notes:**
+- Added canonical ownership policy in `docs/model-location-policy.md`.
+- Policy sets `packages/pma_core/lib/models/**` as source of truth and defines staged de-duplication rules for `lib/models/**`.

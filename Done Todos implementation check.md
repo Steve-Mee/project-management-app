@@ -1831,7 +1831,7 @@
 
 ### Wat ik nog zou toevoegen
 
-- Expliciete canonical model-locatie-afspraak (welke set leidend is) om dubbele modeldefinities verder te reduceren.
+- Canonical model-locatie is nu expliciet vastgelegd in `docs/model-location-policy.md` (`pma_core` als source of truth), inclusief gefaseerd de-duplicatiepad.
 
 ### Wat ik nog zou verwijderen
 
