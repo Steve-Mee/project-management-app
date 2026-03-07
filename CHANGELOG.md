@@ -1,3 +1,10 @@
+# [1.3.0](https://github.com/Steve-Mee/project-management-app/compare/v1.2.3...v1.3.0) (2026-03-07)
+
+
+### Features
+
+* **web:** finalize PWA support and CI validation ([#074](https://github.com/Steve-Mee/project-management-app/issues/074)) ([0cff439](https://github.com/Steve-Mee/project-management-app/commit/0cff439d4eb8781201f7579f388a71153b56c8ea))
+
 ## [1.2.3](https://github.com/Steve-Mee/project-management-app/compare/v1.2.2...v1.2.3) (2026-03-07)
 
 
