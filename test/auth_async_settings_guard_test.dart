@@ -19,4 +19,12 @@ void main() {
 
     expect(content.contains('await ref.read(recaptchaServiceProvider.future)'), isTrue);
   });
+
+  test('auth settings access uses read(future) and avoids watch(future) in imperative paths', () async {
+    final file = File('packages/pma_core/lib/providers/auth/auth_providers.dart');
+    final content = await file.readAsString();
+
+    expect(content.contains('await ref.read(settingsRepositoryProvider.future)'), isTrue);
+    expect(content.contains('ref.watch(settingsRepositoryProvider.future)'), isFalse);
+  });
 }

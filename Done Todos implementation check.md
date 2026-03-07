@@ -611,6 +611,10 @@
 
 ## 018 - Gebruik settingsRepositoryProvider.future waar nodig
 
+### Opvolging status
+
+- DONE (afgewerkt op 2026-03-07): auth/settings access-pattern gestandaardiseerd op `await ref.read(settingsRepositoryProvider.future)` in imperatieve paden, met engineering note voor `read` vs `watch` en guard-test tegen regressie naar `watch(...future)`.
+
 ### Wat is correct geimplementeerd
 
 - Veel codepaden in auth providers volgen het afgesproken patroon met `settingsRepositoryProvider.future` en inline verwijzing naar TODO 018.
