@@ -1925,13 +1925,11 @@
 ### Wat ik nog zou wijzigen
 
 - Acceptance vroeg pad `lib/core/services/ai/ai_service.dart`; door modularisatie zit dit nu in `packages/pma_core/...` (functioneel ok, maar todo-pad verouderd).
-- "Feature flag" switching is slechts gedeeltelijk ingevuld:
-  - provider schakelt op `AiSettings.enableOpenAILangchain` (settings-toggle),
-  - `OpenAiLangchainService.fromFeatureFlag(...)` bestaat, maar wordt niet in de actieve providerselectie gebruikt.
+- DONE: feature-flag backendselectie is nu expliciet gekoppeld in `aiServiceProvider` via `ai_backend` (`grok`/`openai_langchain`/`gemini`/`claude`) met veilige fallback op settings-toggle.
 
 ### Wat ik nog zou toevoegen
 
-- Eenduidige backend-resolutie via feature-flag service (bijv. `ai_backend = grok/gemini/claude/openai_langchain`) i.p.v. enkel boolean settings-toggle.
+- DONE: eenduidige backend-resolutie toegevoegd via feature flag `ai_backend`.
 
 ### Wat ik nog zou verwijderen
 

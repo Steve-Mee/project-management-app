@@ -33,6 +33,7 @@ Migration note:
 - Service caches fetched rows in Hive box `feature_flags` with a `last_fetch` timestamp.
 - Provider uses cache-first startup and refreshes stale cache in the background.
 - AI, Gantt, and onboarding use graceful degradation when flags are disabled or still loading.
+- AI service backend can optionally be selected with `ai_backend` (`grok`, `openai_langchain`, `gemini`, `claude`) with fallback to existing settings toggle when absent/invalid.
 - For write operations, Supabase RLS requires JWT `app_metadata.role == 'admin'`.
 - Without that claim, the admin UI shows an error and no data mutation occurs (intentional safe behavior).
 - Successful flag writes also create an audit event in `analytics_events` (`event = feature_flag_changed`).

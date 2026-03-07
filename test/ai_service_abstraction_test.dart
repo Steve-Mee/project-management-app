@@ -149,5 +149,42 @@ void main() {
 
       expect(service, isA<GrokAiService>());
     });
+
+    test('uses ai_backend feature flag when provided', () {
+      final container = ProviderContainer(
+        overrides: [
+          settingsProvider.overrideWithValue(
+            const AiSettings(
+              enableOpenAILangchain: false,
+              aiBackend: 'claude',
+            ),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      final service = container.read(aiServiceProvider);
+
+      expect(service, isA<OpenAiLangchainService>());
+      expect((service as OpenAiLangchainService).backend, AiProviderBackend.claude);
+    });
+
+    test('ignores unsupported ai_backend and falls back to settings toggle', () {
+      final container = ProviderContainer(
+        overrides: [
+          settingsProvider.overrideWithValue(
+            const AiSettings(
+              enableOpenAILangchain: false,
+              aiBackend: 'unsupported_backend',
+            ),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      final service = container.read(aiServiceProvider);
+
+      expect(service, isA<GrokAiService>());
+    });
   });
 }
