@@ -1,3 +1,9 @@
+## [1.4.0](https://github.com/Steve-Mee/project-management-app/compare/v1.3.0...v1.4.0) (2026-03-07)
+
+### Features
+
+* **todo-002:** harden project pagination contract ([314064a](https://github.com/Steve-Mee/project-management-app/commit/314064aae2992ef6a2f4c7d932520e88d098717b))
+
 # [1.3.0](https://github.com/Steve-Mee/project-management-app/compare/v1.2.3...v1.3.0) (2026-03-07)
 
 
