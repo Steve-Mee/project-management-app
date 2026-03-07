@@ -162,10 +162,68 @@ bool _matchesFuzzySearch(ProjectModel project, String query) {
     // Check for partial matches (e.g., "proj" matches "project")
     for (final word in queryWords) {
       if (field.contains(word)) return true;
+
+      // Allow small typos for single tokens (e.g. "fluter" -> "flutter").
+      final fieldTokens = field.split(RegExp(r'[^a-z0-9]+')).where((token) => token.isNotEmpty);
+      for (final token in fieldTokens) {
+        if (_isApproximateTokenMatch(token, word)) {
+          return true;
+        }
+      }
     }
   }
   
   return false;
+}
+
+bool _isApproximateTokenMatch(String token, String queryToken) {
+  if (token == queryToken) {
+    return true;
+  }
+
+  final lengthDelta = (token.length - queryToken.length).abs();
+  if (lengthDelta > 2) {
+    return false;
+  }
+
+  // Keep edit-distance checks bounded for performance and avoid noisy short matches.
+  if (token.length < 4 || queryToken.length < 4) {
+    return false;
+  }
+
+  final distance = _levenshteinDistance(token, queryToken);
+  return distance <= (queryToken.length >= 7 ? 2 : 1);
+}
+
+int _levenshteinDistance(String source, String target) {
+  if (source == target) {
+    return 0;
+  }
+  if (source.isEmpty) {
+    return target.length;
+  }
+  if (target.isEmpty) {
+    return source.length;
+  }
+
+  var previous = List<int>.generate(target.length + 1, (i) => i);
+  var current = List<int>.filled(target.length + 1, 0);
+
+  for (var i = 1; i <= source.length; i++) {
+    current[0] = i;
+    for (var j = 1; j <= target.length; j++) {
+      final substitutionCost = source.codeUnitAt(i - 1) == target.codeUnitAt(j - 1) ? 0 : 1;
+      final deletion = previous[j] + 1;
+      final insertion = current[j - 1] + 1;
+      final substitution = previous[j - 1] + substitutionCost;
+      current[j] = [deletion, insertion, substitution].reduce((a, b) => a < b ? a : b);
+    }
+    final swap = previous;
+    previous = current;
+    current = swap;
+  }
+
+  return previous[target.length];
 }
 
 /// Fuzzy search helper: filters projects by search query

@@ -1469,17 +1469,22 @@
 
 ### Wat ik nog zou wijzigen
 
-- De "fuzzy" implementatie is in praktijk een contains/word-match benadering; geen echte distance-based fuzzy matching.
+- Fuzzy search bevat nu ook typo-tolerantie (begrensde edit-distance) naast contains/word-match.
 - Niet alle uitgebreide filtervelden zijn overal uniform afgedwongen (eerder vastgesteld in batch 008-010).
 
 ### Wat ik nog zou toevoegen
 
-- Relevantie-ranking of Levenshtein/trigram variant als echte fuzzy search gewenst is.
+- Relevantie-ranking op basis van score/afstand als verdere zoekkwaliteit gewenst is.
 - E2E tests voor zoek + filter + paginatie gecombineerd.
 
 ### Wat ik nog zou verwijderen
 
 - Overclaiming in comments/docs als "fuzzy" bedoeld wordt als geavanceerde similarity search.
+
+### Opvolging status
+
+- DONE (2026-03-07): project management expansion is functioneel afgerond met paginatie, geavanceerde filtering, single-fetch caching en verbeterde fuzzy search (incl. typo-tolerantie) met regressietestdekking.
+- Open follow-up (niet blocker): zoekresultaat-ranking en bredere end-to-end combinatietests kunnen later verdiept worden.
 
 ---
 

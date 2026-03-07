@@ -428,6 +428,33 @@ void main() {
     expect(results[0].id, 'p1');
   });
 
+  test('fuzzy search tolerates small typos in query tokens', () async {
+    final repository = FakeProjectRepository();
+    final container = ProviderContainer(overrides: [
+      projectRepositoryProvider.overrideWithValue(repository),
+      authProvider.overrideWith(() => FakeAuthNotifier()),
+    ]);
+    addTearDown(container.dispose);
+
+    final notifier = container.read(projectsProvider.notifier);
+
+    await notifier.addProject(const ProjectModel(
+      id: 'p-typo-1',
+      name: 'Flutter Dashboard',
+      progress: 0.5,
+      status: 'In Progress',
+      tasks: [],
+      description: 'Analytics and planning workspace',
+    ));
+
+    // "fluter" (missing "t") should still match "flutter".
+    const filter = ProjectFilter(searchQuery: 'fluter');
+    final results = container.read(filteredProjectsProvider(filter));
+
+    expect(results.length, 1);
+    expect(results.first.id, 'p-typo-1');
+  });
+
   test('projectsPaginatedProvider validates invalid params', () async {
     final repository = FakeProjectRepository();
     final container = ProviderContainer(overrides: [
