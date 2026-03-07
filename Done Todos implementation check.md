@@ -1243,6 +1243,10 @@
 
 ## 036 - Implementeer YAML-parsing voor AI-parsers
 
+### Opvolging status
+
+- DONE (afgewerkt op 2026-03-07): YAML parserpad, dependency en testdekking bevestigd inclusief fallback- en foutscenario's.
+
 ### Wat is correct geimplementeerd
 
 - YAML dependency staat in `pubspec` (root en `pma_core`) en parsercode gebruikt `package:yaml`.
