@@ -150,6 +150,17 @@ Debug validation flags:
 
 Implementation checklist and test steps are documented in [`docs/error-boundary.md`](docs/error-boundary.md).
 
+## PWA Support
+
+Issue `#074-pwa-support-web` adds explicit web PWA support assets and offline behavior.
+
+- Manifest: `web/manifest.json`
+- Service worker strategy: Flutter-generated `flutter_service_worker.js` (single-worker setup)
+- Bootstrap integration: `web/index.html` -> `flutter_bootstrap.js`
+- Build command: `flutter build web --release --pwa-strategy=offline-first`
+
+For acceptance checklist, verification flow, and install steps, see [`docs/pwa-support.md`](docs/pwa-support.md).
+
 ## Documentation
 
 | File | Description |
@@ -162,6 +173,7 @@ Implementation checklist and test steps are documented in [`docs/error-boundary.
 | [docs/feature-flags.md](docs/feature-flags.md) | Supabase feature flag checklist, provider/service summary, and acceptance mapping |
 | [docs/analytics.md](docs/analytics.md) | Issue #073 analytics checklist, event mapping, service usage, and `analytics_events` schema suggestion |
 | [docs/error-boundary.md](docs/error-boundary.md) | Global error boundary acceptance checklist, test procedure, and AppLogger/Sentry integration notes |
+| [docs/pwa-support.md](docs/pwa-support.md) | Issue #074 PWA checklist, offline test steps, and Chrome install instructions |
 | [docs/modularization.md](docs/modularization.md) | Issue #070 modularization acceptance checklist and deferred routing summary |
 | [NAVIGATION_GUIDE.md](NAVIGATION_GUIDE.md) | Guide for navigating the application |
 | [QUICK_REFERENCE.md](QUICK_REFERENCE.md) | Quick reference for key features |

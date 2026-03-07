@@ -48,6 +48,90 @@ jobs:
       - name: Build web
         run: flutter build web --release
 
+      - name: Set up Node.js for PWA checks
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Playwright dependencies
+        run: |
+          npm install --no-save playwright@1.51.1
+          npx playwright install --with-deps chromium
+
+      - name: Validate PWA behavior (manifest + SW + offline)
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          python3 -m http.server 8080 --directory build/web >/tmp/pwa_server.log 2>&1 &
+          SERVER_PID=$!
+          trap 'kill ${SERVER_PID}' EXIT
+
+          # Give the local server a moment to start.
+          sleep 2
+
+          node <<'EOF'
+          const { chromium } = require('playwright');
+
+          (async () => {
+            const browser = await chromium.launch({ headless: true });
+            const context = await browser.newContext();
+            const page = await context.newPage();
+
+            await page.goto('http://127.0.0.1:8080', { waitUntil: 'networkidle' });
+
+            const hasManifest = await page.evaluate(() => {
+              return !!document.querySelector('link[rel="manifest"][href]');
+            });
+            if (!hasManifest) {
+              throw new Error('PWA check failed: manifest link not found in index.html');
+            }
+
+            await page.waitForTimeout(3000);
+            const swInfo = await page.evaluate(async () => {
+              const registrations = await navigator.serviceWorker.getRegistrations();
+              const scripts = registrations.map((r) =>
+                r.active?.scriptURL || r.waiting?.scriptURL || r.installing?.scriptURL || ''
+              );
+              const cacheNames = await caches.keys();
+              return {
+                count: registrations.length,
+                scripts,
+                cacheNames,
+              };
+            });
+
+            if (swInfo.count < 1) {
+              throw new Error('PWA check failed: no active service worker registration found');
+            }
+
+            const usesFlutterSW = swInfo.scripts.some((url) => url.includes('flutter_service_worker.js'));
+            if (!usesFlutterSW) {
+              throw new Error(`PWA check failed: expected flutter_service_worker.js, got: ${JSON.stringify(swInfo.scripts)}`);
+            }
+
+            const hasFlutterCache = swInfo.cacheNames.some((name) => name.includes('flutter-app-cache'));
+            if (!hasFlutterCache) {
+              throw new Error(`PWA check failed: expected flutter-app-cache in Cache Storage, got: ${JSON.stringify(swInfo.cacheNames)}`);
+            }
+
+            await context.setOffline(true);
+            await page.reload({ waitUntil: 'domcontentloaded' });
+            const title = await page.title();
+            await context.setOffline(false);
+
+            if (!title || !title.trim()) {
+              throw new Error('PWA check failed: offline reload did not render a page title');
+            }
+
+            await browser.close();
+            console.log('PWA CI checks passed');
+          })().catch((error) => {
+            console.error(error);
+            process.exit(1);
+          });
+          EOF
+
       - name: Verify coverage output
         run: test -f coverage/lcov.info
 

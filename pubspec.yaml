@@ -141,6 +141,7 @@ flutter:
 scripts:
   golden: flutter test --update-goldens
   build:web: dart run tool/build.dart web
+  build:web:pwa: flutter build web --release --pwa-strategy=offline-first
   build:windows: dart run tool/build.dart windows
   build:macos: dart run tool/build.dart macos
   build:linux: dart run tool/build.dart linux
