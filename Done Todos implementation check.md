@@ -291,6 +291,10 @@
 
 ## 009 - Breid filter-conditions in filteredProjectsProvider uit
 
+### Opvolging status
+
+- DONE (afgewerkt op 2026-03-07): `filteredProjectsProvider` gebruikt nu uitgebreid providerfilter met centrale AND/OR evaluatie (`tags` OR, `requiredTags` AND), `extraConditions`-toepassing en regressietests voor null/empty combinaties.
+
 ### Wat is correct geimplementeerd
 
 - `ProjectFilterConditions` bestaat en repository ondersteunt `extraConditions` in `getFilteredProjects(...)`.

@@ -122,13 +122,24 @@ final projectByIdProvider =
 
 /// Family provider for filtered projects (synchronous filtering)
 /// Uses the projectsProvider for data and filters synchronously
-final filteredProjectsProvider = Provider.autoDispose.family<List<ProjectModel>, models.ProjectFilter>((ref, filter) {
+final filteredProjectsProvider = Provider.autoDispose.family<List<ProjectModel>, ProjectFilter>((ref, filter) {
   final projectsAsync = ref.watch(projectsProvider);
   return projectsAsync.maybeWhen(
-    data: (projects) => _filterProjects(projects, filter),
+    data: (projects) => _applyExtendedProjectFilter(projects, filter),
     orElse: () => <ProjectModel>[],
   );
 });
+
+/// Legacy filtered provider retained for callers still using models.ProjectFilter.
+@Deprecated('Use filteredProjectsProvider with provider ProjectFilter instead.')
+final filteredProjectsModelProvider =
+    Provider.autoDispose.family<List<ProjectModel>, models.ProjectFilter>((ref, filter) {
+      final projectsAsync = ref.watch(projectsProvider);
+      return projectsAsync.maybeWhen(
+        data: (projects) => _filterProjects(projects, filter),
+        orElse: () => <ProjectModel>[],
+      );
+    });
 
 /// Fuzzy search implementation for project name, description, and tags
 bool _matchesFuzzySearch(ProjectModel project, String query) {
@@ -223,17 +234,16 @@ final filteredProjectsPaginatedProvider = FutureProvider.autoDispose.family<List
   final repository = ref.watch(projectRepositoryProvider);
 
   // First get all filtered projects
-  var allFiltered = await repository.getFilteredProjects(
+  final repoFiltered = await repository.getFilteredProjects(
     params.filter.toRepositoryFilter(),
     extraConditions: params.filter.extraConditions ?? [],
   );
 
-  // Then apply provider-only filter fields and in-memory sorting.
-  allFiltered = _applyProviderOnlyFilterFields(allFiltered, params.filter);
-  allFiltered = _sortProjects(
-    allFiltered,
-    _effectiveSortBy(sortBy: params.filter.sortBy),
-    _effectiveSortAscending(sortAscending: params.filter.sortAscending),
+  // Then apply any provider-only fields and deterministic in-memory sorting.
+  final allFiltered = _applyExtendedProjectFilter(
+    repoFiltered,
+    params.filter,
+    includeRepositoryFields: false,
   );
 
   // Then paginate in-memory (since we need the full filtered set for accurate pagination)
@@ -763,6 +773,17 @@ List<ProjectModel> _sortProjects(List<ProjectModel> projects, String sortBy, boo
   return projects;
 }
 
+List<ProjectModel> _applyExtraConditions(
+  List<ProjectModel> projects,
+  List<ProjectFilterConditions> extraConditions,
+) {
+  var filtered = projects;
+  for (final cond in extraConditions) {
+    filtered = filtered.where(cond.condition).toList();
+  }
+  return filtered;
+}
+
 String _effectiveSortBy({String? sortBy, String? fallbackSortBy}) {
   if (sortBy != null && sortBy.isNotEmpty) {
     return sortBy;
@@ -816,6 +837,33 @@ List<ProjectModel> _applyProviderOnlyFilterFields(
   return filtered;
 }
 
+List<ProjectModel> _applyExtendedProjectFilter(
+  List<ProjectModel> projects,
+  ProjectFilter filter, {
+  bool includeRepositoryFields = true,
+  String? fallbackSortBy,
+  bool? fallbackSortAscending,
+}) {
+  var filtered = projects;
+
+  if (includeRepositoryFields) {
+    filtered = _filterProjects(filtered, filter.toRepositoryFilter());
+    filtered = _applyExtraConditions(filtered, filter.extraConditions ?? const []);
+  }
+
+  filtered = _applyProviderOnlyFilterFields(filtered, filter);
+
+  final resolvedSortBy =
+      _effectiveSortBy(sortBy: filter.sortBy, fallbackSortBy: fallbackSortBy);
+  final resolvedSortAscending = (filter.sortBy != null && filter.sortBy!.isNotEmpty)
+      ? filter.sortAscending
+      : _effectiveSortAscending(
+          fallbackSortAscending: fallbackSortAscending,
+        );
+
+  return _sortProjects(filtered, resolvedSortBy, resolvedSortAscending);
+}
+
 /// Combined projects provider with pagination, filtering and sorting
 final projectsCombinedProvider = FutureProvider.autoDispose.family<List<ProjectModel>, ProjectParams>(
   (ref, params) async {
@@ -824,20 +872,19 @@ final projectsCombinedProvider = FutureProvider.autoDispose.family<List<ProjectM
     // build a repo filter from provider params via the canonical bridge
     final repoFilter = params.filter.toRepositoryFilter();
 
-    var filtered = await repository.getFilteredProjects(repoFilter);
-    filtered = _applyProviderOnlyFilterFields(filtered, params.filter);
-
-    final sortBy = _effectiveSortBy(
-      sortBy: params.filter.sortBy,
-      fallbackSortBy: params.sortBy,
+    final repoFiltered = await repository.getFilteredProjects(
+      repoFilter,
+      extraConditions: params.filter.extraConditions ?? const [],
     );
-    final sortAscending = (params.filter.sortBy != null &&
-            params.filter.sortBy!.isNotEmpty)
-        ? params.filter.sortAscending
-        : params.sortAscending;
 
-    // sort in-memory (dataset is expected to be moderate in size)
-    filtered = _sortProjects(filtered, sortBy, sortAscending);
+    // Apply provider-only fields and resolve sort deterministically.
+    final filtered = _applyExtendedProjectFilter(
+      repoFiltered,
+      params.filter,
+      includeRepositoryFields: false,
+      fallbackSortBy: params.sortBy,
+      fallbackSortAscending: params.sortAscending,
+    );
 
     // paginate
     final startIndex = (params.page - 1) * params.limit;

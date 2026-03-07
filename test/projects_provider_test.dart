@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pma_core/models/project_filter.dart' as model_filters;
@@ -253,23 +252,9 @@ void main() {
     ]);
     addTearDown(container.dispose);
 
-    // Wait for the notifier to load data
-    await Future.delayed(Duration.zero);
-    // Since build() starts with loading and then loads data asynchronously,
-    // we need to wait for the state to become data
-    final completer = Completer<void>();
-    final subscription = container.listen(projectsProvider, (previous, next) {
-      if (next is AsyncData) {
-        completer.complete();
-      }
-    });
-    await completer.future;
-    subscription.close();
-
-    final state = container.read(projectsProvider);
-    expect(state, isA<AsyncData<List<ProjectModel>>>());
-    expect(state.asData!.value.length, 1);
-    expect(state.asData!.value.first.name, 'Alpha');
+    final projects = await container.read(projectsProvider.future);
+    expect(projects.length, 1);
+    expect(projects.first.name, 'Alpha');
   });
 
   test('ProjectsNotifier addProject updates state', () async {
@@ -279,6 +264,8 @@ void main() {
       authProvider.overrideWith(() => FakeAuthNotifier()),
     ]);
     addTearDown(container.dispose);
+
+    await container.read(projectsProvider.future);
 
     final notifier = container.read(projectsProvider.notifier);
     await notifier.addProject(
@@ -382,7 +369,7 @@ void main() {
     ));
 
     // Test fuzzy search
-    const filter = model_filters.ProjectFilter(searchQuery: 'flutter');
+    const filter = ProjectFilter(searchQuery: 'flutter');
     final results = container.read(filteredProjectsProvider(filter));
     expect(results.length, 1);
     expect(results[0].id, 'p1');
@@ -408,7 +395,7 @@ void main() {
     ));
 
     // Test fuzzy search on description
-    const filter = model_filters.ProjectFilter(searchQuery: 'flutter');
+    const filter = ProjectFilter(searchQuery: 'flutter');
     final results = container.read(filteredProjectsProvider(filter));
     expect(results.length, 1);
     expect(results[0].id, 'p1');
@@ -435,7 +422,7 @@ void main() {
     ));
 
     // Test fuzzy search on tags
-    const filter = model_filters.ProjectFilter(searchQuery: 'mobile');
+    const filter = ProjectFilter(searchQuery: 'mobile');
     final results = container.read(filteredProjectsProvider(filter));
     expect(results.length, 1);
     expect(results[0].id, 'p1');
@@ -480,6 +467,8 @@ void main() {
       authProvider.overrideWith(() => FakeAuthNotifier()),
     ]);
     addTearDown(container.dispose);
+
+    await container.read(projectsProvider.future);
 
     final page1 = await container.read(
       projectsPaginatedProvider(
@@ -734,5 +723,74 @@ void main() {
     final result = await container.read(projectsCombinedProvider(params).future);
 
     expect(result.map((p) => p.id).toList(), <String>['p-s2', 'p-s1']);
+  });
+
+  test('filteredProjectsProvider combines OR tags with AND requiredTags', () async {
+    final repository = FakeProjectRepository(seed: [
+      ProjectModel(
+        id: 'p-009-1',
+        name: 'Alpha',
+        progress: 0.2,
+        status: 'In Progress',
+        tags: const <String>['mobile', 'urgent', 'backend'],
+      ),
+      ProjectModel(
+        id: 'p-009-2',
+        name: 'Beta',
+        progress: 0.2,
+        status: 'In Progress',
+        tags: const <String>['mobile', 'backend'],
+      ),
+      ProjectModel(
+        id: 'p-009-3',
+        name: 'Gamma',
+        progress: 0.2,
+        status: 'In Progress',
+        tags: const <String>['web', 'urgent', 'backend'],
+      ),
+    ]);
+
+    final container = ProviderContainer(overrides: [
+      projectRepositoryProvider.overrideWithValue(repository),
+      authProvider.overrideWith(() => FakeAuthNotifier()),
+    ]);
+    addTearDown(container.dispose);
+
+    final initial = await container.read(projectsProvider.future);
+    expect(initial.length, 3);
+
+    const filter = ProjectFilter(
+      tags: <String>['mobile', 'web'],
+      requiredTags: <String>['urgent', 'backend'],
+    );
+
+    final results = container.read(filteredProjectsProvider(filter));
+    expect(results.map((p) => p.id).toList(), <String>['p-009-1', 'p-009-3']);
+  });
+
+  test('filteredProjectsProvider handles empty and null-like fields safely', () async {
+    final repository = FakeProjectRepository(seed: const [
+      ProjectModel(id: 'p-009-a', name: 'A', progress: 0.1, status: 'In Progress'),
+      ProjectModel(id: 'p-009-b', name: 'B', progress: 0.2, status: 'Planning'),
+    ]);
+
+    final container = ProviderContainer(overrides: [
+      projectRepositoryProvider.overrideWithValue(repository),
+      authProvider.overrideWith(() => FakeAuthNotifier()),
+    ]);
+    addTearDown(container.dispose);
+
+    final initial = await container.read(projectsProvider.future);
+    expect(initial.length, 2);
+
+    const filter = ProjectFilter(
+      status: '',
+      searchQuery: '',
+      tags: <String>[],
+      requiredTags: <String>[],
+    );
+
+    final results = container.read(filteredProjectsProvider(filter));
+    expect(results.length, 2);
   });
 }
