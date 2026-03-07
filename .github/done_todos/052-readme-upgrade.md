@@ -11,3 +11,7 @@
 - [x] DONE: Create table with all documentation files (00_START_HERE.md, DASHBOARD_GUIDE.md, IMPLEMENTATION_SUMMARY.md, etc.)
 - [x] DONE: Update Features list with all current enterprise features
 - [x] DONE: Add "Contributing" and "Roadmap" sections
+
+**Verification Notes:**
+- README screenshot references now match the actual files present in `images/` (`one.jpg`, `two.jpg`, `three.jpg`, `four.jpg`).
+- Broken `.png` screenshot links were removed to keep documentation accurate.

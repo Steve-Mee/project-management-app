@@ -1778,16 +1778,15 @@
 
 ### Wat ik nog zou wijzigen
 
-- Screenshotsectie claimt 8 specifieke imagebestanden met `.png`, maar de map `images/` bevat momenteel slechts 4 `.jpg` bestanden (`one.jpg`, `two.jpg`, `three.jpg`, `four.jpg`).
-- Daardoor lijken meerdere screenshotverwijzingen in README feitelijk stuk/verouderd.
+- Geen blocker meer op README-screenshots: links verwijzen nu naar bestaande assets in `images/` en kapotte `.png` referenties zijn verwijderd.
 
 ### Wat ik nog zou toevoegen
 
-- Werkende screenshot-assets met consistente bestandsnamen/extensies die overeenkomen met README-referenties.
+- Aanvullende screenshots (offline mode, deep link invite, export-flow, platformvergelijking) kunnen later toegevoegd worden zodra assets beschikbaar zijn.
 
 ### Wat ik nog zou verwijderen
 
-- Niet-bestaande screenshotlinks in README totdat de assets bestaan.
+- Geen directe verwijdering meer vereist voor TODO 052.
 
 ---
 

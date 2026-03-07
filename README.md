@@ -56,21 +56,23 @@ Required environment variables:
 
 ## Screenshots
 
-### Dashboard Light
+The repository currently contains four screenshot assets in `images/`.
 
-![Dashboard Light Mode](images/dashboard_light.png)
+### Dashboard Overview
 
-### Dashboard Dark
+![Dashboard Overview](images/one.jpg)
 
-![Dashboard Dark Mode](images/dashboard_dark.png)
+### Project Workspace
 
-### AI Chat
+![Project Workspace](images/two.jpg)
 
-![AI Chat Interface](images/ai_chat.png)
+### Planning And Tracking
 
-### Gantt Chart
+![Planning And Tracking](images/three.jpg)
 
-![Gantt Chart View](images/gantt_chart.png)
+### Team Collaboration
+
+![Team Collaboration](images/four.jpg)
 
 ## Gantt Chart (Modern)
 
@@ -87,21 +89,7 @@ The app now uses a modern `gantt_chart`-based timeline wrapper (`ModernGanttChar
    - Export menu (CSV/PDF via platform share)
 - Offline-first data source through Hive-backed repositories and `tasksProvider`
 
-### Offline Mode
-
-![Offline Mode Indicator](images/offline_mode.png)
-
-### Mobile and Desktop Views
-
-![Mobile and Desktop Views](images/mobile_desktop.png)
-
-### Deep Link Invite
-
-![Deep Link Invite Feature](images/deep_link_invite.png)
-
-### Export PDF/CSV
-
-![Export PDF/CSV Options](images/export_pdf_csv.png)
+Planned screenshot coverage (offline mode, deep link invites, export flows, and platform-specific views) remains on the roadmap and will be added as assets are captured.
 
 ## Architecture
 
