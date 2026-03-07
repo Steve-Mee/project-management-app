@@ -428,6 +428,10 @@
 
 ## 013 - Introduceer IAuthRepository interface
 
+### Opvolging status
+
+- DONE (afgewerkt op 2026-03-07): `IAuthRepository` opgesplitst in sub-interfaces (sessie, directory/admin, rate-limit) met backward-compatible aggregate contract, plus contracttests voor login/logout/current-user/session-state.
+
 ### Wat is correct geimplementeerd
 
 - Interface bestaat: `packages/pma_core/lib/repository/i_auth_repository.dart`.
