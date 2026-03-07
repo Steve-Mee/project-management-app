@@ -10,6 +10,14 @@ final projectsAsync = ref.watch(
 );
 ```
 
+Legacy alias (deprecated):
+
+```dart
+final projectsAsync = ref.watch(
+  paginatedProjectsProvider(const ProjectPaginationParams(page: 1, limit: 100)),
+);
+```
+
 ## Adding a Project
 
 ```dart

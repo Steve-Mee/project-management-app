@@ -167,7 +167,36 @@ class FakeProjectRepository implements IProjectRepository {
 
   @override
   Future<List<ProjectModel>> getProjectsPaginated({int page = 1, int limit = 20, model_filters.ProjectFilter? filter}) async {
-    return _store.values.toList();
+    if (page < 1) {
+      throw ArgumentError.value(page, 'page', 'must be >= 1');
+    }
+    if (limit <= 0) {
+      throw ArgumentError.value(limit, 'limit', 'must be > 0');
+    }
+
+    var projects = _store.values.toList();
+    projects.sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+
+    if (filter != null) {
+      if (filter.status != null && filter.status!.isNotEmpty) {
+        projects = projects.where((p) => p.status == filter.status).toList();
+      }
+      if (filter.searchQuery != null && filter.searchQuery!.isNotEmpty) {
+        final q = filter.searchQuery!.toLowerCase();
+        projects = projects
+            .where((p) =>
+                p.name.toLowerCase().contains(q) ||
+                (p.description?.toLowerCase().contains(q) ?? false) ||
+                p.tags.any((tag) => tag.toLowerCase().contains(q)))
+            .toList();
+      }
+    }
+
+    final startIndex = (page - 1) * limit;
+    if (startIndex >= projects.length) {
+      return <ProjectModel>[];
+    }
+    return projects.skip(startIndex).take(limit).toList();
   }
 
   @override
@@ -408,5 +437,63 @@ void main() {
     final results = container.read(filteredProjectsProvider(filter));
     expect(results.length, 1);
     expect(results[0].id, 'p1');
+  });
+
+  test('projectsPaginatedProvider validates invalid params', () async {
+    final repository = FakeProjectRepository();
+    final container = ProviderContainer(overrides: [
+      projectRepositoryProvider.overrideWithValue(repository),
+      authProvider.overrideWith(() => FakeAuthNotifier()),
+    ]);
+    addTearDown(container.dispose);
+
+    await expectLater(
+      container.read(
+        projectsPaginatedProvider(
+          const ProjectPaginationParams(page: 0, limit: 10),
+        ).future,
+      ),
+      throwsA(isA<ArgumentError>()),
+    );
+
+    await expectLater(
+      container.read(
+        projectsPaginatedProvider(
+          const ProjectPaginationParams(page: 1, limit: 0),
+        ).future,
+      ),
+      throwsA(isA<ArgumentError>()),
+    );
+  });
+
+  test('projectsPaginatedProvider returns paginated slice', () async {
+    final repository = FakeProjectRepository(seed: const [
+      ProjectModel(id: 'p1', name: 'Alpha', progress: 0.1, status: 'In Progress'),
+      ProjectModel(id: 'p2', name: 'Beta', progress: 0.2, status: 'In Progress'),
+      ProjectModel(id: 'p3', name: 'Gamma', progress: 0.3, status: 'In Progress'),
+    ]);
+
+    final container = ProviderContainer(overrides: [
+      projectRepositoryProvider.overrideWithValue(repository),
+      authProvider.overrideWith(() => FakeAuthNotifier()),
+    ]);
+    addTearDown(container.dispose);
+
+    final page1 = await container.read(
+      projectsPaginatedProvider(
+        const ProjectPaginationParams(page: 1, limit: 2),
+      ).future,
+    );
+
+    final page2 = await container.read(
+      paginatedProjectsProvider(
+        const ProjectPaginationParams(page: 2, limit: 2),
+      ).future,
+    );
+
+    expect(page1.length, 2);
+    expect(page2.length, 1);
+    expect(page1.first.name, 'Alpha');
+    expect(page2.first.name, 'Gamma');
   });
 }

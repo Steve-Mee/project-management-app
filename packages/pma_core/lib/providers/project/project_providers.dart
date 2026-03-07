@@ -203,6 +203,13 @@ final filteredProjectsPaginatedProvider = FutureProvider.autoDispose.family<List
 /// Use this for lists that need efficient loading (dashboard, projects page, etc.)
 final projectsPaginatedProvider = FutureProvider.autoDispose.family<List<ProjectModel>, ProjectPaginationParams>(
   (ref, params) async {
+    if (params.page < 1) {
+      throw ArgumentError.value(params.page, 'page', 'must be >= 1');
+    }
+    if (params.limit <= 0) {
+      throw ArgumentError.value(params.limit, 'limit', 'must be > 0');
+    }
+
     ref.keepAlive();
     final repository = ref.watch(projectRepositoryProvider);
     return repository.getProjectsPaginated(
@@ -212,6 +219,10 @@ final projectsPaginatedProvider = FutureProvider.autoDispose.family<List<Project
     );
   },
 );
+
+/// Backward-compatible alias retained for older docs/imports.
+@Deprecated('Use projectsPaginatedProvider instead.')
+final paginatedProjectsProvider = projectsPaginatedProvider;
 
 /// Filter class for project queries
 /// Extensible for future filter parameters

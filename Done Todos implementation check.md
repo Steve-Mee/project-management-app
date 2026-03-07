@@ -111,6 +111,10 @@
 
 ## 004 - Paginated provider voor projecten
 
+### Opvolging status
+
+- DONE (afgewerkt op 2026-03-07): provider-validatie toegevoegd, deprecated alias voorzien en dedicated provider-tests toegevoegd.
+
 ### Wat is correct geimplementeerd
 
 - Er is een paginated family provider: `projectsPaginatedProvider` in `packages/pma_core/lib/providers/project/project_providers.dart`.
