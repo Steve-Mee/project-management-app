@@ -1952,17 +1952,11 @@
 
 ### Wat ik nog zou wijzigen
 
-- Acceptance vroeg expliciet `supabase_fcm_setup.md`; dit bestand is niet aanwezig.
-- Bestaande `docs/supabase-setup.md` bevat Edge Functions, maar geen uitgewerkte Supabase -> FCM flowdocumentatie als apart setupdocument.
+- DONE: Acceptance-document `docs/supabase_fcm_setup.md` toegevoegd met exact Supabase -> FCM flow en Edge Function contract.
 
 ### Wat ik nog zou toevoegen
 
-- `docs/supabase_fcm_setup.md` met:
-  - tokenregistratie-flow,
-  - Edge Function triggerpad,
-  - payloadvoorbeeld,
-  - foutafhandeling/retry,
-  - productie-secrets/checklist.
+- DONE: `docs/supabase_fcm_setup.md` bevat tokenregistratie-flow, triggerpad, payloadvoorbeeld, retry/foutafhandeling en productie-checklist.
 
 ### Wat ik nog zou verwijderen
 
