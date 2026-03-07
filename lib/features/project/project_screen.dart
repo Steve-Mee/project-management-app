@@ -14,13 +14,8 @@ import 'package:share_plus/share_plus.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:project_management_app/features/project/pdf_export.dart';
 // ignore_for_file: use_build_context_synchronously, unnecessary_underscores
-import 'package:pma_core/providers/project_providers.dart';
-import 'package:pma_core/providers/auth_providers.dart';
-import 'package:pma_core/providers/theme_providers.dart';
-import 'package:pma_core/providers/active_viewers_providers.dart';
-import 'package:pma_core/providers/ai/ai_providers.dart' show aiServiceProvider;
-import 'package:pma_core/models/project_meta.dart';
-import 'package:pma_core/models/project_model.dart';
+import 'package:pma_core/models/models.dart';
+import 'package:project_management_app/features/project/providers/index.dart';
 import 'package:project_management_app/models/project_model.dart' as app_models;
 import '../../models/project_sort.dart';
 import 'widgets/project_filter_dialog.dart';

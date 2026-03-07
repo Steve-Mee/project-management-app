@@ -7,7 +7,7 @@ import 'package:go_router/go_router.dart';
 import 'package:project_management_app/generated/app_localizations.dart';
 import 'package:pma_core/auth/permissions.dart';
 import 'package:pma_core/repository/hive_initializer.dart';
-import 'package:pma_core/providers.dart';
+import 'package:project_management_app/features/settings/providers/index.dart';
 import 'package:pma_core/services/project_transfer_service.dart';
 import '../../features/dashboard/customize_dashboard_screen.dart';
 import 'package:pma_core/core/config/ai_config.dart' as ai_config;

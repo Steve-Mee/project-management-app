@@ -4,10 +4,8 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:project_management_app/generated/app_localizations.dart';
 import 'package:pma_core/auth/permissions.dart';
 import 'package:pma_core/utils/accessibility_helper.dart';
-// ai providers are pulled from the general barrel to avoid duplicate definitions
-import 'package:pma_core/providers/ai_providers.dart' show aiChatProvider;
-import 'package:pma_core/providers/auth_providers.dart' show hasPermissionProvider;
-import 'package:pma_core/models/chat_message_model.dart';
+import 'package:pma_core/models/models.dart';
+import 'package:project_management_app/features/ai_chat/providers/index.dart';
 
 /// AI Chat screen - chat interface for AI interactions
 class AIChatScreen extends ConsumerStatefulWidget {

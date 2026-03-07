@@ -3,10 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_spinkit/flutter_spinkit.dart';
 import 'package:project_management_app/generated/app_localizations.dart';
-// bring in only the necessary providers to avoid name clashes
-import 'package:pma_core/providers/ai_providers.dart' show aiChatProvider, useProjectFilesProvider, AiChatState;
-import 'package:pma_core/providers/auth_providers.dart' show privacyConsentProvider;
-import 'package:pma_core/providers/project_providers.dart' show projectsProvider;
+import 'package:project_management_app/features/ai_chat/providers/index.dart';
 import 'package:pma_core/services/project_file_service.dart';
 import '../../models/chat_message_model.dart';
 import '../../models/project_model.dart';

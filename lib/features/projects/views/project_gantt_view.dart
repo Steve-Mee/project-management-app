@@ -4,11 +4,9 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:intl/intl.dart';
 import 'package:go_router/go_router.dart';
 import 'package:pma_core/core/feature_flags/feature_flag_resolver.dart';
-import 'package:pma_core/models/project_model.dart';
-import 'package:pma_core/models/task_model.dart';
+import 'package:pma_core/models/models.dart';
 import 'package:pma_core/core/providers.dart';
-import 'package:pma_core/providers/project_providers.dart';
-import 'package:pma_core/providers/task_providers.dart';
+import 'package:project_management_app/features/projects/providers/index.dart';
 import 'package:pma_core/widgets/modern_gantt_chart.dart';
 import 'package:project_management_app/generated/app_localizations.dart';
 

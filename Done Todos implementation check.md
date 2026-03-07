@@ -1855,12 +1855,12 @@
 
 ### Wat ik nog zou wijzigen
 
-- Acceptance vroeg per-feature `lib/features/xxx/providers/index.dart`; zulke feature-indexbestanden bestaan niet.
-- Acceptance vroeg brede importvervanging naar barrel-imports, maar er zijn nog veel directe imports (`package:pma_core/providers/...`, `package:pma_core/models/...`, `package:pma_core/repository/...`) in de appcode.
+- Kern-eis voor feature-level barrels is nu ingevuld: `lib/features/*/providers/index.dart` is toegevoegd voor de actieve featuremodules.
+- Importmigratie is deels doorgevoerd op kritieke screens; resterende diepe imports kunnen in vervolgbatches verder worden geconsolideerd.
 
 ### Wat ik nog zou toevoegen
 
-- Gefaseerde importmigratie met lint/check die nieuwe directe diepe imports blokkeert waar een barrel beschikbaar is.
+- Optioneel: lint/check toevoegen die nieuwe diepe provider-imports blokkeert zodra migratie volledig is afgerond.
 
 ### Wat ik nog zou verwijderen
 
