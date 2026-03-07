@@ -1,3 +1,9 @@
+## [1.9.0](https://github.com/Steve-Mee/project-management-app/compare/v1.8.0...v1.9.0) (2026-03-07)
+
+### Features
+
+* **todo-008:** apply extended project filter semantics ([bfb2bf4](https://github.com/Steve-Mee/project-management-app/commit/bfb2bf4dbe2d85dbc6f44208cc10655c7f57551b))
+
 ## [1.8.0](https://github.com/Steve-Mee/project-management-app/compare/v1.7.0...v1.8.0) (2026-03-07)
 
 ### Features
