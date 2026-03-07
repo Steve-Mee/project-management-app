@@ -1,3 +1,9 @@
+## [1.6.0](https://github.com/Steve-Mee/project-management-app/compare/v1.5.0...v1.6.0) (2026-03-07)
+
+### Features
+
+* **todo-004:** harden paginated projects provider ([428d870](https://github.com/Steve-Mee/project-management-app/commit/428d870bd7de9adef1554c19d1ba571d8f2d3872))
+
 ## [1.5.0](https://github.com/Steve-Mee/project-management-app/compare/v1.4.0...v1.5.0) (2026-03-07)
 
 ### Features
