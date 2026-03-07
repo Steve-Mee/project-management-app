@@ -327,6 +327,10 @@
 
 ## 010 - Voeg extra filter-velden (date range, priority) toe
 
+### Opvolging status
+
+- DONE (afgewerkt op 2026-03-07): date-range semantiek voor due-date velden geharmoniseerd met inclusieve grenzen en extra testdekking voor boundary/tijdzone-scenario's.
+
 ### Wat is correct geimplementeerd
 
 - Date range + priority velden zijn aanwezig in filtermodellen en filterdialog.

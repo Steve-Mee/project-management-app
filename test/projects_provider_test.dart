@@ -793,4 +793,84 @@ void main() {
     final results = container.read(filteredProjectsProvider(filter));
     expect(results.length, 2);
   });
+
+  test('filteredProjectsProvider dueDate range is inclusive on boundary instants', () async {
+    final repository = FakeProjectRepository(seed: [
+      ProjectModel(
+        id: 'p-010-1',
+        name: 'Boundary Start',
+        progress: 0.1,
+        status: 'In Progress',
+        dueDate: DateTime.utc(2026, 4, 10, 0, 0, 0),
+      ),
+      ProjectModel(
+        id: 'p-010-2',
+        name: 'Boundary End',
+        progress: 0.1,
+        status: 'In Progress',
+        dueDate: DateTime.utc(2026, 4, 10, 23, 59, 59),
+      ),
+      ProjectModel(
+        id: 'p-010-3',
+        name: 'Out Of Range',
+        progress: 0.1,
+        status: 'In Progress',
+        dueDate: DateTime.utc(2026, 4, 11, 0, 0, 0),
+      ),
+    ]);
+
+    final container = ProviderContainer(overrides: [
+      projectRepositoryProvider.overrideWithValue(repository),
+      authProvider.overrideWith(() => FakeAuthNotifier()),
+    ]);
+    addTearDown(container.dispose);
+
+    await container.read(projectsProvider.future);
+
+    final filter = ProjectFilter(
+      dueDateStart: DateTime.utc(2026, 4, 10, 0, 0, 0),
+      dueDateEnd: DateTime.utc(2026, 4, 10, 23, 59, 59),
+    );
+
+    final results = container.read(filteredProjectsProvider(filter));
+    expect(results.map((p) => p.id).toSet(), <String>{'p-010-1', 'p-010-2'});
+  });
+
+  test('projectsCombinedProvider handles dueDate timezone-offset boundaries', () async {
+    final repository = FakeProjectRepository(seed: [
+      ProjectModel(
+        id: 'p-010-tz-1',
+        name: 'UTC Match',
+        progress: 0.1,
+        status: 'In Progress',
+        dueDate: DateTime.parse('2026-05-01T00:00:00Z'),
+      ),
+      ProjectModel(
+        id: 'p-010-tz-2',
+        name: 'UTC Out',
+        progress: 0.1,
+        status: 'In Progress',
+        dueDate: DateTime.parse('2026-04-30T20:59:59Z'),
+      ),
+    ]);
+
+    final container = ProviderContainer(overrides: [
+      projectRepositoryProvider.overrideWithValue(repository),
+      authProvider.overrideWith(() => FakeAuthNotifier()),
+    ]);
+    addTearDown(container.dispose);
+
+    final params = ProjectParams(
+      page: 1,
+      limit: 10,
+      filter: ProjectFilter(
+        // +03:00 offset resolves to UTC window starting at 2026-04-30T21:00:00Z.
+        dueDateStart: DateTime.parse('2026-05-01T00:00:00+03:00'),
+        dueDateEnd: DateTime.parse('2026-05-01T03:00:00+03:00'),
+      ),
+    );
+
+    final result = await container.read(projectsCombinedProvider(params).future);
+    expect(result.map((p) => p.id).toList(), <String>['p-010-tz-1']);
+  });
 }

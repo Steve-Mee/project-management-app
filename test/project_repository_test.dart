@@ -299,6 +299,34 @@ void main() {
     expect(result.first.id, 'project-1');
   });
 
+  test('getFilteredProjects date range includes boundary startDate and dueDate values', () async {
+    await repository.addProject(
+      await createProject(
+        id: 'project-1',
+        name: 'Boundary Match',
+        startDate: DateTime.utc(2026, 6, 1, 0, 0, 0),
+        dueDate: DateTime.utc(2026, 6, 30, 23, 59, 59),
+      ),
+    );
+    await repository.addProject(
+      await createProject(
+        id: 'project-2',
+        name: 'Outside End',
+        startDate: DateTime.utc(2026, 6, 1, 0, 0, 0),
+        dueDate: DateTime.utc(2026, 7, 1, 0, 0, 0),
+      ),
+    );
+
+    final result = await repository.getFilteredProjects(
+      ProjectFilter(
+        startDate: DateTime.utc(2026, 6, 1, 0, 0, 0),
+        endDate: DateTime.utc(2026, 6, 30, 23, 59, 59),
+      ),
+    );
+
+    expect(result.map((p) => p.id).toSet(), <String>{'project-1'});
+  });
+
   test('IProjectRepository contract: status filter matches getProjectsByStatus', () async {
     await repository.addProject(
       await createProject(id: 'project-1', name: 'Project 1', status: 'In Progress'),

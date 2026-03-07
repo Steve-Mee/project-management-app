@@ -31,6 +31,9 @@ These stay in provider scope and are not forwarded directly to repository filter
 - `viewName` / `viewMode` / dashboard-related metadata
 - `dueDateStart` / `dueDateEnd` (unless repository contract is extended)
 
+Date semantics:
+- `dueDateStart` and `dueDateEnd` are evaluated provider-side with inclusive boundaries (`>= start`, `<= end`).
+
 ## Why
 
 This bridge keeps UI flexibility while preventing drift and ambiguity between two filter shapes introduced during modularization.
