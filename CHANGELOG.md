@@ -1,3 +1,15 @@
+# [1.1.0](https://github.com/Steve-Mee/project-management-app/compare/v1.0.1...v1.1.0) (2026-03-07)
+
+
+### Bug Fixes
+
+* **logger:** resolve private type in public API ([283a296](https://github.com/Steve-Mee/project-management-app/commit/283a2962c70dd1717e19af55bc28f3f2d387fd56))
+
+
+### Features
+
+* **error-handling:** add global error boundary, sentry integration, and recovery test hardening ([bc24560](https://github.com/Steve-Mee/project-management-app/commit/bc24560d3898dd5074aae9608c65880213dea831))
+
 ## [1.0.1](https://github.com/Steve-Mee/project-management-app/compare/v1.0.0...v1.0.1) (2026-03-07)
 
 
