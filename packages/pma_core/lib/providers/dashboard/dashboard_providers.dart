@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:uuid/uuid.dart';
 import 'package:collection/collection.dart';
@@ -106,6 +107,9 @@ class DashboardConfigNotifier extends AsyncNotifier<List<DashboardItem>> {
   /// See .github/issues/022-dashboard-undo-redo.md for details
   int _currentIndex = -1;
 
+  /// Prevents save/persist code paths from mutating undo/redo pointers.
+  bool _suspendHistoryMutation = false;
+
   bool _isOffline = false;
   bool get isOffline => _isOffline;
 
@@ -160,7 +164,9 @@ class DashboardConfigNotifier extends AsyncNotifier<List<DashboardItem>> {
     try {
       await _repository.saveConfig(items);
       state = AsyncValue.data(items);
-      _currentIndex = _history.length - 1;
+      if (!_suspendHistoryMutation) {
+        _currentIndex = _history.length - 1;
+      }
 
       // Save to settings for user-specific persistence
       final settings = await ref.read(settingsRepositoryProvider.future);
@@ -361,11 +367,11 @@ class DashboardConfigNotifier extends AsyncNotifier<List<DashboardItem>> {
   /// See .github/issues/022-dashboard-undo-redo.md for details.
   Future<void> undo() async {
     if (canUndo) {
-      int targetIndex = _currentIndex - 1;
+      final int targetIndex = _currentIndex - 1;
       _currentIndex = targetIndex;
       final newState = _deepCopyState(_history[_currentIndex]);
       state = AsyncValue.data(newState);
-      await saveConfig(newState);
+      await _runWithHistoryMutationSuspended(() => saveConfig(newState));
       _currentIndex = targetIndex;
       AppLogger.instance.d('Undid dashboard change');
     }
@@ -376,13 +382,23 @@ class DashboardConfigNotifier extends AsyncNotifier<List<DashboardItem>> {
   /// See .github/issues/022-dashboard-undo-redo.md for details.
   Future<void> redo() async {
     if (canRedo) {
-      int targetIndex = _currentIndex + 1;
+      final int targetIndex = _currentIndex + 1;
       _currentIndex = targetIndex;
       final newState = _deepCopyState(_history[_currentIndex]);
       state = AsyncValue.data(newState);
-      await saveConfig(newState);
+      await _runWithHistoryMutationSuspended(() => saveConfig(newState));
       _currentIndex = targetIndex;
       AppLogger.instance.d('Redid dashboard change');
+    }
+  }
+
+  Future<void> _runWithHistoryMutationSuspended(Future<void> Function() action) async {
+    final previous = _suspendHistoryMutation;
+    _suspendHistoryMutation = true;
+    try {
+      await action();
+    } finally {
+      _suspendHistoryMutation = previous;
     }
   }
 
@@ -393,6 +409,12 @@ class DashboardConfigNotifier extends AsyncNotifier<List<DashboardItem>> {
   /// Whether a redo operation is currently available (not at the end of history)
   /// See .github/issues/022-dashboard-undo-redo.md for details.
   bool get canRedo => _currentIndex < _history.length - 1;
+
+  @visibleForTesting
+  int get historyLengthForTesting => _history.length;
+
+  @visibleForTesting
+  int get historyIndexForTesting => _currentIndex;
 
   /// Saves the current dashboard configuration as a new user template.
   /// See .github/issues/023-dashboard-templates.md for details.

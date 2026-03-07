@@ -538,6 +538,25 @@ void main() {
       expect(notifier.canUndo, true);
       expect(notifier.canRedo, false);
     });
+
+    test('undo/redo persistence does not duplicate history entries', () async {
+      const item = DashboardItem(
+        widgetType: DashboardWidgetType.metricCard,
+        position: {'x': 0, 'y': 0},
+      );
+
+      await notifier.addItem(item);
+      final historyAfterAdd = notifier.historyLengthForTesting;
+      final indexAfterAdd = notifier.historyIndexForTesting;
+
+      await notifier.undo();
+      expect(notifier.historyLengthForTesting, historyAfterAdd);
+      expect(notifier.historyIndexForTesting, indexAfterAdd - 1);
+
+      await notifier.redo();
+      expect(notifier.historyLengthForTesting, historyAfterAdd);
+      expect(notifier.historyIndexForTesting, indexAfterAdd);
+    });
   });
 
   group('Dashboard Templates', () {

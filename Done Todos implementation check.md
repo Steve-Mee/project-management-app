@@ -753,6 +753,10 @@
 
 ## 022 - Undo/Redo functionaliteit voor dashboard wijzigingen
 
+### Opvolging status
+
+- DONE (afgewerkt op 2026-03-07): expliciet history-suspend mechanisme toegevoegd voor undo/redo persist zodat `saveConfig` geen onbedoelde index/historie-mutaties veroorzaakt; regressietest toegevoegd tegen history-duplicatie tijdens undo/redo.
+
 ### Wat is correct geimplementeerd
 
 - History stack, `undo()`, `redo()`, `canUndo`, `canRedo`, max-history trimming zijn aanwezig in `DashboardConfigNotifier`.
