@@ -660,25 +660,33 @@ void main() {
       expect(typedTemplates.where((t) => !t.isPreset).length, 1);
     });
 
-    test('saveAsTemplate with empty name still saves', () async {
-      await notifier.saveAsTemplate('');
+    test('saveAsTemplate with empty name throws and does not save', () async {
+      expect(
+        () => notifier.saveAsTemplate('   '),
+        throwsA(isA<ArgumentError>()),
+      );
 
       final templates = notifier.getAllTemplates();
-      final userTemplates = templates.whereType<DashboardTemplate>().where((t) => !t.isPreset).toList();
-      expect(userTemplates.length, 1);
-      expect(userTemplates[0].name, '');
+      final userTemplates = templates
+          .whereType<DashboardTemplate>()
+          .where((t) => !t.isPreset)
+          .toList();
+      expect(userTemplates, isEmpty);
     });
 
-    test('saveAsTemplate allows duplicate names', () async {
+    test('saveAsTemplate rejects duplicate names (case-insensitive)', () async {
       await notifier.saveAsTemplate('Duplicate');
-      await notifier.saveAsTemplate('Duplicate');
+      expect(
+        () => notifier.saveAsTemplate(' duplicate '),
+        throwsA(isA<ArgumentError>()),
+      );
 
       final templates = notifier.getAllTemplates();
-        final userTemplates = templates
+      final userTemplates = templates
           .whereType<DashboardTemplate>()
           .where((t) => !t.isPreset && t.name == 'Duplicate')
           .toList();
-      expect(userTemplates.length, 2);
+      expect(userTemplates.length, 1);
     });
 
     test('loadTemplate with invalid id throws', () async {

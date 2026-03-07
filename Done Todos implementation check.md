@@ -780,6 +780,10 @@
 
 ## 023 - Dashboard templates en preset layouts
 
+### Opvolging status
+
+- DONE (afgewerkt op 2026-03-07): templatebeheer aangescherpt met naamvalidatie (geen lege/whitespace namen) en case-insensitive duplicate-blokkering in `saveAsTemplate`; tests aangepast op het nieuwe foutcontract.
+
 ### Wat is correct geimplementeerd
 
 - Data model en preset templates bestaan.

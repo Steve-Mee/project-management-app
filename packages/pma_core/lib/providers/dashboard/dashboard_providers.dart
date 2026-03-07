@@ -419,14 +419,27 @@ class DashboardConfigNotifier extends AsyncNotifier<List<DashboardItem>> {
   /// Saves the current dashboard configuration as a new user template.
   /// See .github/issues/023-dashboard-templates.md for details.
   Future<void> saveAsTemplate(String name) async {
+    final normalizedName = name.trim();
+    if (normalizedName.isEmpty) {
+      throw ArgumentError('Template name cannot be empty');
+    }
+
+    final existingTemplates = await _repository.loadTemplates();
+    final duplicateExists = existingTemplates.any(
+      (t) => t.name.trim().toLowerCase() == normalizedName.toLowerCase(),
+    );
+    if (duplicateExists) {
+      throw ArgumentError('Template name already exists: $normalizedName');
+    }
+
     final template = DashboardTemplate(
       id: DateTime.now().millisecondsSinceEpoch.toString(),
-      name: name,
+      name: normalizedName,
       items: List.from(state.asData?.value ?? []),
       isPreset: false,
       createdAt: DateTime.now(),
     );
-    final userTemplates = await _repository.loadTemplates();
+    final userTemplates = existingTemplates;
     userTemplates.add(template);
     await _repository.saveTemplates(userTemplates);
     _userTemplates = userTemplates;
@@ -435,7 +448,7 @@ class DashboardConfigNotifier extends AsyncNotifier<List<DashboardItem>> {
     final settings = await ref.read(settingsRepositoryProvider.future);
     await settings.setDashboardTemplates(userTemplates);
 
-    AppLogger.instance.i('Saved dashboard as template: $name');
+    AppLogger.instance.i('Saved dashboard as template: $normalizedName');
   }
 
   /// Loads a dashboard template by ID and applies it to replace the current configuration.
