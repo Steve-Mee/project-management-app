@@ -21,3 +21,4 @@ Dit bestand bevat de nog openstaande, technisch valide punten uit `Done Todos im
 - [x] 12. Documenteer provider importmigratie en markeer legacy AI-barrel als compatibiliteitspad.
 - [x] 13. Migreer resterende legacy AI test-import naar canoniek providerpad.
 - [x] 14. Update README-documentatie-index met nieuwe AI usage contract- en provider importmigratie-pagina's.
+- [x] 15. Koppel release evidence template expliciet in `release.yml` via artifact-upload.
