@@ -84,6 +84,7 @@ class AiChatNotifier extends AsyncNotifier<AiChatState> {
   AiService? _aiService;
   AiRateLimitsConfig? _rateLimitsConfig;
   final List<DateTime> _requestTimestamps = [];
+  final List<DateTime> _windowRequestTimestamps = [];
   final List<DateTime> _hourlyRequestTimestamps = [];
   final List<DateTime> _dailyRequestTimestamps = [];
   int _totalTokensUsedToday = 0;
@@ -199,6 +200,7 @@ class AiChatNotifier extends AsyncNotifier<AiChatState> {
       _totalTokensUsedToday = 0;
       _lastTokenResetDate = now;
       _dailyRequestTimestamps.clear();
+      _windowRequestTimestamps.clear();
       _processedToday = 0; // Reset daily processed count
       _droppedCount = 0; // Reset dropped count for new day
     }
@@ -251,6 +253,7 @@ class AiChatNotifier extends AsyncNotifier<AiChatState> {
     _resetTokenUsageIfNeeded();
 
     return _isRateLimited(_requestTimestamps, config.maxRequestsPerMinute, const Duration(minutes: 1)) ||
+          _isRateLimited(_windowRequestTimestamps, config.maxRequestsPerWindow, config.timeWindowDuration) ||
            _isRateLimited(_hourlyRequestTimestamps, config.maxRequestsPerHour, const Duration(hours: 1)) ||
            _isRateLimited(_dailyRequestTimestamps, config.maxRequestsPerDay, const Duration(days: 1)) ||
            _totalTokensUsedToday >= config.maxTotalTokensPerDay;
@@ -590,7 +593,8 @@ class AiChatNotifier extends AsyncNotifier<AiChatState> {
       _requestQueue.markFailed();
       // Implement exponential backoff with jitter for retries
       final retryCount = request.payload['retryCount'] as int? ?? 0;
-      if (retryCount < 3) {
+      final maxRetryAttempts = _rateLimitsConfig?.maxRetryAttempts ?? 3;
+      if (retryCount < maxRetryAttempts) {
         // Re-queue with incremented retry count after backoff delay
         final retryDelay = _calculateBackoffDelay(retryCount);
         await Future.delayed(retryDelay);
@@ -646,6 +650,7 @@ class AiChatNotifier extends AsyncNotifier<AiChatState> {
     // Record this request in rate limiting windows (now that we're actually processing)
     final now = DateTime.now();
     _requestTimestamps.add(now);
+    _windowRequestTimestamps.add(now);
     _hourlyRequestTimestamps.add(now);
     _dailyRequestTimestamps.add(now);
 
@@ -791,11 +796,14 @@ class AiChatNotifier extends AsyncNotifier<AiChatState> {
 
   /// Calculate exponential backoff delay with jitter
   Duration _calculateBackoffDelay(int retryCount) {
-    // Simple exponential backoff: base delay * 2^attempts with jitter
-    const baseDelay = Duration(seconds: 1);
+    // Configurable exponential backoff: base delay * 2^attempts with jitter
+    final config = _rateLimitsConfig ?? const AiRateLimitsConfig();
+    final baseDelay = config.backoffBaseDelay;
+    final maxDelay = config.backoffMaxDelay;
     final exponentialDelay = baseDelay * pow(2, retryCount).toInt();
     final jitter = Duration(milliseconds: Random().nextInt(1000)); // 0-1 second jitter
-    return exponentialDelay + jitter;
+    final candidate = exponentialDelay + jitter;
+    return candidate > maxDelay ? maxDelay : candidate;
   }
 
   /// Clear all pending requests from the queue

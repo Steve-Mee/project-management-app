@@ -1017,6 +1017,10 @@
 
 ## 030 - Maak AI rate limits configureerbaar
 
+### Opvolging status
+
+- DONE (afgewerkt op 2026-03-07): actieve AI-provider gebruikt nu configuratiegedreven window/retry/backoff in runtime, met extra validatietests voor clamping.
+
 ### Wat is correct geimplementeerd
 
 - Magic numbers zijn verplaatst naar configureerbaar model `AiRateLimitsConfig` met defaults, JSON-serialisatie en validatie (`packages/pma_core/lib/models/ai_rate_limits_config.dart`).
@@ -1024,6 +1028,8 @@
 - AI chat laadt config runtime via settings provider en gebruikt fallback bij fouten (`packages/pma_core/lib/providers/ai/ai_chat_providers.dart`).
 - Validatie/clamping is aanwezig voor ongeldige inputwaarden; per-operation limits zijn mee ondersteund.
 - Testen voor config persist/loads en per-operation limieten zijn aanwezig (`test/ai_chat_provider_test.dart`).
+- Actieve provider past nu configuratie expliciet toe in runtime voor `maxRequestsPerWindow` + `timeWindowDuration`, `maxRetryAttempts`, `backoffBaseDelay` en `backoffMaxDelay`.
+- Extra validatietests toegevoegd in `test/ai_rate_limits_config_test.dart` voor clampinggedrag.
 
 ### Wat ik nog zou wijzigen
 
@@ -1071,7 +1077,6 @@
 
 ### Wat ik nog zou wijzigen
 
-- In de actieve AI-chat provider (`packages/pma_core/lib/providers/ai/ai_chat_providers.dart`) wordt `maxRequestsPerWindow` niet expliciet toegepast in de runtime throttling; de flow gebruikt vooral minute/hour/day counters.
 - De oudere provider (`packages/pma_core/lib/providers/ai_legacy/ai_chat_providers.dart`) gebruikt `maxRequestsPerWindow` wel actief, wat policy-drift veroorzaakt.
 
 ### Wat ik nog zou toevoegen
@@ -1095,7 +1100,7 @@
 ### Wat ik nog zou wijzigen
 
 - In de actieve provider is retry/backoff niet throttling-specifiek, maar generiek op queue failures; dat wijkt af van de TODO-intentie (rate-limit gedreven backoff).
-- Actieve provider gebruikt vaste retrygrens (`retryCount < 3`) i.p.v. config-gedreven `maxRetryAttempts` op runtime.
+- Actieve provider gebruikt nu config-gedreven `maxRetryAttempts` op runtime; throttling-specifieke semantiek kan nog verder worden aangescherpt.
 
 ### Wat ik nog zou toevoegen
 
@@ -1104,7 +1109,7 @@
 
 ### Wat ik nog zou verwijderen
 
-- Hardcoded retry-limiet in queue-worker zodra config-gedreven aanpak is doorgetrokken.
+- Geen hardcoded retry-limiet meer in queue-worker.
 
 ### Impact van jongere TODO op oudere TODO
 
