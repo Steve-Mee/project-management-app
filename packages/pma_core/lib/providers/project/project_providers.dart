@@ -122,7 +122,8 @@ final projectByIdProvider =
 
 /// Family provider for filtered projects (synchronous filtering)
 /// Uses the projectsProvider for data and filters synchronously
-final filteredProjectsProvider = Provider.autoDispose.family<List<ProjectModel>, ProjectFilter>((ref, filter) {
+final filteredProjectsProvider =
+    Provider.autoDispose.family<List<ProjectModel>, ProviderProjectFilter>((ref, filter) {
   final projectsAsync = ref.watch(projectsProvider);
   return projectsAsync.maybeWhen(
     data: (projects) => _applyExtendedProjectFilter(projects, filter),
@@ -280,7 +281,7 @@ List<ProjectModel> _filterProjects(List<ProjectModel> projects, models.ProjectFi
 @freezed
 abstract class FilteredPaginationParams with _$FilteredPaginationParams {
   const factory FilteredPaginationParams({
-    required ProjectFilter filter,
+    required ProviderProjectFilter filter,
     required int page,
     required int limit,
   }) = _FilteredPaginationParams;
@@ -411,12 +412,18 @@ abstract class ProjectFilter with _$ProjectFilter {
   }
 }
 
+/// Explicit alias for the provider-side extended filter shape.
+///
+/// This keeps the API backward-compatible (`ProjectFilter`) while making call
+/// sites clearer versus the repository model filter (`models.ProjectFilter`).
+typedef ProviderProjectFilter = ProjectFilter;
+
 /// Explicit bridge between provider-level filter shape and repository filter shape.
 ///
 /// Repository-supported fields are mapped directly.
 /// Provider-only fields (ownerId, requiredTags, viewMode, sort metadata) remain
 /// in provider scope and are intentionally not forwarded.
-extension ProjectFilterRepositoryBridge on ProjectFilter {
+extension ProjectFilterRepositoryBridge on ProviderProjectFilter {
   models.ProjectFilter toRepositoryFilter() {
     return models.ProjectFilter(
       status: status,
@@ -897,7 +904,7 @@ List<ProjectModel> _applyProviderOnlyFilterFields(
 
 List<ProjectModel> _applyExtendedProjectFilter(
   List<ProjectModel> projects,
-  ProjectFilter filter, {
+  ProviderProjectFilter filter, {
   bool includeRepositoryFields = true,
   String? fallbackSortBy,
   bool? fallbackSortAscending,
@@ -952,7 +959,7 @@ final projectsCombinedProvider = FutureProvider.autoDispose.family<List<ProjectM
 );
 
 /// Notifier for persistent project filter
-class ProjectFilterNotifier extends StateNotifier<ProjectFilter> {
+class ProjectFilterNotifier extends StateNotifier<ProviderProjectFilter> {
   static const String _boxName = 'project_filters';
   static const String _key = 'current_filter';
   static const String _defaultKey = 'default_project_filter';
@@ -962,7 +969,7 @@ class ProjectFilterNotifier extends StateNotifier<ProjectFilter> {
 
   RealtimeChannel? _channel;
   StreamSubscription? _channelSubscription;
-  List<ProjectFilter> _recentFilters = [];
+  List<ProviderProjectFilter> _recentFilters = [];
 
   ProjectFilterNotifier() : super(const ProjectFilter()) {
     _loadFilter();
@@ -1069,7 +1076,7 @@ class ProjectFilterNotifier extends StateNotifier<ProjectFilter> {
     }
   }
 
-  Future<void> _saveFilter(ProjectFilter filter) async {
+  Future<void> _saveFilter(ProviderProjectFilter filter) async {
     try {
       final box = await Hive.openBox(_boxName);
       await box.put(_key, filter.toJson());
@@ -1106,14 +1113,14 @@ class ProjectFilterNotifier extends StateNotifier<ProjectFilter> {
     _saveFilter(state);
   }
 
-  void updateFilter(ProjectFilter newFilter) {
+  void updateFilter(ProviderProjectFilter newFilter) {
     state = newFilter;
     _saveFilter(newFilter);
     _addToRecentFilters(newFilter);
     _broadcastFilterChange('apply');
   }
 
-  void _addToRecentFilters(ProjectFilter filter) {
+  void _addToRecentFilters(ProviderProjectFilter filter) {
     // Remove if already exists (to move to front)
     _recentFilters.removeWhere((f) => f == filter);
     // Add to front
@@ -1135,7 +1142,7 @@ class ProjectFilterNotifier extends StateNotifier<ProjectFilter> {
     await _broadcastFilterChange('save', viewName: name);
   }
 
-  Future<void> loadView(ProjectFilter view) async {
+  Future<void> loadView(ProviderProjectFilter view) async {
     state = view;
     _saveFilter(view);
   }
@@ -1149,7 +1156,7 @@ class ProjectFilterNotifier extends StateNotifier<ProjectFilter> {
     await _broadcastFilterChange('delete', viewName: viewName);
   }
 
-  List<ProjectFilter> get recentFilters => _recentFilters;
+  List<ProviderProjectFilter> get recentFilters => _recentFilters;
 
   /// Bulk operations for selected projects
   Future<void> bulkDeleteProjects(Set<String> projectIds, WidgetRef ref) async {
@@ -1226,7 +1233,8 @@ class ProjectFilterNotifier extends StateNotifier<ProjectFilter> {
 }
 
 /// Persistent project filter provider
-final persistentProjectFilterProvider = StateNotifierProvider<ProjectFilterNotifier, ProjectFilter>((ref) {
+final persistentProjectFilterProvider =
+    StateNotifierProvider<ProjectFilterNotifier, ProviderProjectFilter>((ref) {
   return ProjectFilterNotifier();
 });
 
