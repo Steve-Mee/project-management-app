@@ -34,12 +34,20 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
 
+      - name: Install Linux build dependencies
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang cmake ninja-build pkg-config libgtk-3-dev libblkid-dev liblzma-dev
+
       - name: Create CI .env placeholder
         shell: pwsh
         run: |
-          if (-not (Test-Path '.env')) {
-            New-Item -Path .env -ItemType File | Out-Null
-          }
+          @"
+          SUPABASE_URL=https://example.supabase.co
+          SUPABASE_ANON_KEY=test-anon-key
+          OPENAI_API_KEY=your_xai_api_key_here
+          "@ | Set-Content -Path .env -Encoding utf8
 
       - name: Build Windows
         if: matrix.os == 'windows-latest'

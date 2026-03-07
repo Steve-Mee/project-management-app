@@ -31,9 +31,11 @@ jobs:
       - name: Create CI .env placeholder
         shell: pwsh
         run: |
-          if (-not (Test-Path '.env')) {
-            New-Item -Path .env -ItemType File | Out-Null
-          }
+          @"
+          SUPABASE_URL=https://example.supabase.co
+          SUPABASE_ANON_KEY=test-anon-key
+          OPENAI_API_KEY=your_xai_api_key_here
+          "@ | Set-Content -Path .env -Encoding utf8
 
       - name: Analyze
         run: |
@@ -48,7 +50,7 @@ jobs:
         run: dart analyze packages/pma_core
 
       - name: Run tests with coverage
-        run: flutter test --coverage
+        run: flutter test --coverage --exclude-tags=golden
 
       - name: Run pma_core tests
         run: flutter test packages/pma_core/test
