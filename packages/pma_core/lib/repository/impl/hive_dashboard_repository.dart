@@ -500,7 +500,7 @@ class _OfflineQueueManager {
       final rawData = box.get('changes') ?? [];
       final queuedChanges = rawData
           .whereType<Map>()
-          .map((entry) => Map<String, dynamic>.from(entry))
+          .map(Map<String, dynamic>.from)
           .toList();
 
       if (queuedChanges.isEmpty) {

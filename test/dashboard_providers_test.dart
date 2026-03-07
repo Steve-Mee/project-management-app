@@ -1029,6 +1029,79 @@ void main() {
     });
   });
 
+  group('projectDisplayNameProvider', () {
+    const project = ProjectModel(
+      id: 'project-1',
+      name: 'Alpha Project',
+      category: 'web',
+      progress: 0.0,
+    );
+
+    test('returns project name when project exists', () async {
+      final testContainer = ProviderContainer(
+        overrides: [
+          projectsProvider.overrideWith(
+            () => FakeProjectsNotifier(const AsyncValue.data([project])),
+          ),
+        ],
+      );
+
+      final name = await testContainer.read(
+        projectDisplayNameProvider('project-1').future,
+      );
+      expect(name, 'Alpha Project');
+      testContainer.dispose();
+    });
+
+    test('returns fallback when project is missing', () async {
+      final testContainer = ProviderContainer(
+        overrides: [
+          projectsProvider.overrideWith(
+            () => FakeProjectsNotifier(const AsyncValue.data([project])),
+          ),
+        ],
+      );
+
+      final name = await testContainer.read(
+        projectDisplayNameProvider('missing-id').future,
+      );
+      expect(name, 'Unknown Project');
+      testContainer.dispose();
+    });
+
+    test('returns fallback when projectsProvider is loading', () async {
+      final testContainer = ProviderContainer(
+        overrides: [
+          projectsProvider.overrideWith(
+            () => FakeProjectsNotifier(const AsyncValue.loading()),
+          ),
+        ],
+      );
+
+      final name = await testContainer.read(
+        projectDisplayNameProvider('project-1').future,
+      );
+      expect(name, 'Unknown Project');
+      testContainer.dispose();
+    });
+
+    test('returns fallback when projectsProvider has error', () async {
+      final testContainer = ProviderContainer(
+        overrides: [
+          projectsProvider.overrideWith(
+            () => FakeProjectsNotifier(const AsyncValue.error('boom', StackTrace.empty)),
+          ),
+        ],
+      );
+
+      final name = await testContainer.read(
+        projectDisplayNameProvider('project-1').future,
+      );
+      expect(name, 'Unknown Project');
+      testContainer.dispose();
+    });
+  });
+
   group('Dashboard Settings Persistence', () {
     late DashboardConfigNotifier notifier;
 

@@ -687,6 +687,25 @@ String _resolveProjectName(List<ProjectModel> projects, String projectId) {
   return project?.name ?? 'Unknown Project';
 }
 
+/// Provider for resolving project display names by id with robust fallbacks.
+/// Uses projectsProvider as source of truth and returns a safe label on
+/// loading/error/missing project states.
+final projectDisplayNameProvider =
+    FutureProvider.family<String, String>((ref, projectId) async {
+  try {
+    final projects = await ref
+        .watch(projectsProvider.future)
+        .timeout(
+          const Duration(seconds: 1),
+          onTimeout: () => const <ProjectModel>[],
+        );
+    return _resolveProjectName(projects, projectId);
+  } catch (e) {
+    AppLogger.instance.w('Failed to resolve project display name: $e');
+    return 'Unknown Project';
+  }
+});
+
 /// Provider for project requirements by project ID with error handling.
 /// Couples dashboard items to projectsProvider for displaying project-specific data.
 /// See .github/issues/029-dashboard-import-projects-provider.md for integration details.

@@ -989,21 +989,24 @@
 
 ## 029 - Koppel dashboard items aan `projectsProvider`
 
+### Opvolging status
+
+- DONE (afgewerkt op 2026-03-07): projects-koppeling uitgebreid met item-level naamresolverprovider en expliciete fallback-tests.
+
 ### Wat is correct geimplementeerd
 
 - Integratie bestaat via `projectRequirementsProvider` dat `projectsProvider.future` leest en projectcontext resolveert (`packages/pma_core/lib/providers/dashboard/dashboard_providers.dart`).
 - Project-id naar projectnaam-resolutie en fallback naar lege requirements zijn aanwezig.
 - Loading/error-situaties zijn afgevangen met timeout/fallback en catch-pad dat veilige defaults retourneert.
+- Item-level resolverprovider toegevoegd: `projectDisplayNameProvider` (projectId -> display label) met veilige fallback op loading/error/missing project.
+- Tests toegevoegd in `test/dashboard_providers_test.dart` voor data-, loading-, error- en missing-project scenario's.
 
 ### Wat ik nog zou wijzigen
 
-- Koppeling is momenteel vooral op requirements-niveau en minder direct op dashboard item rendering zelf.
-  Als TODO ook item-level naamweergave bedoelde, is dat maar deels afgedekt.
 - Timeout naar lege lijst na 1 seconde is pragmatisch, maar kan bij tragere devices tot te agressieve fallback leiden.
 
 ### Wat ik nog zou toevoegen
 
-- Expliciete item-level resolverprovider (projectId -> display label/status) voor consistente weergave in widgets.
 - Tests voor loading/error/timeouts die valideren dat UI-consumptie semantisch klopt (niet alleen geen crash).
 
 ### Wat ik nog zou verwijderen
