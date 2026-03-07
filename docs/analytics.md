@@ -31,6 +31,11 @@ This document tracks the analytics implementation for issue `#073-analytics-impl
 - Default implementation: `SupabaseAnalyticsService`
 - Riverpod provider: `analyticsServiceProvider` in `packages/pma_core/lib/core/providers.dart`
 
+## AI Usage Data Contract
+
+For authoritative source-of-truth boundaries between Supabase aggregates and
+local Hive usage history, see `docs/ai-usage-data-contract.md`.
+
 ## How To Add New Events
 
 1. Pick a stable, snake_case event name.
