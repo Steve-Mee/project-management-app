@@ -2205,7 +2205,7 @@
 
 ### Wat ik nog zou toevoegen
 
-- Gerichte widgettest voor indicator-kleur/status-sheet flow (offline -> syncing -> synced + manual sync knop).
+- DONE: gerichte widgettest toegevoegd in `test/offline_indicator_app_bar_test.dart` voor kleurmapping, status-sheet en manual sync flow.
 
 ### Wat ik nog zou verwijderen
 
