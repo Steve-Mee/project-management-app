@@ -18,3 +18,4 @@ Dit bestand bevat de nog openstaande, technisch valide punten uit `Done Todos im
 - [x] 9. Voeg contractguard-test toe die afdwingt dat `HiveAuthRepository` alle auth subinterfaces implementeert.
 - [x] 10. Leg AI usage source-of-truth contract expliciet vast (Supabase aggregate vs Hive history) en koppel dit in docs.
 - [x] 11. Vervang mention-tap placeholder door echte profieldetail-navigatie.
+- [x] 12. Documenteer provider importmigratie en markeer legacy AI-barrel als compatibiliteitspad.
