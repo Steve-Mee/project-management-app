@@ -923,33 +923,33 @@
 
 ## 027 - Cache `requirements` data met TTL
 
+### Opvolging status
+
+- DONE (afgewerkt op 2026-03-07): requirements TTL-cache toegevoegd met `_CacheEntry<ProjectRequirements>` per categorie, inclusief expiry en invalidering op updates.
+
 ### Wat is correct geimplementeerd
 
-- Er is caching met TTL aanwezig, maar voor dashboard-configuratie (`_DashboardCacheManager`, standaard 5 minuten) in `packages/pma_core/lib/repository/impl/hive_dashboard_repository.dart`.
-- Requirements hebben een lokale read-path (`getCachedRequirements`) en update-pad (`saveRequirement`) die snelle lokale opslag gebruikt.
-- Provider invalideert requirements-gerelateerde state bij updates (`requirementsProvider`, `projectRequirementsProvider`) in `packages/pma_core/lib/providers/dashboard/dashboard_providers.dart`.
+- Dashboardconfig TTL-cache blijft aanwezig in `_CacheManager` in `packages/pma_core/lib/repository/impl/hive_dashboard_repository.dart`.
+- Requirements TTL-cache is nu toegevoegd met `_CacheEntry<ProjectRequirements>` keyed op `projectCategory` in `fetchRequirements`.
+- TTL is configureerbaar (`requirementsCacheTTL`) en gebruikt een injecteerbare klok (`nowProvider`) voor deterministische tests.
+- Invalidering gebeurt nu expliciet op `saveRequirement` en `clearCache`.
+- Testdekking toegevoegd in `test/hive_dashboard_repository_test.dart` voor cache-hit, TTL-expiry en update-invalidering.
 
 ### Wat ik nog zou wijzigen
 
-- De TODO vraagt expliciet TTL-cache op requirements; die TTL ontbreekt nu op requirements zelf.
-  Er is wel lokale cache-opslag, maar geen `_CacheEntry<T>`-achtig patroon met expiry op requirementniveau.
-- Invalidering gebeurt nu vooral via provider invalidation, niet via cache-expiry + update-invalidering als gecombineerd contract.
+- Eventuele vervolgstap: maximale cachegrootte (LRU/cap) toevoegen als categorieset in productie groot wordt.
 
 ### Wat ik nog zou toevoegen
 
-- Dedicated requirements TTL-cache (bijv. `Map<String, CacheEntry<ProjectRequirements>>`) met:
-  - timestamp/expiry,
-  - invalidate op `saveRequirement`,
-  - fallback naar repository fetch bij verlopen entry.
-- Tests voor TTL-verloop en update-invalidering op requirementspad.
+- Optioneel: metrics rond cache hit-rate om echte performancewinst te monitoren.
 
 ### Wat ik nog zou verwijderen
 
-- Claims in comments/docs die impliceren dat requirements TTL-cache al volledig af is, zolang enkel config-TTL bestaat.
+- Geen directe verwijdering nodig.
 
 ### Impact van jongere TODO op oudere TODO
 
-- TODO 028 (offline requirements) voegt lokale opslag toe, maar vervangt TTL-caching niet. Daardoor is TODO 027 slechts gedeeltelijk ingevuld in de huidige vorm.
+- TODO 028 (offline requirements) blijft aanvullend op 027; met TTL-cache is read-performance verbeterd terwijl offline queue/sync de mutatiekant afdekt.
 
 ---
 

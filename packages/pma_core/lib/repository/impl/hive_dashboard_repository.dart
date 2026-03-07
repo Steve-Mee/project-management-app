@@ -20,6 +20,9 @@ class HiveDashboardRepository implements IDashboardRepository {
   static const String _requirementsBoxName = 'requirements';
   static const String _pendingChangesBoxName = 'pending_requirements_changes';
   final RequirementsService _requirementsService;
+  final Duration _requirementsCacheTTL;
+  final DateTime Function() _now;
+  final Map<String, _CacheEntry<ProjectRequirements>> _requirementsCache = {};
 
   /// Helper class for data mapping operations
   final _DataMapper _dataMapper = _DataMapper();
@@ -33,8 +36,13 @@ class HiveDashboardRepository implements IDashboardRepository {
   /// Helper class for Supabase sync operations
   final _SupabaseSyncManager _supabaseSyncManager = _SupabaseSyncManager();
 
-  HiveDashboardRepository({RequirementsService? requirementsService})
-      : _requirementsService = requirementsService ?? RequirementsService();
+  HiveDashboardRepository({
+    RequirementsService? requirementsService,
+    Duration requirementsCacheTTL = const Duration(minutes: 5),
+    DateTime Function()? nowProvider,
+  })  : _requirementsService = requirementsService ?? RequirementsService(),
+        _requirementsCacheTTL = requirementsCacheTTL,
+        _now = nowProvider ?? DateTime.now;
 
   /// Preloads the dashboard config into cache for improved performance.
   /// Can be called optionally during app initialization.
@@ -49,6 +57,7 @@ class HiveDashboardRepository implements IDashboardRepository {
   @override
   Future<void> clearCache() async {
     _cacheManager.invalidateCache();
+    _requirementsCache.clear();
   }
 
   @override
@@ -228,6 +237,7 @@ class HiveDashboardRepository implements IDashboardRepository {
       list.add(req);
     }
     await saveRequirements(list);
+    _requirementsCache.clear();
     AppLogger.event('dashboard_repository_requirement_saved', params: {'id': req.id});
   }
 
@@ -243,7 +253,17 @@ class HiveDashboardRepository implements IDashboardRepository {
 
   @override
   Future<ProjectRequirements> fetchRequirements(String projectCategory) async {
-    return _requirementsService.fetchRequirements(projectCategory);
+    final cached = _requirementsCache[projectCategory];
+    if (cached != null && _isRequirementsCacheValid(cached)) {
+      return cached.value;
+    }
+
+    final requirements = await _requirementsService.fetchRequirements(projectCategory);
+    _requirementsCache[projectCategory] = _CacheEntry<ProjectRequirements>(
+      value: requirements,
+      timestamp: _now(),
+    );
+    return requirements;
   }
 
   @override
@@ -282,6 +302,17 @@ class HiveDashboardRepository implements IDashboardRepository {
       );
     }
   }
+
+  bool _isRequirementsCacheValid(_CacheEntry<ProjectRequirements> entry) {
+    return _now().difference(entry.timestamp) < _requirementsCacheTTL;
+  }
+}
+
+class _CacheEntry<T> {
+  final T value;
+  final DateTime timestamp;
+
+  const _CacheEntry({required this.value, required this.timestamp});
 }
 
 /// Helper class for data mapping operations (JSON serialization/deserialization)

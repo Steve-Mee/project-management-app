@@ -4,6 +4,8 @@ import 'package:pma_core/repository/impl/hive_dashboard_repository.dart';
 import 'package:pma_core/repository/models/dashboard_models.dart';
 import 'package:pma_core/models/dashboard_types.dart';
 import 'package:pma_core/models/requirements.dart';
+import 'package:pma_core/models/project_requirements.dart';
+import 'package:pma_core/services/requirements_service.dart';
 import 'dart:io';
 
 // ignore_for_file: prefer_const_constructors
@@ -261,4 +263,74 @@ void main() {
       expect(loaded.items.first.widgetType, DashboardWidgetType.taskList);
     });
   });
+
+  group('Requirements TTL cache', () {
+    test('fetchRequirements caches within TTL', () async {
+      final fakeService = _FakeRequirementsService();
+      fakeService.responses['mobile'] = const ProjectRequirements(software: ['Flutter']);
+      final cachedRepository = HiveDashboardRepository(
+        requirementsService: fakeService,
+        requirementsCacheTTL: const Duration(milliseconds: 100),
+      );
+
+      final first = await cachedRepository.fetchRequirements('mobile');
+      final second = await cachedRepository.fetchRequirements('mobile');
+
+      expect(first.software, ['Flutter']);
+      expect(second.software, ['Flutter']);
+      expect(fakeService.fetchCount, 1);
+      await cachedRepository.close();
+    });
+
+    test('fetchRequirements refetches after TTL expires', () async {
+      final fakeService = _FakeRequirementsService();
+      fakeService.responses['web'] = const ProjectRequirements(software: ['Dart']);
+      final cachedRepository = HiveDashboardRepository(
+        requirementsService: fakeService,
+        requirementsCacheTTL: const Duration(milliseconds: 10),
+      );
+
+      await cachedRepository.fetchRequirements('web');
+      await Future<void>.delayed(const Duration(milliseconds: 20));
+      await cachedRepository.fetchRequirements('web');
+
+      expect(fakeService.fetchCount, 2);
+      await cachedRepository.close();
+    });
+
+    test('saveRequirement invalidates requirements cache', () async {
+      final fakeService = _FakeRequirementsService();
+      fakeService.responses['backend'] = const ProjectRequirements(software: ['Postgres']);
+      final cachedRepository = HiveDashboardRepository(
+        requirementsService: fakeService,
+        requirementsCacheTTL: const Duration(minutes: 5),
+      );
+
+      await cachedRepository.fetchRequirements('backend');
+      await cachedRepository.fetchRequirements('backend');
+      expect(fakeService.fetchCount, 1);
+
+      await cachedRepository.saveRequirement(
+        const Requirement(
+          id: 'invalidate-1',
+          title: 'Invalidate cache',
+        ),
+      );
+
+      await cachedRepository.fetchRequirements('backend');
+      expect(fakeService.fetchCount, 2);
+      await cachedRepository.close();
+    });
+  });
+}
+
+class _FakeRequirementsService extends RequirementsService {
+  int fetchCount = 0;
+  final Map<String, ProjectRequirements> responses = {};
+
+  @override
+  Future<ProjectRequirements> fetchRequirements(String projectCategory) async {
+    fetchCount++;
+    return responses[projectCategory] ?? const ProjectRequirements();
+  }
 }
