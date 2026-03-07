@@ -8,3 +8,4 @@
 - [x] DONE: Replace all legacy UI kit components with pure MaterialApp + Riverpod + custom widgets
 - [x] DONE: Update main.dart, themes and all screens
 - [x] DONE: Remove get: ^4.x from pubspec
+- [x] DONE: Add migration note doc with replacement checklist (`docs/legacy-ui-kit-removal.md`)

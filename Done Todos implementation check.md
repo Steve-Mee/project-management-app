@@ -1904,7 +1904,7 @@
 
 ### Wat ik nog zou toevoegen
 
-- Korte migratienota in docs met "legacy UI kit verwijderd" + checklist van vervangen componentgroepen, zodat regressies later makkelijker te detecteren zijn.
+- DONE: Migratienota toegevoegd in `docs/legacy-ui-kit-removal.md`, inclusief checklist van vervangen componentgroepen en snelle regressiechecks.
 
 ### Wat ik nog zou verwijderen
 
