@@ -11,3 +11,7 @@
 - [x] DONE: Implement exponential backoff for rate limits
 - [x] DONE: Add request queuing for burst handling
 - [x] DONE: Update ai_rate_limits_config.dart with new configurations
+
+**Verification Notes:**
+- `AiChatNotifier` now listens to `aiRateLimitsConfigProvider` and reapplies runtime limits when settings change.
+- Added integration proof in `test/ai_rate_limits_runtime_sync_test.dart` to verify settings updates change active `aiChatProvider` limit behavior.

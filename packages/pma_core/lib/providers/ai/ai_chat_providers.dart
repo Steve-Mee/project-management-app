@@ -17,6 +17,7 @@ import '../../services/ai/ai_service.dart';
 import '../../models/ai_rate_limits_config.dart';
 import '../../models/ai_request_queue.dart';
 import '../auth_providers.dart';
+import '../settings/settings_providers.dart';
 import '../../core/providers/feature_flag_provider.dart';
 
 /// State class for AI chat
@@ -86,6 +87,7 @@ class AiChatNotifier extends AsyncNotifier<AiChatState> {
 
   AiService? _aiService;
   AiRateLimitsConfig? _rateLimitsConfig;
+  String? _subscriptionLevel;
   final List<DateTime> _requestTimestamps = [];
   final List<DateTime> _windowRequestTimestamps = [];
   final List<DateTime> _hourlyRequestTimestamps = [];
@@ -139,14 +141,22 @@ class AiChatNotifier extends AsyncNotifier<AiChatState> {
   @override
   Future<AiChatState> build() async {
     _aiService ??= ref.read(aiServiceProvider);
+    ref.listen<AsyncValue<AiRateLimitsConfig>>(
+      aiRateLimitsConfigProvider,
+      (_, next) {
+        next.whenData((baseConfig) {
+          _setRuntimeRateLimits(baseConfig, subscriptionLevel: _subscriptionLevel);
+        });
+      },
+    );
 
     try {
       final settings = await ref.watch(settingsRepositoryProvider.future);
       final baseConfig = settings.getAiRateLimitsConfig();
-      final subscriptionLevel = settings.getSubscriptionLevel();
-      
+      _subscriptionLevel = settings.getSubscriptionLevel();
+
       // Apply subscription-based rate limits
-      _rateLimitsConfig = _getSubscriptionBasedRateLimits(baseConfig, subscriptionLevel);
+      _setRuntimeRateLimits(baseConfig, subscriptionLevel: _subscriptionLevel);
       
       // Restore persisted queue from previous app sessions
       await restoreQueue();
@@ -172,7 +182,7 @@ class AiChatNotifier extends AsyncNotifier<AiChatState> {
     } catch (e) {
       AppLogger.instance.e('Failed to load AI rate limits config: $e');
       // Fallback to defaults if settings fail
-      _rateLimitsConfig = const AiRateLimitsConfig();
+      _setRuntimeRateLimits(const AiRateLimitsConfig(), subscriptionLevel: _subscriptionLevel);
       
       // Restore persisted queue even with defaults
       await restoreQueue();
@@ -194,6 +204,23 @@ class AiChatNotifier extends AsyncNotifier<AiChatState> {
         queueLength: _requestQueue.metrics.queueLength,
         processedToday: _processedToday,
         droppedCount: _droppedCount,
+      );
+    }
+  }
+
+  void _setRuntimeRateLimits(
+    AiRateLimitsConfig baseConfig, {
+    String? subscriptionLevel,
+  }) {
+    final effectiveConfig = _getSubscriptionBasedRateLimits(
+      baseConfig,
+      subscriptionLevel,
+    );
+    _rateLimitsConfig = effectiveConfig;
+    final currentState = state.value;
+    if (currentState != null) {
+      state = AsyncValue.data(
+        currentState.copyWith(rateLimitsConfig: effectiveConfig),
       );
     }
   }

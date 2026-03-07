@@ -1615,14 +1615,11 @@
 
 ### Wat ik nog zou wijzigen
 
-- Runtime enforcement in de actieve AI-provider blijft onvolledig:
-  - per-operation limits worden niet consequent toegepast,
-  - `queueEnabled` heeft beperkt effectief runtimegedrag.
-- Hierdoor is de UI/config-laag verder dan de daadwerkelijke limiter-semantiek.
+- Geen blocker meer op config-runtime koppeling: `AiChatNotifier` luistert nu live naar `aiRateLimitsConfigProvider` updates en past runtime-limits direct toe.
 
 ### Wat ik nog zou toevoegen
 
-- Integratietests die bewijzen dat aangepaste UI-limieten het gedrag van `aiChatProvider` echt wijzigen per operation.
+- Eventueel extra regressietest voor wisselende subscription-levels tijdens runtime (huidige tests dekken de standaard flow met settings-updates).
 
 ### Wat ik nog zou verwijderen
 
@@ -1630,7 +1627,7 @@
 
 ### Impact van jongere TODO op oudere TODO
 
-- TODO 046 formaliseert de UI rond TODO 031-034, maar bevestigt ook de bestaande kloof tussen configuratie en actieve enforcement.
+- TODO 046 formaliseert de UI rond TODO 031-034 en heeft nu expliciet bewijs dat settings-config wijzigingen ook runtime enforcement in `aiChatProvider` sturen.
 
 ---
 
