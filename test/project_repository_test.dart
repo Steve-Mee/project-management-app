@@ -181,4 +181,48 @@ void main() {
     expect(typedFiltered.length, 1);
     expect(typedFiltered[0].id, 'project-1');
   });
+
+  test('IProjectRepository contract: status filter matches getProjectsByStatus', () async {
+    await repository.addProject(
+      await createProject(id: 'project-1', name: 'Project 1', status: 'In Progress'),
+    );
+    await repository.addProject(
+      await createProject(id: 'project-2', name: 'Project 2', status: 'Completed'),
+    );
+    await repository.addProject(
+      await createProject(id: 'project-3', name: 'Project 3', status: 'In Progress'),
+    );
+
+    final fromStatusMethod = await repository.getProjectsByStatus('In Progress');
+    final fromFilterMethod = await repository.getFilteredProjects(
+      const ProjectFilter(status: 'In Progress'),
+    );
+
+    final statusIds = fromStatusMethod.map((p) => p.id).toSet();
+    final filterIds = fromFilterMethod.map((p) => p.id).toSet();
+
+    expect(filterIds, equals(statusIds));
+  });
+
+  test('IProjectRepository contract: paginated pages keep stable coverage without duplicates', () async {
+    for (int i = 1; i <= 7; i++) {
+      await repository.addProject(
+        await createProject(id: 'project-$i', name: 'Project $i', status: 'In Progress'),
+      );
+    }
+
+    final all = await repository.getAllProjects();
+    final page1 = await repository.getProjectsPaginated(page: 1, limit: 3);
+    final page2 = await repository.getProjectsPaginated(page: 2, limit: 3);
+    final page3 = await repository.getProjectsPaginated(page: 3, limit: 3);
+
+    final pagedIds = <String>{
+      ...page1.map((p) => p.id),
+      ...page2.map((p) => p.id),
+      ...page3.map((p) => p.id),
+    };
+
+    expect(pagedIds.length, page1.length + page2.length + page3.length);
+    expect(pagedIds, equals(all.map((p) => p.id).toSet()));
+  });
 }

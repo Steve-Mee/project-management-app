@@ -9,10 +9,8 @@ import 'models/project_models.dart';
 /// Keep method signatures narrow and backend-agnostic to allow swapping.
 abstract class IProjectRepository {
   /// Retrieves all projects from storage.
-  /// Retrieves all projects from storage.
   Future<List<ProjectModel>> getAllProjects();
 
-  /// Adds a new project to storage.
   /// Adds a new project to storage.
   Future<void> addProject(
     ProjectModel project, {
@@ -20,7 +18,6 @@ abstract class IProjectRepository {
     Map<String, Object?>? metadata,
   });
 
-  /// Updates an existing project in storage.
   /// Updates an existing project in storage.
   Future<void> updateProject(
     String projectId,
@@ -31,7 +28,6 @@ abstract class IProjectRepository {
   });
 
   /// Updates the progress of a project.
-  /// Updates the progress of a project.
   Future<void> updateProgress(
     String projectId,
     double newProgress, {
@@ -39,7 +35,6 @@ abstract class IProjectRepository {
     Map<String, Object?>? metadata,
   });
 
-  /// Updates the tasks of a project.
   /// Updates the tasks of a project.
   Future<void> updateTasks(
     String projectId,
@@ -64,7 +59,6 @@ abstract class IProjectRepository {
   // breaking changes when swapping implementations.
 
   /// Updates the directory path of a project.
-  /// Updates the directory path of a project.
   Future<void> updateDirectoryPath(
     String projectId,
     String? directoryPath, {
@@ -86,21 +80,36 @@ abstract class IProjectRepository {
   /// Sharing helpers
 
   /// Adds a shared user to a project.
-  Future<void> addSharedUser(String projectId, String username, {String? userId, Map<String, Object?>? metadata});
+  Future<void> addSharedUser(
+    String projectId,
+    String username, {
+    String? userId,
+    Map<String, Object?>? metadata,
+  });
 
   /// Removes a shared user from a project.
-  Future<void> removeSharedUser(String projectId, String username, {String? userId, Map<String, Object?>? metadata});
+  Future<void> removeSharedUser(
+    String projectId,
+    String username, {
+    String? userId,
+    Map<String, Object?>? metadata,
+  });
 
   /// Adds a shared group to a project.
-  Future<void> addSharedGroup(String projectId, String groupId, {String? userId, Map<String, Object?>? metadata});
+  Future<void> addSharedGroup(
+    String projectId,
+    String groupId, {
+    String? userId,
+    Map<String, Object?>? metadata,
+  });
 
   /// Removes a shared group from a project.
-  /// Removes a shared group from a project.
-  Future<void> removeSharedGroup(String projectId, String groupId, {String? userId, Map<String, Object?>? metadata});
-
-  // Future methods to consider:
-  // Future<List<ProjectModel>> getProjectsPaginated(int page, int limit);
-  // Future<List<ProjectModel>> getProjectsByStatus(String status);
+  Future<void> removeSharedGroup(
+    String projectId,
+    String groupId, {
+    String? userId,
+    Map<String, Object?>? metadata,
+  });
 
   /// Fetch projects with pagination for large lists
   /// `page` starts at 1
@@ -114,7 +123,10 @@ abstract class IProjectRepository {
   Future<List<ProjectModel>> getProjectsByStatus(String status);
 
   /// Advanced filtering with multiple criteria
-  Future<List<ProjectModel>> getFilteredProjects(ProjectFilter filter, {List<ProjectFilterConditions> extraConditions = const []});
+  Future<List<ProjectModel>> getFilteredProjects(
+    ProjectFilter filter, {
+    List<ProjectFilterConditions> extraConditions = const [],
+  });
 
   /// Sync methods for Supabase integration (039-supabase-sync-implementation.md)
   /// Syncs a specific project to/from Supabase
