@@ -22,3 +22,4 @@ Dit bestand bevat de nog openstaande, technisch valide punten uit `Done Todos im
 - [x] 13. Evalueer resterende legacy AI test-import; bewust behouden voor legacy contracttest (`test/ai_chat_provider_test.dart`).
 - [x] 14. Update README-documentatie-index met nieuwe AI usage contract- en provider importmigratie-pagina's.
 - [x] 15. Koppel release evidence template expliciet in `release.yml` via artifact-upload.
+- [x] 16. Documenteer in legacy AI contracttest waarom een legacy import bewust behouden blijft.

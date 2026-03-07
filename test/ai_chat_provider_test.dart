@@ -1,6 +1,7 @@
 // ignore_for_file: prefer_const_constructors
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pma_core/models/ai_rate_limits_config.dart';
+// Intentionally targets legacy state contract coverage.
 import 'package:pma_core/providers/ai_legacy_providers.dart' as ai_provider;
 import 'package:pma_core/repository/impl/hive_settings_repository.dart';
 
