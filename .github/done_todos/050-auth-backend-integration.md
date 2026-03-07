@@ -5,8 +5,8 @@
 **Description:** Integrate proper backend authentication system (Firebase or similar).
 
 **Acceptance Criteria:**
-- [ ] Replace placeholder auth with real backend integration
-- [ ] Implement user management methods in i_auth_repository.dart
-- [ ] Add sync capabilities for authentication data
-- [ ] Update auth_repository.dart with actual backend calls
-- [ ] Implement invite user and reset password methods
+- [x] DONE: Replace placeholder auth with real backend integration
+- [x] DONE: Implement user management methods in i_auth_repository.dart
+- [x] DONE: Add sync capabilities for authentication data
+- [x] DONE: Update auth_repository.dart with actual backend calls
+- [x] DONE: Implement invite user and reset password methods
