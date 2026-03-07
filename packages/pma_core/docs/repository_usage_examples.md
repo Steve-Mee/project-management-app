@@ -49,3 +49,21 @@ await ref.read(projectsProvider.notifier).deleteProject(projectId);
 
 - Keep example snippets in docs or `example/`, not under runtime `lib/` source.
 - Runtime source should only contain code used by the app/package.
+
+## Testing Project Providers
+
+```dart
+final fakeRepository = FakeProjectRepository(seed: const [
+  ProjectModel(id: 'p1', name: 'Alpha', progress: 0.2, status: 'In Progress'),
+]);
+
+final container = ProviderContainer(overrides: [
+  projectRepositoryProvider.overrideWithValue(fakeRepository),
+]);
+
+final projects = await container.read(projectsProvider.future);
+expect(projects.length, 1);
+```
+
+- `ProjectsNotifier.initialize()` is not part of the current API.
+- Use provider overrides + `projectsProvider.future` to make tests deterministic.
