@@ -1,3 +1,10 @@
+## [1.2.3](https://github.com/Steve-Mee/project-management-app/compare/v1.2.2...v1.2.3) (2026-03-07)
+
+
+### Bug Fixes
+
+* **ci:** make analyze non-fatal for warnings and tolerate ubuntu desktop ([aff10b0](https://github.com/Steve-Mee/project-management-app/commit/aff10b0fc6ff5a901e7da45d184727b78274c085))
+
 ## [1.2.2](https://github.com/Steve-Mee/project-management-app/compare/v1.2.1...v1.2.2) (2026-03-07)
 
 
