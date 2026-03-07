@@ -1,3 +1,10 @@
+## [1.2.2](https://github.com/Steve-Mee/project-management-app/compare/v1.2.1...v1.2.2) (2026-03-07)
+
+
+### Bug Fixes
+
+* **ci:** use env template, skip golden tests, linux deps ([3aa6100](https://github.com/Steve-Mee/project-management-app/commit/3aa6100f4621417972611ef1686da511a9d67692))
+
 ## [1.2.1](https://github.com/Steve-Mee/project-management-app/compare/v1.2.0...v1.2.1) (2026-03-07)
 
 
