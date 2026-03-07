@@ -773,7 +773,7 @@ void main() {
       expect(state, isA<AsyncError<List<DashboardItem>>>());
       
       final error = container.read(dashboardErrorProvider);
-      expect(error, 'dashboard_load_error');
+      expect(error, DashboardErrorCode.loadError);
     });
 
     test('saveConfig failure logs error and rethrows', () async {
@@ -788,7 +788,7 @@ void main() {
       }
       
       final error = container.read(dashboardErrorProvider);
-      expect(error, 'dashboard_save_error');
+      expect(error, DashboardErrorCode.saveError);
     });
 
     test('addItem failure logs error and rethrows', () async {
@@ -808,7 +808,7 @@ void main() {
       }
       
       final error = container.read(dashboardErrorProvider);
-      expect(error, 'dashboard_action_failed');
+      expect(error, DashboardErrorCode.actionFailed);
     });
 
     test('removeItem failure logs error and rethrows', () async {
@@ -823,7 +823,7 @@ void main() {
       }
       
       final error = container.read(dashboardErrorProvider);
-      expect(error, 'dashboard_action_failed');
+      expect(error, DashboardErrorCode.actionFailed);
     });
 
     test('updateItemPosition success logs event', () async {
@@ -869,7 +869,7 @@ void main() {
       }
       
       final error = container.read(dashboardErrorProvider);
-      expect(error, 'dashboard_action_failed');
+      expect(error, DashboardErrorCode.actionFailed);
     });
 
     test('createCustomWidget success adds item and logs event', () async {

@@ -10,3 +10,7 @@ Dit bestand bevat de nog openstaande, technisch valide punten uit `Done Todos im
 - [x] 4. Valideer/opschonen AI legacy drift: documenteer en borg dat de actieve provider als canonical geldt.
 - [x] 5. Verhard project-detail cache observability en maak TTL-gedrag expliciet configureerbaar met veilige default.
 - [x] 6. Voeg release evidence template toe en koppel dit in release documentatie/workflow-context.
+
+## Vervolg-batch
+
+- [x] 7. Centraliseer dashboard error/status codes in een gedeelde taxonomie en vervang losse string literals.

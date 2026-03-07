@@ -18,6 +18,15 @@ import 'package:pma_core/providers/connectivity/connectivity_providers.dart';
 import 'package:pma_core/providers/offline_status_providers.dart';
 import 'package:pma_core/models/requirements.dart';
 
+/// Canonical error/status codes used by dashboard providers.
+abstract final class DashboardErrorCode {
+  static const String offlineSyncSuccess = 'offline_sync_success';
+  static const String actionFailed = 'dashboard_action_failed';
+  static const String loadError = 'dashboard_load_error';
+  static const String saveError = 'dashboard_save_error';
+  static const String offlineQueued = 'dashboard_offline_queued';
+}
+
 /// DashboardItem
 /// 
 /// Model for dashboard items with validated widget types.
@@ -136,10 +145,10 @@ class DashboardConfigNotifier extends AsyncNotifier<List<DashboardItem>> {
         ref.read(offlineStatusProvider.notifier).markSyncStarted();
         _repository.processPendingSync().then((_) {
           ref.read(offlineStatusProvider.notifier).markSyncSucceeded();
-          ref.read(dashboardErrorProvider.notifier).state = 'offline_sync_success';
+          ref.read(dashboardErrorProvider.notifier).state = DashboardErrorCode.offlineSyncSuccess;
         }).catchError((error) {
           ref.read(offlineStatusProvider.notifier).markSyncFailed();
-          ref.read(dashboardErrorProvider.notifier).state = 'dashboard_action_failed';
+          ref.read(dashboardErrorProvider.notifier).state = DashboardErrorCode.actionFailed;
         });
       }
     });
@@ -157,7 +166,7 @@ class DashboardConfigNotifier extends AsyncNotifier<List<DashboardItem>> {
       await _logError('load_config', e, st);
       state = AsyncValue.error(e, st);
       _userTemplates = [];
-      ref.read(dashboardErrorProvider.notifier).state = 'dashboard_load_error';
+      ref.read(dashboardErrorProvider.notifier).state = DashboardErrorCode.loadError;
     }
   }
 
@@ -193,7 +202,7 @@ class DashboardConfigNotifier extends AsyncNotifier<List<DashboardItem>> {
       _logEvent('config_saved');
     } catch (e, st) {
       await _logError('save_config', e, st);
-      ref.read(dashboardErrorProvider.notifier).state = 'dashboard_save_error';
+      ref.read(dashboardErrorProvider.notifier).state = DashboardErrorCode.saveError;
       rethrow;
     }
   }
@@ -220,7 +229,7 @@ class DashboardConfigNotifier extends AsyncNotifier<List<DashboardItem>> {
       _logEvent('item_added', params: {'widgetType': item.widgetType.name, 'position': position});
     } catch (e, st) {
       await _logError('add_item', e, st);
-      ref.read(dashboardErrorProvider.notifier).state = 'dashboard_action_failed';
+      ref.read(dashboardErrorProvider.notifier).state = DashboardErrorCode.actionFailed;
       rethrow;
     }
   }
@@ -234,7 +243,7 @@ class DashboardConfigNotifier extends AsyncNotifier<List<DashboardItem>> {
       _logEvent('item_removed', params: {'index': index});
     } catch (e, st) {
       await _logError('remove_item', e, st);
-      ref.read(dashboardErrorProvider.notifier).state = 'dashboard_action_failed';
+      ref.read(dashboardErrorProvider.notifier).state = DashboardErrorCode.actionFailed;
       rethrow;
     }
   }
@@ -252,7 +261,7 @@ class DashboardConfigNotifier extends AsyncNotifier<List<DashboardItem>> {
       _logEvent('position_updated', params: {'index': index, 'newPosition': clampedPosition});
     } catch (e, st) {
       await _logError('update_position', e, st);
-      ref.read(dashboardErrorProvider.notifier).state = 'dashboard_action_failed';
+      ref.read(dashboardErrorProvider.notifier).state = DashboardErrorCode.actionFailed;
       rethrow;
     }
   }
@@ -576,7 +585,7 @@ class DashboardConfigNotifier extends AsyncNotifier<List<DashboardItem>> {
       return await _repository.loadRequirements();
     } catch (e, st) {
       await _logError('load_requirements', e, st);
-      ref.read(dashboardErrorProvider.notifier).state = 'dashboard_load_error';
+      ref.read(dashboardErrorProvider.notifier).state = DashboardErrorCode.loadError;
       return [];
     }
   }
@@ -586,13 +595,13 @@ class DashboardConfigNotifier extends AsyncNotifier<List<DashboardItem>> {
       if (_isOffline) {
         await _repository.queuePendingChange({'type': 'save_requirement', 'data': req.toJson()});
         AppLogger.instance.i('Queued requirement save: ${req.id}');
-        ref.read(dashboardErrorProvider.notifier).state = 'Working offline – changes will sync when online';
+        ref.read(dashboardErrorProvider.notifier).state = DashboardErrorCode.offlineQueued;
       } else {
         await _repository.saveRequirement(req);
       }
     } catch (e, st) {
       await _logError('save_requirement', e, st);
-      ref.read(dashboardErrorProvider.notifier).state = 'dashboard_action_failed';
+      ref.read(dashboardErrorProvider.notifier).state = DashboardErrorCode.actionFailed;
     }
   }
 
@@ -644,7 +653,7 @@ class DashboardConfigNotifier extends AsyncNotifier<List<DashboardItem>> {
       AppLogger.event('custom_widget_created');
     } catch (e, st) {
       await _logError('create_custom_widget', e, st);
-      ref.read(dashboardErrorProvider.notifier).state = 'dashboard_action_failed';
+      ref.read(dashboardErrorProvider.notifier).state = DashboardErrorCode.actionFailed;
       rethrow;
     }
   }
