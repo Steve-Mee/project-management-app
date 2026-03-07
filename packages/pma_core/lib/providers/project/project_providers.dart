@@ -48,6 +48,14 @@ class _CacheEntry<T> {
 
 /// TTL used by individual project cache.
 final projectByIdCacheTtlProvider = Provider<Duration>((ref) {
+  const rawTtlSeconds = String.fromEnvironment(
+    'PROJECT_BY_ID_CACHE_TTL_SECONDS',
+    defaultValue: '300',
+  );
+  final parsed = int.tryParse(rawTtlSeconds);
+  if (parsed != null && parsed > 0) {
+    return Duration(seconds: parsed);
+  }
   return const Duration(minutes: 5);
 });
 
@@ -95,9 +103,25 @@ final projectByIdProvider =
       if (cachedProject != null && cachedAt != null) {
         final age = DateTime.now().difference(cachedAt);
         if (age <= ttl) {
+          AppLogger.debug(
+            'project_by_id_cache_hit',
+            params: {
+              'projectId': id,
+              'cacheAgeMs': age.inMilliseconds,
+              'ttlMs': ttl.inMilliseconds,
+            },
+          );
           return cachedProject;
         }
       }
+
+      AppLogger.debug(
+        'project_by_id_cache_miss',
+        params: {
+          'projectId': id,
+          'hadCachedValue': cachedProject != null,
+        },
+      );
 
       final repository = ref.watch(projectRepositoryProvider);
       final project = await repository.getProjectById(id);
