@@ -201,6 +201,26 @@ class _CustomizeDashboardScreenState extends ConsumerState<CustomizeDashboardScr
     );
   }
 
+  Future<void> _undoLastChange() async {
+    final notifier = ref.read(dashboardConfigProvider.notifier);
+    if (!notifier.canUndo) {
+      return;
+    }
+
+    await notifier.undo();
+    _loadConfig();
+  }
+
+  Future<void> _redoLastChange() async {
+    final notifier = ref.read(dashboardConfigProvider.notifier);
+    if (!notifier.canRedo) {
+      return;
+    }
+
+    await notifier.redo();
+    _loadConfig();
+  }
+
   void _showTemplateSelector() {
     final templates = ref.read(layoutTemplatesProvider);
     
@@ -325,10 +345,24 @@ class _CustomizeDashboardScreenState extends ConsumerState<CustomizeDashboardScr
 
   @override
   Widget build(BuildContext context) {
+    // Rebuild toolbar controls when config/history state changes.
+    ref.watch(dashboardConfigProvider);
+    final dashboardNotifier = ref.read(dashboardConfigProvider.notifier);
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Customize Dashboard'),
         actions: [
+          IconButton(
+            tooltip: 'Undo',
+            onPressed: dashboardNotifier.canUndo ? _undoLastChange : null,
+            icon: const Icon(Icons.undo),
+          ),
+          IconButton(
+            tooltip: 'Redo',
+            onPressed: dashboardNotifier.canRedo ? _redoLastChange : null,
+            icon: const Icon(Icons.redo),
+          ),
           TextButton.icon(
             onPressed: _showTemplateSelector,
             icon: const Icon(Icons.view_module),

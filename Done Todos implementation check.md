@@ -1493,16 +1493,14 @@
 ### Wat is correct geimplementeerd
 
 - Undo/redo, templates, constraints, widget validation en error handling bestaan in dashboard provider/repository lagen (eerder geverifieerd in batch 020-025).
-- `customize_dashboard_screen.dart` ondersteunt templates, custom widgets, position updates en save flow.
+- `customize_dashboard_screen.dart` ondersteunt templates, custom widgets, position updates, save flow en expliciete undo/redo AppBar-acties met `canUndo`/`canRedo` state.
 
 ### Wat ik nog zou wijzigen
 
-- In de UI ontbreken expliciete undo/redo acties, terwijl notifier-capabilities bestaan.
 - Widget type validatie blijft permissief fallback-gedrag gebruiken (`fromString` fallback), dus strict-validatieclaim is beperkt.
 
 ### Wat ik nog zou toevoegen
 
-- Undo/redo knoppen in `lib/features/dashboard/customize_dashboard_screen.dart` met state-indicatie (`canUndo/canRedo`).
 - UI tests die template toepassen + widget verplaatsing + foutstatus (`dashboardErrorProvider`) valideren.
 
 ### Wat ik nog zou verwijderen
@@ -1512,6 +1510,11 @@
 ### Impact van jongere TODO op oudere TODO
 
 - TODO 043 bundelt meerdere eerdere dashboard-hardenings (020-025), maar UI-exposure loopt nog achter op provider-capabilities.
+
+### Opvolging status
+
+- DONE (2026-03-07): dashboard customization features zijn functioneel afgerond met undo/redo in providerlaag en nu ook expliciet in de customization-UI.
+- Open follow-up (niet blocker): diepere widget-level E2E tests voor template/apply/reposition/error paden.
 
 ---
 
