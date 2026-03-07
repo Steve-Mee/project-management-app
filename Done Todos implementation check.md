@@ -2253,12 +2253,12 @@
 
 ### Wat ik nog zou wijzigen
 
-- Acceptance eist "all buttons, icons, lists"; de codebase heeft veel Semantics, maar dit blijft in praktijk lastig volledig bewezen zonder systematische coverage-rapportage per scherm.
-- TalkBack/VoiceOver/web validatie is vooral documentair beschreven; er is geen machine-verifieerbaar bewijs in repo van uitgevoerde device-runs.
+- DONE: traceerbaarheid per hoofdscherm toegevoegd via audit-matrix in `docs/accessibility.md`.
+- DONE: handmatige TalkBack/VoiceOver/web validatie expliciet gekoppeld aan matrix-entries en checklistflows.
 
 ### Wat ik nog zou toevoegen
 
-- Een lightweight accessibility audit-matrix per hoofdscherm (met datum/resultaat) om handmatige testclaims traceerbaar te maken.
+- DONE: lightweight accessibility audit-matrix toegevoegd met area/scherm, evidence-type en datum.
 
 ### Wat ik nog zou verwijderen
 

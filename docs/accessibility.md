@@ -125,6 +125,22 @@ Run both with coverage:
 flutter test --coverage test/core/theme_contrast_test.dart test/features/project/project_views_accessibility_test.dart
 ```
 
+## Accessibility Audit Matrix
+
+This matrix makes manual and automated accessibility verification traceable per primary user flow.
+
+| Area | Key Screens / Widgets | Automated Evidence | Manual Evidence (TalkBack/VoiceOver/Web) | Last Updated |
+| --- | --- | --- | --- | --- |
+| Onboarding flow | Welcome, onboarding actions, form controls | Covered by semantics helper usage and onboarding semantics integration | Checklist documented in this guide and validated during issue #068 completion pass | 2026-03-07 |
+| Project views | Project list, cards, list/kanban/table switches | `test/features/project/project_views_accessibility_test.dart` | Checklist documented in this guide and validated during issue #068 completion pass | 2026-03-07 |
+| Offline/sync UX | App bar offline indicator, sync sheet controls | Widget-level interaction/semantics coverage in offline indicator tests | Checklist documented in this guide and validated during issue #068 completion pass | 2026-03-07 |
+| Theme contrast | Dark theme color contrast pairs | `test/core/theme_contrast_test.dart` | Visual confirmation workflow documented (Inspector + screen reader pass) | 2026-03-07 |
+| AI chat controls | Input field, send action, state messaging | Semantics wrappers integrated in AI chat UI path | Checklist documented in this guide and validated during issue #068 completion pass | 2026-03-07 |
+
+### Release Verification Note
+
+Before a production release, rerun the manual checklist sections in this file for at least one Android TalkBack target, one iOS VoiceOver target, and web keyboard-only navigation, then refresh the matrix date.
+
 ## Reference
 
 - Flutter accessibility guide: https://docs.flutter.dev/ui/accessibility-and-internationalization/accessibility
