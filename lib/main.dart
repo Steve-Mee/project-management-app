@@ -14,7 +14,6 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hive_flutter/hive_flutter.dart';
-import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:window_manager/window_manager.dart';
 import 'package:app_links/app_links.dart';
@@ -41,6 +40,8 @@ import 'models/task_model.dart';
 import 'models/comment_model.dart';
 import 'package:pma_core/models/adapters/migrated_model_adapters.dart';
 import 'core/config/app_config.dart';
+import 'core/services/sentry_service.dart';
+import 'core/widgets/error_boundary.dart';
 
 /// Enable Semantics Debugger only in debug mode when explicitly requested.
 /// Use: flutter run --dart-define=ENABLE_SEMANTICS_DEBUGGER=true
@@ -48,6 +49,16 @@ const bool _enableSemanticsDebugger =
   bool.fromEnvironment('ENABLE_SEMANTICS_DEBUGGER', defaultValue: false);
 const bool _showSemanticsDebugger =
   kDebugMode && _enableSemanticsDebugger;
+
+/// Debug flags for issue #072 error-path verification.
+///
+/// Examples:
+/// - flutter run --dart-define=DEBUG_THROW_STARTUP_ERROR=true
+/// - flutter run --dart-define=DEBUG_THROW_POSTFRAME_ERROR=true
+const bool _debugThrowStartupError =
+  bool.fromEnvironment('DEBUG_THROW_STARTUP_ERROR', defaultValue: false);
+const bool _debugThrowPostFrameError =
+  bool.fromEnvironment('DEBUG_THROW_POSTFRAME_ERROR', defaultValue: false);
 
 /// Initializes environment variables from .env file
 /// Loads dotenv for development. In production, uses secure storage if available
@@ -96,96 +107,117 @@ Future<Map<String, String>> initEnv() async {
 /// Main entry point of the application
 /// Initializes Riverpod for state management and ScreenUtil for responsive design
 void main() async {
-  WidgetsFlutterBinding.ensureInitialized();
-  
-  // Initialize application configuration
-  await AppConfig.initialize();
+  // Guard startup and uncaught async exceptions at the process level.
+  await runZonedGuarded<Future<void>>(() async {
+    WidgetsFlutterBinding.ensureInitialized();
 
-  // Firebase: initialize only Core + Messaging.
-  await Firebase.initializeApp();
-  await FirebaseMessaging.instance.setAutoInitEnabled(true);
-  
-  if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
-    await windowManager.ensureInitialized();
-  }
-  await SupabaseConnectionDiagnostics.logConfigurationSnapshot(
-    url: AppConfig.supabaseUrl,
-    anonKey: AppConfig.supabaseAnonKey,
-    context: 'startup_before_supabase_initialize',
-  );
-  await SupabaseConnectionDiagnostics.logNetworkDiagnostics(
-    url: AppConfig.supabaseUrl,
-    context: 'startup_before_supabase_initialize',
-    force: true,
-  );
-  await Supabase.initialize(
-    url: AppConfig.supabaseUrl!,
-    anonKey: AppConfig.supabaseAnonKey!,
-  );
-  // Initialize Stripe
-  Stripe.publishableKey = AppConfig.stripePublishableKey ?? '';
-  Stripe.merchantIdentifier = 'merchant.com.example';
-  Stripe.urlScheme = 'flutterstripe';
-  Hive.registerAdapter<ProjectModel>(ProjectModelAdapter());
-  Hive.registerAdapter<TaskStatus>(TaskStatusAdapter());
-  Hive.registerAdapter<Task>(TaskAdapter());
-  Hive.registerAdapter<CommentModel>(CommentModelAdapter());
-  registerSafeMigratedModelAdapters();
-  await Hive.initFlutter();
-  await EncryptedHiveBox(
-    boxName: 'settings',
-    encryptionKey: 'hive_encryption_key_settings',
-  ).open();
-  await EncryptedHiveBox(
-    boxName: 'auth',
-    encryptionKey: 'hive_encryption_key_auth',
-  ).open();
-  await EncryptedHiveBox(
-    boxName: 'local_tokens',
-    encryptionKey: 'hive_encryption_key_local_tokens',
-  ).open();
-  await Hive.openBox('groups');
-  await Hive.openBox('roles');
-  await HiveInitializer.initialize();
-  await LoginRateLimiter.instance.initialize();
-  final featureFlags = FeatureFlagService(supabaseClient: Supabase.instance.client);
-  await featureFlags.initialize();
-  await featureFlags.refresh();
-  final container = ProviderContainer();
-  
-  // Initialize reCAPTCHA config with settings repository
-  final settingsRepo = await container.read(settingsRepositoryProvider.future);
-  RecaptchaConfig.initializeWithRepository(settingsRepo);
-  RecaptchaConfig.initialize();
-  final lifecycleHandler = _AppLifecycleHandler(container);
-  lifecycleHandler.startPeriodicBackup();
-  WidgetsBinding.instance.addObserver(lifecycleHandler);
-  if (kReleaseMode) {
-    await SentryFlutter.init(
-      (options) {
-        options.dsn =
-            'https://4cc5120c8496e93b5b9f1798f0d1077b@o4510841439453184.ingest.de.sentry.io/4510841442402384';
-        options.enableAutoSessionTracking = true;
-        options.environment = 'production';
-      },
+    // Initialize application configuration and service dependencies.
+    await AppConfig.initialize();
+
+    // Firebase: initialize only Core + Messaging.
+    await Firebase.initializeApp();
+    await FirebaseMessaging.instance.setAutoInitEnabled(true);
+
+    if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
+      await windowManager.ensureInitialized();
+    }
+    await SupabaseConnectionDiagnostics.logConfigurationSnapshot(
+      url: AppConfig.supabaseUrl,
+      anonKey: AppConfig.supabaseAnonKey,
+      context: 'startup_before_supabase_initialize',
+    );
+    await SupabaseConnectionDiagnostics.logNetworkDiagnostics(
+      url: AppConfig.supabaseUrl,
+      context: 'startup_before_supabase_initialize',
+      force: true,
+    );
+    await Supabase.initialize(
+      url: AppConfig.supabaseUrl!,
+      anonKey: AppConfig.supabaseAnonKey!,
+    );
+
+    // Initialize Stripe.
+    Stripe.publishableKey = AppConfig.stripePublishableKey ?? '';
+    Stripe.merchantIdentifier = 'merchant.com.example';
+    Stripe.urlScheme = 'flutterstripe';
+
+    Hive.registerAdapter<ProjectModel>(ProjectModelAdapter());
+    Hive.registerAdapter<TaskStatus>(TaskStatusAdapter());
+    Hive.registerAdapter<Task>(TaskAdapter());
+    Hive.registerAdapter<CommentModel>(CommentModelAdapter());
+    registerSafeMigratedModelAdapters();
+    await Hive.initFlutter();
+    await EncryptedHiveBox(
+      boxName: 'settings',
+      encryptionKey: 'hive_encryption_key_settings',
+    ).open();
+    await EncryptedHiveBox(
+      boxName: 'auth',
+      encryptionKey: 'hive_encryption_key_auth',
+    ).open();
+    await EncryptedHiveBox(
+      boxName: 'local_tokens',
+      encryptionKey: 'hive_encryption_key_local_tokens',
+    ).open();
+    await Hive.openBox('groups');
+    await Hive.openBox('roles');
+    await HiveInitializer.initialize();
+    await LoginRateLimiter.instance.initialize();
+
+    final featureFlags = FeatureFlagService(
+      supabaseClient: Supabase.instance.client,
+    );
+    await featureFlags.initialize();
+    await featureFlags.refresh();
+
+    final container = ProviderContainer();
+
+    // Initialize reCAPTCHA config with settings repository.
+    final settingsRepo = await container.read(settingsRepositoryProvider.future);
+    RecaptchaConfig.initializeWithRepository(settingsRepo);
+    RecaptchaConfig.initialize();
+
+    final lifecycleHandler = _AppLifecycleHandler(container);
+    lifecycleHandler.startPeriodicBackup();
+    WidgetsBinding.instance.addObserver(lifecycleHandler);
+
+    if (kDebugMode && _debugThrowStartupError) {
+      throw StateError('Debug startup error for ErrorBoundary/Sentry validation');
+    }
+
+    // Initialize Sentry, then launch the app tree with global ErrorBoundary.
+    await SentryService.initialize(
+      environment: kReleaseMode ? 'production' : 'development',
       appRunner: () {
+        // Trigger a framework error after first frame to validate ErrorBoundary UI.
+        if (kDebugMode && _debugThrowPostFrameError) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            throw FlutterError(
+              'Debug post-frame Flutter error for ErrorBoundary validation',
+            );
+          });
+        }
+
         runApp(
           UncontrolledProviderScope(
             container: container,
-            child: const _AppBootstrapGate(child: MyApp()),
+            child: const ErrorBoundary(
+              child: _AppBootstrapGate(child: MyApp()),
+            ),
           ),
         );
       },
     );
-    return;
-  }
-
-  runApp(
-    UncontrolledProviderScope(
-      container: container,
-      child: const _AppBootstrapGate(child: MyApp()),
-    ),
-  );
+  }, (Object error, StackTrace stackTrace) {
+    // Last-resort catch for uncaught zone errors.
+    unawaited(
+      SentryService.captureException(
+        error,
+        stackTrace: stackTrace,
+        reason: 'main_run_zoned_guarded',
+      ),
+    );
+  });
 }
 
 /// Global startup gate for issue #067 onboarding flow.

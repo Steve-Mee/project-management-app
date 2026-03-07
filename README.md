@@ -123,6 +123,22 @@ Operational behavior:
 
 See [`docs/feature-flags.md`](docs/feature-flags.md) for the implementation checklist and acceptance criteria mapping.
 
+## Error Handling
+
+Issue `#072-global-error-boundary` introduces centralized crash handling and Sentry observability.
+
+- Global boundary widget: `lib/core/widgets/error_boundary.dart`
+- Bootstrap wiring: `lib/main.dart` (`runZonedGuarded` + root `ErrorBoundary`)
+- Sentry wrapper service: `lib/core/services/sentry_service.dart`
+- Logger bridge with breadcrumb forwarding: `packages/pma_core/lib/services/app_logger.dart`
+
+Debug validation flags:
+
+- `DEBUG_THROW_STARTUP_ERROR=true`: forces startup exception to validate zone/Sentry capture
+- `DEBUG_THROW_POSTFRAME_ERROR=true`: throws post-frame Flutter error to validate boundary fallback UI
+
+Implementation checklist and test steps are documented in [`docs/error-boundary.md`](docs/error-boundary.md).
+
 ## Documentation
 
 | File | Description |
@@ -133,6 +149,7 @@ See [`docs/feature-flags.md`](docs/feature-flags.md) for the implementation chec
 | [INTEGRATION_GUIDE.md](INTEGRATION_GUIDE.md) | Guide for integrating various components |
 | [docs/gantt-chart.md](docs/gantt-chart.md) | Gantt upgrade checklist, architecture notes, and verification |
 | [docs/feature-flags.md](docs/feature-flags.md) | Supabase feature flag checklist, provider/service summary, and acceptance mapping |
+| [docs/error-boundary.md](docs/error-boundary.md) | Global error boundary acceptance checklist, test procedure, and AppLogger/Sentry integration notes |
 | [docs/modularization.md](docs/modularization.md) | Issue #070 modularization acceptance checklist and deferred routing summary |
 | [NAVIGATION_GUIDE.md](NAVIGATION_GUIDE.md) | Guide for navigating the application |
 | [QUICK_REFERENCE.md](QUICK_REFERENCE.md) | Quick reference for key features |

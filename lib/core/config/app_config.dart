@@ -23,13 +23,26 @@ class AppConfig {
   /// Initialize configuration by loading environment variables.
   /// Should be called early in app startup.
   static Future<void> initialize() async {
+    Map<String, String> dotEnvValues = const <String, String>{};
+
     try {
+      // Best effort: load .env once so optional values (for example SENTRY_DSN)
+      // are available in all build modes.
+      try {
+        await dotenv.load();
+        dotEnvValues = Map<String, String>.from(dotenv.env);
+      } catch (e) {
+        AppLogger.instance.w(
+          'AppConfig: .env not loaded, continuing with available configuration',
+          error: e,
+        );
+      }
+
       // Load Supabase keys with secure storage fallback for production
       if (!kReleaseMode) {
         // Debug mode: load from .env file
-        await dotenv.load();
-        _supabaseUrl = dotenv.env['SUPABASE_URL'];
-        _supabaseAnonKey = dotenv.env['SUPABASE_ANON_KEY'];
+        _supabaseUrl = dotEnvValues['SUPABASE_URL'];
+        _supabaseAnonKey = dotEnvValues['SUPABASE_ANON_KEY'];
       } else {
         // Release mode: Use secure storage for production security
         const storage = FlutterSecureStorage();
@@ -37,20 +50,19 @@ class AppConfig {
         _supabaseAnonKey = await storage.read(key: 'SUPABASE_ANON_KEY');
         if (_supabaseUrl == null || _supabaseUrl!.isEmpty || _supabaseAnonKey == null || _supabaseAnonKey!.isEmpty) {
           // Fallback to .env if secure storage is empty
-          await dotenv.load();
-          _supabaseUrl = dotenv.env['SUPABASE_URL'];
-          _supabaseAnonKey = dotenv.env['SUPABASE_ANON_KEY'];
+          _supabaseUrl = dotEnvValues['SUPABASE_URL'];
+          _supabaseAnonKey = dotEnvValues['SUPABASE_ANON_KEY'];
         }
       }
 
       // Load other configuration values from dotenv (available in both modes)
-      _openaiApiKey = dotenv.env['OPENAI_API_KEY'];
-      _stripePublishableKey = dotenv.env['STRIPE_PUBLISHABLE_KEY'];
-      _stripeSecretKey = dotenv.env['STRIPE_SECRET_KEY'];
-      _openaiBaseUrl = dotenv.env['OPENAI_BASE_URL'];
-      _sentryDsn = dotenv.env['SENTRY_DSN'];
-      _logLevel = dotenv.env['LOG_LEVEL'];
-      _firebaseApiKey = dotenv.env['FIREBASE_API_KEY'];
+      _openaiApiKey = dotEnvValues['OPENAI_API_KEY'];
+      _stripePublishableKey = dotEnvValues['STRIPE_PUBLISHABLE_KEY'];
+      _stripeSecretKey = dotEnvValues['STRIPE_SECRET_KEY'];
+      _openaiBaseUrl = dotEnvValues['OPENAI_BASE_URL'];
+      _sentryDsn = dotEnvValues['SENTRY_DSN'];
+      _logLevel = dotEnvValues['LOG_LEVEL'];
+      _firebaseApiKey = dotEnvValues['FIREBASE_API_KEY'];
 
       AppLogger.instance.i('AppConfig: Configuration loaded successfully');
     } catch (e) {

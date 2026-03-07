@@ -13,6 +13,7 @@ import 'package:pma_core/providers/project_providers.dart';
 import 'package:pma_core/providers/onboarding_providers.dart';
 import 'package:pma_core/providers/ai/ai_chat_providers.dart';
 import 'package:pma_core/services/project_invitation_service.dart';
+import 'package:pma_core/services/app_logger.dart';
 import 'package:pma_core/utils/accessibility_helper.dart';
 import 'package:pma_core/models/project_model.dart';
 import 'package:pma_core/models/chat_message_model.dart';
@@ -77,6 +78,8 @@ class _OnboardingWizardState extends ConsumerState<OnboardingWizard> {
       return;
     }
 
+    AppLogger.userAction('User skipped onboarding flow');
+
     await _finishOnboarding();
   }
 
@@ -87,6 +90,7 @@ class _OnboardingWizardState extends ConsumerState<OnboardingWizard> {
 
     try {
       await ref.read(onboardingProvider.notifier).markOnboardingCompleted();
+      AppLogger.userAction('User completed onboarding flow');
       if (!mounted) {
         return;
       }
@@ -416,6 +420,12 @@ class _QuickAiDemoDialogState extends ConsumerState<_QuickAiDemoDialog> {
     if (message.isEmpty) {
       return;
     }
+    AppLogger.userAction(
+      'User added onboarding AI demo prompt',
+      data: {
+        'length': message.length,
+      },
+    );
     await ref.read(aiChatProvider.notifier).sendMessage(message);
   }
 
@@ -571,6 +581,13 @@ class _OnboardingInviteTeamStepState
       final invitationService =
           ProjectInvitationService(Supabase.instance.client);
       await invitationService.sendInvitation(projectId, email, 'member');
+      AppLogger.userAction(
+        'User added team invite for $email',
+        data: {
+          'projectId': projectId,
+          'role': 'member',
+        },
+      );
 
       if (!mounted) {
         return;
@@ -836,6 +853,12 @@ class _OnboardingCreateProjectStepState
         description: description.isEmpty ? null : description,
       );
       await ref.read(projectsProvider.notifier).addProject(project);
+      AppLogger.userAction(
+        'User added project $projectName from onboarding',
+        data: {
+          'projectId': project.id,
+        },
+      );
 
       if (!mounted) {
         return;

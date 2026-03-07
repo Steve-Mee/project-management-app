@@ -67,7 +67,7 @@ dependencies:
   crypto: ^3.0.3
   connectivity_plus: ^6.0.0
   encrypt: ^5.0.3
-  sentry_flutter: ^9.0.0
+  sentry_flutter: ^9.0.0 # Crash reporting and breadcrumbs
   hive: 2.2.3
   hive_flutter: 1.1.0
   supabase_flutter: ^2.9.1

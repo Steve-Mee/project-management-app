@@ -228,6 +228,13 @@ class TaskNotifier extends AsyncNotifier<List<Task>> {
         'status': newStatus.name,
       },
     );
+    AppLogger.userAction(
+      'User updated task status to ${newStatus.name} for ${updatedTask.title}',
+      data: {
+        'taskId': updatedTask.id,
+        'projectId': updatedTask.projectId,
+      },
+    );
     _syncTaskNotification(updatedTask);
   }
 
@@ -268,6 +275,13 @@ class TaskNotifier extends AsyncNotifier<List<Task>> {
         'attachments': updatedTask.attachments.length,
       },
     );
+    AppLogger.userAction(
+      'User updated task ${updatedTask.title}',
+      data: {
+        'taskId': updatedTask.id,
+        'projectId': updatedTask.projectId,
+      },
+    );
     await _syncTaskNotification(updatedTask);
   }
 
@@ -295,6 +309,13 @@ class TaskNotifier extends AsyncNotifier<List<Task>> {
         'id': task.id,
         'projectId': task.projectId,
         'title': task.title,
+      },
+    );
+    AppLogger.userAction(
+      'User added task ${task.title}',
+      data: {
+        'taskId': task.id,
+        'projectId': task.projectId,
       },
     );
     await _syncTaskNotification(task);
@@ -325,6 +346,13 @@ class TaskNotifier extends AsyncNotifier<List<Task>> {
       'task_deleted',
       params: {
         'id': taskId,
+        'projectId': _activeProjectId,
+      },
+    );
+    AppLogger.userAction(
+      'User deleted task $taskId',
+      data: {
+        'taskId': taskId,
         'projectId': _activeProjectId,
       },
     );

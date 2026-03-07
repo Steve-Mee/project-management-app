@@ -121,6 +121,12 @@ class HiveProjectRepository implements IProjectRepository {
       );
     }
     await _projectsBox.put(resolved.id, resolved.toJson());
+    AppLogger.userAction(
+      'User added project ${resolved.name}',
+      data: {
+        'projectId': resolved.id,
+      },
+    );
 
     // Skip Supabase sync in test mode
     if (_isTestMode) {
@@ -300,6 +306,13 @@ class HiveProjectRepository implements IProjectRepository {
         );
         
         await _projectsBox.put(resolvedId, updatedProject.toJson());
+        AppLogger.userAction(
+          'User updated project progress for ${updatedProject.name}',
+          data: {
+            'projectId': resolvedId,
+            'progress': newProgress,
+          },
+        );
         
         // Skip Supabase sync in test mode
         if (!_isTestMode) {
@@ -342,6 +355,13 @@ class HiveProjectRepository implements IProjectRepository {
         );
         
         await _projectsBox.put(resolvedId, updatedProject.toJson());
+        AppLogger.userAction(
+          'User updated task list for project ${updatedProject.name}',
+          data: {
+            'projectId': resolvedId,
+            'taskCount': tasks.length,
+          },
+        );
         
         // Skip Supabase sync in test mode
         if (!_isTestMode) {
@@ -384,6 +404,12 @@ class HiveProjectRepository implements IProjectRepository {
         );
 
         await _projectsBox.put(resolvedId, updatedProject.toJson());
+        AppLogger.userAction(
+          'User updated project path for ${updatedProject.name}',
+          data: {
+            'projectId': resolvedId,
+          },
+        );
         await _syncManager.syncProjectUpdate(resolvedId, userId: userId, metadata: metadata);
       }
     } catch (e) {
@@ -425,6 +451,12 @@ class HiveProjectRepository implements IProjectRepository {
         );
 
         await _projectsBox.put(resolvedId, updatedProject.toJson());
+        AppLogger.userAction(
+          'User updated project plan for ${updatedProject.name}',
+          data: {
+            'projectId': resolvedId,
+          },
+        );
         await _syncManager.syncProjectUpdate(resolvedId, userId: userId, metadata: metadata);
       }
     } catch (e) {
@@ -485,6 +517,12 @@ class HiveProjectRepository implements IProjectRepository {
         );
 
         await _projectsBox.put(resolvedId, finalProject.toJson());
+        AppLogger.userAction(
+          'User updated project ${finalProject.name}',
+          data: {
+            'projectId': resolvedId,
+          },
+        );
         await _syncManager.syncProjectUpdate(resolvedId, userId: userId, metadata: metadata);
       }
     } catch (e) {
@@ -507,7 +545,14 @@ class HiveProjectRepository implements IProjectRepository {
         var project = _dataMapper.fromJson(projectData);
         project = await _ensureValidId(project, projectId);
         final resolvedId = project.id;
+        final projectName = project.name;
         await _projectsBox.delete(resolvedId);
+        AppLogger.userAction(
+          'User deleted project $projectName',
+          data: {
+            'projectId': resolvedId,
+          },
+        );
         
         // Skip Supabase sync in test mode
         if (!_isTestMode) {
@@ -516,6 +561,12 @@ class HiveProjectRepository implements IProjectRepository {
         return;
       }
       await _projectsBox.delete(projectId);
+      AppLogger.userAction(
+        'User deleted project $projectId',
+        data: {
+          'projectId': projectId,
+        },
+      );
       
       // Skip Supabase sync in test mode
       if (!_isTestMode) {
@@ -568,6 +619,13 @@ class HiveProjectRepository implements IProjectRepository {
       );
 
       await _projectsBox.put(projectId, updatedProject.toJson());
+      AppLogger.userAction(
+        'User added member $trimmed to project ${updatedProject.name}',
+        data: {
+          'projectId': projectId,
+          'member': trimmed,
+        },
+      );
       await _syncManager.syncProjectUpdate(projectId, userId: userId, metadata: metadata);
     } catch (e) {
       AppLogger.instance.e('Error sharing project $projectId', error: e);
@@ -610,6 +668,13 @@ class HiveProjectRepository implements IProjectRepository {
       );
 
       await _projectsBox.put(projectId, updatedProject.toJson());
+      AppLogger.userAction(
+        'User removed member $trimmed from project ${updatedProject.name}',
+        data: {
+          'projectId': projectId,
+          'member': trimmed,
+        },
+      );
       await _syncManager.syncProjectUpdate(projectId, userId: userId, metadata: metadata);
     } catch (e) {
       AppLogger.instance.e('Error removing shared user on $projectId', error: e);
@@ -654,6 +719,13 @@ class HiveProjectRepository implements IProjectRepository {
       );
 
       await _projectsBox.put(projectId, updatedProject.toJson());
+      AppLogger.userAction(
+        'User added group $trimmed to project ${updatedProject.name}',
+        data: {
+          'projectId': projectId,
+          'groupId': trimmed,
+        },
+      );
       await _syncManager.syncProjectUpdate(projectId, userId: userId, metadata: metadata);
     } catch (e) {
       AppLogger.instance.e('Error sharing project group $projectId', error: e);
@@ -696,6 +768,13 @@ class HiveProjectRepository implements IProjectRepository {
       );
 
       await _projectsBox.put(projectId, updatedProject.toJson());
+      AppLogger.userAction(
+        'User removed group $trimmed from project ${updatedProject.name}',
+        data: {
+          'projectId': projectId,
+          'groupId': trimmed,
+        },
+      );
       await _syncManager.syncProjectUpdate(projectId, userId: userId, metadata: metadata);
     } catch (e) {
       AppLogger.instance.e(

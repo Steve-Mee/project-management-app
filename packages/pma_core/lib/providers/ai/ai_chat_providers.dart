@@ -307,6 +307,15 @@ class AiChatNotifier extends AsyncNotifier<AiChatState> {
       timestamp: DateTime.now(),
     );
 
+    AppLogger.userAction(
+      'User added AI chat message',
+      data: {
+        'messageId': userMsg.id,
+        'projectId': projectId,
+        'length': userMessage.length,
+      },
+    );
+
     state = AsyncValue.data(currentState.copyWith(
       messages: [...currentState.messages, userMsg],
       isLoading: true,
@@ -356,6 +365,13 @@ class AiChatNotifier extends AsyncNotifier<AiChatState> {
     // For chat messages, we already updated UI, so just enqueue
     // For other requests, enqueue directly
     await _requestQueue.enqueue(request);
+    AppLogger.userAction(
+      'User added AI queue request ${request.action}',
+      data: {
+        'requestId': request.id,
+        'queueLength': _requestQueue.metrics.queueLength,
+      },
+    );
     _updateQueueMetrics(); // Update UI with new queue length
   }
 
@@ -395,6 +411,12 @@ class AiChatNotifier extends AsyncNotifier<AiChatState> {
 
   /// Clear all messages
   void clearChat() {
+    AppLogger.userAction(
+      'User deleted AI chat history',
+      data: {
+        'messageCount': state.value?.messages.length ?? 0,
+      },
+    );
     state = const AsyncValue.data(AiChatState());
   }
 
@@ -768,6 +790,12 @@ class AiChatNotifier extends AsyncNotifier<AiChatState> {
   /// Useful for cleanup or when user wants to cancel all pending operations.
   /// See .github/issues/033-ai-request-queue.md for queue management.
   void clearQueue() {
+    AppLogger.userAction(
+      'User deleted all AI queued requests',
+      data: {
+        'queueLength': _requestQueue.metrics.queueLength,
+      },
+    );
     _requestQueue.clear();
     _updateQueueMetrics(); // Update UI with cleared queue
     AppLogger.event('ai_queue_cleared', params: {'wasCleared': true});
