@@ -1,3 +1,16 @@
+## [1.11.0](https://github.com/Steve-Mee/project-management-app/compare/v1.10.0...v1.11.0) (2026-03-08)
+
+### Features
+
+* **comments:** navigate to user details on mention tap ([55b6d3d](https://github.com/Steve-Mee/project-management-app/commit/55b6d3df7439ae0fe34749f0513b4e64854dce16))
+* **project:** add configurable project cache TTL and cache logs ([e62095d](https://github.com/Steve-Mee/project-management-app/commit/e62095d6e28701cf8ec225eb58806a92c7e27018))
+
+### Bug Fixes
+
+* **ai-tests:** retain legacy import for legacy state contract suite ([07b8b87](https://github.com/Steve-Mee/project-management-app/commit/07b8b873ae0ec632f583db578fd522b80428d377))
+* **features:** add compatibility fallback exports in provider indexes ([bd2bfe9](https://github.com/Steve-Mee/project-management-app/commit/bd2bfe9284dc25259778a4a3f51e259ac74756be))
+* **project:** remove obsolete local pagination error field ([530357f](https://github.com/Steve-Mee/project-management-app/commit/530357f8efd7af8ef9b9d27b2ee1c9dbcd33413e))
+
 ## [1.10.0](https://github.com/Steve-Mee/project-management-app/compare/v1.9.0...v1.10.0) (2026-03-07)
 
 ### Features
