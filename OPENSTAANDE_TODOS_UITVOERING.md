@@ -27,3 +27,4 @@ Dit bestand bevat de nog openstaande, technisch valide punten uit `Done Todos im
 - [x] 18. Migreer compat provider/repository imports in appcode (`lib/**`) naar canonieke modulepaden.
 - [x] 19. Migreer compat provider-imports in tests naar canonieke modulepaden (uitgezonderd expliciete legacy-contracttests).
 - [x] 20. Vervang brede `providers.dart` feature-index exports door expliciete canonieke module-exports.
+- [x] 21. Vervang brede `pma_core/providers.dart` import in `lib/main.dart` door expliciete module-imports.
