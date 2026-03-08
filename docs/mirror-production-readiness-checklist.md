@@ -12,7 +12,7 @@ Status legend:
 - [x] Supabase bootstrap SQL no longer owns Mirror schema.
 - [x] Mirror schema changes live in versioned migrations only.
 - [ ] ADR for Mirror data ownership is linked from architecture docs.
-- [ ] Service boundaries documented for Edge Function vs runners.
+- [x] Service boundaries documented for Edge Function vs runners.
 
 ## 2. Database And Migrations
 
