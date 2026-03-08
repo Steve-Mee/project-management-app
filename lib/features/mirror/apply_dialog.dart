@@ -1,4 +1,3 @@
-import 'package:diffutil_dart/diffutil.dart';
 import 'package:flutter/material.dart';
 
 class ApplyDialogResult {
@@ -142,43 +141,24 @@ class _ApplyDialogState extends State<ApplyDialog> {
     final b = newText.split('\n');
 
     final buffer = <_DiffLine>[];
-    final diffs = calculateListDiff<String>(a, b, equalityChecker: (x, y) => x == y);
+    final maxLines = a.length > b.length ? a.length : b.length;
 
-    var ai = 0;
-    var bi = 0;
+    for (var i = 0; i < maxLines; i++) {
+      final left = i < a.length ? a[i] : null;
+      final right = i < b.length ? b[i] : null;
 
-    for (final diff in diffs.getUpdates()) {
-      while (ai < diff.source.start && bi < diff.destination.start) {
-        buffer.add(_DiffLine(context: ' ', text: a[ai]));
-        ai++;
-        bi++;
+      if (left != null && right != null) {
+        if (left == right) {
+          buffer.add(_DiffLine(context: ' ', text: left));
+        } else {
+          buffer.add(_DiffLine(context: '-', text: left));
+          buffer.add(_DiffLine(context: '+', text: right));
+        }
+      } else if (left != null) {
+        buffer.add(_DiffLine(context: '-', text: left));
+      } else if (right != null) {
+        buffer.add(_DiffLine(context: '+', text: right));
       }
-
-      for (var i = diff.source.start; i < diff.source.end; i++) {
-        buffer.add(_DiffLine(context: '-', text: a[i]));
-      }
-      for (var i = diff.destination.start; i < diff.destination.end; i++) {
-        buffer.add(_DiffLine(context: '+', text: b[i]));
-      }
-
-      ai = diff.source.end;
-      bi = diff.destination.end;
-    }
-
-    while (ai < a.length && bi < b.length) {
-      buffer.add(_DiffLine(context: ' ', text: a[ai]));
-      ai++;
-      bi++;
-    }
-
-    while (ai < a.length) {
-      buffer.add(_DiffLine(context: '-', text: a[ai]));
-      ai++;
-    }
-
-    while (bi < b.length) {
-      buffer.add(_DiffLine(context: '+', text: b[bi]));
-      bi++;
     }
 
     if (buffer.isEmpty) {
@@ -236,8 +216,8 @@ class _DiffLineTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     final bg = switch (line.context) {
-      '+' => colorScheme.tertiaryContainer.withOpacity(0.45),
-      '-' => colorScheme.errorContainer.withOpacity(0.45),
+      '+' => colorScheme.tertiaryContainer.withValues(alpha: 0.45),
+      '-' => colorScheme.errorContainer.withValues(alpha: 0.45),
       _ => Colors.transparent,
     };
 
