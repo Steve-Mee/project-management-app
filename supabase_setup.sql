@@ -144,6 +144,52 @@ CREATE TABLE IF NOT EXISTS ai_sessions (
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
+-- Mirror staging storage bucket (Prompt 2 EOF)
+-- Dashboard note:
+-- 1) Supabase Dashboard > Storage: verify bucket `mirror_staging` exists and is private.
+-- 2) Keep this insert idempotent for environments where the bucket already exists.
+INSERT INTO storage.buckets (id, name, public)
+VALUES ('mirror_staging', 'mirror_staging', false)
+ON CONFLICT (id) DO NOTHING;
+
+-- Prompt 2 EOF storage RLS policies for per-user folder access: {user_id}/...
+CREATE POLICY "mirror_staging_upload_own_folder_prompt_2_eof" ON storage.objects
+FOR INSERT TO authenticated
+WITH CHECK (
+  bucket_id = 'mirror_staging'
+  AND storage.foldername(name)[1] = auth.uid()::text
+);
+
+CREATE POLICY "mirror_staging_download_own_folder_prompt_2_eof" ON storage.objects
+FOR SELECT TO authenticated
+USING (
+  bucket_id = 'mirror_staging'
+  AND storage.foldername(name)[1] = auth.uid()::text
+);
+
+-- Mirror staging storage bucket (Prompt 2)
+-- Dashboard note:
+-- 1) Supabase Dashboard > Storage: verify bucket `mirror_staging` exists and is private.
+-- 2) Keep this insert idempotent for environments where the bucket already exists.
+INSERT INTO storage.buckets (id, name, public)
+VALUES ('mirror_staging', 'mirror_staging', false)
+ON CONFLICT (id) DO NOTHING;
+
+-- Prompt 2 storage RLS policies for per-user folder access: {user_id}/...
+CREATE POLICY "mirror_staging_upload_own_folder_prompt_2" ON storage.objects
+FOR INSERT TO authenticated
+WITH CHECK (
+  bucket_id = 'mirror_staging'
+  AND storage.foldername(name)[1] = auth.uid()::text
+);
+
+CREATE POLICY "mirror_staging_download_own_folder_prompt_2" ON storage.objects
+FOR SELECT TO authenticated
+USING (
+  bucket_id = 'mirror_staging'
+  AND storage.foldername(name)[1] = auth.uid()::text
+);
+
 -- Mirror staging storage bucket
 -- Dashboard note:
 -- 1) Supabase Dashboard > Storage: verify bucket `mirror_staging` exists and is private.
@@ -179,4 +225,27 @@ CREATE TABLE IF NOT EXISTS ai_sessions (
   versions JSONB DEFAULT '[]'::jsonb,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Mirror staging storage bucket (Prompt 2 FINAL EOF)
+-- Dashboard note:
+-- 1) Supabase Dashboard > Storage: verify bucket `mirror_staging` exists and is private.
+-- 2) Keep this insert idempotent for environments where the bucket already exists.
+INSERT INTO storage.buckets (id, name, public)
+VALUES ('mirror_staging', 'mirror_staging', false)
+ON CONFLICT (id) DO NOTHING;
+
+-- Prompt 2 FINAL EOF storage RLS policies for per-user folder access: {user_id}/...
+CREATE POLICY "mirror_staging_upload_own_folder_prompt_2_final_eof" ON storage.objects
+FOR INSERT TO authenticated
+WITH CHECK (
+  bucket_id = 'mirror_staging'
+  AND storage.foldername(name)[1] = auth.uid()::text
+);
+
+CREATE POLICY "mirror_staging_download_own_folder_prompt_2_final_eof" ON storage.objects
+FOR SELECT TO authenticated
+USING (
+  bucket_id = 'mirror_staging'
+  AND storage.foldername(name)[1] = auth.uid()::text
 );
