@@ -5,14 +5,27 @@ import 'dart:io';
 import 'package:crypto/crypto.dart';
 import 'package:grpc/grpc.dart';
 
+import 'auth_guard.dart';
+
 Future<void> main() async {
   final port = int.tryParse(Platform.environment['PORT'] ?? '') ?? 8080;
   final workspaceRoot =
       Platform.environment['MIRROR_WORKSPACE_ROOT'] ?? '/tmp/mirror-workspaces';
   final signedUrlSecret = _requireEnv('SIGNED_URL_SECRET');
+  final serviceToken = _requireEnv('MIRROR_SERVICE_TOKEN');
+  final jwtSecret = _requireEnv('MIRROR_JWT_SECRET');
   final artifactBaseUrl =
       Platform.environment['ARTIFACT_BASE_URL'] ??
       'https://mirror-compute.fly.dev/artifacts';
+  final requiredAudience = Platform.environment['MIRROR_JWT_AUDIENCE'];
+  final requiredIssuer = Platform.environment['MIRROR_JWT_ISSUER'];
+
+  final authGuard = AuthGuard(
+    serviceToken: serviceToken,
+    jwtSecret: jwtSecret,
+    requiredAudience: requiredAudience,
+    requiredIssuer: requiredIssuer,
+  );
 
   await _cleanupOldWorkspaces(workspaceRoot, maxAge: const Duration(hours: 24));
   Timer.periodic(
@@ -28,6 +41,7 @@ Future<void> main() async {
         workspaceRoot: workspaceRoot,
         artifactBaseUrl: artifactBaseUrl,
         signedUrlSecret: signedUrlSecret,
+        authGuard: authGuard,
       ),
     ],
     codecRegistry: CodecRegistry(codecs: const <Codec>[GzipCodec(), IdentityCodec()]),
@@ -58,6 +72,7 @@ class MirrorCompileService extends Service {
     required this.workspaceRoot,
     required this.artifactBaseUrl,
     required this.signedUrlSecret,
+    required this.authGuard,
   })
     : _artifactSigner = ArtifactSigner(
         baseUrl: artifactBaseUrl,
@@ -76,9 +91,24 @@ class MirrorCompileService extends Service {
   final String workspaceRoot;
   final String artifactBaseUrl;
   final String signedUrlSecret;
+  final AuthGuard authGuard;
   final ArtifactSigner _artifactSigner;
 
   Future<List<int>> compile(ServiceCall call, List<int> requestBytes) async {
+    final verdict = authGuard.verify(
+      call.clientMetadata ?? const <String, String>{},
+    );
+    if (!verdict.authorized) {
+      _log(
+        'warn',
+        'unauthorized compile request blocked',
+        context: <String, Object?>{
+          'reason': verdict.reason,
+        },
+      );
+      throw GrpcError.unauthenticated(verdict.reason);
+    }
+
     final requestRaw = utf8.decode(requestBytes);
     final request = CompileRequestPayload.fromJson(_tryParseJson(requestRaw));
     _log(
