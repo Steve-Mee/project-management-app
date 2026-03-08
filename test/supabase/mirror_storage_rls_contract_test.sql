@@ -11,6 +11,11 @@ DECLARE
   cleanup_fn_exists boolean;
   owner_path text := 'owner-uid-123/project-1/task-1/backup-1/input/lib/main.dart';
   non_owner_path text := 'other-uid-999/project-1/task-1/backup-1/input/lib/main.dart';
+  owner_insert_ok boolean := false;
+  non_owner_blocked boolean := false;
+  can_probe_with_authenticated_role boolean := true;
+  owner_probe_name text := owner_uid::text || '/project-rls/task-rls/backup-rls/input/owner_probe.txt';
+  non_owner_probe_name text := 'other-uid-999/project-rls/task-rls/backup-rls/input/non_owner_probe.txt';
 BEGIN
   SELECT EXISTS (
     SELECT 1 FROM storage.buckets
@@ -94,6 +99,45 @@ BEGIN
 
   IF storage.foldername(non_owner_path)[1] = 'owner-uid-123' THEN
     RAISE EXCEPTION 'Contract violation: non-owner path unexpectedly matches owner uid segment';
+  END IF;
+
+  -- Optional live probe: verify owner/non-owner write behavior under authenticated role.
+  -- Some SQL execution contexts may not allow role switch; in that case, static policy checks above remain authoritative.
+  BEGIN
+    EXECUTE 'SET LOCAL ROLE authenticated';
+  EXCEPTION WHEN OTHERS THEN
+    can_probe_with_authenticated_role := false;
+    RAISE NOTICE 'Mirror contract: skipping live RLS probe because role switch failed: %', SQLERRM;
+  END;
+
+  IF can_probe_with_authenticated_role THEN
+    BEGIN
+      INSERT INTO storage.objects (bucket_id, name)
+      VALUES ('mirror-signed-inputs', owner_probe_name);
+      owner_insert_ok := true;
+    EXCEPTION WHEN OTHERS THEN
+      owner_insert_ok := false;
+    END;
+
+    BEGIN
+      INSERT INTO storage.objects (bucket_id, name)
+      VALUES ('mirror-signed-inputs', non_owner_probe_name);
+      non_owner_blocked := false;
+    EXCEPTION WHEN OTHERS THEN
+      non_owner_blocked := true;
+    END;
+
+    IF NOT owner_insert_ok THEN
+      RAISE EXCEPTION 'Contract violation: owner path insert should be allowed under authenticated role';
+    END IF;
+
+    IF NOT non_owner_blocked THEN
+      RAISE EXCEPTION 'Contract violation: non-owner path insert should be denied under authenticated role';
+    END IF;
+
+    DELETE FROM storage.objects
+    WHERE bucket_id = 'mirror-signed-inputs'
+      AND name = owner_probe_name;
   END IF;
 
   SELECT EXISTS (

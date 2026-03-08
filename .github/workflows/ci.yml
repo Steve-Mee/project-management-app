@@ -51,6 +51,15 @@ jobs:
           grep -q "mirror_signed_inputs_insert_own" test/supabase/mirror_storage_rls_contract_test.sql
           grep -q "storage.foldername(name)\[1\] = auth.uid()::text" test/supabase/mirror_storage_rls_contract_test.sql
 
+      - name: Execute Mirror storage SQL contract test (optional)
+        if: ${{ secrets.SUPABASE_DB_URL != '' }}
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client
+          psql "$SUPABASE_DB_URL" -v ON_ERROR_STOP=1 -f test/supabase/mirror_storage_rls_contract_test.sql
+
       # Coverage goal: keep >85% coverage focused on core + repositories.
       # Repository secret required: Settings -> Secrets and variables -> Actions -> New repository secret
       # Name: CODECOV_TOKEN

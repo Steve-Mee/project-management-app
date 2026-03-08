@@ -89,6 +89,75 @@ void main() {
       expect(result.errors.join(' | '), contains('denied'));
     });
 
+    test('runtime apply contract sends apply payload and maps success', () async {
+      late Uri capturedUri;
+      Map<String, dynamic>? capturedBody;
+
+      final mockClient = MockClient((http.Request request) async {
+        capturedUri = request.url;
+        capturedBody = _asMap(request.body);
+        return http.Response(
+          '{"success":true,"files":{"lib/main.dart":"void main() { print(\\"ok\\"); }"}}',
+          200,
+          headers: <String, String>{'content-type': 'application/json'},
+        );
+      });
+
+      final backend = EdgeFunctionBackend(
+        httpClient: mockClient,
+        applyHttpEndpoint: 'https://edge.example/functions/v1/mirror_compute/apply',
+        useSecureApply: false,
+      );
+
+      const context = ProjectContext(
+        projectId: 'project-1',
+        taskId: 'task-1',
+        files: <String, String>{'lib/main.dart': 'void main() {}'},
+      );
+
+      final result = await backend.apply(
+        prompt: 'apply this change',
+        context: context,
+        mode: 'cloud',
+      );
+
+      expect(capturedUri.toString(), contains('/functions/v1/mirror_compute/apply'));
+      expect(capturedBody?['prompt'], 'apply this change');
+      expect(capturedBody?['projectId'], 'project-1');
+      expect(capturedBody?['taskId'], 'task-1');
+      expect(capturedBody?['mode'], 'cloud');
+      expect(result.success, isTrue);
+      expect(result.appliedFiles, contains('lib/main.dart'));
+    });
+
+    test('runtime apply contract maps non-2xx responses to typed code prefixes', () async {
+      final mockClient = MockClient((http.Request request) async {
+        return http.Response('upstream down', 502);
+      });
+
+      final backend = EdgeFunctionBackend(
+        httpClient: mockClient,
+        applyHttpEndpoint: 'https://edge.example/functions/v1/mirror_compute/apply',
+        useSecureApply: false,
+      );
+
+      const context = ProjectContext(
+        projectId: 'project-1',
+        taskId: 'task-1',
+        files: <String, String>{'lib/main.dart': 'void main() {}'},
+      );
+
+      final result = await backend.apply(
+        prompt: 'apply this change',
+        context: context,
+        mode: 'cloud',
+      );
+
+      expect(result.success, isFalse);
+      expect(result.message ?? '', contains('server_error: HTTP 502'));
+      expect(result.message ?? '', contains('upstream down'));
+    });
+
     test('apply route contract is explicit in edge + flutter backend wiring', () {
       final edgeSource = _readRepoFile('supabase/functions/mirror_compute/index.ts');
       final flutterSource = _readRepoFile('lib/features/mirror/edge_function_backend.dart');

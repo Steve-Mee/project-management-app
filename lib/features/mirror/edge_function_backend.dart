@@ -13,17 +13,18 @@ class EdgeFunctionBackend implements MirrorComputeBackend {
     http.Client? httpClient,
     this.httpEndpoint,
     this.applyHttpEndpoint,
+    this.useSecureApply = true,
     this.timeout = const Duration(seconds: 30),
     this.maxRetries = 2,
     this.initialBackoff = const Duration(milliseconds: 300),
-    }) :
-      _client = _resolveClient(client),
-      _httpClient = httpClient ?? http.Client();
+  }) : _client = _resolveClient(client),
+       _httpClient = httpClient ?? http.Client();
 
-    final SupabaseClient? _client;
+  final SupabaseClient? _client;
   final http.Client _httpClient;
   final String? httpEndpoint;
   final String? applyHttpEndpoint;
+  final bool useSecureApply;
   final Duration timeout;
   final int maxRetries;
   final Duration initialBackoff;
@@ -103,63 +104,108 @@ class EdgeFunctionBackend implements MirrorComputeBackend {
       );
     }
 
+    if (!useSecureApply) {
+      return _applyWithoutSecurity(
+        endpoint: endpoint,
+        prompt: prompt,
+        context: context,
+        mode: mode,
+      );
+    }
+
     return secureApply(
       prompt: prompt,
       context: context,
       mode: mode,
       onApply: (ApplySecurityArtifacts artifacts) async {
-        final raw = await _postRaw(
+        return _executeApplyRequest(
           endpoint: endpoint,
           prompt: prompt,
           context: context,
           mode: mode,
-          extra: <String, dynamic>{
-            'backupId': artifacts.backupId,
-            'signedInputUrls': artifacts.signedInputUrls,
-          },
-        );
-
-        if (!raw.success || raw.body == null) {
-          return ApplyResult(
-            success: false,
-            message: raw.errors.join(' | '),
-          );
-        }
-
-        final patches = buildPatchesFromApplyPayload(
-          context: context,
-          output: raw.body!,
-        );
-
-        if (patches.isEmpty) {
-          return const ApplyResult(
-            success: false,
-            message: 'Apply failed: no patchable changes returned.',
-          );
-        }
-
-        final updatedFiles = applyPatchesToFiles(
-          files: context.files,
-          patches: patches,
-        );
-
-        await persistApplyToHive(
-          context: context,
-          mode: mode,
-          prompt: prompt,
-          patches: patches,
           artifacts: artifacts,
-          backend: 'edge_function',
-          updatedFiles: updatedFiles,
-        );
-
-        return ApplyResult(
-          success: true,
-          appliedFiles: patches.map((patch) => patch.path).toSet().toList(),
-          message:
-              'Applied ${patches.length} patch(es) with backup ${artifacts.backupId}.',
         );
       },
+    );
+  }
+
+  Future<ApplyResult> _applyWithoutSecurity({
+    required String endpoint,
+    required String prompt,
+    required ProjectContext context,
+    required String mode,
+  }) async {
+    return _executeApplyRequest(
+      endpoint: endpoint,
+      prompt: prompt,
+      context: context,
+      mode: mode,
+      artifacts: null,
+    );
+  }
+
+  Future<ApplyResult> _executeApplyRequest({
+    required String endpoint,
+    required String prompt,
+    required ProjectContext context,
+    required String mode,
+    required ApplySecurityArtifacts? artifacts,
+  }) async {
+    final raw = await _postRaw(
+      endpoint: endpoint,
+      prompt: prompt,
+      context: context,
+      mode: mode,
+      extra: artifacts == null
+          ? const <String, dynamic>{}
+          : <String, dynamic>{
+              'backupId': artifacts.backupId,
+              'signedInputUrls': artifacts.signedInputUrls,
+            },
+    );
+
+    if (!raw.success || raw.body == null) {
+      return ApplyResult(
+        success: false,
+        message: raw.errors.join(' | '),
+      );
+    }
+
+    final patches = buildPatchesFromApplyPayload(
+      context: context,
+      output: raw.body!,
+    );
+
+    if (patches.isEmpty) {
+      return const ApplyResult(
+        success: false,
+        message: 'Apply failed: no patchable changes returned.',
+      );
+    }
+
+    if (artifacts != null) {
+      final updatedFiles = applyPatchesToFiles(
+        files: context.files,
+        patches: patches,
+      );
+
+      await persistApplyToHive(
+        context: context,
+        mode: mode,
+        prompt: prompt,
+        patches: patches,
+        artifacts: artifacts,
+        backend: 'edge_function',
+        updatedFiles: updatedFiles,
+      );
+    }
+
+    return ApplyResult(
+      success: true,
+      appliedFiles: patches.map((patch) => patch.path).toSet().toList(),
+      message: artifacts == null
+          ? 'Applied ${patches.length} patch(es).'
+          : 'Applied ${patches.length} patch(es) with backup ${artifacts.backupId}.',
     );
   }
 

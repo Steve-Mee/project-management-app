@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../../core/config/app_config.dart';
 import 'mirror_compute_backend.dart';
 
 typedef PremiumAccessResolver = FutureOr<bool> Function(User? user);
@@ -11,7 +12,7 @@ typedef PremiumAccessResolver = FutureOr<bool> Function(User? user);
 class CloudFlyBackend implements MirrorComputeBackend {
   CloudFlyBackend({
     SupabaseClient? client,
-    this.httpEndpoint = 'https://mirror-compute.fly.dev/compile',
+    this.httpEndpoint,
     this.timeout = const Duration(seconds: 45),
     this.maxRetries = 3,
     this.initialBackoff = const Duration(milliseconds: 350),
@@ -20,7 +21,7 @@ class CloudFlyBackend implements MirrorComputeBackend {
        _premiumResolver = premiumResolver ?? _defaultPremiumResolver;
 
   final SupabaseClient _client;
-  final String httpEndpoint;
+  final String? httpEndpoint;
   final Duration timeout;
   final int maxRetries;
   final Duration initialBackoff;
@@ -150,7 +151,7 @@ class CloudFlyBackend implements MirrorComputeBackend {
     Map<String, dynamic> payload,
     String? accessToken,
   ) async {
-    final uri = Uri.parse(httpEndpoint);
+    final uri = Uri.parse(_requireCompileEndpoint());
     final headers = <String, String>{
       'Content-Type': 'application/json',
       if (accessToken != null && accessToken.isNotEmpty)
@@ -256,13 +257,30 @@ class CloudFlyBackend implements MirrorComputeBackend {
   }
 
   String _applyEndpoint() {
-    if (httpEndpoint.endsWith('/compile')) {
-      return '${httpEndpoint.substring(0, httpEndpoint.length - '/compile'.length)}/apply';
+    final compileEndpoint = _requireCompileEndpoint();
+    if (compileEndpoint.endsWith('/compile')) {
+      return '${compileEndpoint.substring(0, compileEndpoint.length - '/compile'.length)}/apply';
     }
-    if (httpEndpoint.endsWith('/')) {
-      return '${httpEndpoint}apply';
+    if (compileEndpoint.endsWith('/')) {
+      return '${compileEndpoint}apply';
     }
-    return '$httpEndpoint/apply';
+    return '$compileEndpoint/apply';
+  }
+
+  String _requireCompileEndpoint() {
+    final explicit = httpEndpoint?.trim();
+    if (explicit != null && explicit.isNotEmpty) {
+      return explicit;
+    }
+
+    final configuredSupabaseUrl = AppConfig.supabaseUrl?.trim();
+    if (configuredSupabaseUrl != null && configuredSupabaseUrl.isNotEmpty) {
+      return '$configuredSupabaseUrl/functions/v1/mirror_compute/compile';
+    }
+
+    throw StateError(
+      'cloud_endpoint_missing: Configure CloudFlyBackend.httpEndpoint or AppConfig.supabaseUrl.',
+    );
   }
 
   Future<_RawHttpResult> _postRawWithRetries({
