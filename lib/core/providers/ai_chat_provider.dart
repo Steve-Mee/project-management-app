@@ -45,7 +45,7 @@ class AiChatBridgeNotifier extends Notifier<MirrorLaunchPayload?> {
 
     final mirrorNotifier = ref.read(mirrorProvider.notifier);
     final safeMode = preferredMode == 'cloud' ? 'cloud' : 'private';
-    mirrorNotifier.setMode(safeMode);
+    await mirrorNotifier.setMode(safeMode);
     await mirrorNotifier.refreshTeamModeVariant();
 
     final mirrorState = ref.read(mirrorProvider);
