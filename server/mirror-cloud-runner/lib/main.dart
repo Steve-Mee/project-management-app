@@ -14,13 +14,18 @@ Future<void> main() async {
   final signedUrlSecret = _requireEnv('SIGNED_URL_SECRET');
   final serviceToken = _requireEnv('MIRROR_SERVICE_TOKEN');
   final jwtSecret = _requireEnv('MIRROR_JWT_SECRET');
+  final jwtSecretsByKid = AuthGuard.parseKidSecretMapping(
+    Platform.environment['MIRROR_JWT_KEYS_BY_KID'],
+  );
   final artifactBaseUrl = _requireEnv('ARTIFACT_BASE_URL');
   final requiredAudience = Platform.environment['MIRROR_JWT_AUDIENCE'];
   final requiredIssuer = Platform.environment['MIRROR_JWT_ISSUER'];
+  final metrics = RunnerMetrics();
 
   final authGuard = AuthGuard(
     serviceToken: serviceToken,
     jwtSecret: jwtSecret,
+    jwtSecretsByKid: jwtSecretsByKid,
     requiredAudience: requiredAudience,
     requiredIssuer: requiredIssuer,
   );
@@ -40,6 +45,7 @@ Future<void> main() async {
         artifactBaseUrl: artifactBaseUrl,
         signedUrlSecret: signedUrlSecret,
         authGuard: authGuard,
+        metrics: metrics,
       ),
     ],
     codecRegistry: CodecRegistry(codecs: const <Codec>[GzipCodec(), IdentityCodec()]),
@@ -71,6 +77,7 @@ class MirrorCompileService extends Service {
     required this.artifactBaseUrl,
     required this.signedUrlSecret,
     required this.authGuard,
+    required this.metrics,
   })
     : _artifactSigner = ArtifactSigner(
         baseUrl: artifactBaseUrl,
@@ -90,18 +97,23 @@ class MirrorCompileService extends Service {
   final String artifactBaseUrl;
   final String signedUrlSecret;
   final AuthGuard authGuard;
+  final RunnerMetrics metrics;
   final ArtifactSigner _artifactSigner;
 
   Future<List<int>> compile(ServiceCall call, List<int> requestBytes) async {
+    final stopwatch = Stopwatch()..start();
+
     final verdict = authGuard.verify(
       call.clientMetadata ?? const <String, String>{},
     );
     if (!verdict.authorized) {
+      metrics.recordAuthDenied(verdict.reason);
       _log(
         'warn',
         'unauthorized compile request blocked',
         context: <String, Object?>{
           'reason': verdict.reason,
+          ...metrics.snapshot(),
         },
       );
       throw GrpcError.unauthenticated(verdict.reason);
@@ -140,6 +152,12 @@ class MirrorCompileService extends Service {
       artifactPath: artifactPath,
     );
 
+    stopwatch.stop();
+    metrics.recordCompile(
+      latency: stopwatch.elapsed,
+      success: compileResult.success,
+    );
+
     _log(
       compileResult.success ? 'info' : 'error',
       'compile request completed',
@@ -148,6 +166,7 @@ class MirrorCompileService extends Service {
         'taskId': request.taskId,
         'success': compileResult.success,
         'errorCount': compileResult.errors.length,
+        ...metrics.snapshot(),
       },
     );
 

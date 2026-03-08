@@ -6,14 +6,42 @@ class AuthGuard {
   AuthGuard({
     required this.serviceToken,
     required this.jwtSecret,
+    this.jwtSecretsByKid = const <String, String>{},
     this.requiredAudience,
     this.requiredIssuer,
   });
 
   final String serviceToken;
   final String jwtSecret;
+  final Map<String, String> jwtSecretsByKid;
   final String? requiredAudience;
   final String? requiredIssuer;
+
+  static Map<String, String> parseKidSecretMapping(String? raw) {
+    if (raw == null || raw.trim().isEmpty) {
+      return const <String, String>{};
+    }
+
+    try {
+      final decoded = jsonDecode(raw);
+      if (decoded is! Map) {
+        return const <String, String>{};
+      }
+
+      final mapping = <String, String>{};
+      for (final entry in decoded.entries) {
+        final key = entry.key.toString().trim();
+        final value = entry.value?.toString().trim() ?? '';
+        if (key.isEmpty || value.isEmpty) {
+          continue;
+        }
+        mapping[key] = value;
+      }
+      return mapping;
+    } catch (_) {
+      return const <String, String>{};
+    }
+  }
 
   AuthVerdict verify(Map<String, String> metadata) {
     final normalized = <String, String>{};
@@ -55,19 +83,40 @@ class AuthGuard {
     final headerPart = parts[0];
     final payloadPart = parts[1];
     final signaturePart = parts[2];
+    final headerMap = _decodeJsonPart(headerPart);
+    if (headerMap == null) {
+      return const AuthVerdict.denied('Invalid JWT header.');
+    }
 
     final payloadMap = _decodeJsonPart(payloadPart);
     if (payloadMap == null) {
       return const AuthVerdict.denied('Invalid JWT payload.');
     }
 
-    final alg = (_decodeJsonPart(headerPart)?['alg'] ?? '').toString();
+    final alg = (headerMap['alg'] ?? '').toString();
     if (alg != 'HS256') {
       return AuthVerdict.denied('Unsupported JWT alg: $alg');
     }
 
-    final expectedSignature = _signHs256('$headerPart.$payloadPart', jwtSecret);
-    if (!_constantTimeEquals(signaturePart, expectedSignature)) {
+    final kid = (headerMap['kid'] ?? '').toString().trim();
+    final signingInput = '$headerPart.$payloadPart';
+    final candidateSecrets = _candidateSecretsForKid(kid);
+    if (candidateSecrets.isEmpty) {
+      return kid.isNotEmpty
+          ? AuthVerdict.denied('Unknown JWT kid: $kid')
+          : const AuthVerdict.denied('No JWT signing secrets configured.');
+    }
+
+    var signatureValid = false;
+    for (final secret in candidateSecrets) {
+      final expectedSignature = _signHs256(signingInput, secret);
+      if (_constantTimeEquals(signaturePart, expectedSignature)) {
+        signatureValid = true;
+        break;
+      }
+    }
+
+    if (!signatureValid) {
       return const AuthVerdict.denied('Invalid JWT signature.');
     }
 
@@ -98,6 +147,23 @@ class AuthGuard {
     }
 
     return const AuthVerdict.authorized(method: 'jwt');
+  }
+
+  List<String> _candidateSecretsForKid(String kid) {
+    if (kid.isNotEmpty) {
+      final mapped = jwtSecretsByKid[kid];
+      if (mapped != null && mapped.isNotEmpty) {
+        return <String>[mapped];
+      }
+      return const <String>[];
+    }
+
+    final set = <String>{};
+    if (jwtSecret.isNotEmpty) {
+      set.add(jwtSecret);
+    }
+    set.addAll(jwtSecretsByKid.values.where((value) => value.isNotEmpty));
+    return set.toList(growable: false);
   }
 
   bool _matchesAudience(dynamic claim, String required) {
@@ -183,4 +249,45 @@ class AuthVerdict {
   final bool authorized;
   final String reason;
   final String method;
+}
+
+class RunnerMetrics {
+  int _authDeniedCount = 0;
+  int _compileCount = 0;
+  int _compileFailureCount = 0;
+  int _compileTotalLatencyMs = 0;
+  int _compileMaxLatencyMs = 0;
+  final Map<String, int> _authDeniedByReason = <String, int>{};
+
+  void recordAuthDenied(String reason) {
+    _authDeniedCount += 1;
+    _authDeniedByReason.update(reason, (value) => value + 1, ifAbsent: () => 1);
+  }
+
+  void recordCompile({required Duration latency, required bool success}) {
+    _compileCount += 1;
+    if (!success) {
+      _compileFailureCount += 1;
+    }
+
+    final latencyMs = latency.inMilliseconds;
+    _compileTotalLatencyMs += latencyMs;
+    if (latencyMs > _compileMaxLatencyMs) {
+      _compileMaxLatencyMs = latencyMs;
+    }
+  }
+
+  Map<String, Object> snapshot() {
+    final avgLatencyMs = _compileCount == 0
+        ? 0
+        : (_compileTotalLatencyMs ~/ _compileCount);
+    return <String, Object>{
+      'authDeniedCount': _authDeniedCount,
+      'authDeniedByReason': Map<String, int>.from(_authDeniedByReason),
+      'compileCount': _compileCount,
+      'compileFailureCount': _compileFailureCount,
+      'compileAvgLatencyMs': avgLatencyMs,
+      'compileMaxLatencyMs': _compileMaxLatencyMs,
+    };
+  }
 }
