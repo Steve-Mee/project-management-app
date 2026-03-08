@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
@@ -11,10 +13,12 @@ class MirrorEditorScreen extends ConsumerStatefulWidget {
     super.key,
     required this.projectId,
     required this.taskId,
+    this.debugRealtimeRecords,
   });
 
   final String projectId;
   final String taskId;
+  final Stream<Map<String, dynamic>>? debugRealtimeRecords;
 
   @override
   ConsumerState<MirrorEditorScreen> createState() => _MirrorEditorScreenState();
@@ -32,6 +36,7 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
   final List<String> _liveOutput = <String>[];
   final ScrollController _liveOutputScrollController = ScrollController();
   RealtimeChannel? _aiOutputChannel;
+  StreamSubscription<Map<String, dynamic>>? _debugRealtimeSubscription;
   bool _isListening = false;
 
   @override
@@ -50,7 +55,13 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
     _speechToText = stt.SpeechToText();
     _terminal.write('Mirror terminal ready.\\r\\n');
     _terminal.write('Project: ${widget.projectId} Task: ${widget.taskId}\\r\\n');
-    _subscribeToLiveOutput();
+    if (widget.debugRealtimeRecords != null) {
+      _debugRealtimeSubscription = widget.debugRealtimeRecords!.listen(
+        _handleRealtimeRecord,
+      );
+    } else {
+      _subscribeToLiveOutput();
+    }
   }
 
   @override
@@ -58,6 +69,7 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
     if (_aiOutputChannel != null) {
       Supabase.instance.client.removeChannel(_aiOutputChannel!);
     }
+    _debugRealtimeSubscription?.cancel();
     _liveOutputScrollController.dispose();
     super.dispose();
   }
@@ -351,40 +363,45 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
             column: 'project_id',
             value: widget.projectId,
           ),
-          callback: (PostgresChangePayload payload) {
-            final record = payload.newRecord;
-            final recordTaskId = record['task_id']?.toString();
-            if (recordTaskId != widget.taskId) {
-              return;
-            }
-
-            final outputLines = _extractOutputLines(record);
-            if (outputLines.isEmpty || !mounted) {
-              return;
-            }
-
-            setState(() {
-              _liveOutput.addAll(outputLines);
-              if (_liveOutput.length > _maxLiveOutputLines) {
-                final overflow = _liveOutput.length - _maxLiveOutputLines;
-                _liveOutput.removeRange(0, overflow);
-              }
-            });
-            _terminal.write('Realtime output ontvangen (${outputLines.length} regels).\\r\\n');
-
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              if (!_liveOutputScrollController.hasClients) {
-                return;
-              }
-              _liveOutputScrollController.animateTo(
-                _liveOutputScrollController.position.maxScrollExtent,
-                duration: const Duration(milliseconds: 180),
-                curve: Curves.easeOut,
-              );
-            });
-          },
+          callback: (PostgresChangePayload payload) =>
+              _handleRealtimeRecord(payload.newRecord),
         )
         .subscribe();
+  }
+
+  void _handleRealtimeRecord(Map<String, dynamic> record) {
+    final recordTaskId = record['task_id']?.toString();
+    if (recordTaskId != null && recordTaskId != widget.taskId) {
+      return;
+    }
+
+    final outputLines = _extractOutputLines(record);
+    if (outputLines.isEmpty || !mounted) {
+      return;
+    }
+
+    setState(() {
+      final capped = mergeLiveOutputWithCap(
+        currentLines: _liveOutput,
+        incomingLines: outputLines,
+        maxLines: _maxLiveOutputLines,
+      );
+      _liveOutput
+        ..clear()
+        ..addAll(capped);
+    });
+    _terminal.write('Realtime output ontvangen (${outputLines.length} regels).\r\n');
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!_liveOutputScrollController.hasClients) {
+        return;
+      }
+      _liveOutputScrollController.animateTo(
+        _liveOutputScrollController.position.maxScrollExtent,
+        duration: const Duration(milliseconds: 180),
+        curve: Curves.easeOut,
+      );
+    });
   }
 
   List<String> _extractOutputLines(Map<String, dynamic> record) {
@@ -492,6 +509,18 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
     }
     return 'plaintext';
   }
+}
+
+List<String> mergeLiveOutputWithCap({
+  required List<String> currentLines,
+  required List<String> incomingLines,
+  int maxLines = 500,
+}) {
+  final merged = <String>[...currentLines, ...incomingLines];
+  if (merged.length <= maxLines) {
+    return merged;
+  }
+  return merged.sublist(merged.length - maxLines);
 }
 
 class _ModeSelector extends StatelessWidget {
