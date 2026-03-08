@@ -29,7 +29,7 @@ import 'package:pma_core/services/cloud_sync_service.dart';
 import 'package:pma_core/repository/impl/hive_project_repository.dart';
 import 'core/routes.dart';
 import 'package:pma_core/widgets/offline_indicator.dart';
-import 'package:pma_core/repository/hive_initializer.dart';
+import 'package:pma_core/repository/hive_initializer.dart' hide ProjectsInitializer;
 import 'package:pma_core/core/services/feature_flag_service.dart';
 import 'package:pma_core/services/app_logger.dart';
 import 'package:pma_core/services/login_rate_limiter.dart';
@@ -45,6 +45,7 @@ import 'package:pma_core/models/adapters/migrated_model_adapters.dart';
 import 'core/config/app_config.dart';
 import 'core/services/sentry_service.dart';
 import 'core/widgets/error_boundary.dart';
+import 'core/projects_initializer.dart';
 
 /// Enable Semantics Debugger only in debug mode when explicitly requested.
 /// Use: flutter run --dart-define=ENABLE_SEMANTICS_DEBUGGER=true
