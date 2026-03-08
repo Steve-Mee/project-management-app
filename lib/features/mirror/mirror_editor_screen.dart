@@ -7,6 +7,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:xterm/xterm.dart';
 
 import '../../core/providers/mirror_provider.dart';
+import '../../core/providers/mirror_session_provider.dart';
 
 class MirrorEditorScreen extends ConsumerStatefulWidget {
   const MirrorEditorScreen({
@@ -28,33 +29,28 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
   static const int _maxLiveOutputLines = 500;
 
   late String _selectedMode;
-  late final Map<String, String> _files;
-  late String _selectedFile;
   late final Terminal _terminal;
   late final TerminalController _terminalController;
   late final stt.SpeechToText _speechToText;
-  final List<String> _liveOutput = <String>[];
   final ScrollController _liveOutputScrollController = ScrollController();
   RealtimeChannel? _aiOutputChannel;
   StreamSubscription<Map<String, dynamic>>? _debugRealtimeSubscription;
   bool _isListening = false;
 
+  String get _sessionKey => '${widget.projectId}::${widget.taskId}';
+
+  MirrorSessionNotifier get _sessionNotifier =>
+      ref.read(mirrorSessionProvider(_sessionKey).notifier);
+
   @override
   void initState() {
     super.initState();
     _selectedMode = 'private';
-    _files = <String, String>{
-      'lib/main.dart': "void main() {\n  print('Mirror');\n}\n",
-      'lib/services/compiler.dart':
-          'class CompilerService {\n  Future<void> run() async {}\n}\n',
-      'README.md': '# Mirror Project\n\nMulti-file coding workspace.\n',
-    };
-    _selectedFile = _files.keys.first;
     _terminal = Terminal(maxLines: 1000);
     _terminalController = TerminalController();
     _speechToText = stt.SpeechToText();
-    _terminal.write('Mirror terminal ready.\\r\\n');
-    _terminal.write('Project: ${widget.projectId} Task: ${widget.taskId}\\r\\n');
+    _appendTerminalLine('Mirror terminal ready.');
+    _appendTerminalLine('Project: ${widget.projectId} Task: ${widget.taskId}');
     if (widget.debugRealtimeRecords != null) {
       _debugRealtimeSubscription = widget.debugRealtimeRecords!.listen(
         _handleRealtimeRecord,
@@ -77,6 +73,7 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
   @override
   Widget build(BuildContext context) {
     final mirrorState = ref.watch(mirrorProvider);
+    final sessionState = ref.watch(mirrorSessionProvider(_sessionKey));
     final isPremium = mirrorState.isPremium;
 
     if (_selectedMode != mirrorState.mode) {
@@ -151,10 +148,15 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
                           children: <Widget>[
                             SizedBox(
                               height: 180,
-                              child: _buildFileExplorer(context),
+                              child: _buildFileExplorer(context, sessionState),
                             ),
                             const Divider(height: 1),
-                            Expanded(child: _buildEditorAndTerminal(context)),
+                            Expanded(
+                              child: _buildEditorAndTerminal(
+                                context,
+                                sessionState,
+                              ),
+                            ),
                           ],
                         );
                       }
@@ -163,10 +165,15 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
                         children: <Widget>[
                           SizedBox(
                             width: 280,
-                            child: _buildFileExplorer(context),
+                            child: _buildFileExplorer(context, sessionState),
                           ),
                           const VerticalDivider(width: 1),
-                          Expanded(child: _buildEditorAndTerminal(context)),
+                          Expanded(
+                            child: _buildEditorAndTerminal(
+                              context,
+                              sessionState,
+                            ),
+                          ),
                         ],
                       );
                     },
@@ -180,20 +187,26 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
     );
   }
 
-  Widget _buildEditorAndTerminal(BuildContext context) {
+  Widget _buildEditorAndTerminal(
+    BuildContext context,
+    MirrorSessionState sessionState,
+  ) {
     return Column(
       children: <Widget>[
-        Expanded(child: _buildMonacoEditor(context)),
+        Expanded(child: _buildMonacoEditor(context, sessionState)),
         const Divider(height: 1),
         SizedBox(
           height: 220,
-          child: _buildTerminal(context),
+          child: _buildTerminal(context, sessionState),
         ),
       ],
     );
   }
 
-  Widget _buildFileExplorer(BuildContext context) {
+  Widget _buildFileExplorer(
+    BuildContext context,
+    MirrorSessionState sessionState,
+  ) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
@@ -208,11 +221,11 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
         ),
         Expanded(
           child: ListView.separated(
-            itemCount: _files.length,
+            itemCount: sessionState.files.length,
             separatorBuilder: (_, __) => const Divider(height: 1),
             itemBuilder: (BuildContext context, int index) {
-              final filePath = _files.keys.elementAt(index);
-              final isActive = filePath == _selectedFile;
+              final filePath = sessionState.files.keys.elementAt(index);
+              final isActive = filePath == sessionState.selectedFile;
 
               return ListTile(
                 dense: true,
@@ -227,9 +240,7 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
                   overflow: TextOverflow.ellipsis,
                 ),
                 onTap: () {
-                  setState(() {
-                    _selectedFile = filePath;
-                  });
+                  _sessionNotifier.selectFile(filePath);
                 },
               );
             },
@@ -239,8 +250,12 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
     );
   }
 
-  Widget _buildMonacoEditor(BuildContext context) {
-    final currentContent = _files[_selectedFile] ?? '';
+  Widget _buildMonacoEditor(
+    BuildContext context,
+    MirrorSessionState sessionState,
+  ) {
+    final currentContent =
+        sessionState.files[sessionState.selectedFile] ?? '';
 
     return Column(
       children: <Widget>[
@@ -249,7 +264,7 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
           color: Theme.of(context).colorScheme.surfaceContainerHigh,
           child: Text(
-            _selectedFile,
+            sessionState.selectedFile,
             style: Theme.of(context).textTheme.titleSmall,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
@@ -258,20 +273,16 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
         Expanded(
           child: _PlainTextFallbackEditor(
             code: currentContent,
-            language: _languageForFile(_selectedFile),
+            language: _languageForFile(sessionState.selectedFile),
             theme: Theme.of(context).brightness == Brightness.dark ? 'vs-dark' : 'vs',
-            onChanged: (String value) {
-              setState(() {
-                _files[_selectedFile] = value;
-              });
-            },
+            onChanged: _sessionNotifier.updateSelectedFileContent,
           ),
         ),
       ],
     );
   }
 
-  Widget _buildTerminal(BuildContext context) {
+  Widget _buildTerminal(BuildContext context, MirrorSessionState sessionState) {
     return Column(
       children: <Widget>[
         Container(
@@ -296,7 +307,7 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
               ),
               const VerticalDivider(width: 1),
               Expanded(
-                child: _buildLiveOutputList(context),
+                child: _buildLiveOutputList(context, sessionState),
               ),
             ],
           ),
@@ -305,7 +316,10 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
     );
   }
 
-  Widget _buildLiveOutputList(BuildContext context) {
+  Widget _buildLiveOutputList(
+    BuildContext context,
+    MirrorSessionState sessionState,
+  ) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
@@ -319,7 +333,7 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
           ),
         ),
         Expanded(
-          child: _liveOutput.isEmpty
+          child: sessionState.liveOutput.isEmpty
               ? Center(
                   child: Text(
                     'Waiting for realtime output...',
@@ -329,10 +343,10 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
               : ListView.separated(
                   controller: _liveOutputScrollController,
                   padding: const EdgeInsets.all(8),
-                  itemCount: _liveOutput.length,
+                  itemCount: sessionState.liveOutput.length,
                   separatorBuilder: (_, __) => const SizedBox(height: 6),
                   itemBuilder: (BuildContext context, int index) {
-                    final line = _liveOutput[index];
+                    final line = sessionState.liveOutput[index];
                     return Container(
                       padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
@@ -380,17 +394,8 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
       return;
     }
 
-    setState(() {
-      final capped = mergeLiveOutputWithCap(
-        currentLines: _liveOutput,
-        incomingLines: outputLines,
-        maxLines: _maxLiveOutputLines,
-      );
-      _liveOutput
-        ..clear()
-        ..addAll(capped);
-    });
-    _terminal.write('Realtime output ontvangen (${outputLines.length} regels).\r\n');
+    _sessionNotifier.appendLiveOutput(outputLines, maxLines: _maxLiveOutputLines);
+    _appendTerminalLine('Realtime output ontvangen (${outputLines.length} regels).');
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!_liveOutputScrollController.hasClients) {
@@ -432,7 +437,7 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
       setState(() {
         _isListening = false;
       });
-      _terminal.write('Voice input stopped.\\r\\n');
+      _appendTerminalLine('Voice input stopped.');
       return;
     }
 
@@ -444,14 +449,14 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Voice input is not available on this device.')),
       );
-      _terminal.write('Voice input unavailable.\\r\\n');
+      _appendTerminalLine('Voice input unavailable.');
       return;
     }
 
     setState(() {
       _isListening = true;
     });
-    _terminal.write('Voice input started...\\r\\n');
+    _appendTerminalLine('Voice input started...');
 
     await _speechToText.listen(
       onResult: (result) {
@@ -461,12 +466,15 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
         }
 
         setState(() {
-          final existing = _files[_selectedFile] ?? '';
+          final sessionState = ref.read(mirrorSessionProvider(_sessionKey));
+          final selectedFile = sessionState.selectedFile;
+          final existing = sessionState.files[selectedFile] ?? '';
           final separator = existing.endsWith('\n') || existing.isEmpty ? '' : '\n';
-          _files[_selectedFile] = '$existing$separator$recognized';
+          _sessionNotifier.updateSelectedFileContent('$existing$separator$recognized');
         });
 
-        _terminal.write('Voice appended to $_selectedFile\\r\\n');
+        final selectedFile = ref.read(mirrorSessionProvider(_sessionKey)).selectedFile;
+        _appendTerminalLine('Voice appended to $selectedFile');
 
         if (result.finalResult) {
           setState(() {
@@ -483,8 +491,14 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
   }
 
   void _runCurrentFileInTerminal() {
-    _terminal.write('\$ run $_selectedFile\\r\\n');
-    _terminal.write('Execution stub completed for $_selectedFile\\r\\n');
+    final selectedFile = ref.read(mirrorSessionProvider(_sessionKey)).selectedFile;
+    _appendTerminalLine('\$ run $selectedFile');
+    _appendTerminalLine('Execution stub completed for $selectedFile');
+  }
+
+  void _appendTerminalLine(String line) {
+    _sessionNotifier.appendTerminalLine(line, maxLines: 1000);
+    _terminal.write('$line\\r\\n');
   }
 
   IconData _iconForFile(String path) {
