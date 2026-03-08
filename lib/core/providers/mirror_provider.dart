@@ -6,8 +6,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-import '../auth/auth_repository.dart';
 import '../ab_testing_service.dart';
+import '../services/mirror_premium_service.dart';
 import '../../features/mirror/cloud_fly_backend.dart';
 import '../../features/mirror/edge_function_backend.dart';
 import '../../features/mirror/mirror_compute_backend.dart';
@@ -56,14 +56,13 @@ final mirrorModeProvider = StateProvider<String>((ref) => 'private');
 
 final mirrorOfflineWarningProvider = StateProvider<String?>((ref) => null);
 
-final mirrorPremiumProvider = Provider<bool>((ref) {
-  final user = Supabase.instance.client.auth.currentUser;
-  return _isPremiumUser(user);
+final mirrorPremiumServiceProvider = Provider<MirrorPremiumService>((ref) {
+  return MirrorPremiumService();
 });
 
-final mirrorStripePremiumProvider = FutureProvider<bool>((ref) async {
-  final authRepository = AuthRepository();
-  return authRepository.hasActiveStripePremiumSubscription();
+final mirrorPremiumProvider = FutureProvider<bool>((ref) async {
+  final premiumService = ref.watch(mirrorPremiumServiceProvider);
+  return premiumService.isPremium();
 });
 
 final mirrorTeamModeVariantProvider = FutureProvider<String>((ref) async {
@@ -102,9 +101,9 @@ final mirrorTeamModeEnabledProvider = Provider<bool>((ref) {
   return variant == 'team';
 });
 
-final mirrorBackendProvider = Provider<MirrorComputeBackend>((ref) {
+final mirrorBackendProvider = FutureProvider<MirrorComputeBackend>((ref) async {
   final mode = ref.watch(mirrorModeProvider);
-  final isPremium = ref.watch(mirrorPremiumProvider);
+  final isPremium = await ref.watch(mirrorPremiumProvider.future);
 
   if (mode == 'cloud' && isPremium) {
     return CloudFlyBackend();
@@ -128,7 +127,7 @@ class MirrorNotifier extends Notifier<MirrorState> {
     }
 
     final mode = ref.watch(mirrorModeProvider);
-    final isPremium = ref.watch(mirrorPremiumProvider);
+    final isPremium = ref.watch(mirrorPremiumProvider).valueOrNull ?? false;
     final teamModeVariant =
         ref.watch(mirrorTeamModeVariantProvider).valueOrNull ?? 'solo';
     final offlineWarning = ref.watch(mirrorOfflineWarningProvider);
@@ -146,8 +145,8 @@ class MirrorNotifier extends Notifier<MirrorState> {
     }
 
     if (mode == 'cloud') {
-      final hasStripePremium = await ref.read(mirrorStripePremiumProvider.future);
-      if (!hasStripePremium) {
+      final hasPremium = await ref.read(mirrorPremiumProvider.future);
+      if (!hasPremium) {
         ref.read(mirrorModeProvider.notifier).state = 'private';
         ref.read(mirrorOfflineWarningProvider.notifier).state =
             'Cloud mode requires an active Stripe premium subscription.';
@@ -167,9 +166,8 @@ class MirrorNotifier extends Notifier<MirrorState> {
   }
 
   Future<void> refreshPremiumFromMetadata() async {
-    final metadataPremium = ref.read(mirrorPremiumProvider);
-    final stripePremium = await ref.read(mirrorStripePremiumProvider.future);
-    final isPremium = metadataPremium || stripePremium;
+    ref.invalidate(mirrorPremiumProvider);
+    final isPremium = await ref.read(mirrorPremiumProvider.future);
     state = state.copyWith(isPremium: isPremium);
 
     if (!isPremium && state.mode == 'cloud') {
@@ -212,24 +210,6 @@ class MirrorNotifier extends Notifier<MirrorState> {
 }
 
 final mirrorProvider = NotifierProvider<MirrorNotifier, MirrorState>(MirrorNotifier.new);
-
-bool _isPremiumUser(User? user) {
-  if (user == null) {
-    return false;
-  }
-
-  final appMetadata = user.appMetadata;
-  final userMetadata = user.userMetadata;
-
-  final planValue =
-      appMetadata['plan'] ??
-      appMetadata['subscription'] ??
-      userMetadata?['plan'] ??
-      userMetadata?['subscription'];
-
-  final normalized = planValue?.toString().toLowerCase().trim() ?? '';
-  return normalized == 'premium' || normalized == 'pro' || normalized == 'enterprise';
-}
 
 class _MirrorOfflineCache {
   static const String _boxName = 'mirror_offline_cache';
