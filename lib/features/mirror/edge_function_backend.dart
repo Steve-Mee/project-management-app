@@ -10,14 +10,18 @@ import 'mirror_compute_backend.dart';
 class EdgeFunctionBackend implements MirrorComputeBackend {
   EdgeFunctionBackend({
     SupabaseClient? client,
+    http.Client? httpClient,
     this.httpEndpoint,
     this.applyHttpEndpoint,
     this.timeout = const Duration(seconds: 30),
     this.maxRetries = 2,
     this.initialBackoff = const Duration(milliseconds: 300),
-  }) : _client = client ?? Supabase.instance.client;
+    }) :
+      _client = _resolveClient(client),
+      _httpClient = httpClient ?? http.Client();
 
-  final SupabaseClient _client;
+    final SupabaseClient? _client;
+  final http.Client _httpClient;
   final String? httpEndpoint;
   final String? applyHttpEndpoint;
   final Duration timeout;
@@ -173,7 +177,7 @@ class EdgeFunctionBackend implements MirrorComputeBackend {
     required ProjectContext context,
     required String mode,
   }) async {
-    final token = _client.auth.currentSession?.accessToken;
+    final token = _client?.auth.currentSession?.accessToken;
     final payload = <String, dynamic>{
       'prompt': prompt,
       'projectId': context.projectId,
@@ -189,7 +193,7 @@ class EdgeFunctionBackend implements MirrorComputeBackend {
     while (true) {
       attempt += 1;
       try {
-        final response = await http
+        final response = await _httpClient
             .post(
               Uri.parse(endpoint),
               headers: <String, String>{
@@ -265,7 +269,7 @@ class EdgeFunctionBackend implements MirrorComputeBackend {
     required String mode,
     Map<String, dynamic> extra = const <String, dynamic>{},
   }) async {
-    final token = _client.auth.currentSession?.accessToken;
+    final token = _client?.auth.currentSession?.accessToken;
     final payload = <String, dynamic>{
       'prompt': prompt,
       'projectId': context.projectId,
@@ -282,7 +286,7 @@ class EdgeFunctionBackend implements MirrorComputeBackend {
     while (true) {
       attempt += 1;
       try {
-        final response = await http
+        final response = await _httpClient
             .post(
               Uri.parse(endpoint),
               headers: <String, String>{
@@ -393,6 +397,18 @@ class EdgeFunctionBackend implements MirrorComputeBackend {
       );
     }
     return configured;
+  }
+
+  static SupabaseClient? _resolveClient(SupabaseClient? client) {
+    if (client != null) {
+      return client;
+    }
+
+    try {
+      return Supabase.instance.client;
+    } catch (_) {
+      return null;
+    }
   }
 }
 

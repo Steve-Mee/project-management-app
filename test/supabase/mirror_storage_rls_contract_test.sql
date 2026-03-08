@@ -3,6 +3,7 @@
 
 DO $$
 DECLARE
+  owner_uid uuid := '00000000-0000-0000-0000-000000000123'::uuid;
   signed_inputs_exists boolean;
   backups_exists boolean;
   policy_count integer;
@@ -71,6 +72,20 @@ BEGIN
 
   IF owner_guard_count < 8 THEN
     RAISE EXCEPTION 'Contract violation: one or more policies missing owner-folder guard';
+  END IF;
+
+  PERFORM set_config('request.jwt.claim.sub', owner_uid::text, true);
+
+  IF auth.uid() IS DISTINCT FROM owner_uid THEN
+    RAISE EXCEPTION 'Contract violation: auth.uid context simulation failed';
+  END IF;
+
+  IF storage.foldername(owner_path)[1] <> auth.uid()::text THEN
+    RAISE EXCEPTION 'Contract violation: owner path must resolve to auth.uid first segment';
+  END IF;
+
+  IF storage.foldername(non_owner_path)[1] = auth.uid()::text THEN
+    RAISE EXCEPTION 'Contract violation: non-owner path must not resolve to auth.uid first segment';
   END IF;
 
   IF storage.foldername(owner_path)[1] <> 'owner-uid-123' THEN

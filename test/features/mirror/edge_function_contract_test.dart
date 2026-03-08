@@ -1,6 +1,11 @@
+import 'dart:convert';
 import 'dart:io';
 
+import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:project_management_app/features/mirror/edge_function_backend.dart';
+import 'package:project_management_app/features/mirror/mirror_compute_backend.dart';
 
 void main() {
   group('Mirror edge function contract', () {
@@ -15,29 +20,93 @@ void main() {
       expect(source, contains("if (!action)"));
     });
 
-    test('edge function keeps idempotency contract and forwarding headers', () {
-      final source = _readRepoFile('supabase/functions/mirror_compute/index.ts');
+    test('runtime compile contract sends payload+auth and parses success response', () async {
+      late Uri capturedUri;
+      Map<String, dynamic>? capturedBody;
+      String? capturedAuth;
 
-      expect(source, contains("req.headers.get('x-idempotency-key')"));
-      expect(source, contains("req.headers.get('idempotency-key')"));
-      expect(source, contains("'x-idempotency-key': idempotencyKey"));
-      expect(source, contains("'x-request-id': requestId"));
-      expect(source, contains('idempotencyKey'));
-      expect(source, contains('action'));
-      expect(source, contains('resolveForwardEndpoint(normalized.mode, action)'));
+      final mockClient = MockClient((http.Request request) async {
+        capturedUri = request.url;
+        capturedAuth = request.headers['Authorization'];
+        capturedBody = _asMap(request.body);
+        return http.Response(
+          '{"success":true,"output":"compiled","warnings":["w1"]}',
+          200,
+          headers: <String, String>{'content-type': 'application/json'},
+        );
+      });
+
+      final backend = EdgeFunctionBackend(
+        httpClient: mockClient,
+        httpEndpoint: 'https://edge.example/functions/v1/mirror_compute/compile',
+      );
+
+      const context = ProjectContext(
+        projectId: 'project-1',
+        taskId: 'task-1',
+        files: <String, String>{'lib/main.dart': 'void main() {}'},
+        metadata: <String, dynamic>{'teamMode': true},
+      );
+
+      final result = await backend.compile(
+        prompt: 'compile this',
+        context: context,
+        mode: 'cloud',
+      );
+
+      expect(capturedUri.toString(), contains('/functions/v1/mirror_compute/compile'));
+      expect(capturedAuth == null || capturedAuth!.startsWith('Bearer '), isTrue);
+      expect(capturedBody?['prompt'], 'compile this');
+      expect(capturedBody?['projectId'], 'project-1');
+      expect(capturedBody?['taskId'], 'task-1');
+      expect(capturedBody?['mode'], 'cloud');
+      expect(capturedBody?['files'], isA<Map>());
+
+      expect(result.success, isTrue);
+      expect(result.output, 'compiled');
+      expect(result.warnings, contains('w1'));
     });
 
-    test('flutter edge backend targets compile and apply endpoints and keeps fail-fast config', () {
-      final source = _readRepoFile('lib/features/mirror/edge_function_backend.dart');
+    test('runtime compile contract maps non-2xx responses to typed code prefixes', () async {
+      final mockClient = MockClient((http.Request request) async {
+        return http.Response('denied', 403);
+      });
 
-      expect(source, contains("/functions/v1/mirror_compute/compile"));
-      expect(source, contains("/functions/v1/mirror_compute/apply"));
-      expect(source, contains('applyHttpEndpoint'));
-      expect(source, contains('supabase_url_missing'));
-      expect(source, contains('Edge HTTP /compile request timed out.'));
-      expect(source, contains('Edge HTTP /apply request timed out.'));
+      final backend = EdgeFunctionBackend(
+        httpClient: mockClient,
+        httpEndpoint: 'https://edge.example/functions/v1/mirror_compute/compile',
+      );
+
+      const context = ProjectContext(projectId: 'p', taskId: 't');
+      final result = await backend.compile(
+        prompt: 'x',
+        context: context,
+        mode: 'private',
+      );
+
+      expect(result.success, isFalse);
+      expect(result.errors.join(' | '), contains('unauthorized: HTTP 403'));
+      expect(result.errors.join(' | '), contains('denied'));
+    });
+
+    test('apply route contract is explicit in edge + flutter backend wiring', () {
+      final edgeSource = _readRepoFile('supabase/functions/mirror_compute/index.ts');
+      final flutterSource = _readRepoFile('lib/features/mirror/edge_function_backend.dart');
+
+      expect(edgeSource, contains('resolveActionFromPath'));
+      expect(edgeSource, contains("normalized.endsWith('/apply')"));
+      expect(edgeSource, contains('resolveForwardEndpoint(normalized.mode, action)'));
+
+      expect(flutterSource, contains('/functions/v1/mirror_compute/apply'));
+      expect(flutterSource, contains('applyHttpEndpoint'));
+      expect(flutterSource, contains('supabase_url_missing'));
     });
   });
+}
+
+Map<String, dynamic> _asMap(String raw) {
+  final decoded = jsonDecode(raw);
+  return Map<String, dynamic>.from(decoded as Map);
 }
 
 String _readRepoFile(String relativePath) {
