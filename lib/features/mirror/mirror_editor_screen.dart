@@ -395,8 +395,8 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
           table: 'ai_sessions',
           filter: PostgresChangeFilter(
             type: PostgresChangeFilterType.eq,
-            column: 'task_id',
-            value: widget.taskId,
+            column: 'user_id',
+            value: currentUserId,
           ),
           callback: (PostgresChangePayload payload) =>
               _handleRealtimeRecord(payload.newRecord),

@@ -92,6 +92,15 @@ class MirrorCompileService extends Service {
       (List<int> value) => value,
       (List<int> value) => value,
     ));
+
+    $addMethod(ServiceMethod<List<int>, List<int>>(
+      'Apply',
+      apply,
+      false,
+      false,
+      (List<int> value) => value,
+      (List<int> value) => value,
+    ));
   }
 
   final String workspaceRoot;
@@ -176,6 +185,12 @@ class MirrorCompileService extends Service {
     );
 
     return utf8.encode(jsonEncode(response.toJson()));
+  }
+
+  // Keep apply contract byte-compatible with compile until a dedicated
+  // apply runner pipeline is introduced.
+  Future<List<int>> apply(ServiceCall call, List<int> requestBytes) {
+    return compile(call, requestBytes);
   }
 
   Map<String, dynamic> _tryParseJson(String value) {

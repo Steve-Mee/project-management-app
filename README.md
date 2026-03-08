@@ -546,4 +546,4 @@ Example markdown once assets are added:
 - `lib/core/providers/mirror_provider.dart`
 - `lib/core/providers/ai_chat_provider.dart`
 - `lib/features/project/project_detail_screen.dart`
-- `lib/features/tasks/widgets/expandable_task_card.dart`
+- `lib/features/project/expandable_task_card.dart`
