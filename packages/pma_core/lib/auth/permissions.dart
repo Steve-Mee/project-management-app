@@ -7,6 +7,7 @@ class AppPermissions {
   static const String manageUsers = 'manage_users';
   static const String manageRoles = 'manage_roles';
   static const String useAi = 'use_ai';
+  static const String useMirror = 'use_mirror';
   static const String exportImport = 'export_import';
   static const String viewAllProjects = 'view_all_projects';
 
@@ -19,6 +20,7 @@ class AppPermissions {
     manageUsers,
     manageRoles,
     useAi,
+    useMirror,
     exportImport,
     viewAllProjects,
   ];

@@ -287,6 +287,7 @@ class HiveAuthRepository implements IAuthRepository {
             AppPermissions.editProjects,
             AppPermissions.shareProjects,
             AppPermissions.useAi,
+            AppPermissions.useMirror,
             AppPermissions.viewSettings,
           ],
         ).toMap(),
@@ -295,6 +296,7 @@ class HiveAuthRepository implements IAuthRepository {
           name: 'Viewer',
           permissions: const [
             AppPermissions.viewProjects,
+            AppPermissions.useMirror,
             AppPermissions.viewSettings,
           ],
         ).toMap(),
