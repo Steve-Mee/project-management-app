@@ -31,3 +31,4 @@ Dit bestand bevat de nog openstaande, technisch valide punten uit `Done Todos im
 - [x] 22. Voeg tijdelijke compat fallback-export toe in feature provider-indexen om regressies te voorkomen tijdens gefaseerde versmalling.
 - [x] 23. Verwijder fallback-export voor auth feature-index en vervang door expliciete theme provider export.
 - [x] 24. Verwijder fallback-export voor ai_usage feature-index (alleen ai_usage providers nodig).
+- [x] 25. Verwijder fallback-export voor admin feature-index en vervang door expliciete ai_usage provider export.
