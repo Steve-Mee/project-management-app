@@ -23,8 +23,6 @@ mixin _$ProjectModel {
   double get progress;
   @HiveField(3)
   String? get directoryPath;
-  @HiveField(4)
-  List<String> get tasks;
   @HiveField(5)
   String get status;
   @HiveField(6)
@@ -88,7 +86,6 @@ mixin _$ProjectModel {
                 other.progress == progress) &&
             (identical(other.directoryPath, directoryPath) ||
                 other.directoryPath == directoryPath) &&
-            const DeepCollectionEquality().equals(other.tasks, tasks) &&
             (identical(other.status, status) || other.status == status) &&
             (identical(other.description, description) ||
                 other.description == description) &&
@@ -126,7 +123,6 @@ mixin _$ProjectModel {
         name,
         progress,
         directoryPath,
-        const DeepCollectionEquality().hash(tasks),
         status,
         description,
         category,
@@ -147,7 +143,7 @@ mixin _$ProjectModel {
 
   @override
   String toString() {
-    return 'ProjectModel(id: $id, name: $name, progress: $progress, directoryPath: $directoryPath, tasks: $tasks, status: $status, description: $description, category: $category, aiAssistant: $aiAssistant, planJson: $planJson, helpLevel: $helpLevel, complexity: $complexity, history: $history, sharedUsers: $sharedUsers, sharedGroups: $sharedGroups, priority: $priority, startDate: $startDate, dueDate: $dueDate, tags: $tags, customFields: $customFields, comments: $comments)';
+    return 'ProjectModel(id: $id, name: $name, progress: $progress, directoryPath: $directoryPath, status: $status, description: $description, category: $category, aiAssistant: $aiAssistant, planJson: $planJson, helpLevel: $helpLevel, complexity: $complexity, history: $history, sharedUsers: $sharedUsers, sharedGroups: $sharedGroups, priority: $priority, startDate: $startDate, dueDate: $dueDate, tags: $tags, customFields: $customFields, comments: $comments)';
   }
 }
 
@@ -162,7 +158,6 @@ abstract mixin class $ProjectModelCopyWith<$Res> {
       @HiveField(1) String name,
       @HiveField(2) double progress,
       @HiveField(3) String? directoryPath,
-      @HiveField(4) List<String> tasks,
       @HiveField(5) String status,
       @HiveField(6) String? description,
       @HiveField(9) String? category,
@@ -203,7 +198,6 @@ class _$ProjectModelCopyWithImpl<$Res> implements $ProjectModelCopyWith<$Res> {
     Object? name = null,
     Object? progress = null,
     Object? directoryPath = freezed,
-    Object? tasks = null,
     Object? status = null,
     Object? description = freezed,
     Object? category = freezed,
@@ -238,10 +232,6 @@ class _$ProjectModelCopyWithImpl<$Res> implements $ProjectModelCopyWith<$Res> {
           ? _self.directoryPath
           : directoryPath // ignore: cast_nullable_to_non_nullable
               as String?,
-      tasks: null == tasks
-          ? _self.tasks
-          : tasks // ignore: cast_nullable_to_non_nullable
-              as List<String>,
       status: null == status
           ? _self.status
           : status // ignore: cast_nullable_to_non_nullable
@@ -408,7 +398,6 @@ extension ProjectModelPatterns on ProjectModel {
             @HiveField(1) String name,
             @HiveField(2) double progress,
             @HiveField(3) String? directoryPath,
-            @HiveField(4) List<String> tasks,
             @HiveField(5) String status,
             @HiveField(6) String? description,
             @HiveField(9) String? category,
@@ -442,7 +431,6 @@ extension ProjectModelPatterns on ProjectModel {
             _that.name,
             _that.progress,
             _that.directoryPath,
-            _that.tasks,
             _that.status,
             _that.description,
             _that.category,
@@ -484,7 +472,6 @@ extension ProjectModelPatterns on ProjectModel {
             @HiveField(1) String name,
             @HiveField(2) double progress,
             @HiveField(3) String? directoryPath,
-            @HiveField(4) List<String> tasks,
             @HiveField(5) String status,
             @HiveField(6) String? description,
             @HiveField(9) String? category,
@@ -517,7 +504,6 @@ extension ProjectModelPatterns on ProjectModel {
             _that.name,
             _that.progress,
             _that.directoryPath,
-            _that.tasks,
             _that.status,
             _that.description,
             _that.category,
@@ -558,7 +544,6 @@ extension ProjectModelPatterns on ProjectModel {
             @HiveField(1) String name,
             @HiveField(2) double progress,
             @HiveField(3) String? directoryPath,
-            @HiveField(4) List<String> tasks,
             @HiveField(5) String status,
             @HiveField(6) String? description,
             @HiveField(9) String? category,
@@ -591,7 +576,6 @@ extension ProjectModelPatterns on ProjectModel {
             _that.name,
             _that.progress,
             _that.directoryPath,
-            _that.tasks,
             _that.status,
             _that.description,
             _that.category,
@@ -622,7 +606,6 @@ class _ProjectModel extends ProjectModel {
       @HiveField(1) required this.name,
       @HiveField(2) required this.progress,
       @HiveField(3) this.directoryPath,
-      @HiveField(4) final List<String> tasks = const <String>[],
       @HiveField(5) this.status = 'In Progress',
       @HiveField(6) this.description,
       @HiveField(9) this.category,
@@ -646,8 +629,7 @@ class _ProjectModel extends ProjectModel {
       @HiveField(19) final Map<String, dynamic>? customFields,
       @HiveField(20)
       final List<CommentModel> comments = const <CommentModel>[]})
-      : _tasks = tasks,
-        _history = history,
+      : _history = history,
         _sharedUsers = sharedUsers,
         _sharedGroups = sharedGroups,
         _tags = tags,
@@ -670,16 +652,6 @@ class _ProjectModel extends ProjectModel {
   @override
   @HiveField(3)
   final String? directoryPath;
-  final List<String> _tasks;
-  @override
-  @JsonKey()
-  @HiveField(4)
-  List<String> get tasks {
-    if (_tasks is EqualUnmodifiableListView) return _tasks;
-    // ignore: implicit_dynamic_type
-    return EqualUnmodifiableListView(_tasks);
-  }
-
   @override
   @JsonKey()
   @HiveField(5)
@@ -810,7 +782,6 @@ class _ProjectModel extends ProjectModel {
                 other.progress == progress) &&
             (identical(other.directoryPath, directoryPath) ||
                 other.directoryPath == directoryPath) &&
-            const DeepCollectionEquality().equals(other._tasks, _tasks) &&
             (identical(other.status, status) || other.status == status) &&
             (identical(other.description, description) ||
                 other.description == description) &&
@@ -848,7 +819,6 @@ class _ProjectModel extends ProjectModel {
         name,
         progress,
         directoryPath,
-        const DeepCollectionEquality().hash(_tasks),
         status,
         description,
         category,
@@ -869,7 +839,7 @@ class _ProjectModel extends ProjectModel {
 
   @override
   String toString() {
-    return 'ProjectModel(id: $id, name: $name, progress: $progress, directoryPath: $directoryPath, tasks: $tasks, status: $status, description: $description, category: $category, aiAssistant: $aiAssistant, planJson: $planJson, helpLevel: $helpLevel, complexity: $complexity, history: $history, sharedUsers: $sharedUsers, sharedGroups: $sharedGroups, priority: $priority, startDate: $startDate, dueDate: $dueDate, tags: $tags, customFields: $customFields, comments: $comments)';
+    return 'ProjectModel(id: $id, name: $name, progress: $progress, directoryPath: $directoryPath, status: $status, description: $description, category: $category, aiAssistant: $aiAssistant, planJson: $planJson, helpLevel: $helpLevel, complexity: $complexity, history: $history, sharedUsers: $sharedUsers, sharedGroups: $sharedGroups, priority: $priority, startDate: $startDate, dueDate: $dueDate, tags: $tags, customFields: $customFields, comments: $comments)';
   }
 }
 
@@ -886,7 +856,6 @@ abstract mixin class _$ProjectModelCopyWith<$Res>
       @HiveField(1) String name,
       @HiveField(2) double progress,
       @HiveField(3) String? directoryPath,
-      @HiveField(4) List<String> tasks,
       @HiveField(5) String status,
       @HiveField(6) String? description,
       @HiveField(9) String? category,
@@ -928,7 +897,6 @@ class __$ProjectModelCopyWithImpl<$Res>
     Object? name = null,
     Object? progress = null,
     Object? directoryPath = freezed,
-    Object? tasks = null,
     Object? status = null,
     Object? description = freezed,
     Object? category = freezed,
@@ -963,10 +931,6 @@ class __$ProjectModelCopyWithImpl<$Res>
           ? _self.directoryPath
           : directoryPath // ignore: cast_nullable_to_non_nullable
               as String?,
-      tasks: null == tasks
-          ? _self._tasks
-          : tasks // ignore: cast_nullable_to_non_nullable
-              as List<String>,
       status: null == status
           ? _self.status
           : status // ignore: cast_nullable_to_non_nullable

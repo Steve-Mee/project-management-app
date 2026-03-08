@@ -525,7 +525,7 @@ class __$ProjectFilterParamsCopyWithImpl<$Res>
 
 /// @nodoc
 mixin _$FilteredPaginationParams {
-  ProjectFilter get filter;
+  ProviderProjectFilter get filter;
   int get page;
   int get limit;
 
@@ -562,7 +562,7 @@ abstract mixin class $FilteredPaginationParamsCopyWith<$Res> {
           $Res Function(FilteredPaginationParams) _then) =
       _$FilteredPaginationParamsCopyWithImpl;
   @useResult
-  $Res call({ProjectFilter filter, int page, int limit});
+  $Res call({ProviderProjectFilter filter, int page, int limit});
 
   $ProjectFilterCopyWith<$Res> get filter;
 }
@@ -588,7 +588,7 @@ class _$FilteredPaginationParamsCopyWithImpl<$Res>
       filter: null == filter
           ? _self.filter
           : filter // ignore: cast_nullable_to_non_nullable
-              as ProjectFilter,
+              as ProviderProjectFilter,
       page: null == page
           ? _self.page
           : page // ignore: cast_nullable_to_non_nullable
@@ -704,7 +704,8 @@ extension FilteredPaginationParamsPatterns on FilteredPaginationParams {
 
   @optionalTypeArgs
   TResult maybeWhen<TResult extends Object?>(
-    TResult Function(ProjectFilter filter, int page, int limit)? $default, {
+    TResult Function(ProviderProjectFilter filter, int page, int limit)?
+        $default, {
     required TResult orElse(),
   }) {
     final _that = this;
@@ -731,7 +732,8 @@ extension FilteredPaginationParamsPatterns on FilteredPaginationParams {
 
   @optionalTypeArgs
   TResult when<TResult extends Object?>(
-    TResult Function(ProjectFilter filter, int page, int limit) $default,
+    TResult Function(ProviderProjectFilter filter, int page, int limit)
+        $default,
   ) {
     final _that = this;
     switch (_that) {
@@ -756,7 +758,8 @@ extension FilteredPaginationParamsPatterns on FilteredPaginationParams {
 
   @optionalTypeArgs
   TResult? whenOrNull<TResult extends Object?>(
-    TResult? Function(ProjectFilter filter, int page, int limit)? $default,
+    TResult? Function(ProviderProjectFilter filter, int page, int limit)?
+        $default,
   ) {
     final _that = this;
     switch (_that) {
@@ -775,7 +778,7 @@ class _FilteredPaginationParams implements FilteredPaginationParams {
       {required this.filter, required this.page, required this.limit});
 
   @override
-  final ProjectFilter filter;
+  final ProviderProjectFilter filter;
   @override
   final int page;
   @override
@@ -817,7 +820,7 @@ abstract mixin class _$FilteredPaginationParamsCopyWith<$Res>
       __$FilteredPaginationParamsCopyWithImpl;
   @override
   @useResult
-  $Res call({ProjectFilter filter, int page, int limit});
+  $Res call({ProviderProjectFilter filter, int page, int limit});
 
   @override
   $ProjectFilterCopyWith<$Res> get filter;
@@ -844,7 +847,7 @@ class __$FilteredPaginationParamsCopyWithImpl<$Res>
       filter: null == filter
           ? _self.filter
           : filter // ignore: cast_nullable_to_non_nullable
-              as ProjectFilter,
+              as ProviderProjectFilter,
       page: null == page
           ? _self.page
           : page // ignore: cast_nullable_to_non_nullable

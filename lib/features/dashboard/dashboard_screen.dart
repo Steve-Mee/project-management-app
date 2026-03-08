@@ -1620,7 +1620,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                         _buildStatCard(
                           context,
                           l10n.tasksTitle,
-                          '${project.tasks.length}',
+                          '-',
                           Colors.purple,
                         ),
                       ],

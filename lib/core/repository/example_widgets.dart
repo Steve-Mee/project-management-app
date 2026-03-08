@@ -297,9 +297,6 @@ class ProjectCard extends ConsumerWidget {
                     Text('Status: ${project.status}').withSemantics(
                       'Project status ${project.status}',
                     ),
-                    Text('Tasks: ${project.tasks.length}').withSemantics(
-                      'Task count ${project.tasks.length}',
-                    ),
                   ],
                 ),
                 if (description != null && description.isNotEmpty) ...[
@@ -533,7 +530,6 @@ class _AddProjectDialogState extends ConsumerState<AddProjectDialog> {
       id: DateTime.now().millisecondsSinceEpoch.toString(),
       name: _nameController.text,
       progress: 0.0,
-      tasks: [],
       status: 'In Progress',
       description: _descriptionController.text.isEmpty
           ? null

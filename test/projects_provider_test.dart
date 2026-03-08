@@ -69,30 +69,6 @@ class FakeProjectRepository implements IProjectRepository {
       name: project.name,
       progress: newProgress,
       directoryPath: project.directoryPath,
-      tasks: project.tasks,
-      status: project.status,
-      description: project.description,
-    );
-  }
-
-  @override
-  Future<void> updateTasks(
-    String projectId,
-    List<String> tasks, {
-    String? userId,
-    Map<String, Object?>? metadata,
-  }) async {
-    final project = _store[projectId];
-    if (project == null) {
-      return;
-    }
-
-    _store[projectId] = ProjectModel(
-      id: project.id,
-      name: project.name,
-      progress: project.progress,
-      directoryPath: project.directoryPath,
-      tasks: tasks,
       status: project.status,
       description: project.description,
     );
@@ -115,7 +91,6 @@ class FakeProjectRepository implements IProjectRepository {
       name: project.name,
       progress: project.progress,
       directoryPath: directoryPath,
-      tasks: project.tasks,
       status: project.status,
       description: project.description,
     );
@@ -355,7 +330,6 @@ void main() {
       name: 'Flutter Project',
       progress: 0.5,
       status: 'In Progress',
-      tasks: [],
       description: 'A mobile app',
     ));
 
@@ -364,7 +338,6 @@ void main() {
       name: 'React Website',
       progress: 0.3,
       status: 'Planning',
-      tasks: [],
       description: 'A web application',
     ));
 
@@ -390,7 +363,6 @@ void main() {
       name: 'Mobile App',
       progress: 0.5,
       status: 'In Progress',
-      tasks: [],
       description: 'Built with Flutter framework',
     ));
 
@@ -416,7 +388,6 @@ void main() {
       name: 'Web App',
       progress: 0.5,
       status: 'In Progress',
-      tasks: [],
       description: 'A web application',
       tags: ['flutter', 'mobile', 'dart'],
     ));
@@ -443,7 +414,6 @@ void main() {
       name: 'Flutter Dashboard',
       progress: 0.5,
       status: 'In Progress',
-      tasks: [],
       description: 'Analytics and planning workspace',
     ));
 

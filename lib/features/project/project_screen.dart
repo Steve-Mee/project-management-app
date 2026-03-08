@@ -749,7 +749,6 @@ class _ProjectScreenState extends ConsumerState<ProjectScreen> {
         name: currentProject.name,
         progress: currentProject.progress,
         directoryPath: currentProject.directoryPath,
-        tasks: currentProject.tasks,
         status: newStatus, // Updated status
         description: currentProject.description,
         category: currentProject.category,
@@ -1668,7 +1667,6 @@ class _ProjectScreenState extends ConsumerState<ProjectScreen> {
           : descriptionController.text.trim(),
       category: category == 'Custom' ? customCategoryController.text.trim() : category,
       directoryPath: null,
-      tasks: const [],
       sharedUsers: currentUsername.isNotEmpty ? [currentUsername] : [],
     );
 

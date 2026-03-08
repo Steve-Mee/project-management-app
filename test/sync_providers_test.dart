@@ -181,20 +181,6 @@ class FakeProjectRepository implements IProjectRepository {
   }
 
   @override
-  Future<void> updateTasks(
-    String projectId,
-    List<String> tasks, {
-    String? userId,
-    Map<String, Object?>? metadata,
-  }) async {
-    final current = _projects[projectId];
-    if (current != null) {
-      _projects[projectId] = current.copyWith(tasks: tasks);
-      _changes.add(_projects.values.toList());
-    }
-  }
-
-  @override
   Stream<List<ProjectModel>> watchProjectChanges(String projectId) {
     return _changes.stream
         .map((projects) => projects.where((p) => p.id == projectId).toList());

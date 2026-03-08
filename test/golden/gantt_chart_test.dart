@@ -84,7 +84,6 @@ List<ProjectModel> _ganttProjectsFixture() {
       status: 'In Progress',
       startDate: DateTime(2026, 2, 20),
       dueDate: DateTime(2026, 4, 10),
-      tasks: const ['Design', 'Implementation'],
     ),
     ProjectModel(
       id: 'p-gantt-2',
@@ -93,7 +92,6 @@ List<ProjectModel> _ganttProjectsFixture() {
       status: 'On Hold',
       startDate: DateTime(2026, 3, 1),
       dueDate: DateTime(2026, 3, 28),
-      tasks: const ['Regression', 'Fixes'],
     ),
   ];
 }

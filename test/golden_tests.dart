@@ -64,7 +64,6 @@ void main() {
         progress: 0.45,
         status: 'In Progress',
         description: 'Revamp onboarding flow',
-        tasks: ['Wireframes', 'Prototype'],
       ),
       const ProjectModel(
         id: 'p2',
@@ -72,7 +71,6 @@ void main() {
         progress: 0.82,
         status: 'Review',
         description: 'Release candidate for mobile app',
-        tasks: ['QA', 'Beta sign-off'],
       ),
     ];
 

@@ -569,7 +569,6 @@ Current Date: ${DateTime.now().toString().split(' ')[0]}
             name: project.name,
             progress: project.progress,
             directoryPath: project.directoryPath,
-            tasks: project.tasks,
             status: project.status,
             description: change['description'],
             category: project.category,

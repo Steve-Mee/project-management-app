@@ -78,7 +78,6 @@ void main() {
     progress: 0.4,
     status: 'In Progress',
     description: 'UI migration validation',
-    tasks: ['Design', 'Implementation'],
     sharedUsers: ['alice'],
     sharedGroups: ['devs'],
   );

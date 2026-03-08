@@ -122,15 +122,6 @@ class ProjectTransferService {
         importedTaskIds.add(task.id);
       }
 
-      final groupedTitles = <String, List<String>>{};
-      for (final task in taskList) {
-        groupedTitles.putIfAbsent(task.projectId, () => []).add(task.title);
-      }
-
-      for (final entry in groupedTitles.entries) {
-        await projectRepository.updateTasks(entry.key, entry.value);
-      }
-
       return ProjectTransferResult(
         projectsPath: projectsPath,
         tasksPath: tasksPath,

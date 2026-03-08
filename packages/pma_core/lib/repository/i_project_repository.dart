@@ -35,14 +35,6 @@ abstract class IProjectRepository {
     Map<String, Object?>? metadata,
   });
 
-  /// Updates the tasks of a project.
-  Future<void> updateTasks(
-    String projectId,
-    List<String> tasks, {
-    String? userId,
-    Map<String, Object?>? metadata,
-  });
-
   /// Deletes a project from storage.
   Future<void> deleteProject(
     String projectId, {

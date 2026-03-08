@@ -7,7 +7,6 @@ import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pma_core/core/services/analytics_events.dart';
 import 'package:pma_core/core/providers.dart' as core_providers;
-import 'package:pma_core/providers/project/project_providers.dart' show projectRepositoryProvider, projectByIdProvider;
 import 'package:pma_core/providers/notification/notification_providers.dart';
 import 'package:pma_core/services/app_logger.dart';
 import 'package:pma_core/models/task_model.dart';
@@ -98,32 +97,6 @@ class TaskNotifier extends AsyncNotifier<List<Task>> {
     try {
       final repository = await ref.read(taskRepositoryProvider.future);
       var tasks = repository.getTasksForProject(projectId);
-
-      if (tasks.isEmpty) {
-        // Migrated to use projectByIdProvider for consistency with Riverpod patterns.
-        final project = await ref.read(projectByIdProvider(projectId).future);
-        final legacyTitles = project.tasks;
-        if (legacyTitles.isNotEmpty) {
-          tasks = List.generate(legacyTitles.length, (index) {
-            final title = legacyTitles[index];
-            return Task(
-              id: '${projectId}_legacy_$index',
-              projectId: projectId,
-              title: title,
-              description: '',
-              status: TaskStatus.todo,
-              assignee: '',
-              createdAt: DateTime.now(),
-              priority: 0.5,
-            );
-          });
-
-          await repository.deleteTasksForProject(projectId);
-          for (final task in tasks) {
-            await repository.upsertTask(task);
-          }
-        }
-      }
 
       // Keep a full in-memory cache, then expose only the first page for infinite scroll.
       _fullCacheByProjectId[projectId] = List<Task>.from(tasks);
@@ -442,11 +415,6 @@ class TaskNotifier extends AsyncNotifier<List<Task>> {
       for (final task in tasks) {
         await taskRepository.upsertTask(task);
       }
-
-      // Keep legacy titles list in sync for UI counters.
-      final projectRepository = ref.read(projectRepositoryProvider);
-      final titles = tasks.map((task) => task.title).toList();
-      await projectRepository.updateTasks(projectId, titles);
     } catch (e) {
       // ignore
     }

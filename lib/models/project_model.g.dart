@@ -21,7 +21,6 @@ class ProjectModelAdapter extends TypeAdapter<ProjectModel> {
       name: fields[1] as String,
       progress: (fields[2] as num).toDouble(),
       directoryPath: fields[3] as String?,
-      tasks: (fields[4] as List).cast<String>(),
       status: fields[5] as String,
       description: fields[6] as String?,
       category: fields[9] as String?,
@@ -46,7 +45,7 @@ class ProjectModelAdapter extends TypeAdapter<ProjectModel> {
   @override
   void write(BinaryWriter writer, ProjectModel obj) {
     writer
-      ..writeByte(21)
+      ..writeByte(20)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -55,8 +54,6 @@ class ProjectModelAdapter extends TypeAdapter<ProjectModel> {
       ..write(obj.progress)
       ..writeByte(3)
       ..write(obj.directoryPath)
-      ..writeByte(4)
-      ..write(obj.tasks)
       ..writeByte(5)
       ..write(obj.status)
       ..writeByte(6)
@@ -112,9 +109,6 @@ _ProjectModel _$ProjectModelFromJson(Map<String, dynamic> json) =>
       name: json['name'] as String,
       progress: (json['progress'] as num).toDouble(),
       directoryPath: json['directoryPath'] as String?,
-      tasks:
-          (json['tasks'] as List<dynamic>?)?.map((e) => e as String).toList() ??
-              const <String>[],
       status: json['status'] as String? ?? 'In Progress',
       description: json['description'] as String?,
       category: json['category'] as String?,
@@ -160,7 +154,6 @@ Map<String, dynamic> _$ProjectModelToJson(_ProjectModel instance) =>
       'name': instance.name,
       'progress': instance.progress,
       'directoryPath': instance.directoryPath,
-      'tasks': instance.tasks,
       'status': instance.status,
       'description': instance.description,
       'category': instance.category,

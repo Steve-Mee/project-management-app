@@ -83,7 +83,6 @@ class HiveProjectRepository implements IProjectRepository {
       name: project.name,
       progress: project.progress,
       directoryPath: project.directoryPath,
-      tasks: project.tasks,
       status: project.status,
       description: project.description,
       sharedUsers: project.sharedUsers,
@@ -352,7 +351,6 @@ class HiveProjectRepository implements IProjectRepository {
           name: project.name,
           progress: newProgress,
           directoryPath: project.directoryPath,
-          tasks: project.tasks,
           status: project.status,
           description: project.description,
           sharedUsers: project.sharedUsers,
@@ -379,55 +377,6 @@ class HiveProjectRepository implements IProjectRepository {
     }
   }
 
-  /// Update a project's tasks list
-  @override
-  Future<void> updateTasks(
-    String projectId,
-    List<String> tasks, {
-    String? userId,
-    Map<String, Object?>? metadata,
-  }) async {
-    try {
-      final data = _projectsBox.get(projectId);
-      if (data != null) {
-        final projectData = Map<String, dynamic>.from(data);
-        var project = _dataMapper.fromJson(projectData);
-        project = await _ensureValidId(project, projectId);
-        final resolvedId = project.id;
-        
-        // Create updated project with new tasks
-        final updatedProject = ProjectModel(
-          id: project.id,
-          name: project.name,
-          progress: project.progress,
-          directoryPath: project.directoryPath,
-          tasks: tasks,
-          status: project.status,
-          description: project.description,
-          sharedUsers: project.sharedUsers,
-          sharedGroups: project.sharedGroups,
-        );
-        
-        await _projectsBox.put(resolvedId, updatedProject.toJson());
-        AppLogger.userAction(
-          'User updated task list for project ${updatedProject.name}',
-          data: {
-            'projectId': resolvedId,
-            'taskCount': tasks.length,
-          },
-        );
-        
-        // Skip Supabase sync in test mode
-        if (!_isTestMode) {
-          await _syncManager.syncProjectUpdate(resolvedId, userId: userId, metadata: metadata);
-        }
-      }
-    } catch (e) {
-      AppLogger.instance.e('Error updating project tasks', error: e);
-      rethrow;
-    }
-  }
-
   /// Update a project's directory path
   @override
   Future<void> updateDirectoryPath(
@@ -450,7 +399,6 @@ class HiveProjectRepository implements IProjectRepository {
           name: project.name,
           progress: project.progress,
           directoryPath: directoryPath,
-          tasks: project.tasks,
           status: project.status,
           description: project.description,
           sharedUsers: project.sharedUsers,
@@ -494,7 +442,6 @@ class HiveProjectRepository implements IProjectRepository {
           name: project.name,
           progress: project.progress,
           directoryPath: project.directoryPath,
-          tasks: project.tasks,
           status: project.status,
           description: project.description,
           category: project.category,
@@ -557,7 +504,6 @@ class HiveProjectRepository implements IProjectRepository {
           name: updatedProject.name,
           progress: updatedProject.progress,
           directoryPath: updatedProject.directoryPath,
-          tasks: updatedProject.tasks,
           status: updatedProject.status,
           description: updatedProject.description,
           category: updatedProject.category,
@@ -665,7 +611,6 @@ class HiveProjectRepository implements IProjectRepository {
         name: project.name,
         progress: project.progress,
         directoryPath: project.directoryPath,
-        tasks: project.tasks,
         status: project.status,
         description: project.description,
         sharedUsers: [...project.sharedUsers, trimmed],
@@ -712,7 +657,6 @@ class HiveProjectRepository implements IProjectRepository {
         name: project.name,
         progress: project.progress,
         directoryPath: project.directoryPath,
-        tasks: project.tasks,
         status: project.status,
         description: project.description,
         sharedUsers: project.sharedUsers
@@ -765,7 +709,6 @@ class HiveProjectRepository implements IProjectRepository {
         name: project.name,
         progress: project.progress,
         directoryPath: project.directoryPath,
-        tasks: project.tasks,
         status: project.status,
         description: project.description,
         sharedUsers: project.sharedUsers,
@@ -812,7 +755,6 @@ class HiveProjectRepository implements IProjectRepository {
         name: project.name,
         progress: project.progress,
         directoryPath: project.directoryPath,
-        tasks: project.tasks,
         status: project.status,
         description: project.description,
         sharedUsers: project.sharedUsers,

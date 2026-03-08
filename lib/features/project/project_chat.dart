@@ -395,7 +395,6 @@ class _ProjectChatState extends ConsumerState<ProjectChat> {
         name: project.name,
         progress: project.progress,
         directoryPath: project.directoryPath,
-        tasks: project.tasks,
         status: project.status,
         description: latestAiMessage.content, // Apply AI suggestion as new description
         category: project.category,

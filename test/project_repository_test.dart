@@ -35,7 +35,6 @@ void main() {
       startDate: startDate,
       dueDate: dueDate,
       tags: tags,
-      tasks: const [],
       directoryPath: null,
       description: description,
     );
@@ -81,16 +80,6 @@ void main() {
     final updated = await repository.getProjectById(project.id);
 
     expect(updated.progress, 0.6);
-  });
-
-  test('updateTasks replaces task list', () async {
-    final project = await createProject();
-    await repository.addProject(project);
-
-    await repository.updateTasks(project.id, const ['Task A', 'Task B']);
-    final updated = await repository.getProjectById(project.id);
-
-    expect(updated.tasks, const ['Task A', 'Task B']);
   });
 
   test('deleteProject removes project', () async {

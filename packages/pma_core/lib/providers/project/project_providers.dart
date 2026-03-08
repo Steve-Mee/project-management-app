@@ -732,27 +732,6 @@ class ProjectsNotifier extends AsyncNotifier<List<ProjectModel>> {
     });
   }
 
-  /// Update a project's tasks list via repository
-  Future<void> updateTasks(String projectId, List<String> tasks) async {
-    state = const AsyncValue.loading();
-    state = await AsyncValue.guard(() async {
-      final userId = ref.read(authProvider).maybeWhen(
-        data: (auth) => auth.username,
-        orElse: () => 'system',
-      ) ?? 'system';
-      await _repository.updateTasks(
-        projectId,
-        tasks,
-        userId: userId,
-        metadata: {'action': 'update_tasks'},
-      );
-      AppLogger.event('project_tasks_updated', params: {'id': projectId});
-      _invalidateProjectCache(projectId);
-      _cache = null;
-      return _loadInitialPage();
-    });
-  }
-
   /// Update project's plan JSON
   Future<void> updatePlanJson(String projectId, String? planJson) async {
     state = const AsyncValue.loading();
@@ -1200,7 +1179,6 @@ class ProjectFilterNotifier extends StateNotifier<ProviderProjectFilter> {
           name: project.name,
           progress: project.progress,
           directoryPath: project.directoryPath,
-          tasks: project.tasks,
           status: project.status,
           description: project.description,
           category: project.category,
@@ -1229,7 +1207,6 @@ class ProjectFilterNotifier extends StateNotifier<ProviderProjectFilter> {
           name: project.name,
           progress: project.progress,
           directoryPath: project.directoryPath,
-          tasks: project.tasks,
           status: status,
           description: project.description,
           category: project.category,

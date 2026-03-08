@@ -23,7 +23,6 @@ Future<void> _pumpDashboardCard(
     progress: 0.67,
     status: 'In Progress',
     description: 'Golden test fixture for dashboard card UI.',
-    tasks: ['Design', 'Build', 'Review'],
   );
 
   await tester.pumpWidget(

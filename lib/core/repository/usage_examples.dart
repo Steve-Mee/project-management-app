@@ -103,7 +103,6 @@ Future<void> addNewProject(WidgetRef ref) async {
     id: DateTime.now().millisecondsSinceEpoch.toString(),
     name: 'New Project',
     progress: 0.0,
-    tasks: [],
     status: 'In Progress',
     description: 'Project description',
   );
@@ -125,16 +124,20 @@ Future<void> updateProjectProgress(
 }
 
 // ============================================================================
-// 4. UPDATE PROJECT TASKS
+// 4. UPDATE PROJECT STATUS
 // ============================================================================
 
-Future<void> updateProjectTasks(
+Future<void> updateProjectStatus(
   WidgetRef ref,
   String projectId,
-  List<String> newTasks,
+  String newStatus,
 ) async {
   final notifier = ref.read(projectsProvider.notifier);
-  await notifier.updateTasks(projectId, newTasks);
+  final project = await ref.read(projectByIdProvider(projectId).future);
+  await notifier.updateProject(
+    projectId,
+    project.copyWith(status: newStatus),
+  );
 }
 
 // ============================================================================
@@ -189,7 +192,6 @@ class _ProjectManagementPageState extends ConsumerState<ProjectManagementPage> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text('Progress: ${(project.progress * 100).toStringAsFixed(1)}%'),
-                      Text('Tasks: ${project.tasks.length}'),
                       Text('Status: ${project.status}'),
                     ],
                   ),
@@ -227,7 +229,6 @@ class _ProjectManagementPageState extends ConsumerState<ProjectManagementPage> {
       id: DateTime.now().millisecondsSinceEpoch.toString(),
       name: 'New Project',
       progress: 0.0,
-      tasks: [],
     );
     await repository.addProject(newProject);
   }
