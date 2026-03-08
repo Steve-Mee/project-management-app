@@ -4,7 +4,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-import '../../core/config/app_config.dart';
+import 'edge_function_backend.dart';
 import 'mirror_compute_backend.dart';
 
 typedef PremiumAccessResolver = FutureOr<bool> Function(User? user);
@@ -26,6 +26,17 @@ class CloudFlyBackend implements MirrorComputeBackend {
   final int maxRetries;
   final Duration initialBackoff;
   final PremiumAccessResolver _premiumResolver;
+
+  bool get supportsApply {
+    try {
+      EdgeFunctionBackend.resolveApplyEndpoint(
+        compileHttpEndpoint: httpEndpoint,
+      );
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
 
   @override
   Future<GenerateResult> generate({
@@ -86,6 +97,15 @@ class CloudFlyBackend implements MirrorComputeBackend {
       context: context,
       mode: mode,
       onApply: (ApplySecurityArtifacts artifacts) async {
+        late final String endpoint;
+        try {
+          endpoint = _requireApplyEndpoint();
+        } on UnsupportedError catch (error) {
+          return ApplyResult(success: false, message: error.message);
+        } on StateError catch (error) {
+          return ApplyResult(success: false, message: 'config_error: ${error.message}');
+        }
+
         final payload = <String, dynamic>{
           'prompt': prompt,
           'projectId': context.projectId,
@@ -98,7 +118,7 @@ class CloudFlyBackend implements MirrorComputeBackend {
         };
 
         final raw = await _postRawWithRetries(
-          endpoint: _applyEndpoint(),
+          endpoint: endpoint,
           payload: payload,
           accessToken: _client.auth.currentSession?.accessToken,
         );
@@ -151,7 +171,8 @@ class CloudFlyBackend implements MirrorComputeBackend {
     Map<String, dynamic> payload,
     String? accessToken,
   ) async {
-    final uri = Uri.parse(_requireCompileEndpoint());
+    final endpoint = _requireCompileEndpoint();
+    final uri = Uri.parse(endpoint);
     final headers = <String, String>{
       'Content-Type': 'application/json',
       if (accessToken != null && accessToken.isNotEmpty)
@@ -256,30 +277,21 @@ class CloudFlyBackend implements MirrorComputeBackend {
     return CompileResult(success: true, output: raw);
   }
 
-  String _applyEndpoint() {
-    final compileEndpoint = _requireCompileEndpoint();
-    if (compileEndpoint.endsWith('/compile')) {
-      return '${compileEndpoint.substring(0, compileEndpoint.length - '/compile'.length)}/apply';
+  String _requireApplyEndpoint() {
+    if (!supportsApply) {
+      throw UnsupportedError(
+        'contract_error: CloudFlyBackend does not support apply because no valid apply endpoint can be resolved.',
+      );
     }
-    if (compileEndpoint.endsWith('/')) {
-      return '${compileEndpoint}apply';
-    }
-    return '$compileEndpoint/apply';
+
+    return EdgeFunctionBackend.resolveApplyEndpoint(
+      compileHttpEndpoint: httpEndpoint,
+    );
   }
 
   String _requireCompileEndpoint() {
-    final explicit = httpEndpoint?.trim();
-    if (explicit != null && explicit.isNotEmpty) {
-      return explicit;
-    }
-
-    final configuredSupabaseUrl = AppConfig.supabaseUrl?.trim();
-    if (configuredSupabaseUrl != null && configuredSupabaseUrl.isNotEmpty) {
-      return '$configuredSupabaseUrl/functions/v1/mirror_compute/compile';
-    }
-
-    throw StateError(
-      'cloud_endpoint_missing: Configure CloudFlyBackend.httpEndpoint or AppConfig.supabaseUrl.',
+    return EdgeFunctionBackend.resolveCompileEndpoint(
+      httpEndpoint: httpEndpoint,
     );
   }
 

@@ -213,15 +213,14 @@ class EdgeFunctionBackend implements MirrorComputeBackend {
   }
 
   String _resolveCompileEndpoint() {
-    return httpEndpoint?.trim().isNotEmpty == true
-        ? httpEndpoint!.trim()
-        : _defaultCompileEndpoint();
+    return resolveCompileEndpoint(httpEndpoint: httpEndpoint);
   }
 
   String _resolveApplyEndpoint() {
-    return applyHttpEndpoint?.trim().isNotEmpty == true
-        ? applyHttpEndpoint!.trim()
-        : _defaultApplyEndpoint();
+    return resolveApplyEndpoint(
+      compileHttpEndpoint: httpEndpoint,
+      applyHttpEndpoint: applyHttpEndpoint,
+    );
   }
 
   Future<CompileResult> _postCompile({
@@ -430,17 +429,36 @@ class EdgeFunctionBackend implements MirrorComputeBackend {
     return CompileResult(success: true, output: raw);
   }
 
-  String _defaultCompileEndpoint() {
+  static String resolveCompileEndpoint({String? httpEndpoint}) {
+    final explicit = httpEndpoint?.trim();
+    if (explicit != null && explicit.isNotEmpty) {
+      return explicit;
+    }
+
     final base = _requireSupabaseBaseUrl();
     return '$base/functions/v1/mirror_compute/compile';
   }
 
-  String _defaultApplyEndpoint() {
-    final base = _requireSupabaseBaseUrl();
-    return '$base/functions/v1/mirror_compute/apply';
+  static String resolveApplyEndpoint({
+    String? compileHttpEndpoint,
+    String? applyHttpEndpoint,
+  }) {
+    final explicitApply = applyHttpEndpoint?.trim();
+    if (explicitApply != null && explicitApply.isNotEmpty) {
+      return explicitApply;
+    }
+
+    final compileEndpoint = resolveCompileEndpoint(httpEndpoint: compileHttpEndpoint);
+    if (compileEndpoint.endsWith('/compile')) {
+      return '${compileEndpoint.substring(0, compileEndpoint.length - '/compile'.length)}/apply';
+    }
+    if (compileEndpoint.endsWith('/')) {
+      return '${compileEndpoint}apply';
+    }
+    return '$compileEndpoint/apply';
   }
 
-  String _requireSupabaseBaseUrl() {
+  static String _requireSupabaseBaseUrl() {
     final configured = AppConfig.supabaseUrl?.trim();
     if (configured == null || configured.isEmpty) {
       throw StateError(
