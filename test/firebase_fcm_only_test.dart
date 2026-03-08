@@ -1,7 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:pma_core/providers/sync_providers.dart';
+import 'package:pma_core/providers/sync/sync_providers.dart';
 import 'package:pma_core/services/cloud_sync_service.dart';
 
 void main() {

@@ -7,7 +7,7 @@ import 'package:pma_core/models/project_filter.dart';
 import 'package:pma_core/models/project_model.dart';
 import 'package:pma_core/models/project_requirements.dart';
 import 'package:pma_core/models/requirements.dart';
-import 'package:pma_core/providers/sync_providers.dart';
+import 'package:pma_core/providers/sync/sync_providers.dart';
 import 'package:pma_core/repository/i_dashboard_repository.dart';
 import 'package:pma_core/repository/i_project_repository.dart';
 import 'package:pma_core/repository/models/dashboard_models.dart';

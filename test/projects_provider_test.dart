@@ -3,7 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:pma_core/models/project_filter.dart' as model_filters;
 import 'package:pma_core/models/project_model.dart';
 import 'package:pma_core/providers/project_providers.dart';
-import 'package:pma_core/providers/auth_providers.dart';
+import 'package:pma_core/providers/auth/auth_providers.dart';
 import 'package:pma_core/repository/i_project_repository.dart';
 import 'package:pma_core/repository/models/project_models.dart';
 

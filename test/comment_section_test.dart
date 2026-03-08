@@ -5,7 +5,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:project_management_app/features/project/widgets/comment_section.dart';
 import 'package:pma_core/models/comment_model.dart';
-import 'package:pma_core/providers/auth_providers.dart';
+import 'package:pma_core/providers/auth/auth_providers.dart';
 import 'package:pma_core/repository/i_auth_repository.dart';
 import 'package:pma_core/auth/auth_user.dart';
 import 'package:pma_core/auth/role_models.dart';

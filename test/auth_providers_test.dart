@@ -9,7 +9,7 @@ import 'package:pma_core/repository/impl/hive_settings_repository.dart';
 import 'package:pma_core/repository/settings_repository.dart';
 import 'package:pma_core/auth/auth_user.dart';
 import 'package:pma_core/auth/role_models.dart';
-import 'package:pma_core/providers/auth_providers.dart';
+import 'package:pma_core/providers/auth/auth_providers.dart';
 import 'package:pma_core/services/login_rate_limiter.dart';
 import 'package:pma_core/services/recaptcha_service.dart';
 import 'package:pma_core/core/config/ai_config.dart' as ai_config;

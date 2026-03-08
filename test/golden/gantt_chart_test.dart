@@ -6,7 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pma_core/providers/project_providers.dart';
-import 'package:pma_core/providers/task_providers.dart';
+import 'package:pma_core/providers/task/task_providers.dart';
 import 'package:pma_core/repository/impl/hive_task_repository.dart';
 import 'package:project_management_app/features/projects/views/project_gantt_view.dart';
 import 'package:project_management_app/generated/app_localizations.dart';

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:pma_core/providers/auth_providers.dart';
+import 'package:pma_core/providers/auth/auth_providers.dart';
 import 'package:pma_core/repository/impl/hive_settings_repository.dart';
 import 'package:pma_core/repository/i_auth_repository.dart';
 import 'package:pma_core/auth/auth_user.dart';
