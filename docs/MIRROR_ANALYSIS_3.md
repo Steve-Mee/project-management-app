@@ -63,41 +63,44 @@
 
 ### 3. Concrete aanbevelingen
 - Wijzigingen (met exacte bestandsnamen en wat te veranderen)
-  - `supabase/functions/mirror_compute/index.ts`
-    - Kritieke fix toegepast: behoud en forward van `backupId`, `fileSetFingerprint`, `actorUserId` en `signedInputUrls` in normalisatie + upstream payload, zodat apply-security flow end-to-end klopt.
-    - Voeg request body size guard toe (bijv. max bytes) om grote payload abuse te beperken.
-  - `lib/features/mirror/cloud_fly_backend.dart`
-    - Introduceer expliciete contract-check op upstream capability (`supportsApply`) en fail-fast met typed message als `/apply` niet beschikbaar is.
-    - Centraliseer endpoint-resolutie met `EdgeFunctionBackend` om duplicatie in HTTP padlogica te verminderen.
-  - `lib/features/mirror/private_grpc_backend.dart`
-    - Implementeer `generate` of verwijder methode uit contract; huidige `not implemented` vergroot foutkans in UI/features die contract generiek gebruiken.
-  - `lib/features/mirror/mirror_compute_backend.dart`
-    - Beperk `updatedFiles` persistence (max files/max chars) in `persistApplyToHive` om lokale box groei te beheersen.
-    - Maak event-name constants voor apply-audit (nu stringly-typed).
-  - `lib/features/mirror/mirror_editor_screen.dart`
-    - Voeg debounce/coalescing toe in `_handleRealtimeRecord` om UI-jank bij burst updates te voorkomen.
-    - Voeg strictere subscription filter toe (task + project + user indien beschikbaar in row schema).
-  - `README.md`
-    - Corrigeer Mirror related files naar actuele paden: `lib/features/project/project_detail_screen.dart` en `lib/features/project/expandable_task_card.dart`.
-  - `supabase_setup.sql`
-    - Verplaats Mirror schema-definities naar migrations-only beleid en markeer setup script als bootstrap/legacy om drift te voorkomen.
+  - [DONE] `supabase/functions/mirror_compute/index.ts`
+    - [DONE] Kritieke fix toegepast: behoud en forward van `backupId`, `fileSetFingerprint`, `actorUserId` en `signedInputUrls` in normalisatie + upstream payload, zodat apply-security flow end-to-end klopt.
+    - [DONE] Request body size guard toegevoegd (max 512KB).
+  - [DONE] `lib/features/mirror/cloud_fly_backend.dart`
+    - [DONE] Expliciete contract-check op upstream capability (`supportsApply`) met fail-fast typed foutpad voor `/apply`.
+    - [DONE] Endpoint-resolutie gecentraliseerd via `EdgeFunctionBackend`.
+    - [DONE] `generate` geïmplementeerd (mapping via `compile`) i.p.v. placeholder.
+  - [DONE] `lib/features/mirror/private_grpc_backend.dart`
+    - [DONE] `generate` geïmplementeerd.
+  - [DONE] `lib/features/mirror/mirror_compute_backend.dart`
+    - [DONE] `updatedFiles` persistence begrensd (max 50 files / 100k chars) in `persistApplyToHive`.
+    - [DONE] Event-name constants toegevoegd voor apply-audit.
+  - [DONE] `lib/features/mirror/mirror_editor_screen.dart`
+    - [DONE] Debounce/coalescing toegevoegd in `_handleRealtimeRecord` (300ms).
+    - [DONE] Striktere filtering toegevoegd met `task_id` + `project_id` + `user_id` validatie (server-side filter op `user_id`, aanvullende client-side scope-check).
+  - [DONE] `README.md`
+    - [DONE] Mirror related files gecorrigeerd naar actuele paden: `lib/features/project/project_detail_screen.dart` en `lib/features/project/expandable_task_card.dart`.
+  - [DONE] `supabase_setup.sql`
+    - [DONE] Mirror schema-definities verplaatst naar migrations-only beleid en setup script gemarkeerd als bootstrap/legacy.
 
 - Toevoegingen (nieuwe bestanden/features met korte beschrijving)
-  - `supabase/migrations/202603xx_mirror_templates_rls_and_sync.sql`
-    - Voeg RLS + beheerstrategie toe voor `mirror_templates` en definieer of de bron DB-first of app-static is.
-  - `server/mirror-cloud-runner/lib/apply_service.dart`
-    - Voeg expliciete apply-runner endpoint/service toe (gRPC of HTTP) zodat `/apply` contract niet alleen aan edge/clientzijde bestaat.
-  - `test/features/mirror/apply_flow_contract_test.dart`
-    - End-to-end contracttest voor apply artifacts: signed uploads, forwarded metadata, audit-event consistency.
-  - `test/core/services/mirror_premium_service_integration_test.dart`
-    - Test precedence-regels metadata vs subscriptions om entitlement-consistentie te borgen.
-  - `docs/mirror-production-readiness-checklist.md`
-    - Checklist voor rollout: security toggles, endpoint matrix, storage lifecycle, observability dashboards, rollback steps.
+  - [DONE] `supabase/migrations/20260309_mirror_templates_rls_and_sync.sql`
+    - [DONE] RLS + DB-first beheerstrategie toegevoegd voor `mirror_templates` inclusief seed sync.
+  - [DONE] `server/mirror-cloud-runner/lib/apply_service.dart`
+    - [DONE] Expliciete apply-service toegevoegd (gRPC/HTTP signature gelijk aan compile).
+  - [DONE] `server/mirror-local-runner/lib/apply_service.dart`
+    - [DONE] Apply-service toegevoegd voor Private Mode ondersteuning.
+  - [DONE] `test/features/mirror/apply_flow_contract_test.dart`
+    - [DONE] End-to-end contracttest toegevoegd voor signed uploads, metadata forwarding en audit consistency.
+  - [DONE] `test/core/services/mirror_premium_service_integration_test.dart`
+    - [DONE] Precedence-tests metadata vs subscriptions toegevoegd.
+  - [DONE] `docs/mirror-production-readiness-checklist.md`
+    - [DONE] Volledige production readiness checklist toegevoegd.
 
 - Verwijderingen (wat weg kan en waarom)
-  - `lib/features/mirror/providers/mirror_session_provider.dart`
-    - Kan weg als pure re-export; gebruik direct `lib/core/providers/mirror_session_provider.dart` om alias-ruis te verminderen.
-  - Statische template duplicatie in `lib/features/mirror/templates_gallery.dart`
-    - Verwijder of minimaliseer hardcoded `defaultTemplates` zodra DB-catalog de canonieke bron wordt, om content drift te voorkomen.
-  - Legacy Mirror blokken in `supabase_setup.sql`
-    - Verwijder zodra migrations volledig leidend zijn; voorkomt dubbele DDL/policy onderhoudspaden.
+  - [DONE] `lib/features/mirror/providers/mirror_session_provider.dart`
+    - [DONE] Verwijderd als pure re-export; direct gebruik van `lib/core/providers/mirror_session_provider.dart`.
+  - [DONE] Statische template duplicatie in `lib/features/mirror/templates_gallery.dart`
+    - [DONE] Hardcoded `defaultTemplates` verwijderd (DB-first).
+  - [DONE] Legacy Mirror blokken in `supabase_setup.sql`
+    - [DONE] Verwijderd; migrations zijn leidend.
