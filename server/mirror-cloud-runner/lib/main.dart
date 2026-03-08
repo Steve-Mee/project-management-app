@@ -49,7 +49,8 @@ Future<void> main() async {
         metrics: metrics,
       ),
     ],
-    codecRegistry: CodecRegistry(codecs: const <Codec>[GzipCodec(), IdentityCodec()]),
+    codecRegistry:
+        CodecRegistry(codecs: const <Codec>[GzipCodec(), IdentityCodec()]),
   );
 
   await server.serve(address: '0.0.0.0', port: port);
@@ -79,11 +80,10 @@ class MirrorCompileService extends Service {
     required this.signedUrlSecret,
     required this.authGuard,
     required this.metrics,
-  })
-    : _artifactSigner = ArtifactSigner(
-        baseUrl: artifactBaseUrl,
-        secret: signedUrlSecret,
-      ) {
+  }) : _artifactSigner = ArtifactSigner(
+          baseUrl: artifactBaseUrl,
+          secret: signedUrlSecret,
+        ) {
     $addMethod(ServiceMethod<List<int>, List<int>>(
       'Compile',
       compile,
@@ -109,17 +109,17 @@ class MirrorCompileService extends Service {
       call.clientMetadata ?? const <String, String>{},
     );
     if (!verdict.authorized) {
-      metrics.recordAuthDenied(verdict.reason);
+      metrics.recordAuthDenied(verdict.reasonCode);
       _log(
         'warn',
         'unauthorized compile request blocked',
         context: <String, Object?>{
           'requestId': requestId,
-          'reason': verdict.reason,
+          'reasonCode': verdict.reasonCode,
           ...metrics.snapshot(),
         },
       );
-      throw GrpcError.unauthenticated(verdict.reason);
+      throw GrpcError.unauthenticated('auth_denied:${verdict.reasonCode}');
     }
 
     final requestRaw = utf8.decode(requestBytes);
@@ -212,17 +212,20 @@ String _resolveRequestId(Map<String, String>? metadata) {
 String _requireEnv(String key) {
   final value = Platform.environment[key]?.trim();
   if (value == null || value.isEmpty) {
-    _log('fatal', 'missing required environment variable', context: <String, Object?>{'key': key});
+    _log('fatal', 'missing required environment variable',
+        context: <String, Object?>{'key': key});
     throw StateError('Missing required environment variable: $key');
   }
   return value;
 }
 
-Future<int> _cleanupOldWorkspaces(String rootPath, {required Duration maxAge}) async {
+Future<int> _cleanupOldWorkspaces(String rootPath,
+    {required Duration maxAge}) async {
   final root = Directory(rootPath);
   if (!await root.exists()) {
     await root.create(recursive: true);
-    _log('info', 'workspace root created', context: <String, Object?>{'rootPath': rootPath});
+    _log('info', 'workspace root created',
+        context: <String, Object?>{'rootPath': rootPath});
     return 0;
   }
 
@@ -268,7 +271,8 @@ Future<int> _cleanupOldWorkspaces(String rootPath, {required Duration maxAge}) a
   return removed;
 }
 
-void _log(String level, String message, {Map<String, Object?> context = const <String, Object?>{}}) {
+void _log(String level, String message,
+    {Map<String, Object?> context = const <String, Object?>{}}) {
   stdout.writeln(
     jsonEncode(<String, Object?>{
       'ts': DateTime.now().toUtc().toIso8601String(),
@@ -306,7 +310,8 @@ class CompileRequestPayload {
       taskId: (json['taskId'] ?? json['task_id'] ?? '').toString(),
       mode: (json['mode'] ?? '').toString(),
       files: filesRaw is Map
-          ? filesRaw.map((key, value) => MapEntry(key.toString(), value.toString()))
+          ? filesRaw
+              .map((key, value) => MapEntry(key.toString(), value.toString()))
           : const <String, String>{},
       metadata: metadataRaw is Map
           ? metadataRaw.map((key, value) => MapEntry(key.toString(), value))
@@ -414,13 +419,15 @@ class CompileRunner {
       warnings.add('pubspec.yaml not found; skipping flutter pub get.');
     }
 
-    final buildTarget =
-        (request.metadata['buildTarget'] ?? request.metadata['build_target'] ?? 'auto')
-            .toString()
-            .toLowerCase();
+    final buildTarget = (request.metadata['buildTarget'] ??
+            request.metadata['build_target'] ??
+            'auto')
+        .toString()
+        .toLowerCase();
 
     String? artifactPath;
-    if (buildTarget == 'flutter' || (buildTarget == 'auto' && await _hasFlutterEntrypoint(workspace))) {
+    if (buildTarget == 'flutter' ||
+        (buildTarget == 'auto' && await _hasFlutterEntrypoint(workspace))) {
       final flutterBuild = await _runCommand(
         executable: 'flutter',
         arguments: const <String>['build', 'web', '--release'],
@@ -439,7 +446,8 @@ class CompileRunner {
     if (artifactPath == null) {
       final dartEntrypoint = await _resolveDartEntrypoint(workspace);
       if (dartEntrypoint == null) {
-        errors.add('No valid Dart entrypoint found (bin/main.dart or main.dart).');
+        errors.add(
+            'No valid Dart entrypoint found (bin/main.dart or main.dart).');
       } else {
         final outputFile = '${workspace.path}/build/app.exe';
         final outputDir = Directory('${workspace.path}/build');
@@ -447,7 +455,13 @@ class CompileRunner {
 
         final dartCompile = await _runCommand(
           executable: 'dart',
-          arguments: <String>['compile', 'exe', dartEntrypoint, '-o', outputFile],
+          arguments: <String>[
+            'compile',
+            'exe',
+            dartEntrypoint,
+            '-o',
+            outputFile
+          ],
           workingDirectory: workspace.path,
           timeout: const Duration(minutes: 5),
         );
@@ -471,7 +485,8 @@ class CompileRunner {
     );
   }
 
-  Future<void> _writeFiles(Directory workspace, Map<String, String> files) async {
+  Future<void> _writeFiles(
+      Directory workspace, Map<String, String> files) async {
     for (final entry in files.entries) {
       final normalized = entry.key.replaceAll('\\', '/');
       if (normalized.contains('..')) {
@@ -570,9 +585,11 @@ class ArtifactSigner {
   final String secret;
 
   String sign(String artifactPath, {required Duration validFor}) {
-    final expiresAt = DateTime.now().toUtc().add(validFor).millisecondsSinceEpoch;
+    final expiresAt =
+        DateTime.now().toUtc().add(validFor).millisecondsSinceEpoch;
     final payload = '$artifactPath:$expiresAt';
-    final signature = Hmac(sha256, utf8.encode(secret)).convert(utf8.encode(payload));
+    final signature =
+        Hmac(sha256, utf8.encode(secret)).convert(utf8.encode(payload));
     final encodedPath = Uri.encodeComponent(artifactPath);
     return '$baseUrl/$encodedPath?exp=$expiresAt&sig=${signature.toString()}';
   }

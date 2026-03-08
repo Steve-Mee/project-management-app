@@ -91,6 +91,7 @@ dependencies:
   pdf: ^3.11.1
   firebase_core: ^3.6.0
   firebase_messaging: ^15.1.0
+  flutter_inappwebview: ^6.1.5
 
   xml: ^6.6.1
 

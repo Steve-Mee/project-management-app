@@ -10,7 +10,8 @@ import 'package:project_management_app/features/mirror/mirror_compute_backend.da
 void main() {
   group('Mirror edge function contract', () {
     test('edge function keeps explicit compile/apply path dispatch', () {
-      final source = _readRepoFile('supabase/functions/mirror_compute/index.ts');
+      final source =
+          _readRepoFile('supabase/functions/mirror_compute/index.ts');
 
       expect(source, contains('function resolveActionFromPath'));
       expect(source, contains("normalized.endsWith('/compile')"));
@@ -18,9 +19,13 @@ void main() {
       expect(source, contains('Invalid route. Use /compile or /apply.'));
       expect(source, contains("const action = resolveActionFromPath"));
       expect(source, contains("if (!action)"));
+      expect(source, contains("missing_endpoint_env:"));
+      expect(source, contains("code: 'config_error'"));
     });
 
-    test('runtime compile contract sends payload+auth and parses success response', () async {
+    test(
+        'runtime compile contract sends payload+auth and parses success response',
+        () async {
       late Uri capturedUri;
       Map<String, dynamic>? capturedBody;
       String? capturedAuth;
@@ -38,7 +43,8 @@ void main() {
 
       final backend = EdgeFunctionBackend(
         httpClient: mockClient,
-        httpEndpoint: 'https://edge.example/functions/v1/mirror_compute/compile',
+        httpEndpoint:
+            'https://edge.example/functions/v1/mirror_compute/compile',
       );
 
       const context = ProjectContext(
@@ -54,8 +60,10 @@ void main() {
         mode: 'cloud',
       );
 
-      expect(capturedUri.toString(), contains('/functions/v1/mirror_compute/compile'));
-      expect(capturedAuth == null || capturedAuth!.startsWith('Bearer '), isTrue);
+      expect(capturedUri.toString(),
+          contains('/functions/v1/mirror_compute/compile'));
+      expect(
+          capturedAuth == null || capturedAuth!.startsWith('Bearer '), isTrue);
       expect(capturedBody?['prompt'], 'compile this');
       expect(capturedBody?['projectId'], 'project-1');
       expect(capturedBody?['taskId'], 'task-1');
@@ -67,14 +75,17 @@ void main() {
       expect(result.warnings, contains('w1'));
     });
 
-    test('runtime compile contract maps non-2xx responses to typed code prefixes', () async {
+    test(
+        'runtime compile contract maps non-2xx responses to typed code prefixes',
+        () async {
       final mockClient = MockClient((http.Request request) async {
         return http.Response('denied', 403);
       });
 
       final backend = EdgeFunctionBackend(
         httpClient: mockClient,
-        httpEndpoint: 'https://edge.example/functions/v1/mirror_compute/compile',
+        httpEndpoint:
+            'https://edge.example/functions/v1/mirror_compute/compile',
       );
 
       const context = ProjectContext(projectId: 'p', taskId: 't');
@@ -89,7 +100,8 @@ void main() {
       expect(result.errors.join(' | '), contains('denied'));
     });
 
-    test('runtime apply contract sends apply payload and maps success', () async {
+    test('runtime apply contract sends apply payload and maps success',
+        () async {
       late Uri capturedUri;
       Map<String, dynamic>? capturedBody;
 
@@ -105,7 +117,8 @@ void main() {
 
       final backend = EdgeFunctionBackend(
         httpClient: mockClient,
-        applyHttpEndpoint: 'https://edge.example/functions/v1/mirror_compute/apply',
+        applyHttpEndpoint:
+            'https://edge.example/functions/v1/mirror_compute/apply',
         useSecureApply: false,
       );
 
@@ -121,7 +134,8 @@ void main() {
         mode: 'cloud',
       );
 
-      expect(capturedUri.toString(), contains('/functions/v1/mirror_compute/apply'));
+      expect(capturedUri.toString(),
+          contains('/functions/v1/mirror_compute/apply'));
       expect(capturedBody?['prompt'], 'apply this change');
       expect(capturedBody?['projectId'], 'project-1');
       expect(capturedBody?['taskId'], 'task-1');
@@ -130,14 +144,16 @@ void main() {
       expect(result.appliedFiles, contains('lib/main.dart'));
     });
 
-    test('runtime apply contract maps non-2xx responses to typed code prefixes', () async {
+    test('runtime apply contract maps non-2xx responses to typed code prefixes',
+        () async {
       final mockClient = MockClient((http.Request request) async {
         return http.Response('upstream down', 502);
       });
 
       final backend = EdgeFunctionBackend(
         httpClient: mockClient,
-        applyHttpEndpoint: 'https://edge.example/functions/v1/mirror_compute/apply',
+        applyHttpEndpoint:
+            'https://edge.example/functions/v1/mirror_compute/apply',
         useSecureApply: false,
       );
 
@@ -158,13 +174,17 @@ void main() {
       expect(result.message ?? '', contains('upstream down'));
     });
 
-    test('apply route contract is explicit in edge + flutter backend wiring', () {
-      final edgeSource = _readRepoFile('supabase/functions/mirror_compute/index.ts');
-      final flutterSource = _readRepoFile('lib/features/mirror/edge_function_backend.dart');
+    test('apply route contract is explicit in edge + flutter backend wiring',
+        () {
+      final edgeSource =
+          _readRepoFile('supabase/functions/mirror_compute/index.ts');
+      final flutterSource =
+          _readRepoFile('lib/features/mirror/edge_function_backend.dart');
 
       expect(edgeSource, contains('resolveActionFromPath'));
       expect(edgeSource, contains("normalized.endsWith('/apply')"));
-      expect(edgeSource, contains('resolveForwardEndpoint(normalized.mode, action)'));
+      expect(edgeSource,
+          contains('resolveForwardEndpoint(normalized.mode, action)'));
 
       expect(flutterSource, contains('/functions/v1/mirror_compute/apply'));
       expect(flutterSource, contains('applyHttpEndpoint'));

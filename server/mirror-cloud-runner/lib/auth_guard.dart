@@ -58,17 +58,26 @@ class AuthGuard {
 
     final authHeader = normalized['authorization'];
     if (authHeader == null || authHeader.isEmpty) {
-      return const AuthVerdict.denied('Missing authorization metadata.');
+      return const AuthVerdict.denied(
+        code: AuthDenyCode.missingAuthorization,
+        reason: 'Missing authorization metadata.',
+      );
     }
 
     const bearerPrefix = 'bearer ';
     if (!authHeader.toLowerCase().startsWith(bearerPrefix)) {
-      return const AuthVerdict.denied('Authorization must be a Bearer token.');
+      return const AuthVerdict.denied(
+        code: AuthDenyCode.invalidAuthorizationScheme,
+        reason: 'Authorization must be a Bearer token.',
+      );
     }
 
     final token = authHeader.substring(bearerPrefix.length).trim();
     if (token.isEmpty) {
-      return const AuthVerdict.denied('Bearer token is empty.');
+      return const AuthVerdict.denied(
+        code: AuthDenyCode.emptyBearerToken,
+        reason: 'Bearer token is empty.',
+      );
     }
 
     return _verifyJwt(token);
@@ -77,7 +86,10 @@ class AuthGuard {
   AuthVerdict _verifyJwt(String token) {
     final parts = token.split('.');
     if (parts.length != 3) {
-      return const AuthVerdict.denied('Malformed JWT.');
+      return const AuthVerdict.denied(
+        code: AuthDenyCode.jwtMalformed,
+        reason: 'Malformed JWT.',
+      );
     }
 
     final headerPart = parts[0];
@@ -85,17 +97,26 @@ class AuthGuard {
     final signaturePart = parts[2];
     final headerMap = _decodeJsonPart(headerPart);
     if (headerMap == null) {
-      return const AuthVerdict.denied('Invalid JWT header.');
+      return const AuthVerdict.denied(
+        code: AuthDenyCode.jwtHeaderInvalid,
+        reason: 'Invalid JWT header.',
+      );
     }
 
     final payloadMap = _decodeJsonPart(payloadPart);
     if (payloadMap == null) {
-      return const AuthVerdict.denied('Invalid JWT payload.');
+      return const AuthVerdict.denied(
+        code: AuthDenyCode.jwtPayloadInvalid,
+        reason: 'Invalid JWT payload.',
+      );
     }
 
     final alg = (headerMap['alg'] ?? '').toString();
     if (alg != 'HS256') {
-      return AuthVerdict.denied('Unsupported JWT alg: $alg');
+      return const AuthVerdict.denied(
+        code: AuthDenyCode.jwtUnsupportedAlg,
+        reason: 'Unsupported JWT algorithm.',
+      );
     }
 
     final kid = (headerMap['kid'] ?? '').toString().trim();
@@ -103,8 +124,14 @@ class AuthGuard {
     final candidateSecrets = _candidateSecretsForKid(kid);
     if (candidateSecrets.isEmpty) {
       return kid.isNotEmpty
-          ? AuthVerdict.denied('Unknown JWT kid: $kid')
-          : const AuthVerdict.denied('No JWT signing secrets configured.');
+          ? const AuthVerdict.denied(
+              code: AuthDenyCode.jwtUnknownKid,
+              reason: 'Unknown JWT key id.',
+            )
+          : const AuthVerdict.denied(
+              code: AuthDenyCode.jwtSecretsMissing,
+              reason: 'No JWT signing secrets configured.',
+            );
     }
 
     var signatureValid = false;
@@ -117,24 +144,36 @@ class AuthGuard {
     }
 
     if (!signatureValid) {
-      return const AuthVerdict.denied('Invalid JWT signature.');
+      return const AuthVerdict.denied(
+        code: AuthDenyCode.jwtSignatureInvalid,
+        reason: 'Invalid JWT signature.',
+      );
     }
 
     final nowSeconds = DateTime.now().toUtc().millisecondsSinceEpoch ~/ 1000;
     final exp = _asInt(payloadMap['exp']);
     if (exp != null && exp < nowSeconds) {
-      return const AuthVerdict.denied('JWT expired.');
+      return const AuthVerdict.denied(
+        code: AuthDenyCode.jwtExpired,
+        reason: 'JWT expired.',
+      );
     }
 
     final nbf = _asInt(payloadMap['nbf']);
     if (nbf != null && nbf > nowSeconds) {
-      return const AuthVerdict.denied('JWT not active yet.');
+      return const AuthVerdict.denied(
+        code: AuthDenyCode.jwtNotYetActive,
+        reason: 'JWT not active yet.',
+      );
     }
 
     if (requiredIssuer != null && requiredIssuer!.isNotEmpty) {
       final iss = (payloadMap['iss'] ?? '').toString();
       if (iss != requiredIssuer) {
-        return const AuthVerdict.denied('JWT issuer mismatch.');
+        return const AuthVerdict.denied(
+          code: AuthDenyCode.jwtIssuerMismatch,
+          reason: 'JWT issuer mismatch.',
+        );
       }
     }
 
@@ -142,7 +181,10 @@ class AuthGuard {
       final audClaim = payloadMap['aud'];
       final hasAudience = _matchesAudience(audClaim, requiredAudience!);
       if (!hasAudience) {
-        return const AuthVerdict.denied('JWT audience mismatch.');
+        return const AuthVerdict.denied(
+          code: AuthDenyCode.jwtAudienceMismatch,
+          reason: 'JWT audience mismatch.',
+        );
       }
     }
 
@@ -204,7 +246,8 @@ class AuthGuard {
   }
 
   String _signHs256(String input, String secret) {
-    final digest = Hmac(sha256, utf8.encode(secret)).convert(utf8.encode(input));
+    final digest =
+        Hmac(sha256, utf8.encode(secret)).convert(utf8.encode(input));
     return base64Url.encode(digest.bytes).replaceAll('=', '');
   }
 
@@ -233,20 +276,52 @@ class AuthGuard {
   }
 }
 
+class AuthDenyCode {
+  static const String missingAuthorization = 'missing_authorization';
+  static const String invalidAuthorizationScheme =
+      'invalid_authorization_scheme';
+  static const String emptyBearerToken = 'empty_bearer_token';
+  static const String jwtMalformed = 'jwt_malformed';
+  static const String jwtHeaderInvalid = 'jwt_header_invalid';
+  static const String jwtPayloadInvalid = 'jwt_payload_invalid';
+  static const String jwtUnsupportedAlg = 'jwt_unsupported_alg';
+  static const String jwtUnknownKid = 'jwt_unknown_kid';
+  static const String jwtSecretsMissing = 'jwt_secrets_missing';
+  static const String jwtSignatureInvalid = 'jwt_signature_invalid';
+  static const String jwtExpired = 'jwt_expired';
+  static const String jwtNotYetActive = 'jwt_not_yet_active';
+  static const String jwtIssuerMismatch = 'jwt_issuer_mismatch';
+  static const String jwtAudienceMismatch = 'jwt_audience_mismatch';
+
+  const AuthDenyCode._();
+}
+
 class AuthVerdict {
   const AuthVerdict._({
     required this.authorized,
+    required this.reasonCode,
     required this.reason,
     required this.method,
   });
 
   const AuthVerdict.authorized({required String method})
-    : this._(authorized: true, reason: '', method: method);
+      : this._(
+          authorized: true,
+          reasonCode: '',
+          reason: '',
+          method: method,
+        );
 
-  const AuthVerdict.denied(String reason)
-    : this._(authorized: false, reason: reason, method: 'none');
+  const AuthVerdict.denied({required String code, required String reason})
+      : this._(
+          authorized: false,
+          reasonCode: code,
+          reason: reason,
+          method: 'none',
+        );
 
   final bool authorized;
+  final String reasonCode;
   final String reason;
   final String method;
 }

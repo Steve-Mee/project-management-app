@@ -37,6 +37,7 @@ interface StructuredError {
     | 'bad_request'
     | 'unauthorized'
     | 'method_not_allowed'
+    | 'config_error'
     | 'timeout'
     | 'upstream_error'
     | 'internal_error'
@@ -59,16 +60,18 @@ function errorResponse(error: StructuredError, status: number): Response {
 }
 
 function resolveForwardEndpoint(mode: 'private' | 'cloud', action: 'compile' | 'apply'): string {
-  const privateEndpoint =
-    Deno.env.get('PRIVATE_COMPUTE_ENDPOINT') ??
-    (action === 'apply' ? 'http://127.0.0.1:50051/apply' : 'http://127.0.0.1:50051/compile')
-  const cloudEndpoint =
-    Deno.env.get('FLY_MIRROR_COMPUTE_ENDPOINT') ??
-    (action === 'apply'
-      ? 'https://mirror-compute.fly.dev/apply'
-      : 'https://mirror-compute.fly.dev/compile')
+  const key = mode === 'private' ? 'PRIVATE_COMPUTE_ENDPOINT' : 'FLY_MIRROR_COMPUTE_ENDPOINT'
+  const configured = Deno.env.get(key)?.trim()
+  if (!configured) {
+    throw new Error(`missing_endpoint_env:${key}`)
+  }
 
-  return mode === 'private' ? privateEndpoint : cloudEndpoint
+  const normalized = configured.replace(/\/$/, '')
+  if (normalized.endsWith('/compile') || normalized.endsWith('/apply')) {
+    return normalized
+  }
+
+  return `${normalized}/${action}`
 }
 
 function resolveActionFromPath(pathname: string): 'compile' | 'apply' | null {
@@ -319,6 +322,19 @@ Deno.serve(async (req: Request) => {
       },
     })
   } catch (error) {
+    if (error instanceof Error && error.message.startsWith('missing_endpoint_env:')) {
+      return errorResponse(
+        {
+          code: 'config_error',
+          message: error.message,
+          retryable: false,
+          requestId,
+          idempotencyKey,
+        },
+        500,
+      )
+    }
+
     console.error('mirror_compute forwarding error:', error)
     return errorResponse(
       {

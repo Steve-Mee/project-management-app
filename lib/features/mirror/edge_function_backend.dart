@@ -17,8 +17,8 @@ class EdgeFunctionBackend implements MirrorComputeBackend {
     this.timeout = const Duration(seconds: 30),
     this.maxRetries = 2,
     this.initialBackoff = const Duration(milliseconds: 300),
-  }) : _client = _resolveClient(client),
-       _httpClient = httpClient ?? http.Client();
+  })  : _client = _resolveClient(client),
+        _httpClient = httpClient ?? http.Client();
 
   final SupabaseClient? _client;
   final http.Client _httpClient;
@@ -37,7 +37,7 @@ class EdgeFunctionBackend implements MirrorComputeBackend {
   }) async {
     late final CompileResult compileResult;
     try {
-      final endpoint = httpEndpoint ?? _defaultCompileEndpoint();
+      final endpoint = _resolveCompileEndpoint();
       compileResult = await _postCompile(
         endpoint: endpoint,
         prompt: prompt,
@@ -73,7 +73,7 @@ class EdgeFunctionBackend implements MirrorComputeBackend {
     required String mode,
   }) async {
     try {
-      final endpoint = httpEndpoint ?? _defaultCompileEndpoint();
+      final endpoint = _resolveCompileEndpoint();
       return _postCompile(
         endpoint: endpoint,
         prompt: prompt,
@@ -94,13 +94,13 @@ class EdgeFunctionBackend implements MirrorComputeBackend {
     required ProjectContext context,
     required String mode,
   }) async {
-    final endpoint =
-        applyHttpEndpoint ?? httpEndpoint ?? _safeDefaultApplyEndpoint();
-    if (endpoint == null) {
-      return const ApplyResult(
+    late final String endpoint;
+    try {
+      endpoint = _resolveApplyEndpoint();
+    } catch (error) {
+      return ApplyResult(
         success: false,
-        message:
-            'config_error: Missing Supabase edge endpoint configuration for apply.',
+        message: 'config_error: ${error.toString()}',
       );
     }
 
@@ -209,12 +209,16 @@ class EdgeFunctionBackend implements MirrorComputeBackend {
     );
   }
 
-  String? _safeDefaultApplyEndpoint() {
-    try {
-      return _defaultApplyEndpoint();
-    } catch (_) {
-      return null;
-    }
+  String _resolveCompileEndpoint() {
+    return httpEndpoint?.trim().isNotEmpty == true
+        ? httpEndpoint!.trim()
+        : _defaultCompileEndpoint();
+  }
+
+  String _resolveApplyEndpoint() {
+    return applyHttpEndpoint?.trim().isNotEmpty == true
+        ? applyHttpEndpoint!.trim()
+        : _defaultApplyEndpoint();
   }
 
   Future<CompileResult> _postCompile({
@@ -256,8 +260,7 @@ class EdgeFunctionBackend implements MirrorComputeBackend {
           return _compileResultFromRaw(bodyText);
         }
 
-        final retriable =
-            response.statusCode == 408 ||
+        final retriable = response.statusCode == 408 ||
             response.statusCode == 429 ||
             response.statusCode >= 500;
 
@@ -349,8 +352,7 @@ class EdgeFunctionBackend implements MirrorComputeBackend {
           return _RawEdgeResult(success: true, body: bodyText);
         }
 
-        final retriable =
-            response.statusCode == 408 ||
+        final retriable = response.statusCode == 408 ||
             response.statusCode == 429 ||
             response.statusCode >= 500;
         if (retriable && attempt <= maxRetries) {
