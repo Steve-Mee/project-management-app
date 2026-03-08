@@ -24,9 +24,24 @@ class PrivateGrpcBackend implements MirrorComputeBackend {
     required ProjectContext context,
     required String mode,
   }) async {
-    return const GenerateResult(
-      success: false,
-      message: 'Generate is not implemented in PrivateGrpcBackend.',
+    final compileResult = await compile(
+      prompt: prompt,
+      context: context,
+      mode: mode,
+    );
+
+    if (!compileResult.success) {
+      return GenerateResult(
+        success: false,
+        message: compileResult.errors.join(' | '),
+        diagnostics: compileResult.errors,
+      );
+    }
+
+    return GenerateResult(
+      success: true,
+      code: compileResult.output,
+      diagnostics: compileResult.warnings,
     );
   }
 
