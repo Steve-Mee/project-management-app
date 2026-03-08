@@ -1,3 +1,9 @@
+import 'dart:convert';
+import 'dart:typed_data';
+
+import 'package:crypto/crypto.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+
 class ProjectContext {
   const ProjectContext({
     required this.projectId,
@@ -52,6 +58,20 @@ class ApplyResult {
   final String? message;
 }
 
+class ApplySecurityArtifacts {
+  const ApplySecurityArtifacts({
+    required this.backupId,
+    required this.signedInputUrls,
+    required this.backupSignedUrls,
+    required this.createdAt,
+  });
+
+  final String backupId;
+  final Map<String, String> signedInputUrls;
+  final Map<String, String> backupSignedUrls;
+  final DateTime createdAt;
+}
+
 abstract class MirrorComputeBackend {
   Future<GenerateResult> generate({
     required String prompt,
@@ -70,6 +90,89 @@ abstract class MirrorComputeBackend {
     required ProjectContext context,
     required String mode,
   });
+}
+
+extension MirrorApplySecurity on MirrorComputeBackend {
+  Future<ApplySecurityArtifacts> prepareSignedInputAndBackup({
+    required ProjectContext context,
+    Duration signedUrlTtl = const Duration(minutes: 30),
+    String signedInputBucket = 'mirror-signed-inputs',
+    String backupBucket = 'mirror-backups',
+  }) async {
+    final client = Supabase.instance.client;
+    final backupId = _buildBackupId(context);
+    final signedInputUrls = <String, String>{};
+    final backupSignedUrls = <String, String>{};
+
+    for (final entry in context.files.entries) {
+      final sanitizedPath = _sanitizeStoragePath(entry.key);
+      final signedInputPath =
+          '${context.projectId}/${context.taskId}/$backupId/input/$sanitizedPath';
+      final backupPath =
+          '${context.projectId}/${context.taskId}/$backupId/backup/$sanitizedPath';
+      final payload = utf8.encode(entry.value);
+
+      await _uploadReplaceBinary(
+        client: client,
+        bucket: signedInputBucket,
+        path: signedInputPath,
+        bytes: payload,
+      );
+      await _uploadReplaceBinary(
+        client: client,
+        bucket: backupBucket,
+        path: backupPath,
+        bytes: payload,
+      );
+
+      final signedInputUrl = await client.storage
+          .from(signedInputBucket)
+          .createSignedUrl(signedInputPath, signedUrlTtl.inSeconds);
+      final backupSignedUrl = await client.storage
+          .from(backupBucket)
+          .createSignedUrl(backupPath, signedUrlTtl.inSeconds);
+
+      signedInputUrls[entry.key] = signedInputUrl;
+      backupSignedUrls[entry.key] = backupSignedUrl;
+    }
+
+    return ApplySecurityArtifacts(
+      backupId: backupId,
+      signedInputUrls: signedInputUrls,
+      backupSignedUrls: backupSignedUrls,
+      createdAt: DateTime.now().toUtc(),
+    );
+  }
+
+  Future<ApplyResult> secureApply({
+    required String prompt,
+    required ProjectContext context,
+    required String mode,
+    required Future<ApplyResult> Function(ApplySecurityArtifacts artifacts)
+    onApply,
+    Duration signedUrlTtl = const Duration(minutes: 30),
+    String signedInputBucket = 'mirror-signed-inputs',
+    String backupBucket = 'mirror-backups',
+  }) async {
+    final artifacts = await prepareSignedInputAndBackup(
+      context: context,
+      signedUrlTtl: signedUrlTtl,
+      signedInputBucket: signedInputBucket,
+      backupBucket: backupBucket,
+    );
+
+    final result = await onApply(artifacts);
+    if (result.success) {
+      return result;
+    }
+
+    return ApplyResult(
+      success: false,
+      appliedFiles: result.appliedFiles,
+      message:
+          '${result.message ?? 'Apply failed.'} Backup ID: ${artifacts.backupId}',
+    );
+  }
 }
 
 extension MirrorPromptBuilder on MirrorComputeBackend {
@@ -144,6 +247,34 @@ String _buildMetadataSection(Map<String, dynamic> metadata) {
     lines.add('- $key: ${_stringify(metadata[key])}');
   }
   return lines.join('\n');
+}
+
+String _buildBackupId(ProjectContext context) {
+  final now = DateTime.now().toUtc().toIso8601String();
+  final seed = '${context.projectId}:${context.taskId}:$now';
+  return sha256.convert(utf8.encode(seed)).toString().substring(0, 20);
+}
+
+String _sanitizeStoragePath(String value) {
+  final normalized = value.replaceAll('\\', '/').trim();
+  final parts = normalized
+      .split('/')
+      .where((part) => part.isNotEmpty)
+      .map((part) => part.replaceAll(RegExp(r'[^a-zA-Z0-9._-]'), '_'));
+  return parts.join('/');
+}
+
+Future<void> _uploadReplaceBinary({
+  required SupabaseClient client,
+  required String bucket,
+  required String path,
+  required List<int> bytes,
+}) async {
+  await client.storage.from(bucket).uploadBinary(
+    path,
+    Uint8List.fromList(bytes),
+    fileOptions: const FileOptions(upsert: true),
+  );
 }
 
 bool _isTeamModeEnabled(Map<String, dynamic> metadata) {
