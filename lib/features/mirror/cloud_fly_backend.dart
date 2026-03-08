@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
 
-import 'package:grpc/grpc.dart';
 import 'package:http/http.dart' as http;
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -13,22 +12,18 @@ class CloudFlyBackend implements MirrorComputeBackend {
   CloudFlyBackend({
     SupabaseClient? client,
     this.httpEndpoint = 'https://mirror-compute.fly.dev/compile',
-    this.grpcHost = 'mirror-compute.fly.dev',
-    this.grpcPort = 443,
-    this.grpcServicePath = '/mirror.compute.v1.MirrorComputeService/Compile',
-    this.useGrpc = false,
     this.timeout = const Duration(seconds: 45),
+    this.maxRetries = 3,
+    this.initialBackoff = const Duration(milliseconds: 350),
     PremiumAccessResolver? premiumResolver,
   }) : _client = client ?? Supabase.instance.client,
        _premiumResolver = premiumResolver ?? _defaultPremiumResolver;
 
   final SupabaseClient _client;
   final String httpEndpoint;
-  final String grpcHost;
-  final int grpcPort;
-  final String grpcServicePath;
-  final bool useGrpc;
   final Duration timeout;
+  final int maxRetries;
+  final Duration initialBackoff;
   final PremiumAccessResolver _premiumResolver;
 
   @override
@@ -67,9 +62,7 @@ class CloudFlyBackend implements MirrorComputeBackend {
       'metadata': context.metadata,
     };
 
-    return useGrpc
-        ? _compileViaGrpc(payload)
-        : _compileViaHttp(payload, _client.auth.currentSession?.accessToken);
+    return _compileViaHttp(payload, _client.auth.currentSession?.accessToken);
   }
 
   @override
@@ -88,71 +81,81 @@ class CloudFlyBackend implements MirrorComputeBackend {
     Map<String, dynamic> payload,
     String? accessToken,
   ) async {
-    try {
-      final response = await http
-          .post(
-            Uri.parse(httpEndpoint),
-            headers: <String, String>{
-              'Content-Type': 'application/json',
-              if (accessToken != null && accessToken.isNotEmpty)
-                'Authorization': 'Bearer $accessToken',
-            },
-            body: jsonEncode(payload),
-          )
-          .timeout(timeout);
+    final uri = Uri.parse(httpEndpoint);
+    final headers = <String, String>{
+      'Content-Type': 'application/json',
+      if (accessToken != null && accessToken.isNotEmpty)
+        'Authorization': 'Bearer $accessToken',
+    };
 
-      final bodyText = response.body;
-      if (response.statusCode < 200 || response.statusCode >= 300) {
+    var backoff = initialBackoff;
+    var attempt = 0;
+
+    while (true) {
+      attempt += 1;
+      try {
+        final response = await http
+            .post(
+              uri,
+              headers: headers,
+              body: jsonEncode(payload),
+            )
+            .timeout(timeout);
+
+        final bodyText = response.body;
+        if (response.statusCode >= 200 && response.statusCode < 300) {
+          return _compileResultFromRaw(bodyText);
+        }
+
+        final retriable =
+            response.statusCode == 408 ||
+            response.statusCode == 429 ||
+            response.statusCode >= 500;
+
+        if (retriable && attempt <= maxRetries) {
+          await Future<void>.delayed(backoff);
+          backoff *= 2;
+          continue;
+        }
+
+        final errorCode = response.statusCode == 401 || response.statusCode == 403
+            ? _MirrorHttpErrorCode.unauthorized
+            : response.statusCode == 429
+                ? _MirrorHttpErrorCode.rateLimited
+                : response.statusCode >= 500
+                    ? _MirrorHttpErrorCode.server
+                    : _MirrorHttpErrorCode.badRequest;
+
         return CompileResult(
           success: false,
-          errors: <String>['Fly compile HTTP ${response.statusCode}: $bodyText'],
+          errors: <String>[
+            '${errorCode.value}: HTTP ${response.statusCode}',
+            if (bodyText.trim().isNotEmpty) bodyText,
+          ],
+        );
+      } on TimeoutException {
+        if (attempt <= maxRetries) {
+          await Future<void>.delayed(backoff);
+          backoff *= 2;
+          continue;
+        }
+
+        return const CompileResult(
+          success: false,
+          errors: <String>['timeout: Fly HTTP /compile request timed out.'],
+        );
+      } catch (error) {
+        if (attempt <= maxRetries) {
+          await Future<void>.delayed(backoff);
+          backoff *= 2;
+          continue;
+        }
+
+        return CompileResult(
+          success: false,
+          errors: <String>['network: ${error.toString()}'],
         );
       }
-
-      return _compileResultFromRaw(bodyText);
-    } on TimeoutException {
-      return const CompileResult(
-        success: false,
-        errors: <String>['Fly HTTP compile request timed out.'],
-      );
-    } catch (error) {
-      return CompileResult(success: false, errors: <String>[error.toString()]);
-    }
-  }
-
-  Future<CompileResult> _compileViaGrpc(Map<String, dynamic> payload) async {
-    final channel = ClientChannel(
-      grpcHost,
-      port: grpcPort,
-      options: const ChannelOptions(credentials: ChannelCredentials.secure()),
-    );
-
-    final method = ClientMethod<List<int>, List<int>>(
-      grpcServicePath,
-      (request) => request,
-      (response) => response,
-    );
-    final client = _RawCloudFlyGrpcClient(channel, method);
-
-    try {
-      final requestBytes = utf8.encode(jsonEncode(payload));
-      final responseBytes = await client.compile(requestBytes, timeout: timeout);
-      final responseText = utf8.decode(responseBytes);
-      return _compileResultFromRaw(responseText);
-    } on GrpcError catch (error) {
-      return CompileResult(
-        success: false,
-        errors: <String>[error.message ?? error.toString()],
-      );
-    } on TimeoutException {
-      return const CompileResult(
-        success: false,
-        errors: <String>['Fly gRPC compile request timed out.'],
-      );
-    } catch (error) {
-      return CompileResult(success: false, errors: <String>[error.toString()]);
-    } finally {
-      await channel.shutdown();
     }
   }
 
@@ -202,19 +205,13 @@ class CloudFlyBackend implements MirrorComputeBackend {
   }
 }
 
-class _RawCloudFlyGrpcClient extends Client {
-  _RawCloudFlyGrpcClient(super.channel, this._compileMethod);
+enum _MirrorHttpErrorCode {
+  unauthorized('unauthorized'),
+  rateLimited('rate_limited'),
+  badRequest('bad_request'),
+  server('server_error');
 
-  final ClientMethod<List<int>, List<int>> _compileMethod;
+  const _MirrorHttpErrorCode(this.value);
 
-  ResponseFuture<List<int>> compile(
-    List<int> requestBytes, {
-    Duration? timeout,
-  }) {
-    return $createUnaryCall(
-      _compileMethod,
-      requestBytes,
-      options: CallOptions(timeout: timeout),
-    );
-  }
+  final String value;
 }
