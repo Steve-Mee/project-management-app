@@ -34,3 +34,4 @@ Dit bestand bevat de nog openstaande, technisch valide punten uit `Done Todos im
 - [x] 25. Verwijder fallback-export voor admin feature-index en vervang door expliciete ai_usage provider export.
 - [x] 26. Verwijder fallback-export voor projects feature-index (project + task providers volstaan).
 - [x] 27. Verwijder fallback-export voor ai_chat feature-index en exporteer expliciet auth + project providers.
+- [x] 28. Verwijder fallback-export voor project feature-index en exporteer expliciet ai/theme/active_viewers/dashboard providers.
