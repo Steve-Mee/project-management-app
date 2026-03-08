@@ -284,17 +284,34 @@ extension MirrorApplySecurity on MirrorComputeBackend {
     String backupBucket = 'mirror-backups',
   }) async {
     final client = Supabase.instance.client;
+    final authUserId = client.auth.currentUser?.id;
     final backupId = _buildBackupId(context);
     final signedInputUrls = <String, String>{};
     final backupSignedUrls = <String, String>{};
     final uploadFailures = <ApplyUploadFailure>[];
 
+    if (authUserId == null || authUserId.isEmpty) {
+      return ApplySecurityArtifacts(
+        backupId: backupId,
+        signedInputUrls: signedInputUrls,
+        backupSignedUrls: backupSignedUrls,
+        createdAt: DateTime.now().toUtc(),
+        uploadFailures: const <ApplyUploadFailure>[
+          ApplyUploadFailure(
+            filePath: '*',
+            stage: 'auth-user',
+            error: 'Authenticated user is required for owner-scoped storage paths.',
+          ),
+        ],
+      );
+    }
+
     for (final entry in context.files.entries) {
       final sanitizedPath = _sanitizeStoragePath(entry.key);
       final signedInputPath =
-          '${context.projectId}/${context.taskId}/$backupId/input/$sanitizedPath';
+          '$authUserId/${context.projectId}/${context.taskId}/$backupId/input/$sanitizedPath';
       final backupPath =
-          '${context.projectId}/${context.taskId}/$backupId/backup/$sanitizedPath';
+          '$authUserId/${context.projectId}/${context.taskId}/$backupId/backup/$sanitizedPath';
       final payload = utf8.encode(entry.value);
 
       try {

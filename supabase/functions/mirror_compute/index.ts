@@ -26,6 +26,7 @@ interface ForwardPayload {
   projectId: string
   taskId: string
   mode: 'private' | 'cloud'
+  action: 'compile' | 'apply'
   userId: string
   files: Record<string, string>
   metadata: Record<string, unknown>
@@ -42,6 +43,7 @@ interface StructuredError {
   message: string
   retryable: boolean
   requestId: string
+  idempotencyKey?: string
   details?: unknown
 }
 
@@ -56,13 +58,39 @@ function errorResponse(error: StructuredError, status: number): Response {
   return jsonResponse({ success: false, error }, status)
 }
 
-function resolveForwardEndpoint(mode: 'private' | 'cloud'): string {
+function resolveForwardEndpoint(mode: 'private' | 'cloud', action: 'compile' | 'apply'): string {
   const privateEndpoint =
-    Deno.env.get('PRIVATE_COMPUTE_ENDPOINT') ?? 'http://127.0.0.1:50051/compile'
+    Deno.env.get('PRIVATE_COMPUTE_ENDPOINT') ??
+    (action === 'apply' ? 'http://127.0.0.1:50051/apply' : 'http://127.0.0.1:50051/compile')
   const cloudEndpoint =
-    Deno.env.get('FLY_MIRROR_COMPUTE_ENDPOINT') ?? 'https://mirror-compute.fly.dev/compile'
+    Deno.env.get('FLY_MIRROR_COMPUTE_ENDPOINT') ??
+    (action === 'apply'
+      ? 'https://mirror-compute.fly.dev/apply'
+      : 'https://mirror-compute.fly.dev/compile')
 
   return mode === 'private' ? privateEndpoint : cloudEndpoint
+}
+
+function resolveActionFromPath(pathname: string): 'compile' | 'apply' | null {
+  const normalized = pathname.toLowerCase()
+
+  if (normalized.endsWith('/compile')) {
+    return 'compile'
+  }
+
+  if (normalized.endsWith('/apply')) {
+    return 'apply'
+  }
+
+  return null
+}
+
+function resolveIdempotencyKey(req: Request): string {
+  const key = req.headers.get('x-idempotency-key') ?? req.headers.get('idempotency-key')
+  if (key && key.trim().length > 0) {
+    return key.trim()
+  }
+  return crypto.randomUUID()
 }
 
 function timeoutMs(): number {
@@ -99,6 +127,8 @@ function normalizeRequestBody(body: Partial<MirrorComputeRequest>): MirrorComput
 // @ts-ignore - Deno global
 Deno.serve(async (req: Request) => {
   const requestId = crypto.randomUUID()
+  const idempotencyKey = resolveIdempotencyKey(req)
+  const action = resolveActionFromPath(new URL(req.url).pathname)
 
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
@@ -111,8 +141,22 @@ Deno.serve(async (req: Request) => {
         message: 'Method not allowed',
         retryable: false,
         requestId,
+        idempotencyKey,
       },
       405,
+    )
+  }
+
+  if (!action) {
+    return errorResponse(
+      {
+        code: 'bad_request',
+        message: 'Invalid route. Use /compile or /apply.',
+        retryable: false,
+        requestId,
+        idempotencyKey,
+      },
+      400,
     )
   }
 
@@ -125,6 +169,7 @@ Deno.serve(async (req: Request) => {
           message: 'Missing or invalid authorization header',
           retryable: false,
           requestId,
+          idempotencyKey,
         },
         401,
       )
@@ -139,6 +184,7 @@ Deno.serve(async (req: Request) => {
           message: 'Supabase environment is not configured',
           retryable: false,
           requestId,
+          idempotencyKey,
         },
         500,
       )
@@ -160,6 +206,7 @@ Deno.serve(async (req: Request) => {
           message: 'Unauthorized',
           retryable: false,
           requestId,
+          idempotencyKey,
         },
         401,
       )
@@ -174,17 +221,19 @@ Deno.serve(async (req: Request) => {
           message: 'Missing or invalid fields: prompt, projectId, taskId, mode',
           retryable: false,
           requestId,
+          idempotencyKey,
         },
         400,
       )
     }
 
-    const targetUrl = resolveForwardEndpoint(normalized.mode)
+    const targetUrl = resolveForwardEndpoint(normalized.mode, action)
     const payload: ForwardPayload = {
       prompt: normalized.prompt,
       projectId: normalized.projectId,
       taskId: normalized.taskId,
       mode: normalized.mode,
+      action,
       userId: user.id,
       files: normalized.files ?? {},
       metadata: normalized.metadata ?? {},
@@ -202,6 +251,7 @@ Deno.serve(async (req: Request) => {
           Authorization: authHeader,
           'x-user-id': user.id,
           'x-request-id': requestId,
+          'x-idempotency-key': idempotencyKey,
         },
         body: JSON.stringify(payload),
         signal: controller.signal,
@@ -212,9 +262,10 @@ Deno.serve(async (req: Request) => {
         return errorResponse(
           {
             code: 'timeout',
-            message: 'Upstream /compile request timed out',
+            message: `Upstream /${action} request timed out`,
             retryable: true,
             requestId,
+            idempotencyKey,
           },
           504,
         )
@@ -223,9 +274,10 @@ Deno.serve(async (req: Request) => {
       return errorResponse(
         {
           code: 'upstream_error',
-          message: 'Failed to reach upstream /compile endpoint',
+          message: `Failed to reach upstream /${action} endpoint`,
           retryable: true,
           requestId,
+          idempotencyKey,
           details: String(error),
         },
         502,
@@ -241,12 +293,13 @@ Deno.serve(async (req: Request) => {
       return errorResponse(
         {
           code: 'upstream_error',
-          message: 'Upstream /compile returned a non-success status',
+          message: `Upstream /${action} returned a non-success status`,
           retryable:
             upstreamResponse.status === 408 ||
             upstreamResponse.status === 429 ||
             upstreamResponse.status >= 500,
           requestId,
+          idempotencyKey,
           details: {
             status: upstreamResponse.status,
             body: upstreamBody,
@@ -258,7 +311,12 @@ Deno.serve(async (req: Request) => {
 
     return new Response(upstreamBody, {
       status: upstreamResponse.status,
-      headers: { ...corsHeaders, 'Content-Type': contentType, 'x-request-id': requestId },
+      headers: {
+        ...corsHeaders,
+        'Content-Type': contentType,
+        'x-request-id': requestId,
+        'x-idempotency-key': idempotencyKey,
+      },
     })
   } catch (error) {
     console.error('mirror_compute forwarding error:', error)
@@ -268,6 +326,7 @@ Deno.serve(async (req: Request) => {
         message: 'Internal server error',
         retryable: false,
         requestId,
+        idempotencyKey,
         details: String(error),
       },
       500,

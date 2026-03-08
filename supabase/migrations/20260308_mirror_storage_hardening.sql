@@ -1,6 +1,9 @@
 -- Mirror storage hardening
 -- Adds private buckets used by Mirror apply flow, enforces owner-only folder access,
 -- and applies a 7-day object lifecycle for signed URL artifacts.
+-- Expected object path format:
+--   <auth.uid>/<projectId>/<taskId>/<backupId>/(input|backup)/<filePath>
+-- This matches RLS checks that require storage.foldername(name)[1] = auth.uid()::text.
 
 BEGIN;
 
