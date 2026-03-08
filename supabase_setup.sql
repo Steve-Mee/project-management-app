@@ -168,3 +168,15 @@ USING (
   bucket_id = 'mirror_staging'
   AND storage.foldername(name)[1] = auth.uid()::text
 );
+
+CREATE TABLE IF NOT EXISTS ai_sessions (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+  project_id TEXT,
+  task_id TEXT,
+  mode TEXT CHECK (mode IN ('private', 'cloud')),
+  status TEXT CHECK (status IN ('pending', 'processing', 'completed', 'failed')),
+  versions JSONB DEFAULT '[]'::jsonb,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
