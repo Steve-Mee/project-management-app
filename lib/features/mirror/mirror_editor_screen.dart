@@ -256,7 +256,7 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
           ),
         ),
         Expanded(
-          child: MonacoEditor(
+          child: _PlainTextFallbackEditor(
             code: currentContent,
             language: _languageForFile(_selectedFile),
             theme: Theme.of(context).brightness == Brightness.dark ? 'vs-dark' : 'vs',
@@ -587,9 +587,8 @@ class _ModeSelector extends StatelessWidget {
   }
 }
 
-class MonacoEditor extends StatefulWidget {
-  const MonacoEditor({
-    super.key,
+class _PlainTextFallbackEditor extends StatefulWidget {
+  const _PlainTextFallbackEditor({
     required this.code,
     required this.language,
     required this.theme,
@@ -602,10 +601,10 @@ class MonacoEditor extends StatefulWidget {
   final ValueChanged<String> onChanged;
 
   @override
-  State<MonacoEditor> createState() => _MonacoEditorState();
+  State<_PlainTextFallbackEditor> createState() => _PlainTextFallbackEditorState();
 }
 
-class _MonacoEditorState extends State<MonacoEditor> {
+class _PlainTextFallbackEditorState extends State<_PlainTextFallbackEditor> {
   late TextEditingController _controller;
 
   @override
@@ -615,7 +614,7 @@ class _MonacoEditorState extends State<MonacoEditor> {
   }
 
   @override
-  void didUpdateWidget(covariant MonacoEditor oldWidget) {
+  void didUpdateWidget(covariant _PlainTextFallbackEditor oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.code != widget.code && _controller.text != widget.code) {
       _controller.value = TextEditingValue(
