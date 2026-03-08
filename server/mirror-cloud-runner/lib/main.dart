@@ -7,16 +7,44 @@ import 'package:grpc/grpc.dart';
 
 Future<void> main() async {
   final port = int.tryParse(Platform.environment['PORT'] ?? '') ?? 8080;
+  final workspaceRoot =
+      Platform.environment['MIRROR_WORKSPACE_ROOT'] ?? '/tmp/mirror-workspaces';
+  final signedUrlSecret = _requireEnv('SIGNED_URL_SECRET');
+  final artifactBaseUrl =
+      Platform.environment['ARTIFACT_BASE_URL'] ??
+      'https://mirror-compute.fly.dev/artifacts';
+
+  await _cleanupOldWorkspaces(workspaceRoot, maxAge: const Duration(hours: 24));
+  Timer.periodic(
+    const Duration(hours: 1),
+    (_) => unawaited(
+      _cleanupOldWorkspaces(workspaceRoot, maxAge: const Duration(hours: 24)),
+    ),
+  );
 
   final server = Server.create(
-    services: <Service>[MirrorCompileService()],
+    services: <Service>[
+      MirrorCompileService(
+        workspaceRoot: workspaceRoot,
+        artifactBaseUrl: artifactBaseUrl,
+        signedUrlSecret: signedUrlSecret,
+      ),
+    ],
     codecRegistry: CodecRegistry(codecs: const <Codec>[GzipCodec(), IdentityCodec()]),
   );
 
   await server.serve(address: '0.0.0.0', port: port);
-  stdout.writeln('mirror-cloud-runner gRPC compile service listening on port $port');
+  _log(
+    'info',
+    'mirror-cloud-runner started',
+    context: <String, Object?>{
+      'port': port,
+      'workspaceRoot': workspaceRoot,
+    },
+  );
 
   ProcessSignal.sigint.watch().listen((_) async {
+    _log('info', 'shutdown signal received');
     await server.shutdown();
     exit(0);
   });
@@ -26,12 +54,14 @@ class MirrorCompileService extends Service {
   @override
   String get $name => 'mirror.compute.v1.MirrorComputeService';
 
-  MirrorCompileService()
+  MirrorCompileService({
+    required this.workspaceRoot,
+    required this.artifactBaseUrl,
+    required this.signedUrlSecret,
+  })
     : _artifactSigner = ArtifactSigner(
-        baseUrl:
-            Platform.environment['ARTIFACT_BASE_URL'] ??
-            'https://mirror-compute.fly.dev/artifacts',
-        secret: Platform.environment['SIGNED_URL_SECRET'] ?? 'dev-secret',
+        baseUrl: artifactBaseUrl,
+        secret: signedUrlSecret,
       ) {
     $addMethod(ServiceMethod<List<int>, List<int>>(
       'Compile',
@@ -43,12 +73,24 @@ class MirrorCompileService extends Service {
     ));
   }
 
+  final String workspaceRoot;
+  final String artifactBaseUrl;
+  final String signedUrlSecret;
   final ArtifactSigner _artifactSigner;
 
   Future<List<int>> compile(ServiceCall call, List<int> requestBytes) async {
     final requestRaw = utf8.decode(requestBytes);
     final request = CompileRequestPayload.fromJson(_tryParseJson(requestRaw));
-    final runner = CompileRunner(workspaceRoot: _workspaceRoot());
+    _log(
+      'info',
+      'compile request received',
+      context: <String, Object?>{
+        'projectId': request.projectId,
+        'taskId': request.taskId,
+        'mode': request.mode,
+      },
+    );
+    final runner = CompileRunner(workspaceRoot: workspaceRoot);
 
     final compileResult = await runner.run(request);
     final artifactPath = compileResult.artifactPath;
@@ -70,11 +112,18 @@ class MirrorCompileService extends Service {
       artifactPath: artifactPath,
     );
 
-    return utf8.encode(jsonEncode(response.toJson()));
-  }
+    _log(
+      compileResult.success ? 'info' : 'error',
+      'compile request completed',
+      context: <String, Object?>{
+        'projectId': request.projectId,
+        'taskId': request.taskId,
+        'success': compileResult.success,
+        'errorCount': compileResult.errors.length,
+      },
+    );
 
-  static String _workspaceRoot() {
-    return Platform.environment['MIRROR_WORKSPACE_ROOT'] ?? '/tmp/mirror-workspaces';
+    return utf8.encode(jsonEncode(response.toJson()));
   }
 
   Map<String, dynamic> _tryParseJson(String value) {
@@ -88,6 +137,76 @@ class MirrorCompileService extends Service {
       return <String, dynamic>{'raw': value};
     }
   }
+}
+
+String _requireEnv(String key) {
+  final value = Platform.environment[key]?.trim();
+  if (value == null || value.isEmpty) {
+    _log('fatal', 'missing required environment variable', context: <String, Object?>{'key': key});
+    throw StateError('Missing required environment variable: $key');
+  }
+  return value;
+}
+
+Future<int> _cleanupOldWorkspaces(String rootPath, {required Duration maxAge}) async {
+  final root = Directory(rootPath);
+  if (!await root.exists()) {
+    await root.create(recursive: true);
+    _log('info', 'workspace root created', context: <String, Object?>{'rootPath': rootPath});
+    return 0;
+  }
+
+  final cutoff = DateTime.now().toUtc().subtract(maxAge);
+  final toDelete = <Directory>[];
+
+  await for (final entity in root.list(recursive: true, followLinks: false)) {
+    if (entity is! Directory) {
+      continue;
+    }
+    try {
+      final modified = (await entity.stat()).modified.toUtc();
+      if (modified.isBefore(cutoff)) {
+        toDelete.add(entity);
+      }
+    } catch (_) {
+      // Ignore inaccessible workspace paths during cleanup.
+    }
+  }
+
+  toDelete.sort((a, b) => b.path.length.compareTo(a.path.length));
+  var removed = 0;
+  for (final dir in toDelete) {
+    try {
+      if (await dir.exists()) {
+        await dir.delete(recursive: true);
+        removed += 1;
+      }
+    } catch (_) {
+      // Best-effort cleanup.
+    }
+  }
+
+  _log(
+    'info',
+    'workspace cleanup finished',
+    context: <String, Object?>{
+      'rootPath': rootPath,
+      'removedDirectories': removed,
+      'maxAgeHours': maxAge.inHours,
+    },
+  );
+  return removed;
+}
+
+void _log(String level, String message, {Map<String, Object?> context = const <String, Object?>{}}) {
+  stdout.writeln(
+    jsonEncode(<String, Object?>{
+      'ts': DateTime.now().toUtc().toIso8601String(),
+      'level': level,
+      'message': message,
+      ...context,
+    }),
+  );
 }
 
 class CompileRequestPayload {
