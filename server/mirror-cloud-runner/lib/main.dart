@@ -14,9 +14,7 @@ Future<void> main() async {
   final signedUrlSecret = _requireEnv('SIGNED_URL_SECRET');
   final serviceToken = _requireEnv('MIRROR_SERVICE_TOKEN');
   final jwtSecret = _requireEnv('MIRROR_JWT_SECRET');
-  final artifactBaseUrl =
-      Platform.environment['ARTIFACT_BASE_URL'] ??
-      'https://mirror-compute.fly.dev/artifacts';
+  final artifactBaseUrl = _requireEnv('ARTIFACT_BASE_URL');
   final requiredAudience = Platform.environment['MIRROR_JWT_AUDIENCE'];
   final requiredIssuer = Platform.environment['MIRROR_JWT_ISSUER'];
 

@@ -10,9 +10,7 @@ Future<void> main() async {
   final workspaceRoot =
       Platform.environment['MIRROR_WORKSPACE_ROOT'] ?? '/tmp/mirror-local-workspaces';
   final signedUrlSecret = _requireEnv('SIGNED_URL_SECRET');
-  final artifactBaseUrl =
-      Platform.environment['ARTIFACT_BASE_URL'] ??
-      'http://127.0.0.1:50051/artifacts';
+  final artifactBaseUrl = _requireEnv('ARTIFACT_BASE_URL');
 
   await _cleanupOldWorkspaces(workspaceRoot, maxAge: const Duration(hours: 24));
   Timer.periodic(
