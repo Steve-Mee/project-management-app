@@ -28,3 +28,4 @@ Dit bestand bevat de nog openstaande, technisch valide punten uit `Done Todos im
 - [x] 19. Migreer compat provider-imports in tests naar canonieke modulepaden (uitgezonderd expliciete legacy-contracttests).
 - [x] 20. Vervang brede `providers.dart` feature-index exports door expliciete canonieke module-exports.
 - [x] 21. Vervang brede `pma_core/providers.dart` import in `lib/main.dart` door expliciete module-imports.
+- [x] 22. Voeg tijdelijke compat fallback-export toe in feature provider-indexen om regressies te voorkomen tijdens gefaseerde versmalling.
