@@ -461,3 +461,89 @@ flutter build apk --analyze-size --target-platform android-arm64
 flutter build apk --analyze-size --target-platform android-x64
 flutter build apk --split-per-abi
 ```
+
+## Mirror Editor
+
+The Mirror Editor is a focused workspace for AI-assisted task execution with project and task context preloaded.
+
+### What It Does
+
+- Opens directly from Project and Task contexts using deep-link actions.
+- Loads the selected `projectId` and `taskId` into a dedicated coding workspace.
+- Supports voice input, live output monitoring, and a multi-file editing surface.
+
+### Modes
+
+Mirror Editor supports two runtime modes:
+
+- `Private Mode`:
+   - Local-first behavior for speed and privacy.
+   - Suitable for day-to-day task drafting and iteration.
+- `Cloud Mode`:
+   - Designed for premium users and collaborative/cloud-assisted workflows.
+   - Uses premium-gated capabilities where applicable.
+
+Mode selection is persisted and can fall back to cached state when offline.
+
+### Premium Access
+
+- Cloud mode and selected advanced Mirror capabilities are premium-gated.
+- Access checks are enforced via role/permission and premium-state providers.
+- If a user lacks access, the app keeps the flow safe and non-destructive (for example, disabled action or informational message).
+
+### Safety And Guardrails
+
+Mirror Editor is designed with operational safety in mind:
+
+- Permission-gated entry (`use_mirror`) before launch.
+- Defensive fallbacks for temporary backend/network failures.
+- Offline cache fallback for mode and variant continuity.
+- Non-blocking warning surfaces instead of hard crashes.
+- Existing app-wide error boundary and telemetry integration remain active.
+
+### A/B Experience
+
+- Team mode experiments are assigned deterministically per user.
+- Variant assignment supports offline fallback to cached values.
+- Behavior remains stable between sessions unless experiment definitions change.
+
+### Offline Behavior
+
+- Last-known Mirror mode is stored locally and restored on next launch.
+- Team-mode variant can be restored from local cache when assignment service is unavailable.
+- User receives contextual warning state when fallback is active.
+
+### Deep Link Entry Points
+
+- `Project Details`: direct action to open Mirror Editor with project/task context.
+- `Task Card`: direct action to open Mirror Editor from the selected task.
+
+These entry points route through a bridge provider that prepares Mirror state before navigation.
+
+### Screenshots (Placeholders)
+
+Add final product screenshots here when available:
+
+- `images/mirror-editor-overview.png` - Main Mirror workspace layout.
+- `images/mirror-editor-mode-selector.png` - Private vs Cloud mode selector.
+- `images/mirror-editor-project-task-context.png` - Project/task context header.
+- `images/mirror-editor-offline-warning.png` - Offline fallback warning state.
+- `images/mirror-editor-voice-input.png` - Voice input interaction.
+
+Example markdown once assets are added:
+
+```md
+![Mirror Editor Overview](images/mirror-editor-overview.png)
+![Mirror Mode Selector](images/mirror-editor-mode-selector.png)
+![Mirror Context Header](images/mirror-editor-project-task-context.png)
+![Mirror Offline Warning](images/mirror-editor-offline-warning.png)
+![Mirror Voice Input](images/mirror-editor-voice-input.png)
+```
+
+### Related Files
+
+- `lib/features/mirror/mirror_editor_screen.dart`
+- `lib/core/providers/mirror_provider.dart`
+- `lib/core/providers/ai_chat_provider.dart`
+- `lib/features/projects/project_details_widget.dart`
+- `lib/features/tasks/task_card.dart`
