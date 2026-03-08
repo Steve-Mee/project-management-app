@@ -117,9 +117,60 @@ class PrivateGrpcBackend implements MirrorComputeBackend {
     required ProjectContext context,
     required String mode,
   }) async {
-    return const ApplyResult(
-      success: false,
-      message: 'Apply is not implemented in PrivateGrpcBackend.',
+    return secureApply(
+      prompt: prompt,
+      context: context,
+      mode: mode,
+      onApply: (ApplySecurityArtifacts artifacts) async {
+        final compileResult = await compile(
+          prompt: prompt,
+          context: context,
+          mode: mode,
+        );
+
+        if (!compileResult.success || compileResult.output == null) {
+          return ApplyResult(
+            success: false,
+            message: compileResult.errors.isEmpty
+                ? 'Apply failed: compile output is empty.'
+                : compileResult.errors.join(' | '),
+          );
+        }
+
+        final patches = buildPatchesFromApplyPayload(
+          context: context,
+          output: compileResult.output!,
+        );
+
+        if (patches.isEmpty) {
+          return const ApplyResult(
+            success: false,
+            message: 'Apply failed: no patchable changes returned.',
+          );
+        }
+
+        final updatedFiles = applyPatchesToFiles(
+          files: context.files,
+          patches: patches,
+        );
+
+        await persistApplyToHive(
+          context: context,
+          mode: mode,
+          prompt: prompt,
+          patches: patches,
+          artifacts: artifacts,
+          backend: 'private_grpc',
+          updatedFiles: updatedFiles,
+        );
+
+        return ApplyResult(
+          success: true,
+          appliedFiles: patches.map((patch) => patch.path).toSet().toList(),
+          message:
+              'Applied ${patches.length} patch(es) with backup ${artifacts.backupId}.',
+        );
+      },
     );
   }
 }

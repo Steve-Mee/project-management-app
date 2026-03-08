@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:crypto/crypto.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class ProjectContext {
@@ -72,6 +73,20 @@ class ApplySecurityArtifacts {
   final DateTime createdAt;
 }
 
+class MirrorFilePatch {
+  const MirrorFilePatch({
+    required this.path,
+    required this.originalContent,
+    required this.updatedContent,
+    required this.diff,
+  });
+
+  final String path;
+  final String originalContent;
+  final String updatedContent;
+  final String diff;
+}
+
 abstract class MirrorComputeBackend {
   Future<GenerateResult> generate({
     required String prompt,
@@ -90,6 +105,161 @@ abstract class MirrorComputeBackend {
     required ProjectContext context,
     required String mode,
   });
+}
+
+extension MirrorPatchTools on MirrorComputeBackend {
+  List<MirrorFilePatch> buildPatchesFromApplyPayload({
+    required ProjectContext context,
+    required String output,
+    String? fallbackPath,
+  }) {
+    final patches = <MirrorFilePatch>[];
+    final parsed = _tryParseApplyPayload(output);
+
+    if (parsed != null) {
+      final filesRaw = parsed['files'];
+      if (filesRaw is Map) {
+        for (final entry in filesRaw.entries) {
+          final path = entry.key.toString();
+          final updated = entry.value?.toString() ?? '';
+          final original = context.files[path] ?? '';
+          if (original == updated) {
+            continue;
+          }
+          patches.add(
+            MirrorFilePatch(
+              path: path,
+              originalContent: original,
+              updatedContent: updated,
+              diff: _buildUnifiedDiff(path: path, before: original, after: updated),
+            ),
+          );
+        }
+      }
+
+      final patchListRaw = parsed['patches'];
+      if (patchListRaw is List) {
+        for (final item in patchListRaw) {
+          if (item is! Map) {
+            continue;
+          }
+          final normalized = Map<String, dynamic>.from(item);
+          final path = normalized['path']?.toString();
+          final updated =
+              normalized['updatedContent']?.toString() ??
+              normalized['content']?.toString();
+          if (path == null || path.isEmpty || updated == null) {
+            continue;
+          }
+
+          final original = context.files[path] ?? '';
+          if (original == updated) {
+            continue;
+          }
+
+          final alreadyExists = patches.any((patch) => patch.path == path);
+          if (alreadyExists) {
+            continue;
+          }
+
+          patches.add(
+            MirrorFilePatch(
+              path: path,
+              originalContent: original,
+              updatedContent: updated,
+              diff: _buildUnifiedDiff(path: path, before: original, after: updated),
+            ),
+          );
+        }
+      }
+    }
+
+    if (patches.isNotEmpty) {
+      return patches;
+    }
+
+    final targetPath = fallbackPath ?? _resolveFallbackPath(context);
+    if (targetPath == null || targetPath.isEmpty) {
+      return const <MirrorFilePatch>[];
+    }
+
+    final original = context.files[targetPath] ?? '';
+    if (original == output) {
+      return const <MirrorFilePatch>[];
+    }
+
+    return <MirrorFilePatch>[
+      MirrorFilePatch(
+        path: targetPath,
+        originalContent: original,
+        updatedContent: output,
+        diff: _buildUnifiedDiff(path: targetPath, before: original, after: output),
+      ),
+    ];
+  }
+
+  Map<String, String> applyPatchesToFiles({
+    required Map<String, String> files,
+    required List<MirrorFilePatch> patches,
+  }) {
+    final updated = Map<String, String>.from(files);
+    for (final patch in patches) {
+      updated[patch.path] = patch.updatedContent;
+    }
+    return updated;
+  }
+
+  Future<void> persistApplyToHive({
+    required ProjectContext context,
+    required String mode,
+    required String prompt,
+    required List<MirrorFilePatch> patches,
+    required ApplySecurityArtifacts artifacts,
+    String backend = 'unknown',
+    Map<String, String> updatedFiles = const <String, String>{},
+  }) async {
+    final box = await _openApplyHistoryBox();
+    final key = '${context.projectId}::${context.taskId}';
+    final existing = box.get(key);
+
+    final history = <Map<String, dynamic>>[];
+    if (existing is List) {
+      for (final item in existing) {
+        if (item is Map) {
+          history.add(Map<String, dynamic>.from(item));
+        }
+      }
+    }
+
+    history.add(<String, dynamic>{
+      'createdAt': DateTime.now().toUtc().toIso8601String(),
+      'projectId': context.projectId,
+      'taskId': context.taskId,
+      'mode': mode,
+      'backend': backend,
+      'prompt': _truncate(prompt, 1000),
+      'backupId': artifacts.backupId,
+      'signedInputUrls': artifacts.signedInputUrls,
+      'backupSignedUrls': artifacts.backupSignedUrls,
+      'appliedFiles': patches.map((patch) => patch.path).toList(),
+      'patches': patches
+          .map(
+            (patch) => <String, dynamic>{
+              'path': patch.path,
+              'diff': patch.diff,
+            },
+          )
+          .toList(),
+      'updatedFiles': updatedFiles,
+    });
+
+    const maxHistoryEntries = 40;
+    final trimmed = history.length <= maxHistoryEntries
+        ? history
+        : history.sublist(history.length - maxHistoryEntries);
+
+    await box.put(key, trimmed);
+  }
 }
 
 extension MirrorApplySecurity on MirrorComputeBackend {
@@ -275,6 +445,78 @@ Future<void> _uploadReplaceBinary({
     Uint8List.fromList(bytes),
     fileOptions: const FileOptions(upsert: true),
   );
+}
+
+Future<Box<dynamic>> _openApplyHistoryBox() async {
+  const boxName = 'mirror_apply_history';
+  if (Hive.isBoxOpen(boxName)) {
+    return Hive.box<dynamic>(boxName);
+  }
+  return Hive.openBox<dynamic>(boxName);
+}
+
+Map<String, dynamic>? _tryParseApplyPayload(String raw) {
+  try {
+    final decoded = jsonDecode(raw);
+    if (decoded is Map<String, dynamic>) {
+      return decoded;
+    }
+    if (decoded is Map) {
+      return Map<String, dynamic>.from(decoded);
+    }
+  } catch (_) {
+    return null;
+  }
+  return null;
+}
+
+String? _resolveFallbackPath(ProjectContext context) {
+  final fromMetadata =
+      context.metadata['activeFile'] ?? context.metadata['active_file'];
+  if (fromMetadata != null && fromMetadata.toString().trim().isNotEmpty) {
+    return fromMetadata.toString().trim();
+  }
+  if (context.files.isNotEmpty) {
+    return context.files.keys.first;
+  }
+  return null;
+}
+
+String _buildUnifiedDiff({
+  required String path,
+  required String before,
+  required String after,
+}) {
+  final beforeLines = before.split('\n');
+  final afterLines = after.split('\n');
+  final max = beforeLines.length > afterLines.length
+      ? beforeLines.length
+      : afterLines.length;
+
+  final buffer = StringBuffer()
+    ..writeln('--- a/$path')
+    ..writeln('+++ b/$path');
+
+  for (var index = 0; index < max; index++) {
+    final left = index < beforeLines.length ? beforeLines[index] : null;
+    final right = index < afterLines.length ? afterLines[index] : null;
+
+    if (left == right) {
+      if (left != null) {
+        buffer.writeln(' $left');
+      }
+      continue;
+    }
+
+    if (left != null) {
+      buffer.writeln('-$left');
+    }
+    if (right != null) {
+      buffer.writeln('+$right');
+    }
+  }
+
+  return buffer.toString().trimRight();
 }
 
 bool _isTeamModeEnabled(Map<String, dynamic> metadata) {

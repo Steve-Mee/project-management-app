@@ -71,9 +71,78 @@ class CloudFlyBackend implements MirrorComputeBackend {
     required ProjectContext context,
     required String mode,
   }) async {
-    return const ApplyResult(
-      success: false,
-      message: 'Apply is not implemented in CloudFlyBackend.',
+    final user = _client.auth.currentUser;
+    final hasPremium = await _premiumResolver(user);
+    if (!hasPremium) {
+      return const ApplyResult(
+        success: false,
+        message: 'Cloud apply is available for premium users only.',
+      );
+    }
+
+    return secureApply(
+      prompt: prompt,
+      context: context,
+      mode: mode,
+      onApply: (ApplySecurityArtifacts artifacts) async {
+        final payload = <String, dynamic>{
+          'prompt': prompt,
+          'projectId': context.projectId,
+          'taskId': context.taskId,
+          'mode': mode,
+          'files': context.files,
+          'metadata': context.metadata,
+          'backupId': artifacts.backupId,
+          'signedInputUrls': artifacts.signedInputUrls,
+        };
+
+        final raw = await _postRawWithRetries(
+          endpoint: _applyEndpoint(),
+          payload: payload,
+          accessToken: _client.auth.currentSession?.accessToken,
+        );
+
+        if (!raw.success || raw.body == null) {
+          return ApplyResult(
+            success: false,
+            message: raw.errors.join(' | '),
+          );
+        }
+
+        final patches = buildPatchesFromApplyPayload(
+          context: context,
+          output: raw.body!,
+        );
+
+        if (patches.isEmpty) {
+          return const ApplyResult(
+            success: false,
+            message: 'Apply failed: no patchable changes returned.',
+          );
+        }
+
+        final updatedFiles = applyPatchesToFiles(
+          files: context.files,
+          patches: patches,
+        );
+
+        await persistApplyToHive(
+          context: context,
+          mode: mode,
+          prompt: prompt,
+          patches: patches,
+          artifacts: artifacts,
+          backend: 'cloud_fly',
+          updatedFiles: updatedFiles,
+        );
+
+        return ApplyResult(
+          success: true,
+          appliedFiles: patches.map((patch) => patch.path).toSet().toList(),
+          message:
+              'Applied ${patches.length} patch(es) with backup ${artifacts.backupId}.',
+        );
+      },
     );
   }
 
@@ -186,6 +255,92 @@ class CloudFlyBackend implements MirrorComputeBackend {
     return CompileResult(success: true, output: raw);
   }
 
+  String _applyEndpoint() {
+    if (httpEndpoint.endsWith('/compile')) {
+      return '${httpEndpoint.substring(0, httpEndpoint.length - '/compile'.length)}/apply';
+    }
+    if (httpEndpoint.endsWith('/')) {
+      return '${httpEndpoint}apply';
+    }
+    return '$httpEndpoint/apply';
+  }
+
+  Future<_RawHttpResult> _postRawWithRetries({
+    required String endpoint,
+    required Map<String, dynamic> payload,
+    required String? accessToken,
+  }) async {
+    final uri = Uri.parse(endpoint);
+    final headers = <String, String>{
+      'Content-Type': 'application/json',
+      if (accessToken != null && accessToken.isNotEmpty)
+        'Authorization': 'Bearer $accessToken',
+    };
+
+    var backoff = initialBackoff;
+    var attempt = 0;
+
+    while (true) {
+      attempt += 1;
+      try {
+        final response = await http
+            .post(uri, headers: headers, body: jsonEncode(payload))
+            .timeout(timeout);
+
+        final bodyText = response.body;
+        if (response.statusCode >= 200 && response.statusCode < 300) {
+          return _RawHttpResult(success: true, body: bodyText);
+        }
+
+        final retriable =
+            response.statusCode == 408 ||
+            response.statusCode == 429 ||
+            response.statusCode >= 500;
+        if (retriable && attempt <= maxRetries) {
+          await Future<void>.delayed(backoff);
+          backoff *= 2;
+          continue;
+        }
+
+        final code = response.statusCode == 401 || response.statusCode == 403
+            ? _MirrorHttpErrorCode.unauthorized
+            : response.statusCode == 429
+                ? _MirrorHttpErrorCode.rateLimited
+                : response.statusCode >= 500
+                    ? _MirrorHttpErrorCode.server
+                    : _MirrorHttpErrorCode.badRequest;
+
+        return _RawHttpResult(
+          success: false,
+          errors: <String>[
+            '${code.value}: HTTP ${response.statusCode}',
+            if (bodyText.trim().isNotEmpty) bodyText,
+          ],
+        );
+      } on TimeoutException {
+        if (attempt <= maxRetries) {
+          await Future<void>.delayed(backoff);
+          backoff *= 2;
+          continue;
+        }
+        return const _RawHttpResult(
+          success: false,
+          errors: <String>['timeout: Fly HTTP /apply request timed out.'],
+        );
+      } catch (error) {
+        if (attempt <= maxRetries) {
+          await Future<void>.delayed(backoff);
+          backoff *= 2;
+          continue;
+        }
+        return _RawHttpResult(
+          success: false,
+          errors: <String>['network: ${error.toString()}'],
+        );
+      }
+    }
+  }
+
   static bool _defaultPremiumResolver(User? user) {
     if (user == null) {
       return false;
@@ -214,4 +369,16 @@ enum _MirrorHttpErrorCode {
   const _MirrorHttpErrorCode(this.value);
 
   final String value;
+}
+
+class _RawHttpResult {
+  const _RawHttpResult({
+    required this.success,
+    this.body,
+    this.errors = const <String>[],
+  });
+
+  final bool success;
+  final String? body;
+  final List<String> errors;
 }
