@@ -4,6 +4,13 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { corsHeaders } from '../_shared/cors.ts'
 
+declare const Deno: {
+  serve: (handler: (req: Request) => Response | Promise<Response>) => void
+  env: {
+    get: (key: string) => string | undefined
+  }
+}
+
 interface MirrorComputeRequest {
   prompt: string
   projectId: string
