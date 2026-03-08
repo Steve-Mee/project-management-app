@@ -24,3 +24,4 @@ Dit bestand bevat de nog openstaande, technisch valide punten uit `Done Todos im
 - [x] 15. Koppel release evidence template expliciet in `release.yml` via artifact-upload.
 - [x] 16. Documenteer in legacy AI contracttest waarom een legacy import bewust behouden blijft.
 - [x] 17. Voeg aparte actieve AI contracttest toe zodat legacy import alleen voor legacy-contractdekking nodig is.
+- [x] 18. Migreer compat provider/repository imports in appcode (`lib/**`) naar canonieke modulepaden.

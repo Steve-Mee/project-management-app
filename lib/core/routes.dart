@@ -18,7 +18,7 @@ import '../features/admin/admin_screen.dart' deferred as admin_feature;
 import '../features/ai_usage/ai_usage_screen.dart' deferred as ai_usage_feature;
 import 'package:pma_core/widgets/offline_indicator.dart';
 import 'package:pma_core/core/widgets.dart';
-import 'package:pma_core/providers/auth_providers.dart';
+import 'package:pma_core/providers/auth/auth_providers.dart';
 import 'package:pma_core/providers/theme_providers.dart';
 import 'auth/permissions.dart';
 

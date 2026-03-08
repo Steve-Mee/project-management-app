@@ -6,7 +6,7 @@ import 'package:project_management_app/generated/app_localizations.dart';
 import 'package:pma_core/models/project_model.dart';
 import 'package:pma_core/models/task_model.dart';
 import 'package:project_management_app/features/dashboard/widgets/error_state_widget.dart';
-import 'package:pma_core/providers/task_providers.dart';
+import 'package:pma_core/providers/task/task_providers.dart';
 
 final _recentTasksProvider = FutureProvider.autoDispose<List<Task>>((ref) async {
   final repository = await ref.watch(taskRepositoryProvider.future);

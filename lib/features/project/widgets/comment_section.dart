@@ -4,7 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:pma_core/models/comment_model.dart';
 import 'package:pma_core/providers/comment_providers.dart';
-import 'package:pma_core/providers/auth_providers.dart';
+import 'package:pma_core/providers/auth/auth_providers.dart';
 import 'package:pma_core/auth/auth_user.dart';
 import 'package:pma_core/services/app_logger.dart';
 import 'package:project_management_app/generated/app_localizations.dart';

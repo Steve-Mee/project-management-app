@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:pma_core/providers/task_providers.dart';
+import 'package:pma_core/providers/task/task_providers.dart';
 import 'package:pma_core/providers/project_providers.dart';
-import 'package:pma_core/providers/auth_providers.dart';
+import 'package:pma_core/providers/auth/auth_providers.dart';
 import 'package:pma_core/services/sub_task_generation_service.dart';
 import 'package:pma_core/models/task_model.dart';
 import 'package:pma_core/models/sub_task_model.dart';

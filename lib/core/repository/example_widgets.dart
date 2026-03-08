@@ -5,7 +5,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pma_core/providers/project_providers.dart';
-import 'package:pma_core/providers/task_providers.dart';
+import 'package:pma_core/providers/task/task_providers.dart';
 import 'package:pma_core/utils/accessibility_helper.dart';
 import 'package:pma_core/widgets/modern_gantt_chart.dart';
 import 'package:pma_core/widgets/offline_indicator.dart';

@@ -5,7 +5,7 @@ import 'dart:convert';
 import 'dart:async';
 import 'package:pma_core/models/project_plan.dart';
 import 'package:pma_core/providers/project_providers.dart';
-import 'package:pma_core/providers/auth_providers.dart';
+import 'package:pma_core/providers/auth/auth_providers.dart';
 import 'package:pma_core/providers/ai/ai_providers.dart' show aiServiceProvider;
 import 'package:http/http.dart' as http;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
