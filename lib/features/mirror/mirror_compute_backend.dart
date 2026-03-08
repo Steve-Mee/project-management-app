@@ -65,12 +65,26 @@ class ApplySecurityArtifacts {
     required this.signedInputUrls,
     required this.backupSignedUrls,
     required this.createdAt,
+    this.uploadFailures = const <ApplyUploadFailure>[],
   });
 
   final String backupId;
   final Map<String, String> signedInputUrls;
   final Map<String, String> backupSignedUrls;
   final DateTime createdAt;
+  final List<ApplyUploadFailure> uploadFailures;
+}
+
+class ApplyUploadFailure {
+  const ApplyUploadFailure({
+    required this.filePath,
+    required this.stage,
+    required this.error,
+  });
+
+  final String filePath;
+  final String stage;
+  final String error;
 }
 
 class MirrorFilePatch {
@@ -273,6 +287,7 @@ extension MirrorApplySecurity on MirrorComputeBackend {
     final backupId = _buildBackupId(context);
     final signedInputUrls = <String, String>{};
     final backupSignedUrls = <String, String>{};
+    final uploadFailures = <ApplyUploadFailure>[];
 
     for (final entry in context.files.entries) {
       final sanitizedPath = _sanitizeStoragePath(entry.key);
@@ -282,25 +297,73 @@ extension MirrorApplySecurity on MirrorComputeBackend {
           '${context.projectId}/${context.taskId}/$backupId/backup/$sanitizedPath';
       final payload = utf8.encode(entry.value);
 
-      await _uploadReplaceBinary(
-        client: client,
-        bucket: signedInputBucket,
-        path: signedInputPath,
-        bytes: payload,
-      );
-      await _uploadReplaceBinary(
-        client: client,
-        bucket: backupBucket,
-        path: backupPath,
-        bytes: payload,
-      );
+      try {
+        await _uploadReplaceBinary(
+          client: client,
+          bucket: signedInputBucket,
+          path: signedInputPath,
+          bytes: payload,
+        );
+      } catch (error) {
+        uploadFailures.add(
+          ApplyUploadFailure(
+            filePath: entry.key,
+            stage: 'signed-input-upload',
+            error: error.toString(),
+          ),
+        );
+        continue;
+      }
 
-      final signedInputUrl = await client.storage
-          .from(signedInputBucket)
-          .createSignedUrl(signedInputPath, signedUrlTtl.inSeconds);
-      final backupSignedUrl = await client.storage
-          .from(backupBucket)
-          .createSignedUrl(backupPath, signedUrlTtl.inSeconds);
+      try {
+        await _uploadReplaceBinary(
+          client: client,
+          bucket: backupBucket,
+          path: backupPath,
+          bytes: payload,
+        );
+      } catch (error) {
+        uploadFailures.add(
+          ApplyUploadFailure(
+            filePath: entry.key,
+            stage: 'backup-upload',
+            error: error.toString(),
+          ),
+        );
+        continue;
+      }
+
+      late final String signedInputUrl;
+      try {
+        signedInputUrl = await client.storage
+            .from(signedInputBucket)
+            .createSignedUrl(signedInputPath, signedUrlTtl.inSeconds);
+      } catch (error) {
+        uploadFailures.add(
+          ApplyUploadFailure(
+            filePath: entry.key,
+            stage: 'signed-input-url',
+            error: error.toString(),
+          ),
+        );
+        continue;
+      }
+
+      late final String backupSignedUrl;
+      try {
+        backupSignedUrl = await client.storage
+            .from(backupBucket)
+            .createSignedUrl(backupPath, signedUrlTtl.inSeconds);
+      } catch (error) {
+        uploadFailures.add(
+          ApplyUploadFailure(
+            filePath: entry.key,
+            stage: 'backup-url',
+            error: error.toString(),
+          ),
+        );
+        continue;
+      }
 
       signedInputUrls[entry.key] = signedInputUrl;
       backupSignedUrls[entry.key] = backupSignedUrl;
@@ -311,6 +374,7 @@ extension MirrorApplySecurity on MirrorComputeBackend {
       signedInputUrls: signedInputUrls,
       backupSignedUrls: backupSignedUrls,
       createdAt: DateTime.now().toUtc(),
+      uploadFailures: uploadFailures,
     );
   }
 
@@ -330,6 +394,19 @@ extension MirrorApplySecurity on MirrorComputeBackend {
       signedInputBucket: signedInputBucket,
       backupBucket: backupBucket,
     );
+
+    if (artifacts.uploadFailures.isNotEmpty) {
+      final lines = artifacts.uploadFailures
+          .map((failure) =>
+              '${failure.filePath} (${failure.stage}): ${failure.error}')
+          .join('; ');
+      return ApplyResult(
+        success: false,
+        appliedFiles: const <String>[],
+        message:
+            'Apply preparation failed for one or more files. Backup ID: ${artifacts.backupId}. Details: $lines',
+      );
+    }
 
     final result = await onApply(artifacts);
     if (result.success) {
