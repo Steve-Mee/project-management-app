@@ -3,6 +3,7 @@ library;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../ab_testing_service.dart';
 import '../../features/mirror/cloud_fly_backend.dart';
 import '../../features/mirror/edge_function_backend.dart';
 import '../../features/mirror/mirror_compute_backend.dart';
@@ -17,18 +18,24 @@ class MirrorState {
   const MirrorState({
     required this.mode,
     required this.isPremium,
+    required this.teamModeVariant,
   });
 
   final String mode;
   final bool isPremium;
+  final String teamModeVariant;
+
+  bool get isTeamMode => teamModeVariant == 'team';
 
   MirrorState copyWith({
     String? mode,
     bool? isPremium,
+    String? teamModeVariant,
   }) {
     return MirrorState(
       mode: mode ?? this.mode,
       isPremium: isPremium ?? this.isPremium,
+      teamModeVariant: teamModeVariant ?? this.teamModeVariant,
     );
   }
 }
@@ -38,6 +45,22 @@ final mirrorModeProvider = StateProvider<String>((ref) => 'private');
 final mirrorPremiumProvider = Provider<bool>((ref) {
   final user = Supabase.instance.client.auth.currentUser;
   return _isPremiumUser(user);
+});
+
+final mirrorTeamModeVariantProvider = FutureProvider<String>((ref) async {
+  final user = Supabase.instance.client.auth.currentUser;
+  final userId = user?.id ?? 'anonymous';
+
+  return ABTestingService.instance.assignVariant(
+    experimentKey: 'mirror_team_mode',
+    userId: userId,
+    variants: const <String>['solo', 'team'],
+  );
+});
+
+final mirrorTeamModeEnabledProvider = Provider<bool>((ref) {
+  final variant = ref.watch(mirrorTeamModeVariantProvider).valueOrNull ?? 'solo';
+  return variant == 'team';
 });
 
 final mirrorBackendProvider = Provider<MirrorComputeBackend>((ref) {
@@ -60,7 +83,13 @@ class MirrorNotifier extends Notifier<MirrorState> {
   MirrorState build() {
     final mode = ref.watch(mirrorModeProvider);
     final isPremium = ref.watch(mirrorPremiumProvider);
-    return MirrorState(mode: mode, isPremium: isPremium);
+    final teamModeVariant =
+        ref.watch(mirrorTeamModeVariantProvider).valueOrNull ?? 'solo';
+    return MirrorState(
+      mode: mode,
+      isPremium: isPremium,
+      teamModeVariant: teamModeVariant,
+    );
   }
 
   void setMode(String mode) {
@@ -74,6 +103,12 @@ class MirrorNotifier extends Notifier<MirrorState> {
   void refreshPremiumFromMetadata() {
     final isPremium = ref.read(mirrorPremiumProvider);
     state = state.copyWith(isPremium: isPremium);
+  }
+
+  Future<void> refreshTeamModeVariant() async {
+    ref.invalidate(mirrorTeamModeVariantProvider);
+    final teamModeVariant = await ref.read(mirrorTeamModeVariantProvider.future);
+    state = state.copyWith(teamModeVariant: teamModeVariant);
   }
 }
 
