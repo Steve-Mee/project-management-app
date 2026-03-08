@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../../core/config/app_config.dart';
 import 'mirror_compute_backend.dart';
 
 class EdgeFunctionBackend implements MirrorComputeBackend {
@@ -192,7 +193,10 @@ class EdgeFunctionBackend implements MirrorComputeBackend {
   }
 
   String _defaultCompileEndpoint() {
-    final base = _client.supabaseUrl;
+    final configured = AppConfig.supabaseUrl;
+    final base = (configured == null || configured.isEmpty)
+        ? 'https://mirror-compute.fly.dev'
+        : configured;
     return '$base/functions/v1/mirror_compute/compile';
   }
 }
