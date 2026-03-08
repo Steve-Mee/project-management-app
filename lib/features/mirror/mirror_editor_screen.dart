@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:xterm/xterm.dart';
 
 import '../../core/providers/mirror_provider.dart';
@@ -26,6 +27,9 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
   late final Terminal _terminal;
   late final TerminalController _terminalController;
   late final stt.SpeechToText _speechToText;
+  final List<String> _liveOutput = <String>[];
+  final ScrollController _liveOutputScrollController = ScrollController();
+  RealtimeChannel? _aiOutputChannel;
   bool _isListening = false;
 
   @override
@@ -44,6 +48,16 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
     _speechToText = stt.SpeechToText();
     _terminal.write('Mirror terminal ready.\\r\\n');
     _terminal.write('Project: ${widget.projectId} Task: ${widget.taskId}\\r\\n');
+    _subscribeToLiveOutput();
+  }
+
+  @override
+  void dispose() {
+    if (_aiOutputChannel != null) {
+      Supabase.instance.client.removeChannel(_aiOutputChannel!);
+    }
+    _liveOutputScrollController.dispose();
+    super.dispose();
   }
 
   @override
@@ -158,7 +172,7 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
         Expanded(child: _buildMonacoEditor(context)),
         const Divider(height: 1),
         SizedBox(
-          height: 180,
+          height: 220,
           child: _buildTerminal(context),
         ),
       ],
@@ -256,15 +270,131 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
           ),
         ),
         Expanded(
-          child: TerminalView(
-            _terminal,
-            controller: _terminalController,
-            backgroundOpacity: 1,
-            autofocus: false,
+          child: Row(
+            children: <Widget>[
+              Expanded(
+                child: TerminalView(
+                  _terminal,
+                  controller: _terminalController,
+                  backgroundOpacity: 1,
+                  autofocus: false,
+                ),
+              ),
+              const VerticalDivider(width: 1),
+              Expanded(
+                child: _buildLiveOutputList(context),
+              ),
+            ],
           ),
         ),
       ],
     );
+  }
+
+  Widget _buildLiveOutputList(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          color: Theme.of(context).colorScheme.surfaceContainerLow,
+          child: Text(
+            'Live AI Output',
+            style: Theme.of(context).textTheme.titleSmall,
+          ),
+        ),
+        Expanded(
+          child: _liveOutput.isEmpty
+              ? Center(
+                  child: Text(
+                    'Waiting for realtime output...',
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                )
+              : ListView.separated(
+                  controller: _liveOutputScrollController,
+                  padding: const EdgeInsets.all(8),
+                  itemCount: _liveOutput.length,
+                  separatorBuilder: (_, __) => const SizedBox(height: 6),
+                  itemBuilder: (BuildContext context, int index) {
+                    final line = _liveOutput[index];
+                    return Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(8),
+                        color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                      ),
+                      child: Text(line),
+                    );
+                  },
+                ),
+        ),
+      ],
+    );
+  }
+
+  void _subscribeToLiveOutput() {
+    final channel = Supabase.instance.client.channel(
+      'mirror-ai-output-${widget.projectId}-${widget.taskId}',
+    );
+
+    _aiOutputChannel = channel
+        .onPostgresChanges(
+          event: PostgresChangeEvent.all,
+          schema: 'public',
+          table: 'ai_sessions',
+          filter: PostgresChangeFilter(
+            type: PostgresChangeFilterType.eq,
+            column: 'task_id',
+            value: widget.taskId,
+          ),
+          callback: (PostgresChangePayload payload) {
+            final outputLines = _extractOutputLines(payload.newRecord);
+            if (outputLines.isEmpty || !mounted) {
+              return;
+            }
+
+            setState(() {
+              _liveOutput.addAll(outputLines);
+            });
+            _terminal.write('Realtime output ontvangen (${outputLines.length} regels).\\r\\n');
+
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (!_liveOutputScrollController.hasClients) {
+                return;
+              }
+              _liveOutputScrollController.animateTo(
+                _liveOutputScrollController.position.maxScrollExtent,
+                duration: const Duration(milliseconds: 180),
+                curve: Curves.easeOut,
+              );
+            });
+          },
+        )
+        .subscribe();
+  }
+
+  List<String> _extractOutputLines(Map<String, dynamic> record) {
+    final versions = record['versions'];
+    if (versions is List) {
+      final lines = <String>[];
+      for (final item in versions) {
+        if (item is Map && item['output'] != null) {
+          lines.add(item['output'].toString());
+        } else if (item != null) {
+          lines.add(item.toString());
+        }
+      }
+      return lines;
+    }
+
+    final status = record['status'];
+    if (status != null) {
+      return <String>['Status: $status'];
+    }
+
+    return const <String>[];
   }
 
   Future<void> _toggleVoiceInput() async {
