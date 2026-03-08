@@ -7,7 +7,7 @@ void main() {
   group('Mirror integration simulation', () {
     test('simulates Private vs Cloud mode and prints diff', () async {
       final backend = _FakeMirrorBackend();
-      final context = ProjectContext(
+      const context = ProjectContext(
         projectId: 'project-123',
         taskId: 'task-456',
         files: const <String, String>{
