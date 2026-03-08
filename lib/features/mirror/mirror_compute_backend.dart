@@ -249,6 +249,37 @@ extension MirrorPatchTools on MirrorComputeBackend {
     String backend = 'unknown',
     Map<String, String> updatedFiles = const <String, String>{},
   }) async {
+    const maxUpdatedFiles = 50;
+    const maxUpdatedFilesChars = 100000;
+
+    final limitedUpdatedFiles = <String, String>{};
+    var usedChars = 0;
+    final sortedPaths = updatedFiles.keys.toList()..sort();
+    for (final path in sortedPaths) {
+      if (limitedUpdatedFiles.length >= maxUpdatedFiles) {
+        break;
+      }
+
+      final remainingChars = maxUpdatedFilesChars - usedChars;
+      if (remainingChars <= 0) {
+        break;
+      }
+
+      final pathCost = path.length;
+      if (pathCost >= remainingChars) {
+        break;
+      }
+
+      final fullContent = updatedFiles[path] ?? '';
+      final contentBudget = remainingChars - pathCost;
+      final persistedContent = fullContent.length <= contentBudget
+          ? fullContent
+          : _truncate(fullContent, contentBudget);
+
+      limitedUpdatedFiles[path] = persistedContent;
+      usedChars += pathCost + persistedContent.length;
+    }
+
     final box = await _openApplyHistoryBox();
     final key = '${context.projectId}::${context.taskId}';
     final existing = box.get(key);
@@ -281,7 +312,7 @@ extension MirrorPatchTools on MirrorComputeBackend {
             },
           )
           .toList(),
-      'updatedFiles': updatedFiles,
+      'updatedFiles': limitedUpdatedFiles,
     });
 
     const maxHistoryEntries = 40;
@@ -428,6 +459,11 @@ extension MirrorApplySecurity on MirrorComputeBackend {
     String signedInputBucket = 'mirror-signed-inputs',
     String backupBucket = 'mirror-backups',
   }) async {
+    const eventApplyStarted = 'apply_started';
+    const eventApplyPreparationFailed = 'apply_preparation_failed';
+    const eventApplyException = 'apply_exception';
+    const eventApplyCompleted = 'apply_completed';
+
     final actorUserId = Supabase.instance.client.auth.currentUser?.id;
     final sourceFingerprint = _fingerprintFiles(context.files);
 
@@ -435,7 +471,7 @@ extension MirrorApplySecurity on MirrorComputeBackend {
       projectId: context.projectId,
       taskId: context.taskId,
       mode: mode,
-      event: 'apply_started',
+      event: eventApplyStarted,
       actorUserId: actorUserId,
       fileSetFingerprint: sourceFingerprint,
     );
@@ -456,7 +492,7 @@ extension MirrorApplySecurity on MirrorComputeBackend {
         projectId: context.projectId,
         taskId: context.taskId,
         mode: mode,
-        event: 'apply_preparation_failed',
+        event: eventApplyPreparationFailed,
         actorUserId: actorUserId,
         backupId: artifacts.backupId,
         success: false,
@@ -482,7 +518,7 @@ extension MirrorApplySecurity on MirrorComputeBackend {
         projectId: context.projectId,
         taskId: context.taskId,
         mode: mode,
-        event: 'apply_exception',
+        event: eventApplyException,
         actorUserId: actorUserId,
         backupId: artifacts.backupId,
         success: false,
@@ -498,7 +534,7 @@ extension MirrorApplySecurity on MirrorComputeBackend {
       projectId: context.projectId,
       taskId: context.taskId,
       mode: mode,
-      event: 'apply_completed',
+      event: eventApplyCompleted,
       actorUserId: actorUserId,
       backupId: artifacts.backupId,
       success: result.success,
