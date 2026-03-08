@@ -6,6 +6,7 @@ import 'package:crypto/crypto.dart';
 import 'package:grpc/grpc.dart';
 
 import 'auth_guard.dart';
+import 'auth_metrics.dart';
 
 Future<void> main() async {
   final port = int.tryParse(Platform.environment['PORT'] ?? '') ?? 8080;
@@ -102,6 +103,7 @@ class MirrorCompileService extends Service {
 
   Future<List<int>> compile(ServiceCall call, List<int> requestBytes) async {
     final stopwatch = Stopwatch()..start();
+    final requestId = _resolveRequestId(call.clientMetadata);
 
     final verdict = authGuard.verify(
       call.clientMetadata ?? const <String, String>{},
@@ -112,6 +114,7 @@ class MirrorCompileService extends Service {
         'warn',
         'unauthorized compile request blocked',
         context: <String, Object?>{
+          'requestId': requestId,
           'reason': verdict.reason,
           ...metrics.snapshot(),
         },
@@ -125,6 +128,7 @@ class MirrorCompileService extends Service {
       'info',
       'compile request received',
       context: <String, Object?>{
+        'requestId': requestId,
         'projectId': request.projectId,
         'taskId': request.taskId,
         'mode': request.mode,
@@ -162,6 +166,7 @@ class MirrorCompileService extends Service {
       compileResult.success ? 'info' : 'error',
       'compile request completed',
       context: <String, Object?>{
+        'requestId': requestId,
         'projectId': request.projectId,
         'taskId': request.taskId,
         'success': compileResult.success,
@@ -184,6 +189,24 @@ class MirrorCompileService extends Service {
       return <String, dynamic>{'raw': value};
     }
   }
+}
+
+String _resolveRequestId(Map<String, String>? metadata) {
+  final headers = metadata ?? const <String, String>{};
+  final direct = headers['x-request-id'] ?? headers['request-id'];
+  if (direct != null && direct.trim().isNotEmpty) {
+    return direct.trim();
+  }
+
+  for (final entry in headers.entries) {
+    final key = entry.key.toLowerCase();
+    if ((key == 'x-request-id' || key == 'request-id') &&
+        entry.value.trim().isNotEmpty) {
+      return entry.value.trim();
+    }
+  }
+
+  return 'grpc-${DateTime.now().toUtc().microsecondsSinceEpoch}';
 }
 
 String _requireEnv(String key) {

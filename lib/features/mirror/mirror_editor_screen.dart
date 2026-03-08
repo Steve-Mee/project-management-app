@@ -8,6 +8,7 @@ import 'package:xterm/xterm.dart';
 
 import '../../core/providers/mirror_provider.dart';
 import '../../core/providers/mirror_session_provider.dart';
+import 'widgets/monaco_editor_host.dart';
 
 class MirrorEditorScreen extends ConsumerStatefulWidget {
   const MirrorEditorScreen({
@@ -49,8 +50,13 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
     _terminal = Terminal(maxLines: 1000);
     _terminalController = TerminalController();
     _speechToText = stt.SpeechToText();
-    _appendTerminalLine('Mirror terminal ready.');
-    _appendTerminalLine('Project: ${widget.projectId} Task: ${widget.taskId}');
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) {
+        return;
+      }
+      _appendTerminalLine('Mirror terminal ready.');
+      _appendTerminalLine('Project: ${widget.projectId} Task: ${widget.taskId}');
+    });
     if (widget.debugRealtimeRecords != null) {
       _debugRealtimeSubscription = widget.debugRealtimeRecords!.listen(
         _handleRealtimeRecord,
@@ -271,7 +277,7 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
           ),
         ),
         Expanded(
-          child: _PlainTextFallbackEditor(
+          child: MonacoEditorHost(
             code: currentContent,
             language: _languageForFile(sessionState.selectedFile),
             theme: Theme.of(context).brightness == Brightness.dark ? 'vs-dark' : 'vs',
@@ -597,73 +603,6 @@ class _ModeSelector extends StatelessWidget {
           ),
         ),
       ],
-    );
-  }
-}
-
-class _PlainTextFallbackEditor extends StatefulWidget {
-  const _PlainTextFallbackEditor({
-    required this.code,
-    required this.language,
-    required this.theme,
-    required this.onChanged,
-  });
-
-  final String code;
-  final String language;
-  final String theme;
-  final ValueChanged<String> onChanged;
-
-  @override
-  State<_PlainTextFallbackEditor> createState() => _PlainTextFallbackEditorState();
-}
-
-class _PlainTextFallbackEditorState extends State<_PlainTextFallbackEditor> {
-  late TextEditingController _controller;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = TextEditingController(text: widget.code);
-  }
-
-  @override
-  void didUpdateWidget(covariant _PlainTextFallbackEditor oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.code != widget.code && _controller.text != widget.code) {
-      _controller.value = TextEditingValue(
-        text: widget.code,
-        selection: TextSelection.collapsed(offset: widget.code.length),
-      );
-    }
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      color: widget.theme == 'vs-dark' ? const Color(0xFF1E1E1E) : const Color(0xFFFFFFFF),
-      padding: const EdgeInsets.all(12),
-      child: TextField(
-        controller: _controller,
-        onChanged: widget.onChanged,
-        maxLines: null,
-        expands: true,
-        decoration: InputDecoration(
-          border: InputBorder.none,
-          hintText: 'Monaco (${widget.language}) editor',
-        ),
-        style: TextStyle(
-          fontFamily: 'Consolas',
-          fontSize: 14,
-          color: widget.theme == 'vs-dark' ? Colors.white : Colors.black87,
-        ),
-      ),
     );
   }
 }

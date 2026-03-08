@@ -78,13 +78,27 @@ class ApplySecurityArtifacts {
 class ApplyUploadFailure {
   const ApplyUploadFailure({
     required this.filePath,
+    required this.code,
     required this.stage,
     required this.error,
   });
 
   final String filePath;
+  final ApplyUploadFailureCode code;
   final String stage;
   final String error;
+}
+
+enum ApplyUploadFailureCode {
+  authUserMissing('auth_user_missing'),
+  signedInputUploadFailed('signed_input_upload_failed'),
+  backupUploadFailed('backup_upload_failed'),
+  signedInputUrlFailed('signed_input_url_failed'),
+  backupUrlFailed('backup_url_failed');
+
+  const ApplyUploadFailureCode(this.value);
+
+  final String value;
 }
 
 class MirrorFilePatch {
@@ -299,6 +313,7 @@ extension MirrorApplySecurity on MirrorComputeBackend {
         uploadFailures: const <ApplyUploadFailure>[
           ApplyUploadFailure(
             filePath: '*',
+            code: ApplyUploadFailureCode.authUserMissing,
             stage: 'auth-user',
             error: 'Authenticated user is required for owner-scoped storage paths.',
           ),
@@ -325,6 +340,7 @@ extension MirrorApplySecurity on MirrorComputeBackend {
         uploadFailures.add(
           ApplyUploadFailure(
             filePath: entry.key,
+            code: ApplyUploadFailureCode.signedInputUploadFailed,
             stage: 'signed-input-upload',
             error: error.toString(),
           ),
@@ -343,6 +359,7 @@ extension MirrorApplySecurity on MirrorComputeBackend {
         uploadFailures.add(
           ApplyUploadFailure(
             filePath: entry.key,
+            code: ApplyUploadFailureCode.backupUploadFailed,
             stage: 'backup-upload',
             error: error.toString(),
           ),
@@ -359,6 +376,7 @@ extension MirrorApplySecurity on MirrorComputeBackend {
         uploadFailures.add(
           ApplyUploadFailure(
             filePath: entry.key,
+            code: ApplyUploadFailureCode.signedInputUrlFailed,
             stage: 'signed-input-url',
             error: error.toString(),
           ),
@@ -375,6 +393,7 @@ extension MirrorApplySecurity on MirrorComputeBackend {
         uploadFailures.add(
           ApplyUploadFailure(
             filePath: entry.key,
+            code: ApplyUploadFailureCode.backupUrlFailed,
             stage: 'backup-url',
             error: error.toString(),
           ),
@@ -405,11 +424,16 @@ extension MirrorApplySecurity on MirrorComputeBackend {
     String signedInputBucket = 'mirror-signed-inputs',
     String backupBucket = 'mirror-backups',
   }) async {
+    final actorUserId = Supabase.instance.client.auth.currentUser?.id;
+    final sourceFingerprint = _fingerprintFiles(context.files);
+
     await _writeApplyAuditEvent(
       projectId: context.projectId,
       taskId: context.taskId,
       mode: mode,
       event: 'apply_started',
+      actorUserId: actorUserId,
+      fileSetFingerprint: sourceFingerprint,
     );
 
     final artifacts = await prepareSignedInputAndBackup(
@@ -422,15 +446,17 @@ extension MirrorApplySecurity on MirrorComputeBackend {
     if (artifacts.uploadFailures.isNotEmpty) {
       final lines = artifacts.uploadFailures
           .map((failure) =>
-              '${failure.filePath} (${failure.stage}): ${failure.error}')
+              '${failure.filePath} [${failure.code.value}] (${failure.stage}): ${failure.error}')
           .join('; ');
       await _writeApplyAuditEvent(
         projectId: context.projectId,
         taskId: context.taskId,
         mode: mode,
         event: 'apply_preparation_failed',
+        actorUserId: actorUserId,
         backupId: artifacts.backupId,
         success: false,
+        fileSetFingerprint: sourceFingerprint,
         details: <String, dynamic>{
           'failureCount': artifacts.uploadFailures.length,
           'details': lines,
@@ -453,8 +479,10 @@ extension MirrorApplySecurity on MirrorComputeBackend {
         taskId: context.taskId,
         mode: mode,
         event: 'apply_exception',
+        actorUserId: actorUserId,
         backupId: artifacts.backupId,
         success: false,
+        fileSetFingerprint: sourceFingerprint,
         details: <String, dynamic>{
           'error': error.toString(),
         },
@@ -467,10 +495,13 @@ extension MirrorApplySecurity on MirrorComputeBackend {
       taskId: context.taskId,
       mode: mode,
       event: 'apply_completed',
+      actorUserId: actorUserId,
       backupId: artifacts.backupId,
       success: result.success,
       appliedFiles: result.appliedFiles,
       message: result.message,
+      fileSetFingerprint: sourceFingerprint,
+      appliedFilesFingerprint: _fingerprintStrings(result.appliedFiles),
     );
 
     if (result.success) {
@@ -609,10 +640,13 @@ Future<void> _writeApplyAuditEvent({
   required String taskId,
   required String mode,
   required String event,
+  String? actorUserId,
   String? backupId,
   bool? success,
   List<String> appliedFiles = const <String>[],
   String? message,
+  String? fileSetFingerprint,
+  String? appliedFilesFingerprint,
   Map<String, dynamic> details = const <String, dynamic>{},
 }) async {
   try {
@@ -623,10 +657,13 @@ Future<void> _writeApplyAuditEvent({
       'taskId': taskId,
       'mode': mode,
       'event': event,
+      'actorUserId': actorUserId,
       'backupId': backupId,
       'success': success,
       'appliedFiles': appliedFiles,
       'message': message,
+      'fileSetFingerprint': fileSetFingerprint,
+      'appliedFilesFingerprint': appliedFilesFingerprint,
       'details': details,
     });
 
@@ -637,6 +674,24 @@ Future<void> _writeApplyAuditEvent({
   } catch (_) {
     // Audit logging must never interrupt apply flow.
   }
+}
+
+String _fingerprintFiles(Map<String, String> files) {
+  final paths = files.keys.toList()..sort();
+  final buffer = StringBuffer();
+  for (final path in paths) {
+    buffer
+      ..write(path)
+      ..write(':')
+      ..write(files[path] ?? '')
+      ..write('\n');
+  }
+  return sha256.convert(utf8.encode(buffer.toString())).toString();
+}
+
+String _fingerprintStrings(List<String> values) {
+  final sorted = values.toList()..sort();
+  return sha256.convert(utf8.encode(sorted.join('\n'))).toString();
 }
 
 Map<String, dynamic>? _tryParseApplyPayload(String raw) {

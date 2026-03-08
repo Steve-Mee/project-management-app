@@ -11,6 +11,7 @@ class EdgeFunctionBackend implements MirrorComputeBackend {
   EdgeFunctionBackend({
     SupabaseClient? client,
     this.httpEndpoint,
+    this.applyHttpEndpoint,
     this.timeout = const Duration(seconds: 30),
     this.maxRetries = 2,
     this.initialBackoff = const Duration(milliseconds: 300),
@@ -18,6 +19,7 @@ class EdgeFunctionBackend implements MirrorComputeBackend {
 
   final SupabaseClient _client;
   final String? httpEndpoint;
+  final String? applyHttpEndpoint;
   final Duration timeout;
   final int maxRetries;
   final Duration initialBackoff;
@@ -28,11 +30,21 @@ class EdgeFunctionBackend implements MirrorComputeBackend {
     required ProjectContext context,
     required String mode,
   }) async {
-    final compileResult = await _postCompile(
-      prompt: prompt,
-      context: context,
-      mode: mode,
-    );
+    late final CompileResult compileResult;
+    try {
+      final endpoint = httpEndpoint ?? _defaultCompileEndpoint();
+      compileResult = await _postCompile(
+        endpoint: endpoint,
+        prompt: prompt,
+        context: context,
+        mode: mode,
+      );
+    } catch (error) {
+      compileResult = CompileResult(
+        success: false,
+        errors: <String>['config_error: ${error.toString()}'],
+      );
+    }
 
     if (!compileResult.success) {
       return GenerateResult(
@@ -55,11 +67,20 @@ class EdgeFunctionBackend implements MirrorComputeBackend {
     required ProjectContext context,
     required String mode,
   }) async {
-    return _postCompile(
-      prompt: prompt,
-      context: context,
-      mode: mode,
-    );
+    try {
+      final endpoint = httpEndpoint ?? _defaultCompileEndpoint();
+      return _postCompile(
+        endpoint: endpoint,
+        prompt: prompt,
+        context: context,
+        mode: mode,
+      );
+    } catch (error) {
+      return CompileResult(
+        success: false,
+        errors: <String>['config_error: ${error.toString()}'],
+      );
+    }
   }
 
   @override
@@ -68,13 +89,23 @@ class EdgeFunctionBackend implements MirrorComputeBackend {
     required ProjectContext context,
     required String mode,
   }) async {
+    final endpoint =
+        applyHttpEndpoint ?? httpEndpoint ?? _safeDefaultApplyEndpoint();
+    if (endpoint == null) {
+      return const ApplyResult(
+        success: false,
+        message:
+            'config_error: Missing Supabase edge endpoint configuration for apply.',
+      );
+    }
+
     return secureApply(
       prompt: prompt,
       context: context,
       mode: mode,
       onApply: (ApplySecurityArtifacts artifacts) async {
         final raw = await _postRaw(
-          endpoint: _defaultApplyEndpoint(),
+          endpoint: endpoint,
           prompt: prompt,
           context: context,
           mode: mode,
@@ -128,12 +159,20 @@ class EdgeFunctionBackend implements MirrorComputeBackend {
     );
   }
 
+  String? _safeDefaultApplyEndpoint() {
+    try {
+      return _defaultApplyEndpoint();
+    } catch (_) {
+      return null;
+    }
+  }
+
   Future<CompileResult> _postCompile({
+    required String endpoint,
     required String prompt,
     required ProjectContext context,
     required String mode,
   }) async {
-    final endpoint = httpEndpoint ?? _defaultCompileEndpoint();
     final token = _client.auth.currentSession?.accessToken;
     final payload = <String, dynamic>{
       'prompt': prompt,
@@ -337,19 +376,23 @@ class EdgeFunctionBackend implements MirrorComputeBackend {
   }
 
   String _defaultCompileEndpoint() {
-    final configured = AppConfig.supabaseUrl;
-    final base = (configured == null || configured.isEmpty)
-        ? 'https://mirror-compute.fly.dev'
-        : configured;
+    final base = _requireSupabaseBaseUrl();
     return '$base/functions/v1/mirror_compute/compile';
   }
 
   String _defaultApplyEndpoint() {
-    final configured = AppConfig.supabaseUrl;
-    final base = (configured == null || configured.isEmpty)
-        ? 'https://mirror-compute.fly.dev'
-        : configured;
+    final base = _requireSupabaseBaseUrl();
     return '$base/functions/v1/mirror_compute/apply';
+  }
+
+  String _requireSupabaseBaseUrl() {
+    final configured = AppConfig.supabaseUrl?.trim();
+    if (configured == null || configured.isEmpty) {
+      throw StateError(
+        'supabase_url_missing: Set AppConfig.supabaseUrl or provide explicit EdgeFunctionBackend endpoints.',
+      );
+    }
+    return configured;
   }
 }
 

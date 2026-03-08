@@ -8,6 +8,8 @@ DECLARE
   policy_count integer;
   owner_guard_count integer;
   cleanup_fn_exists boolean;
+  owner_path text := 'owner-uid-123/project-1/task-1/backup-1/input/lib/main.dart';
+  non_owner_path text := 'other-uid-999/project-1/task-1/backup-1/input/lib/main.dart';
 BEGIN
   SELECT EXISTS (
     SELECT 1 FROM storage.buckets
@@ -71,6 +73,14 @@ BEGIN
     RAISE EXCEPTION 'Contract violation: one or more policies missing owner-folder guard';
   END IF;
 
+  IF storage.foldername(owner_path)[1] <> 'owner-uid-123' THEN
+    RAISE EXCEPTION 'Contract violation: owner path no longer resolves uid in first folder segment';
+  END IF;
+
+  IF storage.foldername(non_owner_path)[1] = 'owner-uid-123' THEN
+    RAISE EXCEPTION 'Contract violation: non-owner path unexpectedly matches owner uid segment';
+  END IF;
+
   SELECT EXISTS (
     SELECT 1
     FROM pg_proc p
@@ -83,6 +93,6 @@ BEGIN
     RAISE EXCEPTION 'Contract violation: cleanup_mirror_storage_objects function missing';
   END IF;
 
-  RAISE NOTICE 'Mirror storage RLS contract checks passed';
+  RAISE NOTICE 'Mirror storage RLS contract checks passed (policy + path-shape)';
 END;
 $$;

@@ -23,13 +23,17 @@ void main() {
       expect(source, contains("'x-idempotency-key': idempotencyKey"));
       expect(source, contains("'x-request-id': requestId"));
       expect(source, contains('idempotencyKey'));
+      expect(source, contains('action'));
+      expect(source, contains('resolveForwardEndpoint(normalized.mode, action)'));
     });
 
-    test('flutter edge backend targets compile and apply endpoints', () {
+    test('flutter edge backend targets compile and apply endpoints and keeps fail-fast config', () {
       final source = _readRepoFile('lib/features/mirror/edge_function_backend.dart');
 
       expect(source, contains("/functions/v1/mirror_compute/compile"));
       expect(source, contains("/functions/v1/mirror_compute/apply"));
+      expect(source, contains('applyHttpEndpoint'));
+      expect(source, contains('supabase_url_missing'));
       expect(source, contains('Edge HTTP /compile request timed out.'));
       expect(source, contains('Edge HTTP /apply request timed out.'));
     });
