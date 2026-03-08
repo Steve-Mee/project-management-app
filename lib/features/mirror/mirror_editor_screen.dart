@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:speech_to_text/speech_to_text.dart' as stt;
+import 'package:xterm/xterm.dart';
 
 import '../../core/providers/mirror_provider.dart';
 
@@ -21,6 +23,10 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
   late String _selectedMode;
   late final Map<String, String> _files;
   late String _selectedFile;
+  late final Terminal _terminal;
+  late final TerminalController _terminalController;
+  late final stt.SpeechToText _speechToText;
+  bool _isListening = false;
 
   @override
   void initState() {
@@ -33,6 +39,11 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
       'README.md': '# Mirror Project\n\nMulti-file coding workspace.\n',
     };
     _selectedFile = _files.keys.first;
+    _terminal = Terminal(maxLines: 1000);
+    _terminalController = TerminalController();
+    _speechToText = stt.SpeechToText();
+    _terminal.write('Mirror terminal ready.\\r\\n');
+    _terminal.write('Project: ${widget.projectId} Task: ${widget.taskId}\\r\\n');
   }
 
   @override
@@ -78,6 +89,22 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
                 'Project: ${widget.projectId}  •  Task: ${widget.taskId}',
                 style: Theme.of(context).textTheme.bodySmall,
               ),
+              const SizedBox(height: 8),
+              Row(
+                children: <Widget>[
+                  FilledButton.tonalIcon(
+                    onPressed: _toggleVoiceInput,
+                    icon: Icon(_isListening ? Icons.mic : Icons.mic_none),
+                    label: Text(_isListening ? 'Listening...' : 'Voice Input'),
+                  ),
+                  const SizedBox(width: 8),
+                  OutlinedButton.icon(
+                    onPressed: _runCurrentFileInTerminal,
+                    icon: const Icon(Icons.play_arrow),
+                    label: const Text('Run'),
+                  ),
+                ],
+              ),
               const SizedBox(height: 16),
               Expanded(
                 child: Container(
@@ -99,7 +126,7 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
                               child: _buildFileExplorer(context),
                             ),
                             const Divider(height: 1),
-                            Expanded(child: _buildMonacoEditor(context)),
+                            Expanded(child: _buildEditorAndTerminal(context)),
                           ],
                         );
                       }
@@ -111,7 +138,7 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
                             child: _buildFileExplorer(context),
                           ),
                           const VerticalDivider(width: 1),
-                          Expanded(child: _buildMonacoEditor(context)),
+                          Expanded(child: _buildEditorAndTerminal(context)),
                         ],
                       );
                     },
@@ -122,6 +149,19 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildEditorAndTerminal(BuildContext context) {
+    return Column(
+      children: <Widget>[
+        Expanded(child: _buildMonacoEditor(context)),
+        const Divider(height: 1),
+        SizedBox(
+          height: 180,
+          child: _buildTerminal(context),
+        ),
+      ],
     );
   }
 
@@ -201,6 +241,91 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
         ),
       ],
     );
+  }
+
+  Widget _buildTerminal(BuildContext context) {
+    return Column(
+      children: <Widget>[
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          color: Theme.of(context).colorScheme.surfaceContainerHigh,
+          child: Text(
+            'Terminal',
+            style: Theme.of(context).textTheme.titleSmall,
+          ),
+        ),
+        Expanded(
+          child: TerminalView(
+            _terminal,
+            controller: _terminalController,
+            backgroundOpacity: 1,
+            autofocus: false,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Future<void> _toggleVoiceInput() async {
+    if (_isListening) {
+      await _speechToText.stop();
+      setState(() {
+        _isListening = false;
+      });
+      _terminal.write('Voice input stopped.\\r\\n');
+      return;
+    }
+
+    final available = await _speechToText.initialize();
+    if (!available) {
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Voice input is not available on this device.')),
+      );
+      _terminal.write('Voice input unavailable.\\r\\n');
+      return;
+    }
+
+    setState(() {
+      _isListening = true;
+    });
+    _terminal.write('Voice input started...\\r\\n');
+
+    await _speechToText.listen(
+      onResult: (result) {
+        final recognized = result.recognizedWords.trim();
+        if (recognized.isEmpty) {
+          return;
+        }
+
+        setState(() {
+          final existing = _files[_selectedFile] ?? '';
+          final separator = existing.endsWith('\n') || existing.isEmpty ? '' : '\n';
+          _files[_selectedFile] = '$existing$separator$recognized';
+        });
+
+        _terminal.write('Voice appended to $_selectedFile\\r\\n');
+
+        if (result.finalResult) {
+          setState(() {
+            _isListening = false;
+          });
+        }
+      },
+      onSoundLevelChange: (_) {},
+      // ignore: deprecated_member_use
+      cancelOnError: true,
+      // ignore: deprecated_member_use
+      listenMode: stt.ListenMode.dictation,
+    );
+  }
+
+  void _runCurrentFileInTerminal() {
+    _terminal.write('\$ run $_selectedFile\\r\\n');
+    _terminal.write('Execution stub completed for $_selectedFile\\r\\n');
   }
 
   IconData _iconForFile(String path) {
