@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../auth/auth_repository.dart';
 import '../ab_testing_service.dart';
 import '../../features/mirror/cloud_fly_backend.dart';
 import '../../features/mirror/edge_function_backend.dart';
@@ -58,6 +59,11 @@ final mirrorOfflineWarningProvider = StateProvider<String?>((ref) => null);
 final mirrorPremiumProvider = Provider<bool>((ref) {
   final user = Supabase.instance.client.auth.currentUser;
   return _isPremiumUser(user);
+});
+
+final mirrorStripePremiumProvider = FutureProvider<bool>((ref) async {
+  final authRepository = AuthRepository();
+  return authRepository.hasActiveStripePremiumSubscription();
 });
 
 final mirrorTeamModeVariantProvider = FutureProvider<String>((ref) async {
@@ -134,18 +140,47 @@ class MirrorNotifier extends Notifier<MirrorState> {
     );
   }
 
-  void setMode(String mode) {
+  Future<void> setMode(String mode) async {
     if (mode != 'private' && mode != 'cloud') {
       return;
     }
+
+    if (mode == 'cloud') {
+      final hasStripePremium = await ref.read(mirrorStripePremiumProvider.future);
+      if (!hasStripePremium) {
+        ref.read(mirrorModeProvider.notifier).state = 'private';
+        ref.read(mirrorOfflineWarningProvider.notifier).state =
+            'Cloud mode requires an active Stripe premium subscription.';
+        state = state.copyWith(
+          mode: 'private',
+          isPremium: false,
+          offlineWarning:
+              'Cloud mode requires an active Stripe premium subscription.',
+        );
+        return;
+      }
+    }
+
     ref.read(mirrorModeProvider.notifier).state = mode;
     state = state.copyWith(mode: mode);
     unawaited(_MirrorOfflineCache.saveMode(mode));
   }
 
-  void refreshPremiumFromMetadata() {
-    final isPremium = ref.read(mirrorPremiumProvider);
+  Future<void> refreshPremiumFromMetadata() async {
+    final metadataPremium = ref.read(mirrorPremiumProvider);
+    final stripePremium = await ref.read(mirrorStripePremiumProvider.future);
+    final isPremium = metadataPremium || stripePremium;
     state = state.copyWith(isPremium: isPremium);
+
+    if (!isPremium && state.mode == 'cloud') {
+      ref.read(mirrorModeProvider.notifier).state = 'private';
+      state = state.copyWith(
+        mode: 'private',
+        offlineWarning:
+            'Cloud mode requires an active Stripe premium subscription.',
+      );
+      unawaited(_MirrorOfflineCache.saveMode('private'));
+    }
   }
 
   Future<void> refreshTeamModeVariant() async {
@@ -171,6 +206,8 @@ class MirrorNotifier extends Notifier<MirrorState> {
     if (cachedVariant != null) {
       state = state.copyWith(teamModeVariant: cachedVariant);
     }
+
+    await refreshPremiumFromMetadata();
   }
 }
 
