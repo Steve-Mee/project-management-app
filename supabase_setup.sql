@@ -132,6 +132,7 @@ CREATE INDEX IF NOT EXISTS idx_feature_flags_key ON feature_flags(key);
 CREATE INDEX IF NOT EXISTS idx_feature_flags_enabled ON feature_flags(enabled);
 CREATE INDEX IF NOT EXISTS idx_feature_flags_updated_at ON feature_flags(updated_at DESC);
 
+-- Canonical Mirror session table
 CREATE TABLE IF NOT EXISTS ai_sessions (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
@@ -144,62 +145,12 @@ CREATE TABLE IF NOT EXISTS ai_sessions (
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- Mirror staging storage bucket (Prompt 2 EOF)
--- Dashboard note:
--- 1) Supabase Dashboard > Storage: verify bucket `mirror_staging` exists and is private.
--- 2) Keep this insert idempotent for environments where the bucket already exists.
+-- Canonical Mirror staging storage bucket
 INSERT INTO storage.buckets (id, name, public)
 VALUES ('mirror_staging', 'mirror_staging', false)
 ON CONFLICT (id) DO NOTHING;
 
--- Prompt 2 EOF storage RLS policies for per-user folder access: {user_id}/...
-CREATE POLICY "mirror_staging_upload_own_folder_prompt_2_eof" ON storage.objects
-FOR INSERT TO authenticated
-WITH CHECK (
-  bucket_id = 'mirror_staging'
-  AND storage.foldername(name)[1] = auth.uid()::text
-);
-
-CREATE POLICY "mirror_staging_download_own_folder_prompt_2_eof" ON storage.objects
-FOR SELECT TO authenticated
-USING (
-  bucket_id = 'mirror_staging'
-  AND storage.foldername(name)[1] = auth.uid()::text
-);
-
--- Mirror staging storage bucket (Prompt 2)
--- Dashboard note:
--- 1) Supabase Dashboard > Storage: verify bucket `mirror_staging` exists and is private.
--- 2) Keep this insert idempotent for environments where the bucket already exists.
-INSERT INTO storage.buckets (id, name, public)
-VALUES ('mirror_staging', 'mirror_staging', false)
-ON CONFLICT (id) DO NOTHING;
-
--- Prompt 2 storage RLS policies for per-user folder access: {user_id}/...
-CREATE POLICY "mirror_staging_upload_own_folder_prompt_2" ON storage.objects
-FOR INSERT TO authenticated
-WITH CHECK (
-  bucket_id = 'mirror_staging'
-  AND storage.foldername(name)[1] = auth.uid()::text
-);
-
-CREATE POLICY "mirror_staging_download_own_folder_prompt_2" ON storage.objects
-FOR SELECT TO authenticated
-USING (
-  bucket_id = 'mirror_staging'
-  AND storage.foldername(name)[1] = auth.uid()::text
-);
-
--- Mirror staging storage bucket
--- Dashboard note:
--- 1) Supabase Dashboard > Storage: verify bucket `mirror_staging` exists and is private.
--- 2) If the bucket already exists from Dashboard/manual setup, keep this INSERT idempotent via ON CONFLICT.
-INSERT INTO storage.buckets (id, name, public)
-VALUES ('mirror_staging', 'mirror_staging', false)
-ON CONFLICT (id) DO NOTHING;
-
--- Storage RLS policies for per-user folder access: {user_id}/...
--- Upload: authenticated users can write only into their own top-level folder.
+-- Canonical storage RLS policies for per-user folder access: {user_id}/...
 CREATE POLICY "mirror_staging_upload_own_folder" ON storage.objects
 FOR INSERT TO authenticated
 WITH CHECK (
@@ -207,7 +158,6 @@ WITH CHECK (
   AND storage.foldername(name)[1] = auth.uid()::text
 );
 
--- Download: authenticated users can read only from their own top-level folder.
 CREATE POLICY "mirror_staging_download_own_folder" ON storage.objects
 FOR SELECT TO authenticated
 USING (
@@ -215,42 +165,7 @@ USING (
   AND storage.foldername(name)[1] = auth.uid()::text
 );
 
-CREATE TABLE IF NOT EXISTS ai_sessions (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
-  project_id TEXT,
-  task_id TEXT,
-  mode TEXT CHECK (mode IN ('private', 'cloud')),
-  status TEXT CHECK (status IN ('pending', 'processing', 'completed', 'failed')),
-  versions JSONB DEFAULT '[]'::jsonb,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
-
--- Mirror staging storage bucket (Prompt 2 FINAL EOF)
--- Dashboard note:
--- 1) Supabase Dashboard > Storage: verify bucket `mirror_staging` exists and is private.
--- 2) Keep this insert idempotent for environments where the bucket already exists.
-INSERT INTO storage.buckets (id, name, public)
-VALUES ('mirror_staging', 'mirror_staging', false)
-ON CONFLICT (id) DO NOTHING;
-
--- Prompt 2 FINAL EOF storage RLS policies for per-user folder access: {user_id}/...
-CREATE POLICY "mirror_staging_upload_own_folder_prompt_2_final_eof" ON storage.objects
-FOR INSERT TO authenticated
-WITH CHECK (
-  bucket_id = 'mirror_staging'
-  AND storage.foldername(name)[1] = auth.uid()::text
-);
-
-CREATE POLICY "mirror_staging_download_own_folder_prompt_2_final_eof" ON storage.objects
-FOR SELECT TO authenticated
-USING (
-  bucket_id = 'mirror_staging'
-  AND storage.foldername(name)[1] = auth.uid()::text
-);
-
--- Mirror templates catalog (Prompt 23)
+-- Canonical Mirror templates catalog
 CREATE TABLE IF NOT EXISTS mirror_templates (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   template_key TEXT NOT NULL UNIQUE,
@@ -323,3 +238,6 @@ SET
   seed_content = EXCLUDED.seed_content,
   is_active = EXCLUDED.is_active,
   updated_at = NOW();
+
+-- Import/run this migration after base setup for signed input/backup buckets hardening:
+-- \i supabase/migrations/20260308_mirror_storage_hardening.sql

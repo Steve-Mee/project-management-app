@@ -272,8 +272,3 @@ CREATE POLICY "ai_sessions_owner_policy" ON ai_sessions
 FOR ALL TO authenticated
 USING (auth.uid() = user_id)
 WITH CHECK (auth.uid() = user_id);
-
-CREATE POLICY "ai_sessions_owner_policy_prompt_1" ON ai_sessions
-FOR ALL TO authenticated
-USING (auth.uid() = user_id)
-WITH CHECK (auth.uid() = user_id);
