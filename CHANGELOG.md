@@ -1,3 +1,9 @@
+## [1.13.0](https://github.com/Steve-Mee/project-management-app/compare/v1.12.0...v1.13.0) (2026-03-08)
+
+### Features
+
+* **mirror:** close remaining hardening attention points ([7ccd1b5](https://github.com/Steve-Mee/project-management-app/commit/7ccd1b54b5f331f14b8b554d4944aa7e8e8ebc0c))
+
 ## [1.12.0](https://github.com/Steve-Mee/project-management-app/compare/v1.11.0...v1.12.0) (2026-03-08)
 
 ### Features
