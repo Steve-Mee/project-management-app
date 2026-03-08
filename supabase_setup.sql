@@ -1,5 +1,7 @@
--- Database setup for project management app
--- Run this in Supabase SQL editor to create the necessary tables
+-- Legacy/bootstrap database setup for project management app.
+-- Mirror schema (tables, buckets, and policies) is migrations-only and must
+-- be managed via files in supabase/migrations.
+-- Run this in Supabase SQL editor only for base bootstrap tables.
 
 -- Projects table
 CREATE TABLE IF NOT EXISTS projects (
@@ -132,112 +134,6 @@ CREATE INDEX IF NOT EXISTS idx_feature_flags_key ON feature_flags(key);
 CREATE INDEX IF NOT EXISTS idx_feature_flags_enabled ON feature_flags(enabled);
 CREATE INDEX IF NOT EXISTS idx_feature_flags_updated_at ON feature_flags(updated_at DESC);
 
--- Canonical Mirror session table
-CREATE TABLE IF NOT EXISTS ai_sessions (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
-  project_id TEXT,
-  task_id TEXT,
-  mode TEXT CHECK (mode IN ('private', 'cloud')),
-  status TEXT CHECK (status IN ('pending', 'processing', 'completed', 'failed')),
-  versions JSONB DEFAULT '[]'::jsonb,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
-
--- Canonical Mirror staging storage bucket
-INSERT INTO storage.buckets (id, name, public)
-VALUES ('mirror_staging', 'mirror_staging', false)
-ON CONFLICT (id) DO NOTHING;
-
--- Canonical storage RLS policies for per-user folder access: {user_id}/...
-CREATE POLICY "mirror_staging_upload_own_folder" ON storage.objects
-FOR INSERT TO authenticated
-WITH CHECK (
-  bucket_id = 'mirror_staging'
-  AND storage.foldername(name)[1] = auth.uid()::text
-);
-
-CREATE POLICY "mirror_staging_download_own_folder" ON storage.objects
-FOR SELECT TO authenticated
-USING (
-  bucket_id = 'mirror_staging'
-  AND storage.foldername(name)[1] = auth.uid()::text
-);
-
--- Canonical Mirror templates catalog
-CREATE TABLE IF NOT EXISTS mirror_templates (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  template_key TEXT NOT NULL UNIQUE,
-  title TEXT NOT NULL,
-  description TEXT NOT NULL,
-  icon_name TEXT NOT NULL,
-  tags TEXT[] NOT NULL DEFAULT ARRAY[]::TEXT[],
-  seed_content TEXT NOT NULL,
-  is_active BOOLEAN NOT NULL DEFAULT true,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
-
-CREATE INDEX IF NOT EXISTS idx_mirror_templates_key ON mirror_templates(template_key);
-CREATE INDEX IF NOT EXISTS idx_mirror_templates_active ON mirror_templates(is_active);
-
-INSERT INTO mirror_templates (template_key, title, description, icon_name, tags, seed_content, is_active)
-VALUES
-  (
-    'flutter-feature',
-    'Flutter Feature Module',
-    'Scaffold a complete feature with state, UI, and tests.',
-    'widgets_outlined',
-    ARRAY['flutter', 'feature', 'riverpod'],
-    'Create a Flutter feature module with:\n- state management via Riverpod\n- screen, view model, and repository layers\n- unit and widget tests\n- clear file structure and TODO markers',
-    true
-  ),
-  (
-    'api-integration',
-    'API Integration',
-    'Generate robust API client, models, and retry handling.',
-    'cloud_outlined',
-    ARRAY['api', 'http', 'models'],
-    'Implement API integration with:\n- typed request/response models\n- error mapping and retry strategy\n- logging hooks and parsing guards\n- a short integration test checklist',
-    true
-  ),
-  (
-    'bugfix-patch',
-    'Bugfix Patch',
-    'Focused fix with minimal risk and verification steps.',
-    'bug_report_outlined',
-    ARRAY['bugfix', 'safe-change'],
-    'Apply a minimal bugfix patch:\n- keep behavior unchanged outside the fix scope\n- include guard clauses and null safety checks\n- add regression tests if possible\n- summarize potential risks',
-    true
-  ),
-  (
-    'performance-pass',
-    'Performance Pass',
-    'Optimize hotspots and reduce UI jank where possible.',
-    'speed_outlined',
-    ARRAY['performance', 'profiling'],
-    'Perform a performance pass:\n- identify hot paths and rebuild bottlenecks\n- reduce expensive operations in build methods\n- memoize or cache safely where useful\n- report expected perf impact',
-    true
-  ),
-  (
-    'test-suite',
-    'Test Suite Booster',
-    'Expand coverage for core flows and failure cases.',
-    'rule_folder_outlined',
-    ARRAY['tests', 'coverage', 'quality'],
-    'Create an expanded test suite:\n- happy path and edge case tests\n- async failure and timeout scenarios\n- concise fixtures and reusable helpers\n- coverage notes for remaining gaps',
-    true
-  )
-ON CONFLICT (template_key) DO UPDATE
-SET
-  title = EXCLUDED.title,
-  description = EXCLUDED.description,
-  icon_name = EXCLUDED.icon_name,
-  tags = EXCLUDED.tags,
-  seed_content = EXCLUDED.seed_content,
-  is_active = EXCLUDED.is_active,
-  updated_at = NOW();
-
--- Import/run this migration after base setup for signed input/backup buckets hardening:
--- \i supabase/migrations/20260308_mirror_storage_hardening.sql
+-- NOTE: Mirror-related schema, storage buckets, and RLS policies were removed
+-- from this bootstrap file. Use dedicated SQL migrations under
+-- supabase/migrations for all Mirror changes.
