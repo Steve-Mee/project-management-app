@@ -21,6 +21,8 @@ class MirrorEditorScreen extends ConsumerStatefulWidget {
 }
 
 class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
+  static const int _maxLiveOutputLines = 500;
+
   late String _selectedMode;
   late final Map<String, String> _files;
   late String _selectedFile;
@@ -346,17 +348,27 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
           table: 'ai_sessions',
           filter: PostgresChangeFilter(
             type: PostgresChangeFilterType.eq,
-            column: 'task_id',
-            value: widget.taskId,
+            column: 'project_id',
+            value: widget.projectId,
           ),
           callback: (PostgresChangePayload payload) {
-            final outputLines = _extractOutputLines(payload.newRecord);
+            final record = payload.newRecord;
+            final recordTaskId = record['task_id']?.toString();
+            if (recordTaskId != widget.taskId) {
+              return;
+            }
+
+            final outputLines = _extractOutputLines(record);
             if (outputLines.isEmpty || !mounted) {
               return;
             }
 
             setState(() {
               _liveOutput.addAll(outputLines);
+              if (_liveOutput.length > _maxLiveOutputLines) {
+                final overflow = _liveOutput.length - _maxLiveOutputLines;
+                _liveOutput.removeRange(0, overflow);
+              }
             });
             _terminal.write('Realtime output ontvangen (${outputLines.length} regels).\\r\\n');
 
