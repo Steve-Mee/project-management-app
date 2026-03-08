@@ -1,6 +1,9 @@
 library;
 
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../ab_testing_service.dart';
@@ -19,28 +22,38 @@ class MirrorState {
     required this.mode,
     required this.isPremium,
     required this.teamModeVariant,
+    required this.offlineWarning,
   });
 
   final String mode;
   final bool isPremium;
   final String teamModeVariant;
+  final String? offlineWarning;
 
   bool get isTeamMode => teamModeVariant == 'team';
+  bool get hasOfflineWarning => offlineWarning != null && offlineWarning!.isNotEmpty;
 
   MirrorState copyWith({
     String? mode,
     bool? isPremium,
     String? teamModeVariant,
+    String? offlineWarning,
+    bool clearOfflineWarning = false,
   }) {
     return MirrorState(
       mode: mode ?? this.mode,
       isPremium: isPremium ?? this.isPremium,
       teamModeVariant: teamModeVariant ?? this.teamModeVariant,
+      offlineWarning: clearOfflineWarning
+          ? null
+          : (offlineWarning ?? this.offlineWarning),
     );
   }
 }
 
 final mirrorModeProvider = StateProvider<String>((ref) => 'private');
+
+final mirrorOfflineWarningProvider = StateProvider<String?>((ref) => null);
 
 final mirrorPremiumProvider = Provider<bool>((ref) {
   final user = Supabase.instance.client.auth.currentUser;
@@ -48,14 +61,34 @@ final mirrorPremiumProvider = Provider<bool>((ref) {
 });
 
 final mirrorTeamModeVariantProvider = FutureProvider<String>((ref) async {
+  final warningNotifier = ref.read(mirrorOfflineWarningProvider.notifier);
   final user = Supabase.instance.client.auth.currentUser;
   final userId = user?.id ?? 'anonymous';
 
-  return ABTestingService.instance.assignVariant(
-    experimentKey: 'mirror_team_mode',
-    userId: userId,
-    variants: const <String>['solo', 'team'],
-  );
+  try {
+    final variant = await ABTestingService.instance
+        .assignVariant(
+          experimentKey: 'mirror_team_mode',
+          userId: userId,
+          variants: const <String>['solo', 'team'],
+        )
+        .timeout(const Duration(seconds: 3));
+
+    await _MirrorOfflineCache.saveTeamModeVariant(userId, variant);
+    warningNotifier.state = null;
+    return variant;
+  } catch (_) {
+    final cached = await _MirrorOfflineCache.getTeamModeVariant(userId);
+    if (cached != null) {
+      warningNotifier.state =
+          'Offline mode: Team Mode variant loaded from local cache.';
+      return cached;
+    }
+
+    warningNotifier.state =
+        'Offline mode: Team Mode unavailable, switched to solo fallback.';
+    return 'solo';
+  }
 });
 
 final mirrorTeamModeEnabledProvider = Provider<bool>((ref) {
@@ -79,16 +112,25 @@ final mirrorBackendProvider = Provider<MirrorComputeBackend>((ref) {
 });
 
 class MirrorNotifier extends Notifier<MirrorState> {
+  bool _cacheHydrated = false;
+
   @override
   MirrorState build() {
+    if (!_cacheHydrated) {
+      _cacheHydrated = true;
+      unawaited(_hydrateFromCache());
+    }
+
     final mode = ref.watch(mirrorModeProvider);
     final isPremium = ref.watch(mirrorPremiumProvider);
     final teamModeVariant =
         ref.watch(mirrorTeamModeVariantProvider).valueOrNull ?? 'solo';
+    final offlineWarning = ref.watch(mirrorOfflineWarningProvider);
     return MirrorState(
       mode: mode,
       isPremium: isPremium,
       teamModeVariant: teamModeVariant,
+      offlineWarning: offlineWarning,
     );
   }
 
@@ -98,6 +140,7 @@ class MirrorNotifier extends Notifier<MirrorState> {
     }
     ref.read(mirrorModeProvider.notifier).state = mode;
     state = state.copyWith(mode: mode);
+    unawaited(_MirrorOfflineCache.saveMode(mode));
   }
 
   void refreshPremiumFromMetadata() {
@@ -109,6 +152,25 @@ class MirrorNotifier extends Notifier<MirrorState> {
     ref.invalidate(mirrorTeamModeVariantProvider);
     final teamModeVariant = await ref.read(mirrorTeamModeVariantProvider.future);
     state = state.copyWith(teamModeVariant: teamModeVariant);
+  }
+
+  void clearOfflineWarning() {
+    ref.read(mirrorOfflineWarningProvider.notifier).state = null;
+    state = state.copyWith(clearOfflineWarning: true);
+  }
+
+  Future<void> _hydrateFromCache() async {
+    final cachedMode = await _MirrorOfflineCache.getMode();
+    if (cachedMode == 'private' || cachedMode == 'cloud') {
+      ref.read(mirrorModeProvider.notifier).state = cachedMode!;
+    }
+
+    final user = Supabase.instance.client.auth.currentUser;
+    final userId = user?.id ?? 'anonymous';
+    final cachedVariant = await _MirrorOfflineCache.getTeamModeVariant(userId);
+    if (cachedVariant != null) {
+      state = state.copyWith(teamModeVariant: cachedVariant);
+    }
   }
 }
 
@@ -130,4 +192,40 @@ bool _isPremiumUser(User? user) {
 
   final normalized = planValue?.toString().toLowerCase().trim() ?? '';
   return normalized == 'premium' || normalized == 'pro' || normalized == 'enterprise';
+}
+
+class _MirrorOfflineCache {
+  static const String _boxName = 'mirror_offline_cache';
+  static const String _modeKey = 'mode';
+
+  static Future<Box<dynamic>> _openBox() async {
+    if (Hive.isBoxOpen(_boxName)) {
+      return Hive.box<dynamic>(_boxName);
+    }
+    return Hive.openBox<dynamic>(_boxName);
+  }
+
+  static Future<void> saveMode(String mode) async {
+    final box = await _openBox();
+    await box.put(_modeKey, mode);
+  }
+
+  static Future<String?> getMode() async {
+    final box = await _openBox();
+    final value = box.get(_modeKey);
+    return value is String ? value : null;
+  }
+
+  static String _variantKey(String userId) => 'team_mode_variant::$userId';
+
+  static Future<void> saveTeamModeVariant(String userId, String variant) async {
+    final box = await _openBox();
+    await box.put(_variantKey(userId), variant);
+  }
+
+  static Future<String?> getTeamModeVariant(String userId) async {
+    final box = await _openBox();
+    final value = box.get(_variantKey(userId));
+    return value is String ? value : null;
+  }
 }
