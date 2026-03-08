@@ -405,6 +405,13 @@ extension MirrorApplySecurity on MirrorComputeBackend {
     String signedInputBucket = 'mirror-signed-inputs',
     String backupBucket = 'mirror-backups',
   }) async {
+    await _writeApplyAuditEvent(
+      projectId: context.projectId,
+      taskId: context.taskId,
+      mode: mode,
+      event: 'apply_started',
+    );
+
     final artifacts = await prepareSignedInputAndBackup(
       context: context,
       signedUrlTtl: signedUrlTtl,
@@ -417,6 +424,18 @@ extension MirrorApplySecurity on MirrorComputeBackend {
           .map((failure) =>
               '${failure.filePath} (${failure.stage}): ${failure.error}')
           .join('; ');
+      await _writeApplyAuditEvent(
+        projectId: context.projectId,
+        taskId: context.taskId,
+        mode: mode,
+        event: 'apply_preparation_failed',
+        backupId: artifacts.backupId,
+        success: false,
+        details: <String, dynamic>{
+          'failureCount': artifacts.uploadFailures.length,
+          'details': lines,
+        },
+      );
       return ApplyResult(
         success: false,
         appliedFiles: const <String>[],
@@ -425,7 +444,35 @@ extension MirrorApplySecurity on MirrorComputeBackend {
       );
     }
 
-    final result = await onApply(artifacts);
+    late final ApplyResult result;
+    try {
+      result = await onApply(artifacts);
+    } catch (error) {
+      await _writeApplyAuditEvent(
+        projectId: context.projectId,
+        taskId: context.taskId,
+        mode: mode,
+        event: 'apply_exception',
+        backupId: artifacts.backupId,
+        success: false,
+        details: <String, dynamic>{
+          'error': error.toString(),
+        },
+      );
+      rethrow;
+    }
+
+    await _writeApplyAuditEvent(
+      projectId: context.projectId,
+      taskId: context.taskId,
+      mode: mode,
+      event: 'apply_completed',
+      backupId: artifacts.backupId,
+      success: result.success,
+      appliedFiles: result.appliedFiles,
+      message: result.message,
+    );
+
     if (result.success) {
       return result;
     }
@@ -547,6 +594,49 @@ Future<Box<dynamic>> _openApplyHistoryBox() async {
     return Hive.box<dynamic>(boxName);
   }
   return Hive.openBox<dynamic>(boxName);
+}
+
+Future<Box<dynamic>> _openApplyAuditBox() async {
+  const boxName = 'mirror_apply_audit';
+  if (Hive.isBoxOpen(boxName)) {
+    return Hive.box<dynamic>(boxName);
+  }
+  return Hive.openBox<dynamic>(boxName);
+}
+
+Future<void> _writeApplyAuditEvent({
+  required String projectId,
+  required String taskId,
+  required String mode,
+  required String event,
+  String? backupId,
+  bool? success,
+  List<String> appliedFiles = const <String>[],
+  String? message,
+  Map<String, dynamic> details = const <String, dynamic>{},
+}) async {
+  try {
+    final box = await _openApplyAuditBox();
+    await box.add(<String, dynamic>{
+      'createdAt': DateTime.now().toUtc().toIso8601String(),
+      'projectId': projectId,
+      'taskId': taskId,
+      'mode': mode,
+      'event': event,
+      'backupId': backupId,
+      'success': success,
+      'appliedFiles': appliedFiles,
+      'message': message,
+      'details': details,
+    });
+
+    const maxAuditEntries = 500;
+    while (box.length > maxAuditEntries) {
+      await box.deleteAt(0);
+    }
+  } catch (_) {
+    // Audit logging must never interrupt apply flow.
+  }
 }
 
 Map<String, dynamic>? _tryParseApplyPayload(String raw) {
