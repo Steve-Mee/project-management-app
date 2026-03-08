@@ -5,7 +5,6 @@ import 'package:pma_core/models/task_model.dart';
 import '../../core/providers/ai_chat_provider.dart';
 import '../mirror/mirror_editor_screen.dart';
 
-/// Task card with deep link action to Mirror Editor.
 class TaskCard extends ConsumerWidget {
   const TaskCard({
     super.key,

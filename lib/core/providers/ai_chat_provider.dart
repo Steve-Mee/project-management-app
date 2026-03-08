@@ -41,7 +41,6 @@ class AiChatBridgeNotifier extends Notifier<MirrorLaunchPayload?> {
       return null;
     }
 
-    // Ensure the AI chat state is initialized before switching into Mirror flow.
     ref.read(aiChatProvider);
 
     final mirrorNotifier = ref.read(mirrorProvider.notifier);

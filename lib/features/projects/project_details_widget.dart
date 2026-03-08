@@ -4,7 +4,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/providers/ai_chat_provider.dart';
 import '../mirror/mirror_editor_screen.dart';
 
-/// Action button for opening Mirror Editor from a project context.
 class ProjectDetailsWidget extends ConsumerWidget {
   const ProjectDetailsWidget({
     super.key,
