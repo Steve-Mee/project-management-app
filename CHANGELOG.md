@@ -1,3 +1,16 @@
+## [1.12.0](https://github.com/Steve-Mee/project-management-app/compare/v1.11.0...v1.12.0) (2026-03-08)
+
+### Features
+
+* **mirror:** harden edge config and desktop monaco host ([f28bced](https://github.com/Steve-Mee/project-management-app/commit/f28bced46e8adf613f629276beaf8c3dbc9d8c5f))
+
+### Bug Fixes
+
+* add mirror session provider and refactor mirror editor state ([034afb0](https://github.com/Steve-Mee/project-management-app/commit/034afb01f84b1b8a103ec90e3cd5a21284e71bb9))
+* finalize remaining Mirror analysis actions ([e587fbf](https://github.com/Steve-Mee/project-management-app/commit/e587fbf09ab5f612acb435322a4affe84718e505))
+* mirror RLS path alignment and edge dispatch idempotency ([97f429d](https://github.com/Steve-Mee/project-management-app/commit/97f429d68936004ae917c89c2327413e478c83d6))
+* remove unnecessary import in mirror editor ([3d62128](https://github.com/Steve-Mee/project-management-app/commit/3d62128947b2d182db38f5689a855b973f3c9c32))
+
 ## [1.11.0](https://github.com/Steve-Mee/project-management-app/compare/v1.10.0...v1.11.0) (2026-03-08)
 
 ### Features
