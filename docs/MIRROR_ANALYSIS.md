@@ -1,0 +1,156 @@
+### 1. Algemene beoordeling
+- Sterke punten
+  - Heldere gelaagde opzet: compute-contract (`lib/features/mirror/mirror_compute_backend.dart`) is gescheiden van concrete backends (`edge_function_backend.dart`, `private_grpc_backend.dart`, `cloud_fly_backend.dart`).
+  - Goede basis voor offline-first gedrag in Mirror state: lokale mode/variant-cache met fallback en waarschuwing (`lib/core/providers/mirror_provider.dart`).
+  - Permission-gating aanwezig voor toegangspad (`use_mirror`) en startup-check (`lib/core/projects_initializer.dart`).
+  - Team Mode/AB-testing is netjes geïsoleerd in providerlaag en niet hardcoded in UI.
+  - Cloud runner en local runner hebben consistente gRPC service-definitie en compile-pipeline.
+  - README en deployment docs bevatten inmiddels operationele handvatten voor Mirror.
+- Zwakke punten
+  - Endpoint-contracten zijn inconsistent tussen Edge Function, Cloud backend en runners (HTTP paden vs gRPC-only service), waardoor runtime-failures waarschijnlijk zijn.
+  - SQL/RLS setup bevat meerdere dubbele DDL/policy-blokken voor `ai_sessions` en `mirror_staging` in `supabase_setup.sql`; dit is lastig onderhoudbaar en risicovol in migraties.
+  - Nieuwe signed-URL/backup flow gebruikt buckets die niet in SQL/RLS zijn ingericht (`mirror-signed-inputs`, `mirror-backups`), dus security + functionaliteit is incompleet.
+  - Deep-link widgets zijn toegevoegd als losse bestanden (`lib/features/projects/project_details_widget.dart`, `lib/features/tasks/task_card.dart`) maar zijn beperkt geïntegreerd in bestaande hoofdflows (`project_detail_screen.dart` gebruikt nog `ExpandableTaskCard`).
+  - `apply` is in alle compute backends nog niet echt geïmplementeerd, terwijl UI/veiligheidslaag dit wel suggereert.
+  - Stripe premium-check is dubbel gedefinieerd (metadata en subscription-query) en niet overal uniform toegepast in backendselectie.
+  - App-level `AuthRepository` (`lib/core/auth/auth_repository.dart`) dupliceert concepten uit `pma_core` auth laag en verhoogt architecturale drift.
+- Overall score (1-10)
+  - 7.2/10
+
+### 2. Laag-voor-laag analyse
+- Supabase / Database laag
+  - Positief:
+    - `ai_sessions` en `mirror_templates` zijn aanwezig met basale constraints/indexen.
+    - RLS op `ai_sessions` in `supabase_policies.sql` beperkt records tot owner.
+    - `mirror_staging` bucket policies beperken padtoegang per `auth.uid()`.
+  - Risico's:
+    - `supabase_setup.sql` bevat meerdere herhaalde blokken voor dezelfde resources (table/policies/bucket insert), wat drift en deploy-frictie veroorzaakt.
+    - Policy-naamvarianten (`...prompt_2`, `...prompt_2_eof`, `...prompt_2_final_eof`) stapelen op zonder lifecyclebeheer.
+    - Nieuwe signed/backup buckets uit compute-code missen DDL + RLS.
+    - `ai_sessions.versions` groeit onbeperkt (geen retention/archivering zichtbaar).
+  - Conclusie:
+    - Basis klopt, maar migratiehygiëne en policy-governance zijn nog niet production-grade.
+
+- Edge Functions & gRPC backend laag
+  - Positief:
+    - Edge Function (`supabase/functions/mirror_compute/index.ts`) valideert auth-header en user context.
+    - Runners (`server/mirror-*-runner/lib/main.dart`) hebben duidelijke compile-flow, input-validatie en artifact-signing.
+    - Proto-contract is simpel en goed leesbaar.
+  - Risico's:
+    - Endpoint mismatch: Edge Function forwardt naar `/mirror_compute`, terwijl `CloudFlyBackend` HTTP naar `/compile` doet, en runner vooral gRPC-service exposeert.
+    - `SIGNED_URL_SECRET` heeft onveilige fallback defaults in code; foutconfiguratie leidt tot voorspelbare signatures.
+    - Geen expliciete auth-verificatie op runner zelf (vertrouwen op netwerkperimeter/edge), geen mTLS of service-token controle zichtbaar.
+    - Geen duidelijke workspace cleanup/TTL op build-artifacts; kans op disk-growth op Fly volume.
+  - Conclusie:
+    - Technisch sterk begin, maar contract/transport/security-hardening moet eerst worden rechtgetrokken.
+
+- Dart/Flutter core & providers laag
+  - Positief:
+    - `MirrorState` model en Riverpod-notifier zijn overzichtelijk en testbaar.
+    - AB variant + offline fallback zijn netjes gecentraliseerd.
+    - `ai_chat_provider.dart` bridge maakt contextgedreven launch mogelijk.
+  - Risico's:
+    - `mirrorBackendProvider` kiest premium op metadata-provider, niet op Stripe-check; dit is semantisch inconsistent met cloud-gating intentie.
+    - `openMirrorFromTask` roept `setMode` async aan zonder `await`, waardoor state-race mogelijk is.
+    - Auth-premiumlogica leeft op app-niveau buiten `pma_core`, wat duplicatie en divergent gedrag creëert.
+  - Conclusie:
+    - Providerarchitectuur is goed, maar premium-policy moet op 1 bron van waarheid komen.
+
+- UI & UX laag (editor, dialogs, realtime)
+  - Positief:
+    - Mirror editor heeft duidelijke desktop/mobile layout, mode selector, file explorer, terminal-pane en realtime output.
+    - Apply dialog heeft diff-preview en risicobevestiging (goede safety-UX).
+    - Templates gallery is bruikbaar en responsive.
+  - Risico's:
+    - `MonacoEditor` is momenteel een TextField-wrapper; feature-naam suggereert rijkere editor dan feitelijk geleverd.
+    - `_liveOutput` groeit onbegrensd in geheugen.
+    - Realtime subscription filtert alleen op `task_id`; cross-project collision is mogelijk bij task-id hergebruik.
+    - Deep-link knoppen zitten in losse widgets die nog niet breed in hoofdschermen zijn ingeplugd.
+  - Conclusie:
+    - UX voelt goed als basis, maar productierijpheid vereist wiring + resource-limits.
+
+- Security, permissions & premium checks
+  - Positief:
+    - `use_mirror` permission is toegevoegd in app + core role seeding.
+    - Startup-gate voor Mirror route-intent is aanwezig.
+    - Stripe subscription check bestaat en blokkeert cloud mode in notifier.
+  - Risico's:
+    - Dubbele premiuminterpretatie (metadata vs Stripe DB) kan inconsistent beslissen.
+    - Runner signing secrets hebben insecure fallback defaults.
+    - Signed backup buckets missen policies.
+    - Geen expliciete audit logging voor Mirror apply-events op backend zichtbaar.
+  - Conclusie:
+    - Security intenties zijn goed, maar enforcement chain is nog niet end-to-end hard.
+
+- Offline / Hive / caching laag
+  - Positief:
+    - Mode en Team Mode variant worden lokaal opgeslagen en hersteld.
+    - Fallback-meldingen maken degradatie zichtbaar voor gebruiker.
+  - Risico's:
+    - Geen TTL/versioning rond `mirror_offline_cache` keys.
+    - Geen encryptie/gevoeligheidsclassificatie voor mogelijke Mirror context cache.
+    - Cache-inhoud kan stale blijven na subscription wijziging zonder expliciete invalidatieflows.
+  - Conclusie:
+    - Goed fundament, nog beperkte lifecycle-controls.
+
+- Integratie met bestaande app
+  - Positief:
+    - Bridge via AI-provider en nieuwe widgets maakt contextlaunch conceptueel compleet.
+    - README en docs zijn bijgewerkt.
+  - Risico's:
+    - Integratie zit deels naast bestaande feature-structuur (`project` vs `projects`, `expandable_task_card` flow).
+    - Routeconfig bevat geen expliciete Mirror route; navigatie gebeurt alleen via push naar screen.
+    - Backward compatibility naar bestaande AI/project flows is functioneel maar nog fragmentarisch.
+  - Conclusie:
+    - Integratie is functioneel aanwezig, maar nog niet uniform met de bestaande navigatie- en componentarchitectuur.
+
+### 3. Concrete aanbevelingen
+- Wijzigingen (met exacte bestandsnamen en wat te veranderen)
+  - `lib/core/providers/mirror_provider.dart`
+    - Laat `mirrorBackendProvider` dezelfde premiumbron gebruiken als Stripe-gating (bij voorkeur 1 async premium provider met gecachete status).
+    - Voeg expliciete `await`-veiligheid toe rond mode-switching in callsites of maak synchronisatiepunt in notifier.
+  - `lib/core/providers/ai_chat_provider.dart`
+    - `await mirrorNotifier.setMode(safeMode);` toepassen om race-condition te voorkomen vóór payload-opbouw.
+  - `lib/features/mirror/cloud_fly_backend.dart`
+    - Harmoniseer endpoint/transport met werkelijke runner interface (HTTP bridge of pure gRPC), inclusief retries/backoff en typed error mapping.
+  - `supabase/functions/mirror_compute/index.ts`
+    - Maak forward endpoint contract eenduidig met backend (`/compile` of gateway), voeg timeout en structured error schema toe.
+  - `server/mirror-cloud-runner/lib/main.dart`
+    - Verwijder default signing secret fallback of fail-fast bij ontbrekend `SIGNED_URL_SECRET`.
+    - Voeg workspace cleanup/retention mechanisme toe.
+  - `server/mirror-local-runner/lib/main.dart`
+    - Zelfde hardening als cloud runner (secret policy + cleanup).
+  - `lib/features/mirror/mirror_compute_backend.dart`
+    - Koppel signed-input/backup buckets aan werkelijk geprovisioneerde Supabase storage en valideer upload-fouten per file met partial-failure rapportage.
+  - `supabase_setup.sql`
+    - Consolideer dubbele `ai_sessions`/`mirror_staging` blokken naar 1 canonieke migratiesectie.
+  - `supabase_policies.sql`
+    - Consolideer dubbele `ai_sessions` policies; houd 1 policyset met duidelijke naming convention.
+  - `lib/features/mirror/mirror_editor_screen.dart`
+    - Beperk `_liveOutput` (bijv. max 500 regels) en verfijn realtime filter met extra project-scope.
+  - `lib/features/project/project_detail_screen.dart`
+    - Integreer de Mirror deep-link knop in bestaande task cards (`ExpandableTaskCard` of actiesectie) zodat nieuwe flow echt bereikbaar is.
+
+- Toevoegingen (nieuwe bestanden/features met korte beschrijving)
+  - `supabase/migrations/<timestamp>_mirror_storage_hardening.sql`
+    - Voeg bucket DDL + RLS toe voor `mirror-signed-inputs` en `mirror-backups` (owner-only padpolicy, signed URL lifecycle).
+  - `lib/core/services/mirror_premium_service.dart`
+    - Centrale service voor premium-resolutie (Stripe + metadata fallback) als single source of truth voor app + backendkeuze.
+  - `test/core/providers/mirror_provider_test.dart`
+    - Unit tests voor mode-gating, Stripe fallback, offline variant fallback en warning reset.
+  - `test/features/mirror/mirror_editor_screen_test.dart`
+    - Widgettests voor mode selector, premium blokkade, realtime-output cap en voice-toggle state.
+  - `docs/mirror-architecture.md`
+    - Canoniek contractdocument met sequence diagrams (UI -> provider -> backend -> edge -> runner -> storage).
+  - `server/mirror-cloud-runner/lib/auth_guard.dart`
+    - Service-token/JWT verificatie voor inbound compile calls vanuit Edge Function.
+
+- Verwijderingen (wat weg kan en waarom)
+  - `lib/core/providers.dart.backup`
+    - Legacy backupbestand verwijderen om verwarring over actieve provider-barrels te voorkomen.
+  - Overlappende policy-/setupblokken in `supabase_setup.sql`
+    - Oude Prompt-varianten verwijderen; alleen canonieke blokken behouden voor veilige idempotente deploys.
+  - Overlappende `ai_sessions` policy varianten in `supabase_policies.sql`
+    - Dubbele policies verwijderen om beheer en debugging te vereenvoudigen.
+  - Eventuele tijdelijke dev-default secrets/fallbacks in runner code
+    - Verwijderen om insecure default deployment te voorkomen.
