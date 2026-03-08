@@ -34,6 +34,10 @@ interface ForwardPayload {
   userId: string
   files: Record<string, string>
   metadata: Record<string, unknown>
+  actorUserId?: string
+  backupId?: string
+  fileSetFingerprint?: string
+  signedInputUrls?: Record<string, string>
 }
 
 interface StructuredError {
@@ -217,7 +221,18 @@ function timeoutMs(): number {
 }
 
 function normalizeRequestBody(body: Partial<MirrorComputeRequest>): MirrorComputeRequest | null {
-  const { prompt, projectId, taskId, mode, files, metadata } = body
+  const {
+    prompt,
+    projectId,
+    taskId,
+    mode,
+    files,
+    metadata,
+    actorUserId,
+    backupId,
+    fileSetFingerprint,
+    signedInputUrls,
+  } = body
   if (!prompt || !projectId || !taskId || !mode) {
     return null
   }
@@ -227,12 +242,18 @@ function normalizeRequestBody(body: Partial<MirrorComputeRequest>): MirrorComput
 
   const safeFiles = files && typeof files === 'object' ? files : {}
   const safeMetadata = metadata && typeof metadata === 'object' ? metadata : {}
+  const safeSignedInputUrls =
+    signedInputUrls && typeof signedInputUrls === 'object' ? signedInputUrls : undefined
 
   return {
     prompt,
     projectId,
     taskId,
     mode,
+    actorUserId,
+    backupId,
+    fileSetFingerprint,
+    signedInputUrls: safeSignedInputUrls,
     files: safeFiles,
     metadata: safeMetadata,
   }
@@ -368,6 +389,10 @@ Deno.serve(async (req: Request) => {
       userId: user.id,
       files: normalized.files ?? {},
       metadata: normalized.metadata ?? {},
+      actorUserId: normalized.actorUserId,
+      backupId: normalized.backupId,
+      fileSetFingerprint: normalized.fileSetFingerprint,
+      signedInputUrls: normalized.signedInputUrls,
     }
 
     const controller = new AbortController()
