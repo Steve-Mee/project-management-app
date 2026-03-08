@@ -7,6 +7,8 @@ import 'package:pma_core/services/sub_task_generation_service.dart';
 import 'package:pma_core/models/task_model.dart';
 import 'package:pma_core/models/sub_task_model.dart';
 import 'package:project_management_app/features/project/task_help_dialog.dart';
+import 'package:project_management_app/core/providers/ai_chat_provider.dart';
+import 'package:project_management_app/features/mirror/mirror_editor_screen.dart';
 
 /// Expandable task card with sub-tasks and assignment functionality
 class ExpandableTaskCard extends ConsumerStatefulWidget {
@@ -48,6 +50,11 @@ class _ExpandableTaskCardState extends ConsumerState<ExpandableTaskCard> {
                   icon: const Icon(Icons.smart_toy),
                   onPressed: () => _showTaskHelpDialog(),
                   tooltip: 'AI Help',
+                ),
+                IconButton(
+                  icon: const Icon(Icons.open_in_new),
+                  onPressed: () => _openMirrorEditor(),
+                  tooltip: 'Open Mirror Editor',
                 ),
                 // Assignment button
                 IconButton(
@@ -263,6 +270,38 @@ class _ExpandableTaskCardState extends ConsumerState<ExpandableTaskCard> {
         _isGeneratingSubTasks = false;
       });
     }
+  }
+
+  Future<void> _openMirrorEditor() async {
+    final payload = await ref
+        .read(aiChatBridgeProvider.notifier)
+        .openMirrorFromTask(
+          projectId: widget.task.projectId,
+          taskId: widget.task.id,
+          preferredMode: 'private',
+        );
+
+    if (!mounted) {
+      return;
+    }
+
+    if (payload == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Mirror is not available for your account.'),
+        ),
+      );
+      return;
+    }
+
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => MirrorEditorScreen(
+          projectId: payload.projectId,
+          taskId: payload.taskId,
+        ),
+      ),
+    );
   }
 
   Future<void> _toggleSubTaskCompletion(String subTaskId, bool isCompleted) async {

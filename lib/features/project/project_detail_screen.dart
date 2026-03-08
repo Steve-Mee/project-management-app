@@ -14,6 +14,8 @@ import 'package:project_management_app/features/project/expandable_task_card.dar
 import 'package:project_management_app/features/project/project_chat.dart';
 import 'package:project_management_app/features/project/task_help_dialog.dart';
 import 'package:project_management_app/features/project/requirements_icon_list_view.dart';
+import 'package:project_management_app/core/providers/ai_chat_provider.dart';
+import 'package:project_management_app/features/mirror/mirror_editor_screen.dart';
 
 // Caching integrated: projectByIdProvider uses a 5-minute TTL cache.
 
@@ -228,6 +230,8 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen>
     final l10n = AppLocalizations.of(context)!;
     final screenWidth = MediaQuery.of(context).size.width;
     final isCompact = screenWidth < 400;
+    final tasks = _filterTasks(ref.watch(tasksProvider).value ?? const <Task>[]);
+    final primaryTaskId = tasks.isNotEmpty ? tasks.first.id : null;
 
     return AppBar(
       toolbarHeight: isCompact ? 56.h : 64.h,
@@ -277,6 +281,17 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen>
             ),
           ),
         IconButton(
+          icon: const Icon(Icons.open_in_new),
+          tooltip: 'Open Mirror Editor',
+          onPressed: primaryTaskId == null
+              ? null
+              : () => _openMirrorEditor(
+                    context,
+                    projectId: widget.projectId,
+                    taskId: primaryTaskId,
+                  ),
+        ),
+        IconButton(
           icon: const Icon(Icons.more_vert),
           tooltip: l10n.moreOptionsLabel,
           onPressed: () {
@@ -289,6 +304,42 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen>
           },
         ),
       ],
+    );
+  }
+
+  Future<void> _openMirrorEditor(
+    BuildContext context, {
+    required String projectId,
+    required String taskId,
+  }) async {
+    final payload = await ref
+        .read(aiChatBridgeProvider.notifier)
+        .openMirrorFromTask(
+          projectId: projectId,
+          taskId: taskId,
+          preferredMode: 'private',
+        );
+
+    if (!context.mounted) {
+      return;
+    }
+
+    if (payload == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Mirror is not available for your account.'),
+        ),
+      );
+      return;
+    }
+
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => MirrorEditorScreen(
+          projectId: payload.projectId,
+          taskId: payload.taskId,
+        ),
+      ),
     );
   }
 
