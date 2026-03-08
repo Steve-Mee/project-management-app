@@ -448,7 +448,12 @@ class EdgeFunctionBackend implements MirrorComputeBackend {
       return explicitApply;
     }
 
-    final compileEndpoint = resolveCompileEndpoint(httpEndpoint: compileHttpEndpoint);
+    final explicitCompile = compileHttpEndpoint?.trim();
+    if (explicitCompile == null || explicitCompile.isEmpty) {
+      return _defaultApplyEndpoint();
+    }
+
+    final compileEndpoint = resolveCompileEndpoint(httpEndpoint: explicitCompile);
     if (compileEndpoint.endsWith('/compile')) {
       return '${compileEndpoint.substring(0, compileEndpoint.length - '/compile'.length)}/apply';
     }
@@ -456,6 +461,11 @@ class EdgeFunctionBackend implements MirrorComputeBackend {
       return '${compileEndpoint}apply';
     }
     return '$compileEndpoint/apply';
+  }
+
+  static String _defaultApplyEndpoint() {
+    final base = _requireSupabaseBaseUrl();
+    return '$base/functions/v1/mirror_compute/apply';
   }
 
   static String _requireSupabaseBaseUrl() {

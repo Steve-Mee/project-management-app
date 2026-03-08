@@ -384,24 +384,45 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
       return;
     }
 
-    final channel = Supabase.instance.client.channel(
-      'mirror-ai-output-${widget.projectId}-${widget.taskId}-$currentUserId',
-    );
+    final topic =
+        'mirror_ai_sessions:$currentUserId:${widget.projectId}:${widget.taskId}';
+    final channel =
+        Supabase.instance.client.channel('mirror-ai-output-$topic');
 
     _aiOutputChannel = channel
-        .onPostgresChanges(
-          event: PostgresChangeEvent.all,
-          schema: 'public',
-          table: 'ai_sessions',
-          filter: PostgresChangeFilter(
-            type: PostgresChangeFilterType.eq,
-            column: 'user_id',
-            value: currentUserId,
-          ),
-          callback: (PostgresChangePayload payload) =>
-              _handleRealtimeRecord(payload.newRecord),
+        .onBroadcast(
+          event: 'ai_session_update',
+          callback: (Map<String, dynamic> payload, [String? _]) {
+            final record = _extractBroadcastRecord(payload);
+            if (record == null) {
+              return;
+            }
+            _handleRealtimeRecord(record);
+          },
         )
         .subscribe();
+  }
+
+  Map<String, dynamic>? _extractBroadcastRecord(Map<String, dynamic> payload) {
+    final directNew = payload['new'];
+    if (directNew is Map) {
+      return Map<String, dynamic>.from(directNew);
+    }
+
+    final nestedPayload = payload['payload'];
+    if (nestedPayload is Map) {
+      final nestedNew = nestedPayload['new'];
+      if (nestedNew is Map) {
+        return Map<String, dynamic>.from(nestedNew);
+      }
+    }
+
+    final record = payload['record'];
+    if (record is Map) {
+      return Map<String, dynamic>.from(record);
+    }
+
+    return null;
   }
 
   void _handleRealtimeRecord(Map<String, dynamic> record) {
