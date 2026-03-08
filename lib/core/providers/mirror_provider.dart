@@ -166,9 +166,15 @@ class MirrorNotifier extends Notifier<MirrorState> {
   }
 
   Future<void> refreshPremiumFromMetadata() async {
+    final previousPremium = state.isPremium;
     ref.invalidate(mirrorPremiumProvider);
     final isPremium = await ref.read(mirrorPremiumProvider.future);
     state = state.copyWith(isPremium: isPremium);
+
+    await _MirrorOfflineCache.invalidateOnPremiumChange(
+      previousPremium: previousPremium,
+      currentPremium: isPremium,
+    );
 
     if (!isPremium && state.mode == 'cloud') {
       ref.read(mirrorModeProvider.notifier).state = 'private';
@@ -193,13 +199,16 @@ class MirrorNotifier extends Notifier<MirrorState> {
   }
 
   Future<void> _hydrateFromCache() async {
+    final user = Supabase.instance.client.auth.currentUser;
+    final userId = user?.id ?? 'anonymous';
+
+    await _MirrorOfflineCache.invalidateOnAuthChange(currentUserId: userId);
+
     final cachedMode = await _MirrorOfflineCache.getMode();
     if (cachedMode == 'private' || cachedMode == 'cloud') {
       ref.read(mirrorModeProvider.notifier).state = cachedMode!;
     }
 
-    final user = Supabase.instance.client.auth.currentUser;
-    final userId = user?.id ?? 'anonymous';
     final cachedVariant = await _MirrorOfflineCache.getTeamModeVariant(userId);
     if (cachedVariant != null) {
       state = state.copyWith(teamModeVariant: cachedVariant);
@@ -213,36 +222,138 @@ final mirrorProvider = NotifierProvider<MirrorNotifier, MirrorState>(MirrorNotif
 
 class _MirrorOfflineCache {
   static const String _boxName = 'mirror_offline_cache';
+  static const String _schemaVersionKey = '__schema_version__';
+  static const String _authUserKey = '__auth_user_id__';
+  static const String _premiumSnapshotKey = '__premium_snapshot__';
+  static const int _schemaVersion = 2;
+  static const Duration _ttl = Duration(days: 7);
   static const String _modeKey = 'mode';
 
   static Future<Box<dynamic>> _openBox() async {
     if (Hive.isBoxOpen(_boxName)) {
-      return Hive.box<dynamic>(_boxName);
+      final box = Hive.box<dynamic>(_boxName);
+      await _ensureSchema(box);
+      return box;
     }
-    return Hive.openBox<dynamic>(_boxName);
+    final box = await Hive.openBox<dynamic>(_boxName);
+    await _ensureSchema(box);
+    return box;
+  }
+
+  static Future<void> _ensureSchema(Box<dynamic> box) async {
+    final version = box.get(_schemaVersionKey);
+    if (version is int && version == _schemaVersion) {
+      return;
+    }
+
+    await box.clear();
+    await box.put(_schemaVersionKey, _schemaVersion);
   }
 
   static Future<void> saveMode(String mode) async {
     final box = await _openBox();
-    await box.put(_modeKey, mode);
+    await box.put(_modeKey, _CacheEnvelope.wrap(mode));
   }
 
   static Future<String?> getMode() async {
     final box = await _openBox();
-    final value = box.get(_modeKey);
-    return value is String ? value : null;
+    final value = _CacheEnvelope.unwrap<String>(box.get(_modeKey), ttl: _ttl);
+    if (value == null) {
+      await box.delete(_modeKey);
+    }
+    return value;
   }
 
   static String _variantKey(String userId) => 'team_mode_variant::$userId';
 
   static Future<void> saveTeamModeVariant(String userId, String variant) async {
     final box = await _openBox();
-    await box.put(_variantKey(userId), variant);
+    await box.put(_variantKey(userId), _CacheEnvelope.wrap(variant));
   }
 
   static Future<String?> getTeamModeVariant(String userId) async {
     final box = await _openBox();
-    final value = box.get(_variantKey(userId));
-    return value is String ? value : null;
+    final key = _variantKey(userId);
+    final value = _CacheEnvelope.unwrap<String>(box.get(key), ttl: _ttl);
+    if (value == null) {
+      await box.delete(key);
+    }
+    return value;
+  }
+
+  static Future<void> invalidateOnAuthChange({
+    required String currentUserId,
+  }) async {
+    final box = await _openBox();
+    final previousUserId = box.get(_authUserKey)?.toString();
+    if (previousUserId == null || previousUserId == currentUserId) {
+      await box.put(_authUserKey, currentUserId);
+      return;
+    }
+
+    await _clearStateCache(box);
+    await box.put(_authUserKey, currentUserId);
+  }
+
+  static Future<void> invalidateOnPremiumChange({
+    required bool previousPremium,
+    required bool currentPremium,
+  }) async {
+    final box = await _openBox();
+    final previousSnapshot = box.get(_premiumSnapshotKey);
+    final previousCachedPremium = previousSnapshot is bool
+        ? previousSnapshot
+        : previousPremium;
+
+    if (previousCachedPremium == currentPremium) {
+      await box.put(_premiumSnapshotKey, currentPremium);
+      return;
+    }
+
+    await _clearStateCache(box);
+    await box.put(_premiumSnapshotKey, currentPremium);
+  }
+
+  static Future<void> _clearStateCache(Box<dynamic> box) async {
+    final keys = box.keys.map((key) => key.toString()).toList();
+    for (final key in keys) {
+      if (key == _schemaVersionKey ||
+          key == _authUserKey ||
+          key == _premiumSnapshotKey) {
+        continue;
+      }
+      await box.delete(key);
+    }
+  }
+}
+
+class _CacheEnvelope {
+  static Map<String, dynamic> wrap(dynamic value) {
+    return <String, dynamic>{
+      'v': value,
+      'savedAt': DateTime.now().toUtc().millisecondsSinceEpoch,
+      'schema': 1,
+    };
+  }
+
+  static T? unwrap<T>(dynamic raw, {required Duration ttl}) {
+    if (raw is Map) {
+      final map = Map<String, dynamic>.from(raw);
+      final savedAtMs = map['savedAt'];
+      final value = map['v'];
+      final savedAt = savedAtMs is int
+          ? DateTime.fromMillisecondsSinceEpoch(savedAtMs, isUtc: true)
+          : null;
+      if (savedAt == null) {
+        return null;
+      }
+      final expired = DateTime.now().toUtc().difference(savedAt) > ttl;
+      if (expired) {
+        return null;
+      }
+      return value is T ? value : null;
+    }
+
+    return raw is T ? raw : null;
   }
 }
