@@ -1,0 +1,21 @@
+version: "3.9"
+
+services:
+  mirror-local-runner:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: mirror-local-runner
+    ports:
+      - "50051:50051"
+    environment:
+      PORT: "50051"
+      MIRROR_WORKSPACE_ROOT: "/tmp/mirror-local-workspaces"
+      ARTIFACT_BASE_URL: "http://127.0.0.1:50051/artifacts"
+      SIGNED_URL_SECRET: "local-dev-secret"
+    volumes:
+      - mirror_local_workspace:/tmp/mirror-local-workspaces
+    restart: unless-stopped
+
+volumes:
+  mirror_local_workspace:
