@@ -143,3 +143,28 @@ CREATE TABLE IF NOT EXISTS ai_sessions (
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
+
+-- Mirror staging storage bucket
+-- Dashboard note:
+-- 1) Supabase Dashboard > Storage: verify bucket `mirror_staging` exists and is private.
+-- 2) If the bucket already exists from Dashboard/manual setup, keep this INSERT idempotent via ON CONFLICT.
+INSERT INTO storage.buckets (id, name, public)
+VALUES ('mirror_staging', 'mirror_staging', false)
+ON CONFLICT (id) DO NOTHING;
+
+-- Storage RLS policies for per-user folder access: {user_id}/...
+-- Upload: authenticated users can write only into their own top-level folder.
+CREATE POLICY "mirror_staging_upload_own_folder" ON storage.objects
+FOR INSERT TO authenticated
+WITH CHECK (
+  bucket_id = 'mirror_staging'
+  AND storage.foldername(name)[1] = auth.uid()::text
+);
+
+-- Download: authenticated users can read only from their own top-level folder.
+CREATE POLICY "mirror_staging_download_own_folder" ON storage.objects
+FOR SELECT TO authenticated
+USING (
+  bucket_id = 'mirror_staging'
+  AND storage.foldername(name)[1] = auth.uid()::text
+);
