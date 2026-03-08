@@ -131,3 +131,15 @@ CREATE INDEX IF NOT EXISTS idx_ai_usage_user_id ON ai_usage(user_id);
 CREATE INDEX IF NOT EXISTS idx_feature_flags_key ON feature_flags(key);
 CREATE INDEX IF NOT EXISTS idx_feature_flags_enabled ON feature_flags(enabled);
 CREATE INDEX IF NOT EXISTS idx_feature_flags_updated_at ON feature_flags(updated_at DESC);
+
+CREATE TABLE IF NOT EXISTS ai_sessions (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+  project_id TEXT,
+  task_id TEXT,
+  mode TEXT CHECK (mode IN ('private', 'cloud')),
+  status TEXT CHECK (status IN ('pending', 'processing', 'completed', 'failed')),
+  versions JSONB DEFAULT '[]'::jsonb,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);

@@ -265,3 +265,10 @@ FOR INSERT WITH CHECK (auth.uid() = user_id);
 CREATE POLICY "ai_usage_update_policy" ON ai_usage
 FOR UPDATE USING (auth.uid() = user_id)
 WITH CHECK (auth.uid() = user_id);
+
+ALTER TABLE ai_sessions ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "ai_sessions_owner_policy" ON ai_sessions
+FOR ALL TO authenticated
+USING (auth.uid() = user_id)
+WITH CHECK (auth.uid() = user_id);
