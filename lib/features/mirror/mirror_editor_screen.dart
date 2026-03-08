@@ -28,6 +28,7 @@ class MirrorEditorScreen extends ConsumerStatefulWidget {
 
 class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
   static const int _maxLiveOutputLines = 500;
+  static const Duration _realtimeDebounceDuration = Duration(milliseconds: 300);
 
   late String _selectedMode;
   late final Terminal _terminal;
@@ -36,6 +37,8 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
   final ScrollController _liveOutputScrollController = ScrollController();
   RealtimeChannel? _aiOutputChannel;
   StreamSubscription<Map<String, dynamic>>? _debugRealtimeSubscription;
+  Timer? _realtimeDebounceTimer;
+  final List<String> _pendingRealtimeLines = <String>[];
   bool _isListening = false;
 
   String get _sessionKey => '${widget.projectId}::${widget.taskId}';
@@ -73,6 +76,7 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
       Supabase.instance.client.removeChannel(_aiOutputChannel!);
     }
     _debugRealtimeSubscription?.cancel();
+    _realtimeDebounceTimer?.cancel();
     _liveOutputScrollController.dispose();
     super.dispose();
   }
@@ -375,8 +379,13 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
   }
 
   void _subscribeToLiveOutput() {
+    final currentUserId = Supabase.instance.client.auth.currentUser?.id;
+    if (currentUserId == null || currentUserId.isEmpty) {
+      return;
+    }
+
     final channel = Supabase.instance.client.channel(
-      'mirror-ai-output-${widget.projectId}-${widget.taskId}',
+      'mirror-ai-output-${widget.projectId}-${widget.taskId}-$currentUserId',
     );
 
     _aiOutputChannel = channel
@@ -396,13 +405,7 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
   }
 
   void _handleRealtimeRecord(Map<String, dynamic> record) {
-    final recordProjectId = record['project_id']?.toString();
-    if (recordProjectId != null && recordProjectId != widget.projectId) {
-      return;
-    }
-
-    final recordTaskId = record['task_id']?.toString();
-    if (recordTaskId != null && recordTaskId != widget.taskId) {
+    if (!_isRecordInRealtimeScope(record)) {
       return;
     }
 
@@ -411,10 +414,37 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
       return;
     }
 
-    _sessionNotifier.appendLiveOutput(outputLines,
-        maxLines: _maxLiveOutputLines);
-    _appendTerminalLine(
-        'Realtime output ontvangen (${outputLines.length} regels).');
+    _pendingRealtimeLines.addAll(outputLines);
+    _realtimeDebounceTimer?.cancel();
+    _realtimeDebounceTimer =
+        Timer(_realtimeDebounceDuration, _flushDebouncedRealtimeOutput);
+  }
+
+  bool _isRecordInRealtimeScope(Map<String, dynamic> record) {
+    final currentUserId = Supabase.instance.client.auth.currentUser?.id;
+    if (currentUserId == null || currentUserId.isEmpty) {
+      return false;
+    }
+
+    final recordTaskId = record['task_id']?.toString();
+    final recordProjectId = record['project_id']?.toString();
+    final recordUserId = record['user_id']?.toString();
+
+    return recordTaskId == widget.taskId &&
+        recordProjectId == widget.projectId &&
+        recordUserId == currentUserId;
+  }
+
+  void _flushDebouncedRealtimeOutput() {
+    if (!mounted || _pendingRealtimeLines.isEmpty) {
+      return;
+    }
+
+    final flushedLines = List<String>.from(_pendingRealtimeLines);
+    _pendingRealtimeLines.clear();
+
+    _sessionNotifier.appendLiveOutput(flushedLines, maxLines: _maxLiveOutputLines);
+    _appendTerminalLine('Realtime output ontvangen (${flushedLines.length} regels).');
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!_liveOutputScrollController.hasClients) {
