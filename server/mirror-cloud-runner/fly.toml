@@ -1,0 +1,26 @@
+app = "mirror-cloud-runner"
+primary_region = "ams"
+
+[build]
+  dockerfile = "Dockerfile"
+
+[env]
+  PORT = "8080"
+  MIRROR_WORKSPACE_ROOT = "/tmp/mirror-workspaces"
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+  auto_stop_machines = "off"
+  auto_start_machines = true
+  min_machines_running = 1
+  processes = ["app"]
+
+[[vm]]
+  memory = "2gb"
+  cpu_kind = "shared"
+  cpus = 2
+
+[mounts]
+  source = "mirror_data"
+  destination = "/tmp/mirror-workspaces"
