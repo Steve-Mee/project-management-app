@@ -3,6 +3,7 @@ import 'dart:typed_data';
 
 import 'package:crypto/crypto.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+import 'package:pma_core/repository/encrypted_hive_box.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class ProjectContext {
@@ -159,7 +160,8 @@ extension MirrorPatchTools on MirrorComputeBackend {
               path: path,
               originalContent: original,
               updatedContent: updated,
-              diff: _buildUnifiedDiff(path: path, before: original, after: updated),
+              diff: _buildUnifiedDiff(
+                  path: path, before: original, after: updated),
             ),
           );
         }
@@ -173,8 +175,7 @@ extension MirrorPatchTools on MirrorComputeBackend {
           }
           final normalized = Map<String, dynamic>.from(item);
           final path = normalized['path']?.toString();
-          final updated =
-              normalized['updatedContent']?.toString() ??
+          final updated = normalized['updatedContent']?.toString() ??
               normalized['content']?.toString();
           if (path == null || path.isEmpty || updated == null) {
             continue;
@@ -195,7 +196,8 @@ extension MirrorPatchTools on MirrorComputeBackend {
               path: path,
               originalContent: original,
               updatedContent: updated,
-              diff: _buildUnifiedDiff(path: path, before: original, after: updated),
+              diff: _buildUnifiedDiff(
+                  path: path, before: original, after: updated),
             ),
           );
         }
@@ -221,7 +223,8 @@ extension MirrorPatchTools on MirrorComputeBackend {
         path: targetPath,
         originalContent: original,
         updatedContent: output,
-        diff: _buildUnifiedDiff(path: targetPath, before: original, after: output),
+        diff: _buildUnifiedDiff(
+            path: targetPath, before: original, after: output),
       ),
     ];
   }
@@ -315,7 +318,8 @@ extension MirrorApplySecurity on MirrorComputeBackend {
             filePath: '*',
             code: ApplyUploadFailureCode.authUserMissing,
             stage: 'auth-user',
-            error: 'Authenticated user is required for owner-scoped storage paths.',
+            error:
+                'Authenticated user is required for owner-scoped storage paths.',
           ),
         ],
       );
@@ -419,7 +423,7 @@ extension MirrorApplySecurity on MirrorComputeBackend {
     required ProjectContext context,
     required String mode,
     required Future<ApplyResult> Function(ApplySecurityArtifacts artifacts)
-    onApply,
+        onApply,
     Duration signedUrlTtl = const Duration(minutes: 30),
     String signedInputBucket = 'mirror-signed-inputs',
     String backupBucket = 'mirror-backups',
@@ -571,7 +575,8 @@ extension MirrorPromptBuilder on MirrorComputeBackend {
       ..writeln('- Return deterministic output when possible.')
       ..writeln('- Prefer minimal edits and include only necessary changes.')
       ..writeln('- Mention assumptions if critical information is missing.')
-      ..writeln('- If Team Mode is enabled: follow Architect -> Coder -> Reviewer flow.');
+      ..writeln(
+          '- If Team Mode is enabled: follow Architect -> Coder -> Reviewer flow.');
 
     final full = buffer.toString();
     return _truncate(full, maxTotalChars);
@@ -613,10 +618,10 @@ Future<void> _uploadReplaceBinary({
   required List<int> bytes,
 }) async {
   await client.storage.from(bucket).uploadBinary(
-    path,
-    Uint8List.fromList(bytes),
-    fileOptions: const FileOptions(upsert: true),
-  );
+        path,
+        Uint8List.fromList(bytes),
+        fileOptions: const FileOptions(upsert: true),
+      );
 }
 
 Future<Box<dynamic>> _openApplyHistoryBox() async {
@@ -624,7 +629,15 @@ Future<Box<dynamic>> _openApplyHistoryBox() async {
   if (Hive.isBoxOpen(boxName)) {
     return Hive.box<dynamic>(boxName);
   }
-  return Hive.openBox<dynamic>(boxName);
+
+  try {
+    return EncryptedHiveBox<dynamic>(
+      boxName: boxName,
+      encryptionKey: 'hive_encryption_key_mirror_apply_history',
+    ).open();
+  } catch (_) {
+    return Hive.openBox<dynamic>(boxName);
+  }
 }
 
 Future<Box<dynamic>> _openApplyAuditBox() async {
@@ -632,7 +645,15 @@ Future<Box<dynamic>> _openApplyAuditBox() async {
   if (Hive.isBoxOpen(boxName)) {
     return Hive.box<dynamic>(boxName);
   }
-  return Hive.openBox<dynamic>(boxName);
+
+  try {
+    return EncryptedHiveBox<dynamic>(
+      boxName: boxName,
+      encryptionKey: 'hive_encryption_key_mirror_apply_audit',
+    ).open();
+  } catch (_) {
+    return Hive.openBox<dynamic>(boxName);
+  }
 }
 
 Future<void> _writeApplyAuditEvent({
@@ -759,7 +780,8 @@ String _buildUnifiedDiff({
 }
 
 bool _isTeamModeEnabled(Map<String, dynamic> metadata) {
-  final value = metadata['teamMode'] ?? metadata['team_mode'] ?? metadata['multiAgent'];
+  final value =
+      metadata['teamMode'] ?? metadata['team_mode'] ?? metadata['multiAgent'];
   if (value is bool) {
     return value;
   }
@@ -783,9 +805,11 @@ String _buildTeamModeSection(Map<String, dynamic> metadata) {
     ..writeln('Active roles: ${roles.join(', ')}')
     ..writeln()
     ..writeln('Orchestration protocol:')
-    ..writeln('1. Architect: define implementation plan, constraints, and risk list.')
+    ..writeln(
+        '1. Architect: define implementation plan, constraints, and risk list.')
     ..writeln('2. Coder: implement the planned changes in minimal safe diffs.')
-    ..writeln('3. Reviewer: validate correctness, edge cases, regressions, and missing tests.')
+    ..writeln(
+        '3. Reviewer: validate correctness, edge cases, regressions, and missing tests.')
     ..writeln()
     ..writeln('Role outputs:');
 
@@ -796,7 +820,8 @@ String _buildTeamModeSection(Map<String, dynamic> metadata) {
     buffer.writeln('- Coder: concrete code patch details.');
   }
   if (roles.contains('Reviewer')) {
-    buffer.writeln('- Reviewer: findings ordered by severity with follow-up actions.');
+    buffer.writeln(
+        '- Reviewer: findings ordered by severity with follow-up actions.');
   }
 
   final customGoal = metadata['teamGoal'] ?? metadata['team_goal'];
@@ -810,7 +835,8 @@ String _buildTeamModeSection(Map<String, dynamic> metadata) {
 }
 
 List<String> _resolveTeamRoles(Map<String, dynamic> metadata) {
-  final rawRoles = metadata['teamRoles'] ?? metadata['team_roles'] ?? metadata['agents'];
+  final rawRoles =
+      metadata['teamRoles'] ?? metadata['team_roles'] ?? metadata['agents'];
   final resolved = <String>{};
 
   if (rawRoles is Iterable) {

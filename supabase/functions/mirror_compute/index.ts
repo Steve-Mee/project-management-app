@@ -17,6 +17,10 @@ interface MirrorComputeRequest {
   projectId: string
   taskId: string
   mode: 'private' | 'cloud'
+  actorUserId?: string
+  backupId?: string
+  fileSetFingerprint?: string
+  signedInputUrls?: Record<string, string>
   files?: Record<string, string>
   metadata?: Record<string, unknown>
 }
@@ -94,6 +98,113 @@ function resolveIdempotencyKey(req: Request): string {
     return key.trim()
   }
   return crypto.randomUUID()
+}
+
+function stableStringify(value: unknown): string {
+  if (value === null || value === undefined) {
+    return ''
+  }
+
+  if (typeof value !== 'object') {
+    return String(value)
+  }
+
+  if (Array.isArray(value)) {
+    return `[${value.map((item) => stableStringify(item)).join(',')}]`
+  }
+
+  const record = value as Record<string, unknown>
+  const keys = Object.keys(record).sort()
+  return `{${keys.map((key) => `${key}:${stableStringify(record[key])}`).join(',')}}`
+}
+
+function fingerprintValue(value: unknown): string {
+  const raw = stableStringify(value)
+  let hash = 2166136261
+  for (let i = 0; i < raw.length; i += 1) {
+    hash ^= raw.charCodeAt(i)
+    hash += (hash << 1) + (hash << 4) + (hash << 7) + (hash << 8) + (hash << 24)
+  }
+
+  const normalized = (hash >>> 0).toString(16).padStart(8, '0')
+  return `fnv1a32:${normalized}`
+}
+
+function normalizeArtifactIds(request: MirrorComputeRequest): string[] {
+  const ids = new Set<string>()
+  if (request.backupId && request.backupId.trim().length > 0) {
+    ids.add(request.backupId.trim())
+  }
+  const signedInputUrls = request.signedInputUrls
+  if (signedInputUrls && typeof signedInputUrls === 'object') {
+    for (const value of Object.values(signedInputUrls)) {
+      if (typeof value === 'string' && value.trim().length > 0) {
+        ids.add(value.trim())
+      }
+    }
+  }
+  return Array.from(ids)
+}
+
+function normalizeUuidOrNull(value: string | undefined, fallback: string): string {
+  const candidate = value?.trim()
+  if (!candidate) {
+    return fallback
+  }
+
+  const uuidV4Like = /^[0-9a-fA-F-]{36}$/
+  return uuidV4Like.test(candidate) ? candidate : fallback
+}
+
+async function writeApplyAuditEvent({
+  supabase,
+  userId,
+  normalized,
+  requestId,
+  idempotencyKey,
+  event,
+  success,
+  details,
+  appliedFilesFingerprint,
+  diffFingerprint,
+}: {
+  supabase: ReturnType<typeof createClient>
+  userId: string
+  normalized: MirrorComputeRequest
+  requestId: string
+  idempotencyKey: string
+  event: 'apply_started' | 'apply_completed' | 'apply_failed'
+  success: boolean | null
+  details: Record<string, unknown>
+  appliedFilesFingerprint?: string
+  diffFingerprint?: string
+}): Promise<void> {
+  if (event !== 'apply_started' && event !== 'apply_completed' && event !== 'apply_failed') {
+    return
+  }
+
+  const payload = {
+    user_id: userId,
+    project_id: normalized.projectId,
+    task_id: normalized.taskId,
+    mode: normalized.mode,
+    event,
+    request_id: requestId,
+    idempotency_key: idempotencyKey,
+    backup_id: normalized.backupId ?? null,
+    success,
+    actor_user_id: normalizeUuidOrNull(normalized.actorUserId, userId),
+    file_set_fingerprint: normalized.fileSetFingerprint ?? null,
+    applied_files_fingerprint: appliedFilesFingerprint ?? null,
+    diff_fingerprint: diffFingerprint ?? null,
+    artifact_ids: normalizeArtifactIds(normalized),
+    details,
+  }
+
+  const { error } = await supabase.from('mirror_apply_audit_events').insert(payload)
+  if (error) {
+    console.error('mirror_compute apply audit write failed:', error.message)
+  }
 }
 
 function timeoutMs(): number {
@@ -231,6 +342,23 @@ Deno.serve(async (req: Request) => {
     }
 
     const targetUrl = resolveForwardEndpoint(normalized.mode, action)
+
+    if (action === 'apply') {
+      await writeApplyAuditEvent({
+        supabase,
+        userId: user.id,
+        normalized,
+        requestId,
+        idempotencyKey,
+        event: 'apply_started',
+        success: null,
+        details: {
+          source: 'edge_function',
+          filesCount: Object.keys(normalized.files ?? {}).length,
+        },
+      })
+    }
+
     const payload: ForwardPayload = {
       prompt: normalized.prompt,
       projectId: normalized.projectId,
@@ -262,6 +390,22 @@ Deno.serve(async (req: Request) => {
     } catch (error) {
       clearTimeout(timeout)
       if (error instanceof DOMException && error.name === 'AbortError') {
+        if (action === 'apply') {
+          await writeApplyAuditEvent({
+            supabase,
+            userId: user.id,
+            normalized,
+            requestId,
+            idempotencyKey,
+            event: 'apply_failed',
+            success: false,
+            details: {
+              code: 'timeout',
+              message: `Upstream /${action} request timed out`,
+            },
+          })
+        }
+
         return errorResponse(
           {
             code: 'timeout',
@@ -272,6 +416,23 @@ Deno.serve(async (req: Request) => {
           },
           504,
         )
+      }
+
+      if (action === 'apply') {
+        await writeApplyAuditEvent({
+          supabase,
+          userId: user.id,
+          normalized,
+          requestId,
+          idempotencyKey,
+          event: 'apply_failed',
+          success: false,
+          details: {
+            code: 'upstream_error',
+            message: `Failed to reach upstream /${action} endpoint`,
+            error: String(error),
+          },
+        })
       }
 
       return errorResponse(
@@ -293,6 +454,24 @@ Deno.serve(async (req: Request) => {
     const upstreamBody = await upstreamResponse.text()
 
     if (!upstreamResponse.ok) {
+      if (action === 'apply') {
+        await writeApplyAuditEvent({
+          supabase,
+          userId: user.id,
+          normalized,
+          requestId,
+          idempotencyKey,
+          event: 'apply_failed',
+          success: false,
+          details: {
+            code: 'upstream_error',
+            status: upstreamResponse.status,
+            body: upstreamBody,
+          },
+          diffFingerprint: fingerprintValue(upstreamBody),
+        })
+      }
+
       return errorResponse(
         {
           code: 'upstream_error',
@@ -310,6 +489,34 @@ Deno.serve(async (req: Request) => {
         },
         upstreamResponse.status,
       )
+    }
+
+    if (action === 'apply') {
+      let appliedFilesFingerprint: string | undefined
+      try {
+        const parsed = JSON.parse(upstreamBody)
+        const files = parsed?.files
+        if (files && typeof files === 'object') {
+          appliedFilesFingerprint = fingerprintValue(Object.keys(files as Record<string, unknown>).sort())
+        }
+      } catch (_) {
+        // Keep fallback fingerprint below.
+      }
+
+      await writeApplyAuditEvent({
+        supabase,
+        userId: user.id,
+        normalized,
+        requestId,
+        idempotencyKey,
+        event: 'apply_completed',
+        success: true,
+        details: {
+          status: upstreamResponse.status,
+        },
+        appliedFilesFingerprint,
+        diffFingerprint: fingerprintValue(upstreamBody),
+      })
     }
 
     return new Response(upstreamBody, {

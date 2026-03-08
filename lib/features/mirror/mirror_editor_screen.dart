@@ -55,7 +55,8 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
         return;
       }
       _appendTerminalLine('Mirror terminal ready.');
-      _appendTerminalLine('Project: ${widget.projectId} Task: ${widget.taskId}');
+      _appendTerminalLine(
+          'Project: ${widget.projectId} Task: ${widget.taskId}');
     });
     if (widget.debugRealtimeRecords != null) {
       _debugRealtimeSubscription = widget.debugRealtimeRecords!.listen(
@@ -103,7 +104,8 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
                   if (mode == 'cloud' && !isPremium) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(
-                        content: Text('Cloud mode is beschikbaar voor premium gebruikers.'),
+                        content: Text(
+                            'Cloud mode is beschikbaar voor premium gebruikers.'),
                       ),
                     );
                     return;
@@ -146,7 +148,8 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
                   ),
                   clipBehavior: Clip.antiAlias,
                   child: LayoutBuilder(
-                    builder: (BuildContext context, BoxConstraints constraints) {
+                    builder:
+                        (BuildContext context, BoxConstraints constraints) {
                       final isCompact = constraints.maxWidth < 900;
 
                       if (isCompact) {
@@ -260,8 +263,7 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
     BuildContext context,
     MirrorSessionState sessionState,
   ) {
-    final currentContent =
-        sessionState.files[sessionState.selectedFile] ?? '';
+    final currentContent = sessionState.files[sessionState.selectedFile] ?? '';
 
     return Column(
       children: <Widget>[
@@ -280,7 +282,9 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
           child: MonacoEditorHost(
             code: currentContent,
             language: _languageForFile(sessionState.selectedFile),
-            theme: Theme.of(context).brightness == Brightness.dark ? 'vs-dark' : 'vs',
+            theme: Theme.of(context).brightness == Brightness.dark
+                ? 'vs-dark'
+                : 'vs',
             onChanged: _sessionNotifier.updateSelectedFileContent,
           ),
         ),
@@ -357,7 +361,9 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
                       padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(8),
-                        color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                        color: Theme.of(context)
+                            .colorScheme
+                            .surfaceContainerHighest,
                       ),
                       child: Text(line),
                     );
@@ -380,8 +386,8 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
           table: 'ai_sessions',
           filter: PostgresChangeFilter(
             type: PostgresChangeFilterType.eq,
-            column: 'project_id',
-            value: widget.projectId,
+            column: 'task_id',
+            value: widget.taskId,
           ),
           callback: (PostgresChangePayload payload) =>
               _handleRealtimeRecord(payload.newRecord),
@@ -390,6 +396,11 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
   }
 
   void _handleRealtimeRecord(Map<String, dynamic> record) {
+    final recordProjectId = record['project_id']?.toString();
+    if (recordProjectId != null && recordProjectId != widget.projectId) {
+      return;
+    }
+
     final recordTaskId = record['task_id']?.toString();
     if (recordTaskId != null && recordTaskId != widget.taskId) {
       return;
@@ -400,8 +411,10 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
       return;
     }
 
-    _sessionNotifier.appendLiveOutput(outputLines, maxLines: _maxLiveOutputLines);
-    _appendTerminalLine('Realtime output ontvangen (${outputLines.length} regels).');
+    _sessionNotifier.appendLiveOutput(outputLines,
+        maxLines: _maxLiveOutputLines);
+    _appendTerminalLine(
+        'Realtime output ontvangen (${outputLines.length} regels).');
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!_liveOutputScrollController.hasClients) {
@@ -453,7 +466,8 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
         return;
       }
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Voice input is not available on this device.')),
+        const SnackBar(
+            content: Text('Voice input is not available on this device.')),
       );
       _appendTerminalLine('Voice input unavailable.');
       return;
@@ -475,11 +489,14 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
           final sessionState = ref.read(mirrorSessionProvider(_sessionKey));
           final selectedFile = sessionState.selectedFile;
           final existing = sessionState.files[selectedFile] ?? '';
-          final separator = existing.endsWith('\n') || existing.isEmpty ? '' : '\n';
-          _sessionNotifier.updateSelectedFileContent('$existing$separator$recognized');
+          final separator =
+              existing.endsWith('\n') || existing.isEmpty ? '' : '\n';
+          _sessionNotifier
+              .updateSelectedFileContent('$existing$separator$recognized');
         });
 
-        final selectedFile = ref.read(mirrorSessionProvider(_sessionKey)).selectedFile;
+        final selectedFile =
+            ref.read(mirrorSessionProvider(_sessionKey)).selectedFile;
         _appendTerminalLine('Voice appended to $selectedFile');
 
         if (result.finalResult) {
@@ -497,7 +514,8 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
   }
 
   void _runCurrentFileInTerminal() {
-    final selectedFile = ref.read(mirrorSessionProvider(_sessionKey)).selectedFile;
+    final selectedFile =
+        ref.read(mirrorSessionProvider(_sessionKey)).selectedFile;
     _appendTerminalLine('\$ run $selectedFile');
     _appendTerminalLine('Execution stub completed for $selectedFile');
   }
@@ -580,10 +598,12 @@ class _ModeSelector extends StatelessWidget {
                     const SizedBox(width: 8),
                     if (!isPremium)
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 2),
                         decoration: BoxDecoration(
                           borderRadius: BorderRadius.circular(999),
-                          color: Theme.of(context).colorScheme.secondaryContainer,
+                          color:
+                              Theme.of(context).colorScheme.secondaryContainer,
                         ),
                         child: Text(
                           'Premium',

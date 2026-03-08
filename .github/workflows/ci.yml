@@ -45,11 +45,20 @@ jobs:
       - name: Run Mirror edge contract test
         run: flutter test test/features/mirror/edge_function_contract_test.dart
 
+      - name: Run Mirror Monaco host contract test
+        run: flutter test test/features/mirror/monaco_host_contract_test.dart
+
       - name: Validate Mirror storage SQL contract test
         run: |
           test -f test/supabase/mirror_storage_rls_contract_test.sql
           grep -q "mirror_signed_inputs_insert_own" test/supabase/mirror_storage_rls_contract_test.sql
           grep -q "storage.foldername(name)\[1\] = auth.uid()::text" test/supabase/mirror_storage_rls_contract_test.sql
+
+      - name: Validate Mirror audit+retention migration
+        run: |
+          test -f supabase/migrations/20260308_mirror_audit_and_ai_sessions_retention.sql
+          grep -q "CREATE TABLE IF NOT EXISTS public.mirror_apply_audit_events" supabase/migrations/20260308_mirror_audit_and_ai_sessions_retention.sql
+          grep -q "cleanup_ai_sessions_retention" supabase/migrations/20260308_mirror_audit_and_ai_sessions_retention.sql
 
       - name: Execute Mirror storage SQL contract test (optional)
         run: |

@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:crypto/crypto.dart';
 import 'package:http/http.dart' as http;
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -160,6 +161,8 @@ class EdgeFunctionBackend implements MirrorComputeBackend {
           ? const <String, dynamic>{}
           : <String, dynamic>{
               'backupId': artifacts.backupId,
+              'fileSetFingerprint': _fingerprintFileMap(context.files),
+              'actorUserId': _client?.auth.currentUser?.id,
               'signedInputUrls': artifacts.signedInputUrls,
             },
     );
@@ -481,4 +484,17 @@ class _RawEdgeResult {
   final bool success;
   final String? body;
   final List<String> errors;
+}
+
+String _fingerprintFileMap(Map<String, String> files) {
+  final paths = files.keys.toList()..sort();
+  final buffer = StringBuffer();
+  for (final path in paths) {
+    buffer
+      ..write(path)
+      ..write(':')
+      ..write(files[path] ?? '')
+      ..write('\n');
+  }
+  return sha256.convert(utf8.encode(buffer.toString())).toString();
 }

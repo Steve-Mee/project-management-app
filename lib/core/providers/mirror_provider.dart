@@ -4,6 +4,8 @@ import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+import 'package:pma_core/repository/encrypted_hive_box.dart';
+import 'package:pma_core/services/mirror_access_policy.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../ab_testing_service.dart';
@@ -32,7 +34,8 @@ class MirrorState {
   final String? offlineWarning;
 
   bool get isTeamMode => teamModeVariant == 'team';
-  bool get hasOfflineWarning => offlineWarning != null && offlineWarning!.isNotEmpty;
+  bool get hasOfflineWarning =>
+      offlineWarning != null && offlineWarning!.isNotEmpty;
 
   MirrorState copyWith({
     String? mode,
@@ -45,9 +48,8 @@ class MirrorState {
       mode: mode ?? this.mode,
       isPremium: isPremium ?? this.isPremium,
       teamModeVariant: teamModeVariant ?? this.teamModeVariant,
-      offlineWarning: clearOfflineWarning
-          ? null
-          : (offlineWarning ?? this.offlineWarning),
+      offlineWarning:
+          clearOfflineWarning ? null : (offlineWarning ?? this.offlineWarning),
     );
   }
 }
@@ -71,13 +73,11 @@ final mirrorTeamModeVariantProvider = FutureProvider<String>((ref) async {
   final userId = user?.id ?? 'anonymous';
 
   try {
-    final variant = await ABTestingService.instance
-        .assignVariant(
-          experimentKey: 'mirror_team_mode',
-          userId: userId,
-          variants: const <String>['solo', 'team'],
-        )
-        .timeout(const Duration(seconds: 3));
+    final variant = await ABTestingService.instance.assignVariant(
+      experimentKey: 'mirror_team_mode',
+      userId: userId,
+      variants: const <String>['solo', 'team'],
+    ).timeout(const Duration(seconds: 3));
 
     await _MirrorOfflineCache.saveTeamModeVariant(userId, variant);
     warningNotifier.state = null;
@@ -97,19 +97,25 @@ final mirrorTeamModeVariantProvider = FutureProvider<String>((ref) async {
 });
 
 final mirrorTeamModeEnabledProvider = Provider<bool>((ref) {
-  final variant = ref.watch(mirrorTeamModeVariantProvider).valueOrNull ?? 'solo';
+  final variant =
+      ref.watch(mirrorTeamModeVariantProvider).valueOrNull ?? 'solo';
   return variant == 'team';
 });
 
 final mirrorBackendProvider = FutureProvider<MirrorComputeBackend>((ref) async {
   final mode = ref.watch(mirrorModeProvider);
   final isPremium = await ref.watch(mirrorPremiumProvider.future);
+  const policy = MirrorAccessPolicy();
+  final decision = policy.resolveRequestedMode(
+    requestedMode: mode,
+    isPremium: isPremium,
+  );
 
-  if (mode == 'cloud' && isPremium) {
+  if (decision.effectiveMode == 'cloud' && isPremium) {
     return CloudFlyBackend();
   }
 
-  if (mode == 'cloud' && !isPremium) {
+  if (decision.effectiveMode == 'cloud' && !isPremium) {
     return EdgeFunctionBackend();
   }
 
@@ -140,29 +146,21 @@ class MirrorNotifier extends Notifier<MirrorState> {
   }
 
   Future<void> setMode(String mode) async {
-    if (mode != 'private' && mode != 'cloud') {
-      return;
-    }
+    final hasPremium = await ref.read(mirrorPremiumProvider.future);
+    const policy = MirrorAccessPolicy();
+    final decision = policy.resolveRequestedMode(
+      requestedMode: mode,
+      isPremium: hasPremium,
+    );
 
-    if (mode == 'cloud') {
-      final hasPremium = await ref.read(mirrorPremiumProvider.future);
-      if (!hasPremium) {
-        ref.read(mirrorModeProvider.notifier).state = 'private';
-        ref.read(mirrorOfflineWarningProvider.notifier).state =
-            'Cloud mode requires an active Stripe premium subscription.';
-        state = state.copyWith(
-          mode: 'private',
-          isPremium: false,
-          offlineWarning:
-              'Cloud mode requires an active Stripe premium subscription.',
-        );
-        return;
-      }
-    }
-
-    ref.read(mirrorModeProvider.notifier).state = mode;
-    state = state.copyWith(mode: mode);
-    unawaited(_MirrorOfflineCache.saveMode(mode));
+    ref.read(mirrorModeProvider.notifier).state = decision.effectiveMode;
+    ref.read(mirrorOfflineWarningProvider.notifier).state = decision.warning;
+    state = state.copyWith(
+      mode: decision.effectiveMode,
+      isPremium: hasPremium,
+      offlineWarning: decision.warning,
+    );
+    unawaited(_MirrorOfflineCache.saveMode(decision.effectiveMode));
   }
 
   Future<void> refreshPremiumFromMetadata() async {
@@ -189,7 +187,8 @@ class MirrorNotifier extends Notifier<MirrorState> {
 
   Future<void> refreshTeamModeVariant() async {
     ref.invalidate(mirrorTeamModeVariantProvider);
-    final teamModeVariant = await ref.read(mirrorTeamModeVariantProvider.future);
+    final teamModeVariant =
+        await ref.read(mirrorTeamModeVariantProvider.future);
     state = state.copyWith(teamModeVariant: teamModeVariant);
   }
 
@@ -218,16 +217,19 @@ class MirrorNotifier extends Notifier<MirrorState> {
   }
 }
 
-final mirrorProvider = NotifierProvider<MirrorNotifier, MirrorState>(MirrorNotifier.new);
+final mirrorProvider =
+    NotifierProvider<MirrorNotifier, MirrorState>(MirrorNotifier.new);
 
 class _MirrorOfflineCache {
   static const String _boxName = 'mirror_offline_cache';
   static const String _schemaVersionKey = '__schema_version__';
   static const String _authUserKey = '__auth_user_id__';
   static const String _premiumSnapshotKey = '__premium_snapshot__';
-  static const int _schemaVersion = 2;
+  static const int _schemaVersion = 3;
   static const Duration _ttl = Duration(days: 7);
   static const String _modeKey = 'mode';
+  static const String _encryptionKeyName =
+      'hive_encryption_key_mirror_offline_cache';
 
   static Future<Box<dynamic>> _openBox() async {
     if (Hive.isBoxOpen(_boxName)) {
@@ -235,7 +237,17 @@ class _MirrorOfflineCache {
       await _ensureSchema(box);
       return box;
     }
-    final box = await Hive.openBox<dynamic>(_boxName);
+
+    late final Box<dynamic> box;
+    try {
+      box = await EncryptedHiveBox<dynamic>(
+        boxName: _boxName,
+        encryptionKey: _encryptionKeyName,
+      ).open();
+    } catch (_) {
+      box = await Hive.openBox<dynamic>(_boxName);
+    }
+
     await _ensureSchema(box);
     return box;
   }
@@ -301,9 +313,8 @@ class _MirrorOfflineCache {
   }) async {
     final box = await _openBox();
     final previousSnapshot = box.get(_premiumSnapshotKey);
-    final previousCachedPremium = previousSnapshot is bool
-        ? previousSnapshot
-        : previousPremium;
+    final previousCachedPremium =
+        previousSnapshot is bool ? previousSnapshot : previousPremium;
 
     if (previousCachedPremium == currentPremium) {
       await box.put(_premiumSnapshotKey, currentPremium);

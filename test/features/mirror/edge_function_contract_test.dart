@@ -21,6 +21,10 @@ void main() {
       expect(source, contains("if (!action)"));
       expect(source, contains("missing_endpoint_env:"));
       expect(source, contains("code: 'config_error'"));
+      expect(source, contains("mirror_apply_audit_events"));
+      expect(source, contains("writeApplyAuditEvent"));
+      expect(source, contains("fileSetFingerprint"));
+      expect(source, contains("diff_fingerprint"));
     });
 
     test(

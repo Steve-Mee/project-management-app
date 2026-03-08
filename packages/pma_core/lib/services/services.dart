@@ -9,6 +9,7 @@ export 'ai_planning_service.dart';
 export 'app_logger.dart';
 export 'cloud_sync_service.dart';
 export 'login_rate_limiter.dart';
+export 'mirror_access_policy.dart';
 export 'notification_service.dart';
 export 'payment_backend_service.dart';
 export 'payment_service.dart';

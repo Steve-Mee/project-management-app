@@ -18,6 +18,10 @@ Storage contract:
 - `<auth.uid>/<projectId>/<taskId>/<backupId>/(input|backup)/<filePath>`
 - RLS policies enforce `storage.foldername(name)[1] = auth.uid()::text`
 
+Apply audit contract:
+- Backend apply events are written to `public.mirror_apply_audit_events`
+- Required fields include actor (`actor_user_id`), artifact ids (`artifact_ids`/`backup_id`), and fingerprints (`file_set_fingerprint`, `applied_files_fingerprint`, `diff_fingerprint`)
+
 ## Required Environment Variables
 Edge Function:
 - `SUPABASE_URL`
@@ -70,6 +74,13 @@ Run in SQL editor (service role) when validating policies:
 1. Ensure both buckets exist and are private.
 2. Ensure policy set exists for insert/select/update/delete on both buckets.
 3. Ensure each policy includes owner-folder check using `storage.foldername(name)[1]`.
+
+## Session Retention Verification
+Run in SQL editor (service role):
+1. Confirm function `public.cleanup_ai_sessions_retention(integer, integer)` exists.
+2. Dry-run retention trim in staging and inspect counts:
+- `select * from public.cleanup_ai_sessions_retention(30, 50);`
+3. Confirm cron job `mirror_ai_sessions_retention_daily` exists when `pg_cron` is enabled.
 
 ## Key Rotation Procedure
 1. Generate new JWT key and assign a new `kid`.
