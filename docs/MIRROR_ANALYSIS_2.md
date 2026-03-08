@@ -90,41 +90,41 @@
 ### 3. Concrete aanbevelingen
 - Wijzigingen (met exacte bestandsnamen en wat te veranderen)
   - `lib/features/mirror/mirror_compute_backend.dart`
-    - Pas uploadpad aan naar owner-scoped prefix zodat het matcht met RLS (bijv. `${auth.uid}/${projectId}/${taskId}/...`) of maak padstrategie centraal configureerbaar.
-    - Voeg expliciete error-codes toe in `ApplyUploadFailure` (enum/typed) i.p.v. alleen vrije tekst.
+    - DONE: Pas uploadpad aan naar owner-scoped prefix zodat het matcht met RLS (bijv. `${auth.uid}/${projectId}/${taskId}/...`) of maak padstrategie centraal configureerbaar.
+    - DONE: Voeg expliciete error-codes toe in `ApplyUploadFailure` (enum/typed) i.p.v. alleen vrije tekst.
   - `supabase/migrations/20260308_mirror_storage_hardening.sql`
-    - Align RLS policy met daadwerkelijke padstructuur (of vice versa). Dit is P0.
-    - Voeg policy-tests of SQL assertions toe in migratie-validatie (CI) voor voorbeeldpaden.
+    - DONE: Align RLS policy met daadwerkelijke padstructuur (of vice versa). Dit is P0.
+    - DONE: Voeg policy-tests of SQL assertions toe in migratie-validatie (CI) voor voorbeeldpaden.
   - `supabase/functions/mirror_compute/index.ts`
-    - Voeg expliciete path-dispatch toe voor `/compile` en `/apply`, inclusief contractvalidatie per action.
-    - Voeg idempotency/request correlation velden toe aan forwarded payload en structured error body.
+    - DONE: Voeg expliciete path-dispatch toe voor `/compile` en `/apply`, inclusief contractvalidatie per action.
+    - DONE: Voeg idempotency/request correlation velden toe aan forwarded payload en structured error body.
   - `lib/features/mirror/edge_function_backend.dart`
-    - Synchroniseer endpoint-builder exact met edge-dispatch contract zodat compile/apply nooit ambigu routeert.
+    - DONE: Synchroniseer endpoint-builder exact met edge-dispatch contract zodat compile/apply nooit ambigu routeert.
   - `lib/features/mirror/mirror_editor_screen.dart`
-    - Refactor `MonacoEditor` naar een echte web-based Monaco host (desktop/web) met fallback-editor voor mobile.
-    - Verplaats zware state (files/session/output) naar providerlaag voor betere testbaarheid en lifecycle-beheer.
+    - DONE: Refactor `MonacoEditor` naar een echte web-based Monaco host (desktop/web) met fallback-editor voor mobile.
+    - DONE: Verplaats zware state (files/session/output) naar providerlaag voor betere testbaarheid en lifecycle-beheer.
   - `lib/core/providers/mirror_provider.dart`
-    - Introduceer TTL/versioning voor `_MirrorOfflineCache` (mode + team variant) en expliciete invalidatie na auth/premium wijzigingen.
+    - DONE: Introduceer TTL/versioning voor `_MirrorOfflineCache` (mode + team variant) en expliciete invalidatie na auth/premium wijzigingen.
   - `server/mirror-cloud-runner/lib/auth_guard.dart`
-    - Voeg ondersteuning toe voor key rotation (meerdere actieve signing secrets / kid mapping).
-    - Log auth failures met veilige reason codes (zonder token details) en request correlation.
+    - DONE: Voeg ondersteuning toe voor key rotation (meerdere actieve signing secrets / kid mapping).
+    - DONE: Log auth failures met veilige reason codes (zonder token details) en request correlation.
 
 - Toevoegingen (nieuwe bestanden/features met korte beschrijving)
   - `test/supabase/mirror_storage_rls_contract_test.sql` (of CI script)
-    - Contracttests die owner/non-owner padtoegang verifiëren voor `mirror-signed-inputs` en `mirror-backups`.
+    - DONE: Contracttests die owner/non-owner padtoegang verifiëren voor `mirror-signed-inputs` en `mirror-backups`.
   - `test/features/mirror/edge_function_contract_test.dart`
-    - End-to-end contracttests voor `/compile` en `/apply` payload/response/error mapping.
+    - DONE: End-to-end contracttests voor `/compile` en `/apply` payload/response/error mapping.
   - `server/mirror-cloud-runner/lib/auth_metrics.dart`
-    - Lichte metrics + counters voor auth denied reasons, compile latencies, failure categories.
+    - DONE: Lichte metrics + counters voor auth denied reasons, compile latencies, failure categories.
   - `docs/mirror-ops-runbook.md`
-    - Production runbook (secrets rotatie, rollback procedure, storage cleanup verificatie, alerting).
+    - DONE: Production runbook (secrets rotatie, rollback procedure, storage cleanup verificatie, alerting).
   - `lib/features/mirror/providers/mirror_session_provider.dart`
-    - Session state/provider voor editorfiles/output/terminal events ter vervanging van screen-local state.
+    - DONE: Session state/provider voor editorfiles/output/terminal events ter vervanging van screen-local state.
 
 - Verwijderingen (wat weg kan en waarom)
   - `lib/features/projects/project_details_widget.dart`
-    - Verwijderen of deprecaten als de hoofdflow via `lib/features/project/project_detail_screen.dart` leidend is; voorkomt dubbele integratiepaden.
+    - DONE: Verwijderen of deprecaten als de hoofdflow via `lib/features/project/project_detail_screen.dart` leidend is; voorkomt dubbele integratiepaden.
   - `lib/features/tasks/task_card.dart`
-    - Verwijderen of reduceren naar gedeelde component als `ExpandableTaskCard` de primaire taak-UI is.
+    - DONE: Verwijderen of reduceren naar gedeelde component als `ExpandableTaskCard` de primaire taak-UI is.
   - Overmatige default endpoint fallbacks in runtime paths (waar nog aanwezig)
-    - Voor productie alleen fail-fast of expliciete environment wiring om config drift te voorkomen.
+    - DONE: Voor productie alleen fail-fast of expliciete environment wiring om config drift te voorkomen.
