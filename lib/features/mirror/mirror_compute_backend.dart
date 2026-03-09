@@ -301,8 +301,10 @@ extension MirrorPatchTools on MirrorComputeBackend {
       'backend': backend,
       'prompt': _truncate(prompt, 1000),
       'backupId': artifacts.backupId,
-      'signedInputUrls': artifacts.signedInputUrls,
-      'backupSignedUrls': artifacts.backupSignedUrls,
+      'signedInputUrlFingerprints':
+          _fingerprintSignedUrlMap(artifacts.signedInputUrls),
+      'backupSignedUrlFingerprints':
+          _fingerprintSignedUrlMap(artifacts.backupSignedUrls),
       'appliedFiles': patches.map((patch) => patch.path).toList(),
       'patches': patches
           .map(
@@ -671,7 +673,12 @@ Future<Box<dynamic>> _openApplyHistoryBox() async {
       boxName: boxName,
       encryptionKey: 'hive_encryption_key_mirror_apply_history',
     ).open();
-  } catch (_) {
+  } catch (error) {
+    if (_failClosedOnEncryptionError) {
+      throw StateError(
+        'Encrypted apply history storage is unavailable in production: $error',
+      );
+    }
     return Hive.openBox<dynamic>(boxName);
   }
 }
@@ -687,10 +694,20 @@ Future<Box<dynamic>> _openApplyAuditBox() async {
       boxName: boxName,
       encryptionKey: 'hive_encryption_key_mirror_apply_audit',
     ).open();
-  } catch (_) {
+  } catch (error) {
+    if (_failClosedOnEncryptionError) {
+      throw StateError(
+        'Encrypted apply audit storage is unavailable in production: $error',
+      );
+    }
     return Hive.openBox<dynamic>(boxName);
   }
 }
+
+const bool _failClosedOnEncryptionError = bool.fromEnvironment(
+  'MIRROR_FAIL_CLOSED_ON_ENCRYPTION_ERROR',
+  defaultValue: bool.fromEnvironment('dart.vm.product'),
+);
 
 Future<void> _writeApplyAuditEvent({
   required String projectId,
@@ -744,6 +761,21 @@ String _fingerprintFiles(Map<String, String> files) {
       ..write('\n');
   }
   return sha256.convert(utf8.encode(buffer.toString())).toString();
+}
+
+Map<String, String> _fingerprintSignedUrlMap(Map<String, String> urls) {
+  if (urls.isEmpty) {
+    return const <String, String>{};
+  }
+
+  final sortedKeys = urls.keys.toList()..sort();
+  final fingerprints = <String, String>{};
+  for (final key in sortedKeys) {
+    final value = urls[key] ?? '';
+    final hash = sha256.convert(utf8.encode(value)).toString();
+    fingerprints[key] = hash.substring(0, 16);
+  }
+  return fingerprints;
 }
 
 String _fingerprintStrings(List<String> values) {

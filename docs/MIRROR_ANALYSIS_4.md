@@ -64,30 +64,30 @@
 
 ### 3. Concrete aanbevelingen
 - Wijzigingen (met exacte bestandsnamen en wat te veranderen)
-- `supabase/functions/mirror_compute/index.ts`: corrigeer `resolveForwardEndpoint` zodat action-consistentie wordt afgedwongen. Als endpoint op `/compile` eindigt en action `apply` is, rewrite naar `/apply` (en omgekeerd). Voeg ook expliciete deny toe bij unsupported action-path combinaties.
-- `supabase/functions/mirror_compute/index.ts`: voeg server-side permissiecheck toe voor `use_mirror` (bijv. via RPC/claim/role map) voordat forwarding gebeurt.
-- `lib/core/providers/mirror_provider.dart`: verwijder onbereikbaar pad `decision.effectiveMode == 'cloud' && !isPremium` of herstructureer policy + backendselectie in een enkele centrale beslisfunctie.
-- `lib/features/mirror/cloud_fly_backend.dart`: vervang `_defaultPremiumResolver` door injectie van `MirrorPremiumService` of hergebruik exact dezelfde entitlementbron als providerlaag.
-- `lib/features/mirror/mirror_editor_screen.dart`: vervang `_runCurrentFileInTerminal` stub door echte flow die `mirrorBackendProvider` aanroept (generate/compile/apply), status terugkoppelt naar `mirrorSessionProvider`, en fouten zichtbaar maakt in UI.
-- `lib/features/mirror/mirror_editor_screen.dart`: koppel `ApplyDialog` aan daadwerkelijke apply-actie en gebruik branche-advies + risk-ack als verplichte pre-apply stap.
-- `lib/core/providers/mirror_session_provider.dart`: initialiseer sessiebestanden vanuit project/task context (repository of staging source) in plaats van hardcoded demo files.
-- `server/mirror-cloud-runner/lib/main.dart`: maak de HTTP ingest expliciet (of documenteer en implementeer gateway) zodat edge forwarding naar `/compile` en `/apply` contractueel klopt.
-- `server/mirror-local-runner/lib/main.dart`: idem als cloud runner voor lokale parity, inclusief e2e testbare `/apply` route.
-- `lib/features/mirror/mirror_compute_backend.dart`: maak encryptie-fallback configureerbaar (`failClosedOnEncryptionError`) en standaard fail-closed in production builds.
-- `lib/features/mirror/mirror_compute_backend.dart`: sla geen volledige signed URLs op in lokale history/audit; bewaar alleen hash/identifier.
-- `README.md`: actualiseer claims over Mirror deep links en editor capabilities zodat documentatie overeenkomt met werkelijke implementatie.
+- [DONE] `supabase/functions/mirror_compute/index.ts`: `resolveForwardEndpoint` action-consistent gemaakt inclusief expliciete deny bij unsupported action-path combinaties.
+- [DONE] `supabase/functions/mirror_compute/index.ts`: server-side permissiecheck voor `use_mirror` toegevoegd.
+- [DONE] `lib/core/providers/mirror_provider.dart`: onbereikbaar pad `decision.effectiveMode == 'cloud' && !isPremium` verwijderd.
+- [DONE] `lib/features/mirror/cloud_fly_backend.dart`: duplicate premiumresolver verwijderd; entitlement via `MirrorPremiumService`.
+- [DONE] `lib/features/mirror/mirror_editor_screen.dart`: Run-stub vervangen door echte generate/compile/apply flow met statusfeedback.
+- [DONE] `lib/features/mirror/mirror_editor_screen.dart`: `ApplyDialog` gekoppeld met verplichte risk-ack pre-apply.
+- [DONE] `lib/core/providers/mirror_session_provider.dart`: sessiebestanden initialiseren vanuit echte project/task context.
+- [DONE] `server/mirror-cloud-runner/lib/main.dart`: HTTP ingest/gateway expliciet toegevoegd voor `/compile` en `/apply`.
+- [DONE] `server/mirror-local-runner/lib/main.dart`: lokale HTTP parity/gateway toegevoegd voor `/compile` en `/apply`.
+- [DONE] `lib/features/mirror/mirror_compute_backend.dart`: encryptie-fallback configureerbaar gemaakt en standaard fail-closed in productie.
+- [DONE] `lib/features/mirror/mirror_compute_backend.dart`: signed URLs niet meer raw opgeslagen; fingerprints/identifiers gebruikt.
+- [DONE] `README.md`: claims over Mirror entry points/deeplinks en capabilities geactualiseerd.
 
 - Toevoegingen (nieuwe bestanden/features met korte beschrijving)
-- `lib/features/mirror/providers/mirror_templates_provider.dart`: Riverpod provider die `mirror_templates` uit Supabase laadt, cachet en mapt naar UI-model.
-- `lib/features/mirror/services/mirror_orchestrator_service.dart`: centrale orchestrator voor generate/compile/apply, inclusief retries, telemetry, idempotency en mapping naar session state.
-- `test/features/mirror/mirror_editor_integration_test.dart`: widget/integration test die end-to-end editoractie naar backendmock valideert (generate, realtime updates, apply).
-- `test/features/mirror/mirror_security_flow_test.dart`: test voor permission- en premium-gates (no access, downgraded mode, cloud authorized).
-- `test/supabase/mirror_rls_contract.sql` of equivalent migration test: valideer RLS-cases voor `mirror_templates`, `mirror_apply_audit_events`, storage buckets en realtime topics.
-- `server/mirror-cloud-runner/lib/http_gateway.dart`: expliciete HTTP endpointlaag voor `/compile` en `/apply` die request-contract met edge function borgt.
-- `docs/mirror-production-readiness-checklist.md`: production checklist met security controls, secrets policy, runner hardening, rollout/rollback en observability KPI's.
+- [DONE] `lib/features/mirror/providers/mirror_templates_provider.dart`: Riverpod provider toegevoegd voor `mirror_templates`.
+- [DONE] `lib/features/mirror/services/mirror_orchestrator_service.dart`: centrale orchestrator toegevoegd.
+- [DONE] `test/features/mirror/mirror_editor_integration_test.dart`: integratiegerichte editor test toegevoegd.
+- [DONE] `test/features/mirror/mirror_security_flow_test.dart`: security/premium gate test toegevoegd.
+- [DONE] `test/supabase/mirror_rls_contract.sql`: RLS-contracttest toegevoegd.
+- [DONE] `server/mirror-cloud-runner/lib/http_gateway.dart`: expliciete HTTP endpointlaag toegevoegd.
+- [DONE] `docs/mirror-production-readiness-checklist.md`: production readiness checklist aanwezig.
 
 - Verwijderingen (wat weg kan en waarom)
-- `server/mirror-cloud-runner/lib/apply_service.dart`: verwijderen als ongebruikt blijft, of daadwerkelijk integreren; huidige losse aanwezigheid verhoogt complexiteit zonder runtimewaarde.
-- `server/mirror-local-runner/lib/apply_service.dart`:zelfde keuze als cloud runner om dode code en contractverwarring te vermijden.
-- `lib/features/mirror/providers/` lege map (indien geen lokale providers blijven): verwijderen om structuurruis te beperken.
-- Duplicatieve entitlementlogica in `lib/features/mirror/cloud_fly_backend.dart` (`_defaultPremiumResolver`) na centralisatie via provider/service: verwijderen om inconsistent gedrag te voorkomen.
+- [DONE] `server/mirror-cloud-runner/lib/apply_service.dart`: verwijderd (dode code opgeruimd).
+- [DONE] `server/mirror-local-runner/lib/apply_service.dart`: verwijderd (dode code opgeruimd).
+- [NVT] `lib/features/mirror/providers/` lege map verwijderen: map is niet meer leeg na toevoegen `mirror_templates_provider.dart`.
+- [DONE] duplicatieve entitlementlogica in `lib/features/mirror/cloud_fly_backend.dart` (`_defaultPremiumResolver`) verwijderd.

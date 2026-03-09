@@ -76,9 +76,18 @@ function resolveForwardEndpoint(mode: 'private' | 'cloud', action: 'compile' | '
   }
 
   const normalized = configured.replace(/\/$/, '')
-  const actionNormalized = normalized.replace(/\/(compile|apply)$/i, '')
+  const actionSuffixMatch = normalized.match(/\/(compile|apply)$/i)
+  if (actionSuffixMatch) {
+    const configuredAction = actionSuffixMatch[1]?.toLowerCase() as 'compile' | 'apply'
+    if (configuredAction !== action) {
+      throw new Error(
+        `unsupported_action_path_combination:${key}:${configuredAction}->${action}`,
+      )
+    }
+    return normalized
+  }
 
-  return `${actionNormalized}/${action}`
+  return `${normalized}/${action}`
 }
 
 async function hasUseMirrorPermission(
@@ -709,7 +718,11 @@ Deno.serve(async (req: Request) => {
       },
     })
   } catch (error) {
-    if (error instanceof Error && error.message.startsWith('missing_endpoint_env:')) {
+    if (
+      error instanceof Error &&
+      (error.message.startsWith('missing_endpoint_env:') ||
+        error.message.startsWith('unsupported_action_path_combination:'))
+    ) {
       return errorResponse(
         {
           code: 'config_error',

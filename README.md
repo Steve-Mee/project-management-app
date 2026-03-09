@@ -112,6 +112,14 @@ graph TD
 - **Repositories**: Data access abstraction
 - **Supabase/Hive**: External data sources
 
+## Mirror Runtime
+
+Mirror compute forwarding now uses action-consistent HTTP endpoints and runner parity across environments.
+
+- Supabase Edge Function forwards by action to `/compile` or `/apply`.
+- Cloud and local mirror runners expose HTTP `/compile` and `/apply` gateways backed by internal gRPC services.
+- Apply history and apply audit persistence use encrypted Hive storage, with production fail-closed behavior when encryption initialization fails.
+
 ## Modular Architecture
 
 The app now uses a modular core package (`packages/pma_core`) to separate reusable core logic from app-specific feature UI.
@@ -513,12 +521,14 @@ Mirror Editor is designed with operational safety in mind:
 - Team-mode variant can be restored from local cache when assignment service is unavailable.
 - User receives contextual warning state when fallback is active.
 
-### Deep Link Entry Points
+### In-App Entry Points
 
 - `Project Details`: direct action to open Mirror Editor with project/task context.
 - `Task Card`: direct action to open Mirror Editor from the selected task.
 
 These entry points route through a bridge provider that prepares Mirror state before navigation.
+
+External deep-link handling in `lib/main.dart` currently targets invitation acceptance (`/accept-invite`).
 
 ### Screenshots (Placeholders)
 

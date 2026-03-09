@@ -11,12 +11,10 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../ab_testing_service.dart';
 import '../services/mirror_premium_service.dart';
 import '../../features/mirror/cloud_fly_backend.dart';
-import '../../features/mirror/edge_function_backend.dart';
 import '../../features/mirror/mirror_compute_backend.dart';
 import '../../features/mirror/private_grpc_backend.dart';
 
 export '../../features/mirror/cloud_fly_backend.dart';
-export '../../features/mirror/edge_function_backend.dart';
 export '../../features/mirror/mirror_compute_backend.dart';
 export '../../features/mirror/private_grpc_backend.dart';
 
@@ -118,10 +116,6 @@ final mirrorBackendProvider = FutureProvider<MirrorComputeBackend>((ref) async {
       accessTokenProvider: () =>
           Supabase.instance.client.auth.currentSession?.accessToken,
     );
-  }
-
-  if (decision.effectiveMode == 'cloud' && !isPremium) {
-    return EdgeFunctionBackend();
   }
 
   return PrivateGrpcBackend();
@@ -235,6 +229,11 @@ class _MirrorOfflineCache {
   static const String _modeKey = 'mode';
   static const String _encryptionKeyName =
       'hive_encryption_key_mirror_offline_cache';
+  static const bool _failClosedOnEncryptionError =
+      bool.fromEnvironment(
+        'MIRROR_FAIL_CLOSED_ON_ENCRYPTION_ERROR',
+        defaultValue: bool.fromEnvironment('dart.vm.product'),
+      );
 
   static Future<Box<dynamic>> _openBox() async {
     if (Hive.isBoxOpen(_boxName)) {
@@ -249,7 +248,12 @@ class _MirrorOfflineCache {
         boxName: _boxName,
         encryptionKey: _encryptionKeyName,
       ).open();
-    } catch (_) {
+    } catch (error) {
+      if (_failClosedOnEncryptionError) {
+        throw StateError(
+          'Encrypted mirror offline cache is unavailable: $error',
+        );
+      }
       box = await Hive.openBox<dynamic>(_boxName);
     }
 
