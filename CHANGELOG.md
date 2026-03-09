@@ -1,3 +1,9 @@
+## [1.22.0](https://github.com/Steve-Mee/project-management-app/compare/v1.21.2...v1.22.0) (2026-03-09)
+
+### Features
+
+* **local-runner:** add optional auth guard and env-based secrets ([ca6872f](https://github.com/Steve-Mee/project-management-app/commit/ca6872f1d06a70af2fbb1cb1a4467ab4ac45c92f))
+
 ## [1.21.2](https://github.com/Steve-Mee/project-management-app/compare/v1.21.1...v1.21.2) (2026-03-09)
 
 ### Bug Fixes
