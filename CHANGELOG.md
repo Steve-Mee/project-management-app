@@ -1,3 +1,9 @@
+## [1.17.0](https://github.com/Steve-Mee/project-management-app/compare/v1.16.0...v1.17.0) (2026-03-09)
+
+### Features
+
+* **mirror:** initialize session from project and task context ([1865fb2](https://github.com/Steve-Mee/project-management-app/commit/1865fb2d099f7b7ae4e1d9d458e437898914682f))
+
 ## [1.16.0](https://github.com/Steve-Mee/project-management-app/compare/v1.15.0...v1.16.0) (2026-03-09)
 
 ### Features
