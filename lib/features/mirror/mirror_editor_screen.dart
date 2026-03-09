@@ -635,6 +635,7 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
     });
 
     _appendTerminalLine('Starting Mirror run for $selectedFile...');
+    _appendTerminalLine('Flow: generate -> compile -> preview -> apply');
 
     try {
       final backend = await ref.read(mirrorBackendProvider.future);
@@ -650,6 +651,7 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
         },
       );
 
+      _appendTerminalLine('Step 1/5: generate request sent...');
       final generateResult = await orchestrator.generate(
         ref: ref,
         sessionKey: _sessionKey,
@@ -664,7 +666,11 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
 
       if (!generateResult.success) {
         final errorText =
-            generateResult.message ?? generateResult.diagnostics.join(' | ');
+            _firstNonEmpty(
+                  generateResult.message,
+                  generateResult.diagnostics.join(' | '),
+                ) ??
+                'Unknown generate error.';
         _appendTerminalLine('Mirror generate failed: $errorText');
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Generate mislukt: $errorText')),
@@ -672,6 +678,14 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
         return;
       }
 
+      _appendTerminalLine('Step 1/5: generate completed.');
+      if (generateResult.diagnostics.isNotEmpty) {
+        _appendTerminalLine(
+          'Generate diagnostics: ${generateResult.diagnostics.join(' | ')}',
+        );
+      }
+
+      _appendTerminalLine('Step 2/5: compile request sent...');
       final compileResult = await orchestrator.compile(
         ref: ref,
         sessionKey: _sessionKey,
@@ -685,7 +699,8 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
       }
 
       if (!compileResult.success) {
-        final errorText = compileResult.errors.join(' | ');
+        final errorText =
+            _firstNonEmpty(compileResult.errors.join(' | '), 'Unknown compile error.')!;
         _appendTerminalLine('Mirror compile failed: $errorText');
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Compile mislukt: $errorText')),
@@ -693,11 +708,20 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
         return;
       }
 
-      final compileOutput = compileResult.output ?? '';
-      final patches = backend.buildPatchesFromApplyPayload(
+      _appendTerminalLine('Step 2/5: compile completed.');
+      if (compileResult.warnings.isNotEmpty) {
+        _appendTerminalLine(
+          'Compile warnings: ${compileResult.warnings.join(' | ')}',
+        );
+      }
+
+      _appendTerminalLine('Step 3/5: building patch preview...');
+      final patches = _buildPreviewPatches(
+        backend: backend,
         context: executionContext,
-        output: compileOutput,
-        fallbackPath: selectedFile,
+        selectedFile: selectedFile,
+        compileOutput: compileResult.output,
+        generatedCode: generateResult.code,
       );
 
       if (patches.isEmpty) {
@@ -710,11 +734,18 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
         return;
       }
 
+      _appendTerminalLine(
+        'Step 3/5: preview ready for ${patches.length} file(s).',
+      );
+
       final previewPatch = patches.firstWhere(
         (MirrorFilePatch patch) => patch.path == selectedFile,
         orElse: () => patches.first,
       );
 
+      _appendTerminalLine(
+        'Step 4/5: waiting for ApplyDialog confirmation (${previewPatch.path})...',
+      );
       final applyDecision = await ApplyDialog.show(
         context,
         title: 'Apply wijzigingen (${previewPatch.path})',
@@ -730,7 +761,7 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
       final applyApproved = applyDecision?.apply == true &&
           applyDecision?.acceptRisk == true;
       if (!applyApproved) {
-        _appendTerminalLine('Apply geannuleerd: risk acknowledgment ontbreekt.');
+        _appendTerminalLine('Step 4/5: apply cancelled by user.');
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Apply geannuleerd.'),
@@ -739,6 +770,7 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
         return;
       }
 
+      _appendTerminalLine('Step 5/5: apply request sent...');
       final applyResult = await orchestrator.apply(
         ref: ref,
         sessionKey: _sessionKey,
@@ -756,6 +788,11 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
           patches: patches,
           fallbackSelectedFile: selectedFile,
         );
+        if (applyResult.appliedFiles.isNotEmpty) {
+          _appendTerminalLine(
+            'Applied files: ${applyResult.appliedFiles.join(', ')}',
+          );
+        }
         _appendTerminalLine('Mirror run completed successfully.');
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -789,6 +826,52 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
         });
       }
     }
+  }
+
+  List<MirrorFilePatch> _buildPreviewPatches({
+    required MirrorComputeBackend backend,
+    required ProjectContext context,
+    required String selectedFile,
+    required String? compileOutput,
+    required String? generatedCode,
+  }) {
+    final normalizedCompileOutput = compileOutput?.trim() ?? '';
+
+    if (normalizedCompileOutput.isNotEmpty) {
+      final patchesFromCompile = backend.buildPatchesFromApplyPayload(
+        context: context,
+        output: normalizedCompileOutput,
+        fallbackPath: selectedFile,
+      );
+      if (patchesFromCompile.isNotEmpty) {
+        return patchesFromCompile;
+      }
+    }
+
+    final normalizedGeneratedCode = generatedCode?.trim() ?? '';
+    if (normalizedGeneratedCode.isNotEmpty) {
+      return backend.buildPatchesFromApplyPayload(
+        context: context,
+        output: normalizedGeneratedCode,
+        fallbackPath: selectedFile,
+      );
+    }
+
+    return const <MirrorFilePatch>[];
+  }
+
+  String? _firstNonEmpty(String? first, String? second) {
+    final firstValue = first?.trim();
+    if (firstValue != null && firstValue.isNotEmpty) {
+      return firstValue;
+    }
+
+    final secondValue = second?.trim();
+    if (secondValue != null && secondValue.isNotEmpty) {
+      return secondValue;
+    }
+
+    return null;
   }
 
   Future<void> _openTemplatesGallery() async {
