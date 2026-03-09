@@ -14,7 +14,13 @@ services:
       HTTP_PORT: "8080"
       MIRROR_WORKSPACE_ROOT: "/tmp/mirror-local-workspaces"
       ARTIFACT_BASE_URL: "http://localhost:8080/artifacts"
-      SIGNED_URL_SECRET: "local-dev-secret"
+      SIGNED_URL_SECRET: "${SIGNED_URL_SECRET}"
+      MIRROR_AUTH_GUARD_ENABLED: "${MIRROR_AUTH_GUARD_ENABLED:-false}"
+      MIRROR_SERVICE_TOKEN: "${MIRROR_SERVICE_TOKEN:-}"
+      MIRROR_JWT_SECRET: "${MIRROR_JWT_SECRET:-}"
+      MIRROR_JWT_KEYS_BY_KID: "${MIRROR_JWT_KEYS_BY_KID:-}"
+      MIRROR_JWT_AUDIENCE: "${MIRROR_JWT_AUDIENCE:-}"
+      MIRROR_JWT_ISSUER: "${MIRROR_JWT_ISSUER:-}"
     volumes:
       - mirror_local_workspace:/tmp/mirror-local-workspaces
     restart: unless-stopped

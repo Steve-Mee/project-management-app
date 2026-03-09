@@ -7,6 +7,7 @@ import 'package:grpc/grpc.dart';
 
 import 'http_gateway.dart';
 import '../../mirror-shared/lib/compile_runner.dart';
+import '../../mirror-cloud-runner/lib/auth_guard.dart';
 
 Future<void> main() async {
   final grpcPort = int.tryParse(Platform.environment['PORT'] ?? '') ?? 50051;
@@ -15,6 +16,19 @@ Future<void> main() async {
       Platform.environment['MIRROR_WORKSPACE_ROOT'] ?? '/tmp/mirror-local-workspaces';
   final signedUrlSecret = _requireEnv('SIGNED_URL_SECRET');
   final artifactBaseUrl = _requireEnv('ARTIFACT_BASE_URL');
+  final authGuardEnabled =
+      _isTrue(Platform.environment['MIRROR_AUTH_GUARD_ENABLED']);
+  final authGuard = authGuardEnabled
+      ? AuthGuard(
+          serviceToken: _requireEnv('MIRROR_SERVICE_TOKEN'),
+          jwtSecret: _requireEnv('MIRROR_JWT_SECRET'),
+          jwtSecretsByKid: AuthGuard.parseKidSecretMapping(
+            Platform.environment['MIRROR_JWT_KEYS_BY_KID'],
+          ),
+          requiredAudience: _optionalEnv('MIRROR_JWT_AUDIENCE'),
+          requiredIssuer: _optionalEnv('MIRROR_JWT_ISSUER'),
+        )
+      : null;
 
   await _cleanupOldWorkspaces(workspaceRoot, maxAge: const Duration(hours: 24));
   Timer.periodic(
@@ -30,6 +44,7 @@ Future<void> main() async {
         workspaceRoot: workspaceRoot,
         artifactBaseUrl: artifactBaseUrl,
         signedUrlSecret: signedUrlSecret,
+        authGuard: authGuard,
       ),
     ],
     codecRegistry: CodecRegistry(codecs: const <Codec>[GzipCodec(), IdentityCodec()]),
@@ -52,6 +67,7 @@ Future<void> main() async {
       'grpcPort': grpcPort,
       'httpPort': httpPort,
       'workspaceRoot': workspaceRoot,
+      'authGuardEnabled': authGuardEnabled,
     },
   );
 
@@ -71,6 +87,7 @@ class MirrorCompileService extends Service {
     required this.workspaceRoot,
     required this.artifactBaseUrl,
     required this.signedUrlSecret,
+    required this.authGuard,
   })
     : _artifactSigner = ArtifactSigner(
         baseUrl: artifactBaseUrl,
@@ -98,15 +115,36 @@ class MirrorCompileService extends Service {
   final String workspaceRoot;
   final String artifactBaseUrl;
   final String signedUrlSecret;
+  final AuthGuard? authGuard;
   final ArtifactSigner _artifactSigner;
 
   Future<List<int>> compile(ServiceCall call, List<int> requestBytes) async {
+    final requestId = _resolveRequestId(call.clientMetadata);
+    final verifier = authGuard;
+    if (verifier != null) {
+      final verdict = verifier.verify(
+        call.clientMetadata ?? const <String, String>{},
+      );
+      if (!verdict.authorized) {
+        _log(
+          'warn',
+          'unauthorized compile request blocked',
+          context: <String, Object?>{
+            'requestId': requestId,
+            'reasonCode': verdict.reasonCode,
+          },
+        );
+        throw GrpcError.unauthenticated('auth_denied:${verdict.reasonCode}');
+      }
+    }
+
     final requestRaw = utf8.decode(requestBytes);
     final request = CompileRequestPayload.fromJson(_tryParseJson(requestRaw));
     _log(
       'info',
       'compile request received',
       context: <String, Object?>{
+        'requestId': requestId,
         'projectId': request.projectId,
         'taskId': request.taskId,
         'mode': request.mode,
@@ -147,6 +185,7 @@ class MirrorCompileService extends Service {
       compileResult.success ? 'info' : 'error',
       'compile request completed',
       context: <String, Object?>{
+        'requestId': requestId,
         'projectId': request.projectId,
         'taskId': request.taskId,
         'success': compileResult.success,
@@ -173,6 +212,37 @@ class MirrorCompileService extends Service {
       return <String, dynamic>{'raw': value};
     }
   }
+}
+
+String _resolveRequestId(Map<String, String>? metadata) {
+  final headers = metadata ?? const <String, String>{};
+  final direct = headers['x-request-id'] ?? headers['request-id'];
+  if (direct != null && direct.trim().isNotEmpty) {
+    return direct.trim();
+  }
+
+  for (final entry in headers.entries) {
+    final key = entry.key.toLowerCase();
+    if ((key == 'x-request-id' || key == 'request-id') &&
+        entry.value.trim().isNotEmpty) {
+      return entry.value.trim();
+    }
+  }
+
+  return 'grpc-${DateTime.now().toUtc().microsecondsSinceEpoch}';
+}
+
+String? _optionalEnv(String key) {
+  final value = Platform.environment[key]?.trim();
+  if (value == null || value.isEmpty) {
+    return null;
+  }
+  return value;
+}
+
+bool _isTrue(String? value) {
+  final normalized = (value ?? '').trim().toLowerCase();
+  return normalized == '1' || normalized == 'true' || normalized == 'yes';
 }
 
 String _requireEnv(String key) {
