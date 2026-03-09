@@ -126,7 +126,7 @@ class MirrorCompileService extends Service {
     final response = CompileResponsePayload(
       success: compileResult.success,
       output: <String, dynamic>{
-        'files': Map<String, String>.from(request.files),
+        'files': Map<String, String>.from(compileResult.outputFiles),
       },
       errors: compileResult.errors,
       warnings: compileResult.warnings,
@@ -311,6 +311,7 @@ class CompileExecutionResult {
     required this.logs,
     required this.errors,
     required this.warnings,
+    required this.outputFiles,
     required this.artifactPath,
   });
 
@@ -318,6 +319,7 @@ class CompileExecutionResult {
   final List<String> logs;
   final List<String> errors;
   final List<String> warnings;
+  final Map<String, String> outputFiles;
   final String? artifactPath;
 }
 
@@ -337,6 +339,7 @@ class CompileRunner {
         logs: <String>[],
         errors: <String>['Missing projectId or taskId.'],
         warnings: <String>[],
+        outputFiles: <String, String>{},
         artifactPath: null,
       );
     }
@@ -365,6 +368,7 @@ class CompileRunner {
           logs: logs,
           errors: errors,
           warnings: warnings,
+          outputFiles: Map<String, String>.from(request.files),
           artifactPath: null,
         );
       }
@@ -425,6 +429,7 @@ class CompileRunner {
       logs: logs,
       errors: errors,
       warnings: warnings,
+      outputFiles: Map<String, String>.from(request.files),
       artifactPath: artifactPath,
     );
   }
