@@ -118,6 +118,7 @@ Mirror compute forwarding now uses action-consistent HTTP endpoints and runner p
 
 - Supabase Edge Function forwards by action to `/compile` or `/apply`.
 - Cloud and local mirror runners expose HTTP `/compile` and `/apply` gateways backed by internal gRPC services.
+- Shared gateway implementation lives in `server/mirror-shared/lib/http_gateway.dart` and is reused by both runners.
 - Apply history and apply audit persistence use encrypted Hive storage, with production fail-closed behavior when encryption initialization fails.
 
 ## Modular Architecture

@@ -57,6 +57,7 @@ The architecture in this document covers:
 - Services:
 - `server/mirror-cloud-runner/lib/main.dart`
 - `server/mirror-local-runner/lib/main.dart`
+- `server/mirror-shared/lib/http_gateway.dart`
 - Responsibilities:
 - Receive compile/apply requests
 - Resolve and compile project inputs

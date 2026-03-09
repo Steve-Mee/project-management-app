@@ -2,7 +2,8 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
-import 'http_gateway.dart';
+// ignore: avoid_relative_lib_imports
+import '../../mirror-shared/lib/http_gateway.dart';
 // ignore: avoid_relative_lib_imports
 import '../../mirror-cloud-runner/lib/auth_guard.dart';
 // ignore: avoid_relative_lib_imports
