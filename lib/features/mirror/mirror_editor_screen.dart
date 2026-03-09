@@ -920,7 +920,7 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
                         FilledButton.tonalIcon(
                           onPressed: () {
                             ref.invalidate(mirrorTemplatesProvider);
-                            ref.refresh(mirrorTemplatesProvider);
+                            final _ = ref.refresh(mirrorTemplatesProvider);
                           },
                           icon: const Icon(Icons.refresh),
                           label: Text(AppLocalizations.of(context)!.retryButton),
