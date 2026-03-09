@@ -617,14 +617,24 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
       final backend = await ref.read(mirrorBackendProvider.future);
       final orchestrator = MirrorOrchestratorService(backend: backend);
 
+      final originalFiles = Map<String, String>.from(sessionState.files);
+      final originalMetadata = <String, dynamic>{
+        'selectedFile': selectedFile,
+        'trigger': 'run_button',
+      };
+
       final executionContext = ProjectContext(
         projectId: widget.projectId,
         taskId: widget.taskId,
-        files: sessionState.files,
-        metadata: <String, dynamic>{
-          'selectedFile': selectedFile,
-          'trigger': 'run_button',
-        },
+        files: originalFiles,
+        metadata: originalMetadata,
+      );
+
+      final originalCompileContext = ProjectContext(
+        projectId: executionContext.projectId,
+        taskId: executionContext.taskId,
+        files: Map<String, String>.from(executionContext.files),
+        metadata: Map<String, dynamic>.from(executionContext.metadata),
       );
 
       _appendTerminalLine('Step 1/5: generate request sent...');
@@ -669,7 +679,6 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
         generatedCode: generateResult.code,
       );
 
-      final originalCompileContext = executionContext;
       final compileContext = generatedPatches.isEmpty
           ? originalCompileContext
           : ProjectContext(
@@ -718,7 +727,7 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
       _appendTerminalLine('Step 3/5: building patch preview...');
       final patches = _buildPreviewPatches(
         backend: backend,
-        context: compileContext,
+        context: originalCompileContext,
         selectedFile: selectedFile,
         compileOutput: compileResult.output,
         generatedCode: generateResult.code,
