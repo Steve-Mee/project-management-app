@@ -1,3 +1,9 @@
+## [1.16.0](https://github.com/Steve-Mee/project-management-app/compare/v1.15.0...v1.16.0) (2026-03-09)
+
+### Features
+
+* **mirror:** integrate templates gallery and apply risk dialog ([3b152d1](https://github.com/Steve-Mee/project-management-app/commit/3b152d1aee855621837cd2cec997bb7b125e36ae))
+
 ## [1.15.0](https://github.com/Steve-Mee/project-management-app/compare/v1.14.0...v1.15.0) (2026-03-09)
 
 ### Features
