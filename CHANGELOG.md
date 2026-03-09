@@ -1,3 +1,9 @@
+## [1.25.0](https://github.com/Steve-Mee/project-management-app/compare/v1.24.0...v1.25.0) (2026-03-09)
+
+### Features
+
+* **i18n:** replace Mirror temp extension with semantic ARB keys ([5be4bdf](https://github.com/Steve-Mee/project-management-app/commit/5be4bdfcbc628669f1023ebef4e549bc180cfa70))
+
 ## [1.24.0](https://github.com/Steve-Mee/project-management-app/compare/v1.23.1...v1.24.0) (2026-03-09)
 
 ### Features
