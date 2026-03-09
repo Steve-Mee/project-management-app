@@ -665,16 +665,17 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
         generatedCode: generateResult.code,
       );
 
+      final originalCompileContext = executionContext;
       final compileContext = generatedPatches.isEmpty
-          ? executionContext
+          ? originalCompileContext
           : ProjectContext(
-              projectId: executionContext.projectId,
-              taskId: executionContext.taskId,
+              projectId: originalCompileContext.projectId,
+              taskId: originalCompileContext.taskId,
               files: backend.applyPatchesToFiles(
-                files: executionContext.files,
+                files: originalCompileContext.files,
                 patches: generatedPatches,
               ),
-              metadata: executionContext.metadata,
+              metadata: originalCompileContext.metadata,
             );
 
       final runPrompt = _firstNonEmpty(generateResult.code, selectedContent) ??
@@ -767,13 +768,11 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
 
       _appendTerminalLine('Step 5/5: apply request sent...');
       final applyContext = ProjectContext(
-        projectId: compileContext.projectId,
-        taskId: compileContext.taskId,
-        files: backend.applyPatchesToFiles(
-          files: compileContext.files,
-          patches: patches,
-        ),
-        metadata: compileContext.metadata,
+        projectId: originalCompileContext.projectId,
+        taskId: originalCompileContext.taskId,
+        // Keep backend as source of truth: apply receives original files.
+        files: Map<String, String>.from(originalCompileContext.files),
+        metadata: originalCompileContext.metadata,
       );
       final applyResult = await orchestrator.apply(
         ref: ref,
