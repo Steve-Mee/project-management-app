@@ -27,6 +27,17 @@ import 'package:pma_core/repository/impl/hive_settings_repository.dart';
 class HiveInitializer {
   static const int _backupVersion = 1;
   static const String _backupFolderName = 'hive_backups';
+  static const List<String> _backupGenericBoxes = <String>[
+    'mirror_outbox',
+    'mirror_offline_cache',
+    'mirror_apply_history',
+    'mirror_apply_audit',
+    'mirror_signed_inputs',
+    'settings',
+    'auth',
+    'project_filters',
+    'saved_views',
+  ];
 
   /// Initialize Hive and load projects from local storage
   /// Call this in main() before running the app
@@ -90,11 +101,8 @@ class HiveInitializer {
         'projects': await _exportProjectsBox(),
         'tasks': await _exportTasksBox(),
         'project_meta': await _exportProjectMetaBox(),
-        'mirror_outbox': await _exportGenericBox('mirror_outbox'),
-        'settings': await _exportGenericBox('settings'),
-        'auth': await _exportGenericBox('auth'),
-        'project_filters': await _exportGenericBox('project_filters'),
-        'saved_views': await _exportGenericBox('saved_views'),
+        for (final boxName in _backupGenericBoxes)
+          boxName: await _exportGenericBox(boxName),
       },
     };
 
@@ -127,11 +135,24 @@ class HiveInitializer {
     await _restoreProjectsBox(boxes['projects']);
     await _restoreTasksBox(boxes['tasks']);
     await _restoreProjectMetaBox(boxes['project_meta']);
-    await _restoreGenericBox('mirror_outbox', boxes['mirror_outbox']);
-    await _restoreGenericBox('settings', boxes['settings']);
-    await _restoreGenericBox('auth', boxes['auth']);
-    await _restoreGenericBox('project_filters', boxes['project_filters']);
-    await _restoreGenericBox('saved_views', boxes['saved_views']);
+    for (final boxName in _backupGenericBoxes) {
+      await _restoreGenericBox(boxName, boxes[boxName]);
+    }
+    // Backward compatibility for older snapshots that used an alias key.
+    if (!boxes.containsKey('mirror_offline_cache') &&
+        boxes.containsKey('mirror_sessions')) {
+      await _restoreGenericBox('mirror_offline_cache', boxes['mirror_sessions']);
+    }
+  }
+
+  /// Clear all managed Hive boxes used by backup/restore flows.
+  static Future<void> clearHive() async {
+    await _openMapBox('projects').then((box) => box.clear());
+    await _openTasksBox().then((box) => box.clear());
+    await _openMapBox('project_meta').then((box) => box.clear());
+    for (final boxName in _backupGenericBoxes) {
+      await _openGenericBox(boxName).then((box) => box.clear());
+    }
   }
 
   static Future<Map<String, dynamic>> _exportProjectsBox() async {
@@ -264,8 +285,12 @@ class HiveInitializer {
     return name == 'auth' ||
         name == 'settings' ||
         name == 'ai_usage' ||
-      name == 'local_tokens' ||
-      name == 'mirror_outbox';
+        name == 'local_tokens' ||
+        name == 'mirror_outbox' ||
+        name == 'mirror_offline_cache' ||
+        name == 'mirror_apply_history' ||
+        name == 'mirror_apply_audit' ||
+        name == 'mirror_signed_inputs';
   }
 
   static String _encryptionKeyForBox(String name) {

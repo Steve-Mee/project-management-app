@@ -6,6 +6,7 @@ import 'dart:math';
 import 'package:crypto/crypto.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+import 'package:pma_core/providers/task/task_providers.dart';
 import 'package:pma_core/repository/encrypted_hive_box.dart';
 import 'package:pma_core/services/app_logger.dart';
 
@@ -476,6 +477,11 @@ class MirrorOrchestratorService {
     );
 
     if (result.success) {
+      await _refreshTaskAndSubTaskCaches(
+        ref: ref,
+        context: context,
+        sessionKey: sessionKey,
+      );
       final appliedFilesText = result.appliedFiles.isEmpty
           ? 'No files were reported as applied.'
           : 'Applied files: ${result.appliedFiles.join(', ')}';
@@ -502,6 +508,36 @@ class MirrorOrchestratorService {
     }
 
     return result;
+  }
+
+  Future<void> _refreshTaskAndSubTaskCaches({
+    required WidgetRef ref,
+    required ProjectContext context,
+    required String sessionKey,
+  }) async {
+    final parts = sessionKey.split('::');
+    final projectId = context.projectId.isNotEmpty
+        ? context.projectId
+        : (parts.isNotEmpty ? parts.first : '');
+    final taskId = context.taskId.isNotEmpty
+        ? context.taskId
+        : (parts.length > 1 ? parts[1] : '');
+
+    if (projectId.isEmpty) {
+      return;
+    }
+
+    try {
+      await ref.read(tasksProvider.notifier).loadTasks(projectId);
+      if (taskId.isNotEmpty) {
+        ref.invalidate(subTasksByTaskProvider(taskId));
+      }
+    } catch (error) {
+      AppLogger.instance.w(
+        'Mirror apply succeeded but task/subtask cache refresh failed',
+        error: error,
+      );
+    }
   }
 
   Future<T> _withRetries<T>({
