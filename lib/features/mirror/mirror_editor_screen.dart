@@ -8,6 +8,7 @@ import 'package:xterm/xterm.dart';
 
 import '../../core/providers/mirror_provider.dart';
 import '../../core/providers/mirror_session_provider.dart';
+import 'services/mirror_orchestrator_service.dart';
 import 'widgets/monaco_editor_host.dart';
 
 class MirrorEditorScreen extends ConsumerStatefulWidget {
@@ -40,6 +41,7 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
   Timer? _realtimeDebounceTimer;
   final List<String> _pendingRealtimeLines = <String>[];
   bool _isListening = false;
+  bool _isRunInProgress = false;
 
   String get _sessionKey => '${widget.projectId}::${widget.taskId}';
 
@@ -136,9 +138,15 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
                   ),
                   const SizedBox(width: 8),
                   OutlinedButton.icon(
-                    onPressed: _runCurrentFileInTerminal,
-                    icon: const Icon(Icons.play_arrow),
-                    label: const Text('Run'),
+                    onPressed: _isRunInProgress ? null : _runCurrentFileInTerminal,
+                    icon: _isRunInProgress
+                        ? const SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Icon(Icons.play_arrow),
+                    label: Text(_isRunInProgress ? 'Running...' : 'Run'),
                   ),
                 ],
               ),
@@ -564,11 +572,97 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
     );
   }
 
-  void _runCurrentFileInTerminal() {
-    final selectedFile =
-        ref.read(mirrorSessionProvider(_sessionKey)).selectedFile;
-    _appendTerminalLine('\$ run $selectedFile');
-    _appendTerminalLine('Execution stub completed for $selectedFile');
+  Future<void> _runCurrentFileInTerminal() async {
+    if (_isRunInProgress) {
+      return;
+    }
+
+    final sessionState = ref.read(mirrorSessionProvider(_sessionKey));
+    final selectedFile = sessionState.selectedFile;
+    final selectedContent = sessionState.files[selectedFile]?.trim() ?? '';
+
+    if (selectedContent.isEmpty) {
+      _appendTerminalLine('Run aborted: selected file is empty ($selectedFile).');
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Het geselecteerde bestand is leeg.'),
+        ),
+      );
+      return;
+    }
+
+    setState(() {
+      _isRunInProgress = true;
+    });
+
+    _appendTerminalLine('Starting Mirror run for $selectedFile...');
+
+    try {
+      final backend = await ref.read(mirrorBackendProvider.future);
+      final orchestrator = MirrorOrchestratorService(backend: backend);
+
+      final orchestrationResult = await orchestrator.runGenerateCompileApply(
+        ref: ref,
+        sessionKey: _sessionKey,
+        prompt: selectedContent,
+        context: ProjectContext(
+          projectId: widget.projectId,
+          taskId: widget.taskId,
+          files: sessionState.files,
+          metadata: <String, dynamic>{
+            'selectedFile': selectedFile,
+            'trigger': 'run_button',
+          },
+        ),
+        mode: _selectedMode,
+      );
+
+      if (!mounted) {
+        return;
+      }
+
+      if (orchestrationResult.success) {
+        _appendTerminalLine('Mirror run completed successfully.');
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Mirror run succesvol afgerond.'),
+          ),
+        );
+        return;
+      }
+
+      final errorText = orchestrationResult.applyResult?.message ??
+          orchestrationResult.compileResult?.errors.join(' | ') ??
+          orchestrationResult.generateResult?.message ??
+          orchestrationResult.error?.toString() ??
+          'Unknown run error.';
+
+      _appendTerminalLine('Mirror run failed: $errorText');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Mirror run mislukt: $errorText'),
+        ),
+      );
+    } catch (error) {
+      _appendTerminalLine('Mirror run crashed: $error');
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Mirror run gecrasht: $error'),
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isRunInProgress = false;
+        });
+      }
+    }
   }
 
   void _appendTerminalLine(String line) {
