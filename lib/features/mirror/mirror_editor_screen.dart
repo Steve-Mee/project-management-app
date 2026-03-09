@@ -8,7 +8,9 @@ import 'package:xterm/xterm.dart';
 
 import '../../core/providers/mirror_provider.dart';
 import '../../core/providers/mirror_session_provider.dart';
+import 'apply_dialog.dart';
 import 'services/mirror_orchestrator_service.dart';
+import 'templates_gallery.dart';
 import 'widgets/monaco_editor_host.dart';
 
 class MirrorEditorScreen extends ConsumerStatefulWidget {
@@ -30,6 +32,35 @@ class MirrorEditorScreen extends ConsumerStatefulWidget {
 class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
   static const int _maxLiveOutputLines = 500;
   static const Duration _realtimeDebounceDuration = Duration(milliseconds: 300);
+  static const List<MirrorTemplate> _defaultTemplates = <MirrorTemplate>[
+    MirrorTemplate(
+      id: 'dart-service',
+      title: 'Dart Service',
+      description: 'Boilerplate for a typed async service class.',
+      icon: Icons.settings_suggest,
+      seedContent:
+          'class ExampleService {\n  Future<String> execute() async {\n    return \'ok\';\n  }\n}\n',
+      tags: <String>['dart', 'service', 'async'],
+    ),
+    MirrorTemplate(
+      id: 'flutter-widget',
+      title: 'Flutter Widget',
+      description: 'Stateful widget scaffold with clear sectioning.',
+      icon: Icons.widgets,
+      seedContent:
+          'import \'package:flutter/material.dart\';\n\nclass ExampleWidget extends StatefulWidget {\n  const ExampleWidget({super.key});\n\n  @override\n  State<ExampleWidget> createState() => _ExampleWidgetState();\n}\n\nclass _ExampleWidgetState extends State<ExampleWidget> {\n  @override\n  Widget build(BuildContext context) {\n    return const SizedBox.shrink();\n  }\n}\n',
+      tags: <String>['flutter', 'widget'],
+    ),
+    MirrorTemplate(
+      id: 'readme',
+      title: 'README Section',
+      description: 'Structured markdown section for feature docs.',
+      icon: Icons.description,
+      seedContent:
+          '## Feature Overview\n\n### Goal\nDescribe the problem and expected outcome.\n\n### Usage\n1. Step one\n2. Step two\n\n### Notes\n- Constraints\n- Follow-up tasks\n',
+      tags: <String>['docs', 'markdown'],
+    ),
+  ];
 
   late String _selectedMode;
   late final Terminal _terminal;
@@ -96,6 +127,11 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Mirror Editor'),
+      ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: _openTemplatesGallery,
+        icon: const Icon(Icons.auto_awesome),
+        label: const Text('Templates'),
       ),
       body: SafeArea(
         child: Padding(
@@ -604,19 +640,21 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
       final backend = await ref.read(mirrorBackendProvider.future);
       final orchestrator = MirrorOrchestratorService(backend: backend);
 
-      final orchestrationResult = await orchestrator.runGenerateCompileApply(
+      final executionContext = ProjectContext(
+        projectId: widget.projectId,
+        taskId: widget.taskId,
+        files: sessionState.files,
+        metadata: <String, dynamic>{
+          'selectedFile': selectedFile,
+          'trigger': 'run_button',
+        },
+      );
+
+      final generateResult = await orchestrator.generate(
         ref: ref,
         sessionKey: _sessionKey,
         prompt: selectedContent,
-        context: ProjectContext(
-          projectId: widget.projectId,
-          taskId: widget.taskId,
-          files: sessionState.files,
-          metadata: <String, dynamic>{
-            'selectedFile': selectedFile,
-            'trigger': 'run_button',
-          },
-        ),
+        context: executionContext,
         mode: _selectedMode,
       );
 
@@ -624,7 +662,100 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
         return;
       }
 
-      if (orchestrationResult.success) {
+      if (!generateResult.success) {
+        final errorText =
+            generateResult.message ?? generateResult.diagnostics.join(' | ');
+        _appendTerminalLine('Mirror generate failed: $errorText');
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Generate mislukt: $errorText')),
+        );
+        return;
+      }
+
+      final compileResult = await orchestrator.compile(
+        ref: ref,
+        sessionKey: _sessionKey,
+        prompt: selectedContent,
+        context: executionContext,
+        mode: _selectedMode,
+      );
+
+      if (!mounted) {
+        return;
+      }
+
+      if (!compileResult.success) {
+        final errorText = compileResult.errors.join(' | ');
+        _appendTerminalLine('Mirror compile failed: $errorText');
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Compile mislukt: $errorText')),
+        );
+        return;
+      }
+
+      final compileOutput = compileResult.output ?? '';
+      final patches = backend.buildPatchesFromApplyPayload(
+        context: executionContext,
+        output: compileOutput,
+        fallbackPath: selectedFile,
+      );
+
+      if (patches.isEmpty) {
+        _appendTerminalLine('No patch preview available after compile.');
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Geen wijzigingen gedetecteerd na compile.'),
+          ),
+        );
+        return;
+      }
+
+      final previewPatch = patches.firstWhere(
+        (MirrorFilePatch patch) => patch.path == selectedFile,
+        orElse: () => patches.first,
+      );
+
+      final applyDecision = await ApplyDialog.show(
+        context,
+        title: 'Apply wijzigingen (${previewPatch.path})',
+        originalContent: previewPatch.originalContent,
+        updatedContent: previewPatch.updatedContent,
+        suggestedBranch: 'mirror/${widget.projectId}-${widget.taskId}',
+      );
+
+      if (!mounted) {
+        return;
+      }
+
+      final applyApproved = applyDecision?.apply == true &&
+          applyDecision?.acceptRisk == true;
+      if (!applyApproved) {
+        _appendTerminalLine('Apply geannuleerd: risk acknowledgment ontbreekt.');
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Apply geannuleerd.'),
+          ),
+        );
+        return;
+      }
+
+      final applyResult = await orchestrator.apply(
+        ref: ref,
+        sessionKey: _sessionKey,
+        prompt: selectedContent,
+        context: executionContext,
+        mode: _selectedMode,
+      );
+
+      if (!mounted) {
+        return;
+      }
+
+      if (applyResult.success) {
+        _applyPreviewPatchesToSession(
+          patches: patches,
+          fallbackSelectedFile: selectedFile,
+        );
         _appendTerminalLine('Mirror run completed successfully.');
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -634,16 +765,11 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
         return;
       }
 
-      final errorText = orchestrationResult.applyResult?.message ??
-          orchestrationResult.compileResult?.errors.join(' | ') ??
-          orchestrationResult.generateResult?.message ??
-          orchestrationResult.error?.toString() ??
-          'Unknown run error.';
-
-      _appendTerminalLine('Mirror run failed: $errorText');
+      final errorText = applyResult.message ?? 'Unknown apply error.';
+      _appendTerminalLine('Mirror apply failed: $errorText');
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Mirror run mislukt: $errorText'),
+          content: Text('Apply mislukt: $errorText'),
         ),
       );
     } catch (error) {
@@ -663,6 +789,69 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
         });
       }
     }
+  }
+
+  Future<void> _openTemplatesGallery() async {
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (BuildContext context) {
+        return SizedBox(
+          height: MediaQuery.sizeOf(context).height * 0.7,
+          child: TemplatesGallery(
+            templates: _defaultTemplates,
+            onTemplateSelected: (MirrorTemplate template) {
+              Navigator.of(context).pop();
+              _applyTemplateToSelectedFile(template);
+            },
+          ),
+        );
+      },
+    );
+  }
+
+  void _applyTemplateToSelectedFile(MirrorTemplate template) {
+    final selectedFile = ref.read(mirrorSessionProvider(_sessionKey)).selectedFile;
+    _sessionNotifier.updateSelectedFileContent(template.seedContent);
+    _appendTerminalLine(
+      'Template toegepast op $selectedFile: ${template.title}',
+    );
+    if (!mounted) {
+      return;
+    }
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Template geladen: ${template.title}'),
+      ),
+    );
+  }
+
+  void _applyPreviewPatchesToSession({
+    required List<MirrorFilePatch> patches,
+    required String fallbackSelectedFile,
+  }) {
+    final previousSelected =
+        ref.read(mirrorSessionProvider(_sessionKey)).selectedFile;
+
+    for (final patch in patches) {
+      final existsInSession =
+          ref.read(mirrorSessionProvider(_sessionKey)).files.containsKey(patch.path);
+      if (!existsInSession) {
+        continue;
+      }
+
+      _sessionNotifier.selectFile(patch.path);
+      _sessionNotifier.updateSelectedFileContent(patch.updatedContent);
+    }
+
+    final restoreTarget = ref
+            .read(mirrorSessionProvider(_sessionKey))
+            .files
+            .containsKey(previousSelected)
+        ? previousSelected
+        : fallbackSelectedFile;
+    _sessionNotifier.selectFile(restoreTarget);
   }
 
   void _appendTerminalLine(String line) {
