@@ -1,3 +1,9 @@
+## [1.14.0](https://github.com/Steve-Mee/project-management-app/compare/v1.13.0...v1.14.0) (2026-03-09)
+
+### Features
+
+* **mirror:** add orchestrator service and fix windows CMP0175 policy default ([aaae65d](https://github.com/Steve-Mee/project-management-app/commit/aaae65d5a1cb6647be5e701d0ae70bf02defd605))
+
 ## [1.13.0](https://github.com/Steve-Mee/project-management-app/compare/v1.12.0...v1.13.0) (2026-03-08)
 
 ### Features
