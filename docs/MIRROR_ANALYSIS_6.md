@@ -1,0 +1,120 @@
+### 1. Algemene beoordeling
+- Sterke punten
+  - Duidelijke laagopbouw met een expliciet contract (`MirrorComputeBackend`) en gescheiden transports (`edge_function_backend.dart`, `cloud_fly_backend.dart`, `private_grpc_backend.dart`).
+  - Security-baseline is volwassen voor een AI-feature: server-side `use_mirror` check in edge function, payload-size guard, idempotency/request-id, owner-scoped storage policies en audit events.
+  - Offline-first intentie is goed zichtbaar: Hive-cache met TTL, schema versioning, invalidatie op auth/premium-wissels en fail-closed encryptie in productie.
+  - Integratie in bestaande app is functioneel coherent: entrypoints vanuit `project_detail_screen.dart` en `expandable_task_card.dart`, bridge via `openMirrorFromTask`.
+  - Degelijke contractgerichte tests aanwezig voor edge/apply route-gedrag en premium-policy.
+- Zwakke punten
+  - Functionele mismatch in edit/apply flow: compile output wordt vaak als `Map.toString()` doorgegeven, waardoor patch parsing fragiel is en preview kan afwijken van wat echt ge-applyd wordt.
+  - Team Mode is conceptueel aanwezig (AB-variant + context-builder), maar niet consequent doorgekoppeld in runtime prompt/context pipeline.
+  - Runner-contract drift: proto definieert alleen `Compile`, service/gateway ondersteunen ook `Apply`; dit maakt tooling/codegen en onderhoud kwetsbaar.
+  - Templates-datamodel is niet volledig uitgelijnd met client mapping (`icon_name` uit DB wordt niet gebruikt in provider-query).
+  - Baseline migratie voor `public.ai_sessions` ontbreekt in `supabase/migrations`, waardoor bootstrap van nieuwe omgevingen niet deterministisch is.
+  - Lokale runner Docker-config is inconsistent (HTTP gateway op 8080 maar compose expose't alleen 50051), wat lokale end-to-end paden kan breken.
+- Overall score (1-10)
+  - 7.8/10
+
+### 2. Laag-voor-laag analyse
+- Supabase / Database laag
+  - Positief
+    - Storage hardening voor `mirror-signed-inputs` en `mirror-backups` is correct owner-scoped via `storage.foldername(name)[1] = auth.uid()::text` in `supabase/migrations/20260308_mirror_storage_hardening.sql`.
+    - Audittrail op `mirror_apply_audit_events` bevat nuttige velden (request/idempotency/fingerprints/artifacts) en RLS per eigenaar in `supabase/migrations/20260308_mirror_audit_and_ai_sessions_retention.sql`.
+    - Realtime topic-scope voor `ai_sessions` is goed opgezet met trigger + broadcast topic partitionering in `supabase/migrations/20260309_mirror_ai_sessions_broadcast_topics.sql`.
+  - Risico's
+    - Geen zichtbare `CREATE TABLE public.ai_sessions` migratie in `supabase/migrations/*`; feature draait op impliciete/legacy state.
+    - `project_id`/`task_id` zijn tekstvelden in audit zonder FK-constraints; data-integriteit en cleanup-joins blijven zwakker.
+    - `mirror_templates` RLS admin-check op JWT role claim kan afwijken van app-brede permissiemodel (`manage_roles`, `manage_users`, etc.).
+- Edge Functions & gRPC backend laag
+  - Positief
+    - `supabase/functions/mirror_compute/index.ts` valideert auth, route (`/compile`/`/apply`), payloadgrootte en endpointconfig, en logt apply-events gestructureerd.
+    - Cloud runner heeft expliciete auth-guard met JWT-validatie (issuer/audience optioneel), deny-codes en metrics in `server/mirror-cloud-runner/lib/auth_guard.dart`.
+    - HTTP gateway naar gRPC is aanwezig in beide runners (`server/*/lib/http_gateway.dart`) en routeert compile/apply consistent.
+  - Risico's
+    - Proto drift: `server/mirror-*/proto/mirror.proto` definieert geen `Apply` RPC, terwijl service en gateway die wel aanroepen.
+    - `Apply` is momenteel compile-byte-compatibel in runners (`apply` roept `compile`), waardoor semantiek, auditing en foutmodel voor echte apply beperkt blijven.
+    - Local runner compose expose't alleen gRPC-poort; edge-forwarding verwacht HTTP endpoint gedrag.
+- Dart/Flutter core & providers laag
+  - Positief
+    - `lib/core/providers/mirror_provider.dart` dwingt cloud->private fallback af bij non-premium en cachet mode/variant met invalidatie.
+    - `MirrorPremiumService` combineert metadata + subscriptions check met korte cache en in-flight deduplicatie.
+    - `MirrorComputeBackend` bevat nuttige utilities voor patching, secure apply voorbereiding en audit persistence.
+  - Risico's
+    - `buildFullContext`/Team Mode prompt-opbouw wordt niet aantoonbaar gebruikt door concrete backend-aanroepen.
+    - Dubbele/gespreide policycontrole (provider + backend + edge) is veilig, maar verhoogt kans op regressie door configuratiedrift.
+- UI & UX laag (editor, dialogs, realtime)
+  - Positief
+    - Editor-opzet (explorer + monaco + terminal + realtime) is solide en responsive.
+    - Realtime updates worden gedebounced en op user/project/task gescoped in `mirror_editor_screen.dart`.
+    - ApplyDialog forceert expliciete risicobevestiging.
+  - Risico's
+    - In run-flow wordt `selected file content` als prompt gebruikt; dit vermengt broncode en intentie en verlaagt voorspelbaarheid.
+    - Preview patches worden uit compile-output afgeleid, maar die outputstructuur is niet overal stabiel; kans op mismatch met echte apply.
+    - ApplyDialog toont branch-advies, maar maakt of wisselt branch niet daadwerkelijk.
+- Security, permissions & premium checks
+  - Positief
+    - Toegangsgating is meerlaags: UI-permissie (`use_mirror`), edge `has_permission('use_mirror')`, premium policy in provider/backends.
+    - Storage object paths gebruiken user-prefixed namespaces.
+  - Risico's
+    - In lokale/dev configuraties bestaan zwakke defaults (`SIGNED_URL_SECRET=local-dev-secret`), acceptabel voor dev maar riskant als dit per ongeluk promoted wordt.
+    - Audit- en signed URL metadata blijft gevoelig; lokaal opslaan vraagt strikt retention/redaction beleid.
+- Offline / Hive / caching laag
+  - Positief
+    - Cache envelope met TTL en schema-versie voorkomt stale state drift.
+    - Encryptie-fail-closed default in productie is sterk.
+  - Risico's
+    - Niet-productie fallback naar onge-encrypte boxen blijft een risico op gedeelde of onbeveiligde testdevices.
+    - Apply-history blijft payload-zwaar; caps bestaan, maar ontbreken van expliciete redactiepolicy kan later privacy/compliance raken.
+- Integratie met bestaande app
+  - Positief
+    - Integratiepunten in project/task UI zijn functioneel correct en permissie-gated.
+    - Bridge payload bevat mode + team variant en werkt samen met providerstate.
+  - Risico's
+    - Mirror session hydratie trekt project/tasks context in editor, maar nieuw aangemaakte bestanden uit patches worden niet altijd meegenomen in lokale sessie-update.
+    - Bestaande app-permissions en Supabase JWT role checks zijn niet volledig geharmoniseerd voor template-admin beheer.
+
+### 3. Concrete aanbevelingen
+- Wijzigingen (met exacte bestandsnamen en wat te veranderen)
+  - `lib/features/mirror/edge_function_backend.dart`
+    - Zorg dat `CompileResult.output` bij JSON-map output gestandaardiseerd als JSON-string wordt teruggegeven (niet `toString()`), zodat patch parsing deterministisch wordt.
+  - `lib/features/mirror/cloud_fly_backend.dart`
+    - Zelfde normalisatie toepassen als boven; compile-output contract gelijk trekken met edge/private backends.
+  - `lib/features/mirror/mirror_editor_screen.dart`
+    - Splits user prompt en file content expliciet; gebruik een dedicated prompt input en stuur codecontext via `ProjectContext.files/metadata`.
+    - Laat preview baseren op dezelfde outputstructuur als apply of toon expliciet "preview is advisory" wanneer parser fallback gebruikt.
+  - `lib/features/mirror/mirror_editor_screen.dart`
+    - `_applyPreviewPatchesToSession` uitbreiden zodat nieuwe bestanden uit patches ook in sessie `files` worden toegevoegd.
+  - `lib/features/mirror/providers/mirror_templates_provider.dart`
+    - Query uitbreiden met `template_key, icon_name` en mapping aanpassen zodat DB-iconen deterministisch renderen.
+  - `server/mirror-local-runner/docker-compose.yml`
+    - Voeg `HTTP_PORT` toe en expose `8080:8080` of wijzig endpointstrategie zodat edge naar een daadwerkelijk bereikbare poort wijst.
+  - `server/mirror-local-runner/proto/mirror.proto`
+    - Voeg `rpc Apply(CompileRequest) returns (CompileResponse);` toe om contract drift met gateway/service te verwijderen.
+  - `server/mirror-cloud-runner/proto/mirror.proto`
+    - Zelfde `Apply` RPC toevoegen voor parity en codegen-consistentie.
+  - `supabase/migrations/20260308_mirror_audit_and_ai_sessions_retention.sql`
+    - Overweeg FK-strategie (of soft-FK constraints via validation function) voor `project_id/task_id` om referentiële kwaliteit te verhogen.
+
+- Toevoegingen (nieuwe bestanden/features met korte beschrijving)
+  - `supabase/migrations/20260310_create_ai_sessions_baseline.sql`
+    - Idempotente baseline migratie voor `public.ai_sessions` inclusief indexes en RLS, zodat nieuwe omgevingen voorspelbaar opstarten.
+  - `test/features/mirror/mirror_output_contract_test.dart`
+    - Contracttest die valideert dat alle backends dezelfde compile/apply outputshape leveren voor patch parser.
+  - `test/features/mirror/mirror_team_mode_context_test.dart`
+    - Test dat Team Mode metadata effectief in request-context/prompt terechtkomt.
+  - `test/features/mirror/mirror_templates_provider_test.dart`
+    - Test voor DB-field mapping (`icon_name`, `template_key`, tags) en fallback-gedrag.
+  - `docs/mirror-security-hardening.md`
+    - Productievereisten voor secret rotation, redactie van audit payloads, retention window en incident checks.
+  - `server/mirror-cloud-runner/openapi-or-proto-contract.md`
+    - Versiebeheer van compile/apply contract plus backward compatibility matrix.
+
+- Verwijderingen (wat weg kan en waarom)
+  - `server/mirror-local-runner/docker-compose.yml`
+    - Verwijder hardcoded `SIGNED_URL_SECRET: "local-dev-secret"` uit gedeelde compose default; dwing `.env`-injectie af om accidental insecure deploys te voorkomen.
+  - `lib/features/mirror/mirror_compute_backend.dart`
+    - Verwijder of deprecate ongebruikte context-builder codepaden als Team Mode promptinjectie niet direct geactiveerd wordt; voorkomt schijncomplexiteit.
+  - `lib/features/mirror/mirror_editor_screen.dart`
+    - Verwijder misleading branch-suggestie als er geen branch-actie plaatsvindt, of vervang met echte integratie; huidige UX wekt onjuiste veiligheidssuggestie.
+  - `docs/mirror-architecture.md`
+    - Verwijder/actualiseer claims over “staging” als die terminologie niet meer in actieve migraties voorkomt; documentatie moet exact aansluiten op canonical buckets.
