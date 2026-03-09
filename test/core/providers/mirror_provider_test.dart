@@ -109,7 +109,8 @@ void main() {
       );
       addTearDown(container.dispose);
 
-      expect(container.read(mirrorTeamModeEnabledProvider), isFalse);
+      expect(container.read(mirrorProvider).teamModeVariant, 'solo');
+      expect(container.read(mirrorProvider).isTeamMode, isFalse);
 
       container.read(mirrorProvider.notifier).state =
           container.read(mirrorProvider).copyWith(offlineWarning: 'offline fallback');

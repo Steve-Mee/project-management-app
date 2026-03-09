@@ -271,36 +271,8 @@ ALTER TABLE storage.objects ENABLE ROW LEVEL SECURITY;
 
 -- Canonical ai_sessions policy set
 DROP POLICY IF EXISTS "ai_sessions_owner_policy" ON ai_sessions;
-DROP POLICY IF EXISTS "ai_sessions_owner_policy_prompt_1" ON ai_sessions;
-DROP POLICY IF EXISTS "ai_sessions_owner_policy_prompt_2" ON ai_sessions;
-DROP POLICY IF EXISTS "ai_sessions_owner_policy_prompt_2_eof" ON ai_sessions;
-DROP POLICY IF EXISTS "ai_sessions_owner_policy_prompt_2_final_eof" ON ai_sessions;
 
 CREATE POLICY "ai_sessions_owner_policy" ON ai_sessions
 FOR ALL TO authenticated
 USING (auth.uid() = user_id)
 WITH CHECK (auth.uid() = user_id);
-
--- Canonical mirror_staging policy set
-DROP POLICY IF EXISTS "mirror_staging_upload_own_folder" ON storage.objects;
-DROP POLICY IF EXISTS "mirror_staging_download_own_folder" ON storage.objects;
-DROP POLICY IF EXISTS "mirror_staging_upload_own_folder_prompt_2" ON storage.objects;
-DROP POLICY IF EXISTS "mirror_staging_download_own_folder_prompt_2" ON storage.objects;
-DROP POLICY IF EXISTS "mirror_staging_upload_own_folder_prompt_2_eof" ON storage.objects;
-DROP POLICY IF EXISTS "mirror_staging_download_own_folder_prompt_2_eof" ON storage.objects;
-DROP POLICY IF EXISTS "mirror_staging_upload_own_folder_prompt_2_final_eof" ON storage.objects;
-DROP POLICY IF EXISTS "mirror_staging_download_own_folder_prompt_2_final_eof" ON storage.objects;
-
-CREATE POLICY "mirror_staging_upload_own_folder" ON storage.objects
-FOR INSERT TO authenticated
-WITH CHECK (
-  bucket_id = 'mirror_staging'
-  AND storage.foldername(name)[1] = auth.uid()::text
-);
-
-CREATE POLICY "mirror_staging_download_own_folder" ON storage.objects
-FOR SELECT TO authenticated
-USING (
-  bucket_id = 'mirror_staging'
-  AND storage.foldername(name)[1] = auth.uid()::text
-);

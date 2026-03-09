@@ -94,12 +94,6 @@ final mirrorTeamModeVariantProvider = FutureProvider<String>((ref) async {
   }
 });
 
-final mirrorTeamModeEnabledProvider = Provider<bool>((ref) {
-  final variant =
-      ref.watch(mirrorTeamModeVariantProvider).valueOrNull ?? 'solo';
-  return variant == 'team';
-});
-
 final mirrorBackendProvider = FutureProvider<MirrorComputeBackend>((ref) async {
   final mode = ref.watch(mirrorModeProvider);
   final premiumService = ref.watch(mirrorPremiumServiceProvider);
