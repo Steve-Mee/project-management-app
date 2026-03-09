@@ -1,3 +1,9 @@
+## [1.20.0](https://github.com/Steve-Mee/project-management-app/compare/v1.19.1...v1.20.0) (2026-03-09)
+
+### Features
+
+* wire mirror run flow through orchestrator and use provider templates ([aebbe1f](https://github.com/Steve-Mee/project-management-app/commit/aebbe1f72a167e5e687da3f271c7a3b1dd6af250))
+
 ## [1.19.1](https://github.com/Steve-Mee/project-management-app/compare/v1.19.0...v1.19.1) (2026-03-09)
 
 ### Bug Fixes
