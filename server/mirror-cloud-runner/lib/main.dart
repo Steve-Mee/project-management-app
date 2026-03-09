@@ -7,9 +7,11 @@ import 'package:grpc/grpc.dart';
 
 import 'auth_guard.dart';
 import 'auth_metrics.dart';
+import 'http_gateway.dart';
 
 Future<void> main() async {
-  final port = int.tryParse(Platform.environment['PORT'] ?? '') ?? 8080;
+  final httpPort = int.tryParse(Platform.environment['PORT'] ?? '') ?? 8080;
+  final grpcPort = int.tryParse(Platform.environment['GRPC_PORT'] ?? '') ?? 50051;
   final workspaceRoot =
       Platform.environment['MIRROR_WORKSPACE_ROOT'] ?? '/tmp/mirror-workspaces';
   final signedUrlSecret = _requireEnv('SIGNED_URL_SECRET');
@@ -53,18 +55,29 @@ Future<void> main() async {
         CodecRegistry(codecs: const <Codec>[GzipCodec(), IdentityCodec()]),
   );
 
-  await server.serve(address: '0.0.0.0', port: port);
+  await server.serve(address: '0.0.0.0', port: grpcPort);
+
+  final gateway = MirrorHttpGateway(
+    bindAddress: '0.0.0.0',
+    httpPort: httpPort,
+    grpcHost: '127.0.0.1',
+    grpcPort: grpcPort,
+  );
+  await gateway.start();
+
   _log(
     'info',
     'mirror-cloud-runner started',
     context: <String, Object?>{
-      'port': port,
+      'httpPort': httpPort,
+      'grpcPort': grpcPort,
       'workspaceRoot': workspaceRoot,
     },
   );
 
   ProcessSignal.sigint.watch().listen((_) async {
     _log('info', 'shutdown signal received');
+    await gateway.stop();
     await server.shutdown();
     exit(0);
   });
