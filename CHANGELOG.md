@@ -1,3 +1,9 @@
+## [1.21.0](https://github.com/Steve-Mee/project-management-app/compare/v1.20.1...v1.21.0) (2026-03-09)
+
+### Features
+
+* add ai_sessions baseline migration and mirror output contract test ([5902d87](https://github.com/Steve-Mee/project-management-app/commit/5902d875cddd5eedd8df0baf64fddb15cb4fa436))
+
 ## [1.20.1](https://github.com/Steve-Mee/project-management-app/compare/v1.20.0...v1.20.1) (2026-03-09)
 
 ### Bug Fixes
