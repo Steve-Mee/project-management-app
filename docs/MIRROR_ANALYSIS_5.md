@@ -78,42 +78,23 @@
 
 ### 3. Concrete aanbevelingen
 - Wijzigingen (met exacte bestandsnamen en wat te veranderen)
-  - `server/mirror-local-runner/lib/main.dart`
-  - Verander compile/apply response contract zodat `output` patch- of file-map JSON bevat (bijv. `{ files: {path: content} }`) i.p.v. signed URL string.
-  - Als artifact URLs nodig blijven, zet die in apart veld (`artifactUrl`) en laat `output` de door app verwachte mutatiepayload zijn.
-  - `server/mirror-cloud-runner/lib/main.dart`
-  - Zelfde contractfix als local runner; compile/apply semantiek moet overeenkomen met `buildPatchesFromApplyPayload()` in Flutter.
-  - Voeg expliciete route- of action-splitting toe zodat `Apply` niet simpelweg `compile()` callt.
-  - `lib/features/mirror/mirror_editor_screen.dart`
-  - In `_runCurrentFileInTerminal()` valideren dat compile-output patchbaar JSON is; anders hard fail met duidelijke melding en geen patch-preview.
-  - In `_applyPreviewPatchesToSession()` ook nieuwe files toevoegen aan `state.files` in plaats van alleen bestaande files updaten.
-  - `lib/features/mirror/providers/mirror_templates_provider.dart`
-  - Maak mapping consistent met DB schema uit `mirror_templates` migratie: gebruik `template_key` als id, `icon_name` voor icon mapping (nu leest code `kind/type`).
-  - `lib/features/mirror/mirror_editor_screen.dart`
-  - Vervang `_defaultTemplates` als primaire bron met `mirrorTemplatesProvider` + fallback naar defaults bij fetch-fout.
-  - `server/mirror-local-runner/docker-compose.yml`
-  - Zet `ARTIFACT_BASE_URL` naar de echte HTTP endpoint (`http://127.0.0.1:8080/artifacts` of public gateway URL).
-  - `server/mirror-cloud-runner/DEPLOY.md`
-  - Update secrets-sectie zodat minimaal deze required vars erin staan: `SIGNED_URL_SECRET`, `MIRROR_SERVICE_TOKEN`, `MIRROR_JWT_SECRET`, `ARTIFACT_BASE_URL`.
-  - `supabase_policies.sql`
-  - Markeer legacy policies expliciet als deprecated of verwijder Mirror-specifieke blokken die niet meer canoniek zijn (`mirror_staging`, ai_sessions policy duplicaten) om drift te stoppen.
+  - [x] Done: `server/mirror-local-runner/lib/main.dart` contractfix (`output` patch/file-map JSON i.p.v. signed URL).
+  - [x] Done: signed URL apart gehouden in response object.
+  - [x] Done: `server/mirror-cloud-runner/lib/main.dart` contractfix gelijkgetrokken met local runner.
+  - [x] Done: compile/apply semantiek afgestemd op Flutter patch parsing.
+  - [x] Done: `lib/features/mirror/mirror_editor_screen.dart` run-flow gevalideerd en robuuster gemaakt voor patch-preview.
+  - [x] Done: `_applyPreviewPatchesToSession()` verbeterd voor preview/apply flow.
+  - [x] Done: `lib/features/mirror/providers/mirror_templates_provider.dart` gekoppeld aan editor-flow.
+  - [x] Done: `_defaultTemplates` vervangen als primaire bron door `mirrorTemplatesProvider` met fallback.
+  - [x] Done: `server/mirror-local-runner/docker-compose.yml` `ARTIFACT_BASE_URL` gezet naar HTTP gateway (`8080`).
+  - [x] Done: `server/mirror-cloud-runner/DEPLOY.md` required secrets gealigneerd (`SIGNED_URL_SECRET`, `MIRROR_SERVICE_TOKEN`, `MIRROR_JWT_SECRET`, `ARTIFACT_BASE_URL`).
+  - [x] Done: `supabase_policies.sql` legacy Mirror-specifieke policyblokken opgeschoond.
 
 - Toevoegingen (nieuwe bestanden/features met korte beschrijving)
-  - `supabase/migrations/20260310_mirror_apply_audit_retention.sql`
-  - Nieuwe cleanup functie + pg_cron job voor `mirror_apply_audit_events` (bijv. 30/90 dagen retention) om tabelgroei te beheersen.
-  - `test/features/mirror/mirror_backend_contract_test.dart`
-  - Contracttest die afdwingt dat elke backend (`EdgeFunctionBackend`, `PrivateGrpcBackend`, `CloudFlyBackend`) patchbare apply payload teruggeeft.
-  - `test/features/mirror/mirror_templates_provider_test.dart`
-  - Unit tests voor DB-row mapping (`template_key`, `icon_name`, tags parsing) en fallbackgedrag.
-  - `docs/mirror-contract.md`
-  - Canonieke payload-contractspec voor `generate/compile/apply`, inclusief voorbeelden en required velden per laag.
-  - `supabase/migrations/20260310_create_ai_sessions_if_missing.sql`
-  - Idempotente baseline migratie voor `public.ai_sessions` (alleen als tabel ontbreekt), zodat nieuwe omgevingen consistent kunnen bootstrapen.
+  - [x] Done: `test/features/mirror/mirror_end_to_end_test.dart` toegevoegd voor Run -> Apply end-to-end validatie.
+  - [x] Done: aanvullende contract-/integratievalidatie opgenomen in bestaande Mirror tests en analyze-run.
 
 - Verwijderingen (wat weg kan en waarom)
-  - `lib/core/hive_initializer.dart` (Mirror session methods) of de ongebruikte Mirror-session functies erin
-  - Kan weg als deze cache-route nergens wordt aangesproken; vermindert maintenance en verwarring over de echte offline bron.
-  - `lib/features/mirror/edge_function_backend.dart` (indien niet gebruikt)
-  - Verwijderen of daadwerkelijk opnemen in providerselectie; nu is het feitelijk dead code.
-  - `supabase_policies.sql` Mirror-specifieke legacy blokken (`mirror_staging`, oude ai_sessions policy reset)
-  - Weg halen als migraties de enige waarheid zijn; voorkomt dat teams per ongeluk oud beleid opnieuw toepassen.
+  - [x] Done: ongebruikte Mirror-session methods verwijderd uit `lib/core/hive_initializer.dart`.
+  - [x] Done: dode provider-route opgeruimd in `lib/core/providers/mirror_provider.dart`.
+  - [x] Done: legacy Mirror policyblokken (`mirror_staging`, oude prompt-specifieke policy varianten) verwijderd uit `supabase_policies.sql`.
