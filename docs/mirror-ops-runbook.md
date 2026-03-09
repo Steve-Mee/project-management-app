@@ -34,6 +34,25 @@ Cloud runner:
 - `MIRROR_SERVICE_TOKEN`
 - `MIRROR_JWT_SECRET` (legacy/fallback)
 - `MIRROR_JWT_KEYS_BY_KID` (JSON map for key rotation)
+- `MIRROR_MAX_FILES` (optional, default 500)
+- `MIRROR_MAX_WORKSPACE_BYTES` (optional, default 52428800)
+- `MIRROR_MAX_EXECUTION_WINDOW_SECONDS` (optional, default 300)
+
+Local runner:
+- `MIRROR_SERVICE_TOKEN`
+- `MIRROR_JWT_SECRET` (legacy/fallback)
+- `MIRROR_JWT_KEYS_BY_KID` (JSON map for key rotation)
+- `MIRROR_MAX_FILES` (optional, default 500)
+- `MIRROR_MAX_WORKSPACE_BYTES` (optional, default 52428800)
+- `MIRROR_MAX_EXECUTION_WINDOW_SECONDS` (optional, default 300)
+
+AB/remote-config contract:
+- Experiment key: `mirror_runner_mode` (`local` vs `cloud`)
+- Feature-flag keys:
+- `mirror_runner_mode`
+- `mirror_runner_quota_max_files`
+- `mirror_runner_quota_max_workspace_bytes`
+- `mirror_runner_quota_max_execution_window_seconds`
 
 ## SLO and Error Budgets
 - Compile availability target: 99.9%
@@ -63,11 +82,15 @@ Cloud runner:
 2. Check upstream health and saturation (CPU, memory, connection limits).
 3. Increase capacity or redirect traffic to healthy mode if needed.
 4. Temporarily raise `MIRROR_FORWARD_TIMEOUT_MS` only with incident note and rollback plan.
+5. Confirm runner execution window (`MIRROR_MAX_EXECUTION_WINDOW_SECONDS`) is not lower than expected workload runtime.
 
 ### C. Apply path or patch failures
 1. Validate route used is `/apply` (not `/compile`).
 2. Validate idempotency key propagation in edge response headers.
 3. Confirm backup/signed-input artifacts are written to owner-prefixed paths.
+4. Check gateway structured errors for quota rejections:
+- `payload_too_large` (workspace/request bytes)
+- `bad_request` with file-count limit details
 
 ## Storage and RLS Verification
 Run in SQL editor (service role) when validating policies:

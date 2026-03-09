@@ -36,5 +36,17 @@ void main() {
       expect(decision.effectiveMode, 'private');
       expect(decision.requiresPremium, false);
     });
+
+    test('runner local variant downgrades cloud request to private', () {
+      final decision = policy.resolveRequestedMode(
+        requestedMode: 'cloud',
+        isPremium: true,
+        runnerModeVariant: 'local',
+      );
+
+      expect(decision.effectiveMode, 'private');
+      expect(decision.requiresPremium, false);
+      expect(decision.warning, isNotNull);
+    });
   });
 }

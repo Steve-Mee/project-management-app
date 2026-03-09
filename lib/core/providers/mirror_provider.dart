@@ -23,12 +23,14 @@ class MirrorState {
     required this.mode,
     required this.isPremium,
     required this.teamModeVariant,
+    this.runnerModeVariant = 'cloud',
     required this.offlineWarning,
   });
 
   final String mode;
   final bool isPremium;
   final String teamModeVariant;
+  final String runnerModeVariant;
   final String? offlineWarning;
 
   bool get isTeamMode => teamModeVariant == 'team';
@@ -39,6 +41,7 @@ class MirrorState {
     String? mode,
     bool? isPremium,
     String? teamModeVariant,
+    String? runnerModeVariant,
     String? offlineWarning,
     bool clearOfflineWarning = false,
   }) {
@@ -46,6 +49,7 @@ class MirrorState {
       mode: mode ?? this.mode,
       isPremium: isPremium ?? this.isPremium,
       teamModeVariant: teamModeVariant ?? this.teamModeVariant,
+      runnerModeVariant: runnerModeVariant ?? this.runnerModeVariant,
       offlineWarning:
           clearOfflineWarning ? null : (offlineWarning ?? this.offlineWarning),
     );
@@ -94,14 +98,47 @@ final mirrorTeamModeVariantProvider = FutureProvider<String>((ref) async {
   }
 });
 
+final mirrorRunnerModeVariantProvider = FutureProvider<String>((ref) async {
+  final warningNotifier = ref.read(mirrorOfflineWarningProvider.notifier);
+  final user = Supabase.instance.client.auth.currentUser;
+  final userId = user?.id ?? 'anonymous';
+
+  try {
+    final variant = await ABTestingService.instance
+        .assignVariant(
+          experimentKey: 'mirror_runner_mode',
+          userId: userId,
+          variants: const <String>['local', 'cloud'],
+        )
+        .timeout(const Duration(seconds: 3));
+
+    await _MirrorOfflineCache.saveRunnerModeVariant(userId, variant);
+    return variant;
+  } catch (_) {
+    final cached = await _MirrorOfflineCache.getRunnerModeVariant(userId);
+    if (cached != null) {
+      warningNotifier.state =
+          'Offline mode: Runner variant loaded from local cache.';
+      return cached;
+    }
+
+    warningNotifier.state =
+        'Offline mode: Runner variant unavailable, switched to cloud fallback.';
+    return 'cloud';
+  }
+});
+
 final mirrorBackendProvider = FutureProvider<MirrorComputeBackend>((ref) async {
   final mode = ref.watch(mirrorModeProvider);
   final premiumService = ref.watch(mirrorPremiumServiceProvider);
   final isPremium = await ref.watch(mirrorPremiumProvider.future);
+  final runnerModeVariant =
+      await ref.watch(mirrorRunnerModeVariantProvider.future);
   const policy = MirrorAccessPolicy();
   final decision = policy.resolveRequestedMode(
     requestedMode: mode,
     isPremium: isPremium,
+    runnerModeVariant: runnerModeVariant,
   );
 
   if (decision.effectiveMode == 'cloud' && isPremium) {
@@ -129,21 +166,27 @@ class MirrorNotifier extends Notifier<MirrorState> {
     final isPremium = ref.watch(mirrorPremiumProvider).valueOrNull ?? false;
     final teamModeVariant =
         ref.watch(mirrorTeamModeVariantProvider).valueOrNull ?? 'solo';
+    final runnerModeVariant =
+        ref.watch(mirrorRunnerModeVariantProvider).valueOrNull ?? 'cloud';
     final offlineWarning = ref.watch(mirrorOfflineWarningProvider);
     return MirrorState(
       mode: mode,
       isPremium: isPremium,
       teamModeVariant: teamModeVariant,
+      runnerModeVariant: runnerModeVariant,
       offlineWarning: offlineWarning,
     );
   }
 
   Future<void> setMode(String mode) async {
     final hasPremium = await ref.read(mirrorPremiumProvider.future);
+    final runnerModeVariant =
+        await ref.read(mirrorRunnerModeVariantProvider.future);
     const policy = MirrorAccessPolicy();
     final decision = policy.resolveRequestedMode(
       requestedMode: mode,
       isPremium: hasPremium,
+      runnerModeVariant: runnerModeVariant,
     );
 
     ref.read(mirrorModeProvider.notifier).state = decision.effectiveMode;
@@ -151,6 +194,7 @@ class MirrorNotifier extends Notifier<MirrorState> {
     state = state.copyWith(
       mode: decision.effectiveMode,
       isPremium: hasPremium,
+      runnerModeVariant: runnerModeVariant,
       offlineWarning: decision.warning,
     );
     unawaited(_MirrorOfflineCache.saveMode(decision.effectiveMode));
@@ -185,6 +229,13 @@ class MirrorNotifier extends Notifier<MirrorState> {
     state = state.copyWith(teamModeVariant: teamModeVariant);
   }
 
+  Future<void> refreshRunnerModeVariant() async {
+    ref.invalidate(mirrorRunnerModeVariantProvider);
+    final runnerModeVariant =
+        await ref.read(mirrorRunnerModeVariantProvider.future);
+    state = state.copyWith(runnerModeVariant: runnerModeVariant);
+  }
+
   void clearOfflineWarning() {
     ref.read(mirrorOfflineWarningProvider.notifier).state = null;
     state = state.copyWith(clearOfflineWarning: true);
@@ -204,6 +255,12 @@ class MirrorNotifier extends Notifier<MirrorState> {
     final cachedVariant = await _MirrorOfflineCache.getTeamModeVariant(userId);
     if (cachedVariant != null) {
       state = state.copyWith(teamModeVariant: cachedVariant);
+    }
+
+    final cachedRunnerVariant =
+        await _MirrorOfflineCache.getRunnerModeVariant(userId);
+    if (cachedRunnerVariant != null) {
+      state = state.copyWith(runnerModeVariant: cachedRunnerVariant);
     }
 
     await refreshPremiumFromMetadata();
@@ -280,6 +337,8 @@ class _MirrorOfflineCache {
   }
 
   static String _variantKey(String userId) => 'team_mode_variant::$userId';
+  static String _runnerVariantKey(String userId) =>
+      'runner_mode_variant::$userId';
 
   static Future<void> saveTeamModeVariant(String userId, String variant) async {
     final box = await _openBox();
@@ -289,6 +348,21 @@ class _MirrorOfflineCache {
   static Future<String?> getTeamModeVariant(String userId) async {
     final box = await _openBox();
     final key = _variantKey(userId);
+    final value = _CacheEnvelope.unwrap<String>(box.get(key), ttl: _ttl);
+    if (value == null) {
+      await box.delete(key);
+    }
+    return value;
+  }
+
+  static Future<void> saveRunnerModeVariant(String userId, String variant) async {
+    final box = await _openBox();
+    await box.put(_runnerVariantKey(userId), _CacheEnvelope.wrap(variant));
+  }
+
+  static Future<String?> getRunnerModeVariant(String userId) async {
+    final box = await _openBox();
+    final key = _runnerVariantKey(userId);
     final value = _CacheEnvelope.unwrap<String>(box.get(key), ttl: _ttl);
     if (value == null) {
       await box.delete(key);

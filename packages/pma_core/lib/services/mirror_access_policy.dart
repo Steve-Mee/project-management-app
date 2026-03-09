@@ -16,11 +16,20 @@ class MirrorAccessPolicy {
   MirrorAccessDecision resolveRequestedMode({
     required String requestedMode,
     required bool isPremium,
+    String runnerModeVariant = 'cloud',
   }) {
     if (requestedMode != 'private' && requestedMode != 'cloud') {
       return const MirrorAccessDecision(
         effectiveMode: 'private',
         requiresPremium: false,
+      );
+    }
+
+    if (requestedMode == 'cloud' && runnerModeVariant == 'local') {
+      return const MirrorAccessDecision(
+        effectiveMode: 'private',
+        requiresPremium: false,
+        warning: 'Cloud mode is disabled for this runner experiment variant.',
       );
     }
 

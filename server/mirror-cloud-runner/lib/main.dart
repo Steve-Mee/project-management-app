@@ -24,6 +24,14 @@ Future<void> main() async {
   final requiredAudience = Platform.environment['MIRROR_JWT_AUDIENCE'];
   final requiredIssuer = Platform.environment['MIRROR_JWT_ISSUER'];
   final metrics = RunnerMetrics();
+  final gatewayQuota = MirrorGatewayQuotaConfig(
+    maxFiles: _intEnv('MIRROR_MAX_FILES', fallback: 500),
+    maxWorkspaceBytes:
+        _intEnv('MIRROR_MAX_WORKSPACE_BYTES', fallback: 50 * 1024 * 1024),
+    maxExecutionWindow: Duration(
+      seconds: _intEnv('MIRROR_MAX_EXECUTION_WINDOW_SECONDS', fallback: 300),
+    ),
+  );
 
   final authGuard = AuthGuard(
     serviceToken: serviceToken,
@@ -50,6 +58,7 @@ Future<void> main() async {
     httpPort: httpPort,
     grpcHost: '127.0.0.1',
     grpcPort: grpcPort,
+    quota: gatewayQuota,
   );
 
   await bootstrapRunner(
@@ -83,9 +92,21 @@ Future<void> main() async {
       startupContext: <String, Object?>{
         'httpPort': httpPort,
         'workspaceRoot': workspaceRoot,
+        'maxFiles': gatewayQuota.maxFiles,
+        'maxWorkspaceBytes': gatewayQuota.maxWorkspaceBytes,
+        'maxExecutionWindowSeconds': gatewayQuota.maxExecutionWindow.inSeconds,
       },
     ),
   );
+}
+
+int _intEnv(String key, {required int fallback}) {
+  final raw = Platform.environment[key]?.trim();
+  final parsed = raw == null ? null : int.tryParse(raw);
+  if (parsed == null || parsed <= 0) {
+    return fallback;
+  }
+  return parsed;
 }
 
 String _requireEnv(String key) {

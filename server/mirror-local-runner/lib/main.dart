@@ -30,6 +30,7 @@ Future<void> main() async {
       'MIRROR_AUTH_GUARD_ENABLED=false is not allowed for mirror-local-runner',
     );
   }
+
   final authGuard = AuthGuard(
     serviceToken: _requireEnv('MIRROR_SERVICE_TOKEN'),
     jwtSecret: _requireEnv('MIRROR_JWT_SECRET'),
@@ -38,6 +39,15 @@ Future<void> main() async {
     ),
     requiredAudience: _optionalEnv('MIRROR_JWT_AUDIENCE'),
     requiredIssuer: _optionalEnv('MIRROR_JWT_ISSUER'),
+  );
+
+  final gatewayQuota = MirrorGatewayQuotaConfig(
+    maxFiles: _intEnv('MIRROR_MAX_FILES', fallback: 500),
+    maxWorkspaceBytes:
+        _intEnv('MIRROR_MAX_WORKSPACE_BYTES', fallback: 50 * 1024 * 1024),
+    maxExecutionWindow: Duration(
+      seconds: _intEnv('MIRROR_MAX_EXECUTION_WINDOW_SECONDS', fallback: 300),
+    ),
   );
 
   await cleanupOldWorkspaces(
@@ -57,6 +67,7 @@ Future<void> main() async {
     httpPort: httpPort,
     grpcHost: '127.0.0.1',
     grpcPort: grpcPort,
+    quota: gatewayQuota,
   );
 
   await bootstrapRunner(
@@ -89,6 +100,9 @@ Future<void> main() async {
         'bindAddress': bindAddress,
         'workspaceRoot': workspaceRoot,
         'authGuardEnabled': authGuardEnabled,
+        'maxFiles': gatewayQuota.maxFiles,
+        'maxWorkspaceBytes': gatewayQuota.maxWorkspaceBytes,
+        'maxExecutionWindowSeconds': gatewayQuota.maxExecutionWindow.inSeconds,
       },
     ),
   );
@@ -105,6 +119,15 @@ String? _optionalEnv(String key) {
 bool _isTrue(String? value) {
   final normalized = (value ?? '').trim().toLowerCase();
   return normalized == '1' || normalized == 'true' || normalized == 'yes';
+}
+
+int _intEnv(String key, {required int fallback}) {
+  final raw = Platform.environment[key]?.trim();
+  final parsed = raw == null ? null : int.tryParse(raw);
+  if (parsed == null || parsed <= 0) {
+    return fallback;
+  }
+  return parsed;
 }
 
 String _requireEnv(String key) {
