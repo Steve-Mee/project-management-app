@@ -4,6 +4,7 @@ package mirror.compute.v1;
 
 service MirrorComputeService {
   rpc Compile(CompileRequest) returns (CompileResponse);
+  rpc Apply(CompileRequest) returns (CompileResponse);
 }
 
 message CompileRequest {
