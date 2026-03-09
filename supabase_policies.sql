@@ -266,13 +266,5 @@ CREATE POLICY "ai_usage_update_policy" ON ai_usage
 FOR UPDATE USING (auth.uid() = user_id)
 WITH CHECK (auth.uid() = user_id);
 
-ALTER TABLE ai_sessions ENABLE ROW LEVEL SECURITY;
-ALTER TABLE storage.objects ENABLE ROW LEVEL SECURITY;
-
--- Canonical ai_sessions policy set
-DROP POLICY IF EXISTS "ai_sessions_owner_policy" ON ai_sessions;
-
-CREATE POLICY "ai_sessions_owner_policy" ON ai_sessions
-FOR ALL TO authenticated
-USING (auth.uid() = user_id)
-WITH CHECK (auth.uid() = user_id);
+-- Mirror/ai_sessions/storage policies are managed via versioned migrations in
+-- supabase/migrations to avoid policy drift between environments.
