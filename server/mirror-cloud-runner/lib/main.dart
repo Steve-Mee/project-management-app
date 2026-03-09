@@ -170,7 +170,9 @@ class MirrorCompileService extends Service {
 
     final response = CompileResponsePayload(
       success: compileResult.success,
-      output: signedUrl,
+      output: <String, dynamic>{
+        'files': Map<String, String>.from(request.files),
+      },
       errors: compileResult.errors,
       warnings: compileResult.warnings,
       logs: compileResult.logs,
@@ -360,7 +362,7 @@ class CompileResponsePayload {
   });
 
   final bool success;
-  final String? output;
+  final Map<String, dynamic>? output;
   final List<String> errors;
   final List<String> warnings;
   final List<String> logs;
