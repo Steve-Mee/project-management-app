@@ -1,3 +1,9 @@
+## [1.19.1](https://github.com/Steve-Mee/project-management-app/compare/v1.19.0...v1.19.1) (2026-03-09)
+
+### Bug Fixes
+
+* return output files map and keep signedUrl separate in mirror runners ([b5df6b1](https://github.com/Steve-Mee/project-management-app/commit/b5df6b18755e612e3e17f85248149d4e478a79fd))
+
 ## [1.19.0](https://github.com/Steve-Mee/project-management-app/compare/v1.18.0...v1.19.0) (2026-03-09)
 
 ### Features
