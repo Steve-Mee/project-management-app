@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:pma_core/services/app_logger.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:xterm/xterm.dart';
@@ -33,6 +34,9 @@ class MirrorEditorScreen extends ConsumerStatefulWidget {
 
 class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
   static const int _maxLiveOutputLines = 500;
+  static const int _maxRealtimeCharsPerLine = 500;
+  static const int _maxRealtimeLinesPerEvent = 50;
+  static const int _maxRealtimeCharsPerDebounceWindow = 10000;
   static const Duration _realtimeDebounceDuration = Duration(milliseconds: 300);
 
   late String _selectedMode;
@@ -459,7 +463,40 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
       return;
     }
 
-    _pendingRealtimeLines.addAll(outputLines);
+    final eventGuarded = guardRealtimeEventLines(
+      lines: outputLines,
+      maxCharsPerLine: _maxRealtimeCharsPerLine,
+      maxLinesPerEvent: _maxRealtimeLinesPerEvent,
+    );
+    if (eventGuarded.lines.isEmpty) {
+      return;
+    }
+
+    final mergedPending = mergeRealtimeDebounceLinesWithCharCap(
+      currentLines: _pendingRealtimeLines,
+      incomingLines: eventGuarded.lines,
+      maxTotalChars: _maxRealtimeCharsPerDebounceWindow,
+      maxCharsPerLine: _maxRealtimeCharsPerLine,
+    );
+
+    _pendingRealtimeLines
+      ..clear()
+      ..addAll(mergedPending.lines);
+
+    if (eventGuarded.wasTruncated || mergedPending.wasTruncated) {
+      AppLogger.warning(
+        'Mirror realtime payload truncated',
+        params: <String, Object?>{
+          'projectId': widget.projectId,
+          'taskId': widget.taskId,
+          'eventTruncated': eventGuarded.wasTruncated,
+          'debounceTruncated': mergedPending.wasTruncated,
+          'incomingLines': outputLines.length,
+          'pendingLines': _pendingRealtimeLines.length,
+        },
+      );
+    }
+
     _realtimeDebounceTimer?.cancel();
     _realtimeDebounceTimer =
         Timer(_realtimeDebounceDuration, _flushDebouncedRealtimeOutput);
@@ -1047,6 +1084,147 @@ List<String> mergeLiveOutputWithCap({
     return merged;
   }
   return merged.sublist(merged.length - maxLines);
+}
+
+const String realtimeTruncationSuffix = '… [truncated]';
+
+class RealtimePayloadGuardResult {
+  const RealtimePayloadGuardResult({
+    required this.lines,
+    required this.wasTruncated,
+  });
+
+  final List<String> lines;
+  final bool wasTruncated;
+}
+
+RealtimePayloadGuardResult guardRealtimeEventLines({
+  required List<String> lines,
+  int maxCharsPerLine = 500,
+  int maxLinesPerEvent = 50,
+}) {
+  if (lines.isEmpty || maxCharsPerLine <= 0 || maxLinesPerEvent <= 0) {
+    return const RealtimePayloadGuardResult(
+      lines: <String>[],
+      wasTruncated: false,
+    );
+  }
+
+  var wasTruncated = false;
+  final limit = lines.length > maxLinesPerEvent ? maxLinesPerEvent : lines.length;
+  if (lines.length > maxLinesPerEvent) {
+    wasTruncated = true;
+  }
+
+  final guarded = <String>[];
+  for (var index = 0; index < limit; index += 1) {
+    final line = lines[index];
+    final normalized = line.length <= maxCharsPerLine
+        ? line
+        : truncateRealtimeLine(line, maxCharsPerLine);
+    if (normalized.length < line.length) {
+      wasTruncated = true;
+    }
+    guarded.add(normalized);
+  }
+
+  if (lines.length > maxLinesPerEvent && guarded.isNotEmpty) {
+    guarded[guarded.length - 1] = ensureRealtimeTruncationSuffix(
+      guarded.last,
+      maxCharsPerLine,
+    );
+  }
+
+  return RealtimePayloadGuardResult(lines: guarded, wasTruncated: wasTruncated);
+}
+
+RealtimePayloadGuardResult mergeRealtimeDebounceLinesWithCharCap({
+  required List<String> currentLines,
+  required List<String> incomingLines,
+  int maxTotalChars = 10000,
+  int maxCharsPerLine = 500,
+}) {
+  if (maxTotalChars <= 0 || maxCharsPerLine <= 0) {
+    return const RealtimePayloadGuardResult(
+      lines: <String>[],
+      wasTruncated: true,
+    );
+  }
+
+  final merged = <String>[...currentLines];
+  var totalChars = 0;
+  for (final line in merged) {
+    totalChars += line.length;
+  }
+
+  var wasTruncated = false;
+  for (final line in incomingLines) {
+    final remaining = maxTotalChars - totalChars;
+    if (remaining <= 0) {
+      wasTruncated = true;
+      break;
+    }
+
+    if (line.length <= remaining) {
+      merged.add(line);
+      totalChars += line.length;
+      continue;
+    }
+
+    final maxCharsForLine = remaining < maxCharsPerLine ? remaining : maxCharsPerLine;
+    if (maxCharsForLine > 0) {
+      final truncatedLine = truncateRealtimeLine(line, maxCharsForLine);
+      merged.add(truncatedLine);
+      totalChars += truncatedLine.length;
+    }
+    wasTruncated = true;
+    break;
+  }
+
+  if (wasTruncated && merged.isNotEmpty) {
+    var charsBeforeLast = 0;
+    for (var index = 0; index < merged.length - 1; index += 1) {
+      charsBeforeLast += merged[index].length;
+    }
+    final remainingForLast = maxTotalChars - charsBeforeLast;
+    final maxCharsForLast = remainingForLast < maxCharsPerLine
+        ? remainingForLast
+        : maxCharsPerLine;
+    merged[merged.length - 1] = ensureRealtimeTruncationSuffix(
+      merged.last,
+      maxCharsForLast,
+    );
+  }
+
+  return RealtimePayloadGuardResult(lines: merged, wasTruncated: wasTruncated);
+}
+
+String truncateRealtimeLine(String line, int maxCharsPerLine) {
+  if (maxCharsPerLine <= 0) {
+    return '';
+  }
+  if (line.length <= maxCharsPerLine) {
+    return line;
+  }
+
+  if (maxCharsPerLine <= realtimeTruncationSuffix.length) {
+    return realtimeTruncationSuffix.substring(0, maxCharsPerLine);
+  }
+
+  final keep = maxCharsPerLine - realtimeTruncationSuffix.length;
+  return '${line.substring(0, keep)}$realtimeTruncationSuffix';
+}
+
+String ensureRealtimeTruncationSuffix(String line, int maxCharsPerLine) {
+  if (maxCharsPerLine <= 0) {
+    return '';
+  }
+  if (line.contains(realtimeTruncationSuffix)) {
+    return line.length <= maxCharsPerLine
+        ? line
+        : truncateRealtimeLine(line, maxCharsPerLine);
+  }
+  return truncateRealtimeLine('$line $realtimeTruncationSuffix', maxCharsPerLine);
 }
 
 class _ModeSelector extends StatelessWidget {
