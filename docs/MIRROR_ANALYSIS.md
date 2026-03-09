@@ -9,7 +9,7 @@
   - Error-observability rond templates is zwak: provider slikt Supabase fouten en retourneert lege lijst, waardoor UI-error state in praktijk niet afgaat (`lib/features/mirror/providers/mirror_templates_provider.dart`, `lib/features/mirror/mirror_editor_screen.dart`).
   - UI-consistentie met rest van codebase is beperkt: veel Mirror-teksten zijn hardcoded in screen extension i.p.v. reguliere ARB/l10n flow (`lib/features/mirror/mirror_editor_screen.dart`, `l10n/*.arb`).
   - Duplicate backend/gateway code tussen cloud en local runner verhoogt onderhoudslast en vergroot kans op drift bij security fixes (`server/mirror-cloud-runner/lib/main.dart`, `server/mirror-local-runner/lib/main.dart`, `server/mirror-cloud-runner/lib/http_gateway.dart`, `server/mirror-local-runner/lib/http_gateway.dart`).
-  - Feature-context noemt `mirror_staging`, maar implementatie draait op `mirror-signed-inputs` + `mirror-backups`; deze naming drift kan operations/documentatie verwarren.
+  - Feature-context noemde eerder een staging-bucket, maar implementatie draait op `mirror-signed-inputs` + `mirror-backups`; deze naming drift kan operations/documentatie verwarren.
 - Overall score (1-10)
   - 8.2/10
 
@@ -93,7 +93,7 @@
     - Verwijder een van de duplicaten na extractie naar `server/mirror-shared` om drift en dubbele fixes te voorkomen.
   - `server/mirror-cloud-runner/lib/main.dart` en `server/mirror-local-runner/lib/main.dart`
     - Verwijder dubbele compile/apply bootstrapblokken na centralisatie in gedeelde module.
-  - Legacy verwijzingen naar `mirror_staging` in documentatie/config-hulpen
+  - Legacy verwijzingen naar oude staging-bucket benaming in documentatie/config-hulpen
     - Verwijder of migreer naar de huidige bucketnamen (`mirror-signed-inputs`, `mirror-backups`) om naming-ambiguiteit te voorkomen.
   - Hardcoded Mirror UI teksten in screen-level extension (`lib/features/mirror/mirror_editor_screen.dart`)
     - Verwijder na migratie naar ARB om consistentie met bestaande i18n-architectuur te herstellen.

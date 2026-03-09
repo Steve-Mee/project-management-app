@@ -989,6 +989,10 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
       final existsInSession =
           ref.read(mirrorSessionProvider(_sessionKey)).files.containsKey(patch.path);
       if (!existsInSession) {
+        _sessionNotifier.upsertFileContent(
+          path: patch.path,
+          content: patch.updatedContent,
+        );
         continue;
       }
 

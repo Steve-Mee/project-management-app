@@ -7,7 +7,7 @@
 - Zwakke punten
   - Kritieke contractmismatch: runners leveren compile output als signed artifact URL, terwijl Flutter-laag dit als file patch interpreteert. Dit kan file-content corrupt maken bij apply-flow.
   - DB-template laag is niet gekoppeld aan UI: `mirrorTemplatesProvider` bestaat maar `mirror_editor_screen.dart` gebruikt alleen hardcoded `_defaultTemplates`.
-  - Inconsistentie in Mirror-storage ontwerp: request noemt `mirror_staging`, maar actieve migraties gebruiken `mirror-signed-inputs` en `mirror-backups`; `mirror_staging` leeft alleen in legacy `supabase_policies.sql`.
+  - Inconsistentie in Mirror-storage ontwerp: oudere documentatie noemde een staging-bucket, maar actieve migraties gebruiken `mirror-signed-inputs` en `mirror-backups`.
   - Deployment docs en runtime-env zijn niet aligned: `server/mirror-cloud-runner/DEPLOY.md` noemt andere secrets dan verplicht in `server/mirror-cloud-runner/lib/main.dart`.
   - Meerdere legacy paden/policies naast migraties (`supabase_setup.sql`, `supabase_policies.sql`) verhogen drift-risico.
 - Overall score (1-10)
@@ -21,7 +21,7 @@
   - Realtime topic-scoping op `ai_sessions` via broadcast trigger is goed doordacht in `supabase/migrations/20260309_mirror_ai_sessions_broadcast_topics.sql`.
   - Risico's
   - Geen zichtbare migratie voor `CREATE TABLE public.ai_sessions` in `supabase/migrations/**`; feature leunt op eerder/extern schema.
-  - `mirror_staging` is niet gemigreerd maar wel in legacy policies (`supabase_policies.sql`), wat operationele verwarring geeft.
+  - Legacy bucketbenaming stond nog in oudere policy/documentatiereferenties, wat operationele verwarring gaf.
   - `mirror_apply_audit_events` heeft geen expliciete retention/cleanup job, terwijl events hard kunnen groeien.
 
 - Edge Functions & gRPC backend laag
@@ -97,4 +97,4 @@
 - Verwijderingen (wat weg kan en waarom)
   - [x] Done: ongebruikte Mirror-session methods verwijderd uit `lib/core/hive_initializer.dart`.
   - [x] Done: dode provider-route opgeruimd in `lib/core/providers/mirror_provider.dart`.
-  - [x] Done: legacy Mirror policyblokken (`mirror_staging`, oude prompt-specifieke policy varianten) verwijderd uit `supabase_policies.sql`.
+  - [x] Done: legacy Mirror policyblokken en oude prompt-specifieke policy varianten verwijderd uit `supabase_policies.sql`.

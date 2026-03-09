@@ -242,6 +242,12 @@ class MirrorSessionNotifier extends FamilyNotifier<MirrorSessionState, String> {
     state = state.copyWith(files: updatedFiles);
   }
 
+  void upsertFileContent({required String path, required String content}) {
+    final updatedFiles = Map<String, String>.from(state.files);
+    updatedFiles[path] = content;
+    state = state.copyWith(files: updatedFiles);
+  }
+
   void appendLiveOutput(List<String> lines, {int maxLines = 500}) {
     if (lines.isEmpty) {
       return;
