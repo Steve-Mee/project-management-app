@@ -33,35 +33,6 @@ class MirrorEditorScreen extends ConsumerStatefulWidget {
 class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
   static const int _maxLiveOutputLines = 500;
   static const Duration _realtimeDebounceDuration = Duration(milliseconds: 300);
-  static const List<MirrorTemplate> _fallbackTemplates = <MirrorTemplate>[
-    MirrorTemplate(
-      id: 'dart-service',
-      title: 'Dart Service',
-      description: 'Boilerplate for a typed async service class.',
-      icon: Icons.settings_suggest,
-      seedContent:
-          'class ExampleService {\n  Future<String> execute() async {\n    return \'ok\';\n  }\n}\n',
-      tags: <String>['dart', 'service', 'async'],
-    ),
-    MirrorTemplate(
-      id: 'flutter-widget',
-      title: 'Flutter Widget',
-      description: 'Stateful widget scaffold with clear sectioning.',
-      icon: Icons.widgets,
-      seedContent:
-          'import \'package:flutter/material.dart\';\n\nclass ExampleWidget extends StatefulWidget {\n  const ExampleWidget({super.key});\n\n  @override\n  State<ExampleWidget> createState() => _ExampleWidgetState();\n}\n\nclass _ExampleWidgetState extends State<ExampleWidget> {\n  @override\n  Widget build(BuildContext context) {\n    return const SizedBox.shrink();\n  }\n}\n',
-      tags: <String>['flutter', 'widget'],
-    ),
-    MirrorTemplate(
-      id: 'readme',
-      title: 'README Section',
-      description: 'Structured markdown section for feature docs.',
-      icon: Icons.description,
-      seedContent:
-          '## Feature Overview\n\n### Goal\nDescribe the problem and expected outcome.\n\n### Usage\n1. Step one\n2. Step two\n\n### Notes\n- Constraints\n- Follow-up tasks\n',
-      tags: <String>['docs', 'markdown'],
-    ),
-  ];
 
   late String _selectedMode;
   late final Terminal _terminal;
@@ -686,12 +657,35 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
         );
       }
 
+      final generatedPatches = _buildPreviewPatches(
+        backend: backend,
+        context: executionContext,
+        selectedFile: selectedFile,
+        compileOutput: generateResult.code,
+        generatedCode: generateResult.code,
+      );
+
+      final compileContext = generatedPatches.isEmpty
+          ? executionContext
+          : ProjectContext(
+              projectId: executionContext.projectId,
+              taskId: executionContext.taskId,
+              files: backend.applyPatchesToFiles(
+                files: executionContext.files,
+                patches: generatedPatches,
+              ),
+              metadata: executionContext.metadata,
+            );
+
+      final runPrompt = _firstNonEmpty(generateResult.code, selectedContent) ??
+          selectedContent;
+
       _appendTerminalLine('Step 2/5: compile request sent...');
       final compileResult = await orchestrator.compile(
         ref: ref,
         sessionKey: _sessionKey,
-        prompt: selectedContent,
-        context: executionContext,
+        prompt: runPrompt,
+        context: compileContext,
         mode: _selectedMode,
       );
 
@@ -719,7 +713,7 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
       _appendTerminalLine('Step 3/5: building patch preview...');
       final patches = _buildPreviewPatches(
         backend: backend,
-        context: executionContext,
+        context: compileContext,
         selectedFile: selectedFile,
         compileOutput: compileResult.output,
         generatedCode: generateResult.code,
@@ -772,11 +766,20 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
       }
 
       _appendTerminalLine('Step 5/5: apply request sent...');
+      final applyContext = ProjectContext(
+        projectId: compileContext.projectId,
+        taskId: compileContext.taskId,
+        files: backend.applyPatchesToFiles(
+          files: compileContext.files,
+          patches: patches,
+        ),
+        metadata: compileContext.metadata,
+      );
       final applyResult = await orchestrator.apply(
         ref: ref,
         sessionKey: _sessionKey,
-        prompt: selectedContent,
-        context: executionContext,
+        prompt: runPrompt,
+        context: applyContext,
         mode: _selectedMode,
       );
 
@@ -893,69 +896,45 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
                 loading: () => const Center(
                   child: CircularProgressIndicator(),
                 ),
-                error: (_, __) => Column(
-                  children: <Widget>[
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
-                      child: Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.all(10),
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(8),
-                          color: Theme.of(context)
-                              .colorScheme
-                              .surfaceContainerHighest,
+                error: (_, __) => Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: <Widget>[
+                        const Text(
+                          'Templates konden niet worden geladen.',
+                          textAlign: TextAlign.center,
                         ),
-                        child: const Text(
-                          'Templates uit database laden mislukte. Fallback templates worden getoond.',
+                        const SizedBox(height: 12),
+                        FilledButton.tonalIcon(
+                          onPressed: () => ref.invalidate(mirrorTemplatesProvider),
+                          icon: const Icon(Icons.refresh),
+                          label: const Text('Opnieuw proberen'),
                         ),
-                      ),
+                      ],
                     ),
-                    Expanded(
-                      child: TemplatesGallery(
-                        templates: _fallbackTemplates,
-                        onTemplateSelected: (MirrorTemplate template) {
-                          Navigator.of(context).pop();
-                          _applyTemplateToSelectedFile(template);
-                        },
-                      ),
-                    ),
-                  ],
+                  ),
                 ),
                 data: (List<MirrorTemplate> templates) {
-                  final resolvedTemplates =
-                      templates.isEmpty ? _fallbackTemplates : templates;
-                  final usingFallback = templates.isEmpty;
-
-                  return Column(
-                    children: <Widget>[
-                      if (usingFallback)
-                        Padding(
-                          padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
-                          child: Container(
-                            width: double.infinity,
-                            padding: const EdgeInsets.all(10),
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(8),
-                              color: Theme.of(context)
-                                  .colorScheme
-                                  .surfaceContainerHighest,
-                            ),
-                            child: const Text(
-                              'Geen actieve templates in database. Fallback templates worden getoond.',
-                            ),
-                          ),
-                        ),
-                      Expanded(
-                        child: TemplatesGallery(
-                          templates: resolvedTemplates,
-                          onTemplateSelected: (MirrorTemplate template) {
-                            Navigator.of(context).pop();
-                            _applyTemplateToSelectedFile(template);
-                          },
+                  if (templates.isEmpty) {
+                    return const Center(
+                      child: Padding(
+                        padding: EdgeInsets.all(16),
+                        child: Text(
+                          'Geen actieve templates beschikbaar.',
+                          textAlign: TextAlign.center,
                         ),
                       ),
-                    ],
+                    );
+                  }
+
+                  return TemplatesGallery(
+                    templates: templates,
+                    onTemplateSelected: (MirrorTemplate template) {
+                      Navigator.of(context).pop();
+                      _applyTemplateToSelectedFile(template);
+                    },
                   );
                 },
               );
