@@ -1,3 +1,9 @@
+## [1.20.1](https://github.com/Steve-Mee/project-management-app/compare/v1.20.0...v1.20.1) (2026-03-09)
+
+### Bug Fixes
+
+* add explicit Apply RPC to mirror proto services ([e29feb4](https://github.com/Steve-Mee/project-management-app/commit/e29feb456306c3ee05b0c58e0570937073a3e527))
+
 ## [1.20.0](https://github.com/Steve-Mee/project-management-app/compare/v1.19.1...v1.20.0) (2026-03-09)
 
 ### Features
