@@ -40,6 +40,12 @@
      ARTIFACT_BASE_URL="https://<your-app-name>.fly.dev/artifacts"
    ```
 
+   Vereist minimaal deze 4 secrets:
+   - `SIGNED_URL_SECRET`
+   - `MIRROR_SERVICE_TOKEN`
+   - `MIRROR_JWT_SECRET`
+   - `ARTIFACT_BASE_URL` (moet wijzen naar de publieke HTTP gateway, inclusief `/artifacts`)
+
 7. (Optioneel) Stel extra JWT- en policy-gerelateerde secrets in.
    ```bash
    fly secrets set \
