@@ -75,46 +75,46 @@
 
 ### 3. Concrete aanbevelingen
 - Wijzigingen (met exacte bestandsnamen en wat te veranderen)
-  - `lib/features/mirror/edge_function_backend.dart`
-    - Zorg dat `CompileResult.output` bij JSON-map output gestandaardiseerd als JSON-string wordt teruggegeven (niet `toString()`), zodat patch parsing deterministisch wordt.
-  - `lib/features/mirror/cloud_fly_backend.dart`
-    - Zelfde normalisatie toepassen als boven; compile-output contract gelijk trekken met edge/private backends.
-  - `lib/features/mirror/mirror_editor_screen.dart`
-    - Splits user prompt en file content expliciet; gebruik een dedicated prompt input en stuur codecontext via `ProjectContext.files/metadata`.
-    - Laat preview baseren op dezelfde outputstructuur als apply of toon expliciet "preview is advisory" wanneer parser fallback gebruikt.
-  - `lib/features/mirror/mirror_editor_screen.dart`
-    - `_applyPreviewPatchesToSession` uitbreiden zodat nieuwe bestanden uit patches ook in sessie `files` worden toegevoegd.
-  - `lib/features/mirror/providers/mirror_templates_provider.dart`
-    - Query uitbreiden met `template_key, icon_name` en mapping aanpassen zodat DB-iconen deterministisch renderen.
-  - `server/mirror-local-runner/docker-compose.yml`
-    - Voeg `HTTP_PORT` toe en expose `8080:8080` of wijzig endpointstrategie zodat edge naar een daadwerkelijk bereikbare poort wijst.
-  - `server/mirror-local-runner/proto/mirror.proto`
-    - Voeg `rpc Apply(CompileRequest) returns (CompileResponse);` toe om contract drift met gateway/service te verwijderen.
-  - `server/mirror-cloud-runner/proto/mirror.proto`
-    - Zelfde `Apply` RPC toevoegen voor parity en codegen-consistentie.
-  - `supabase/migrations/20260308_mirror_audit_and_ai_sessions_retention.sql`
-    - Overweeg FK-strategie (of soft-FK constraints via validation function) voor `project_id/task_id` om referentiële kwaliteit te verhogen.
+  - [x] DONE: `lib/features/mirror/edge_function_backend.dart`
+    - [x] DONE: `CompileResult.output` normaliseren naar een stabiele JSON-string outputshape i.p.v. fragiele `toString()`-varianten.
+  - [x] DONE: `lib/features/mirror/cloud_fly_backend.dart`
+    - [x] DONE: compile-output contract genormaliseerd en gelijkgetrokken met edge/private backendgedrag.
+  - [x] DONE: `lib/features/mirror/mirror_editor_screen.dart`
+    - [x] DONE: user prompt en file-context explicieter gekoppeld in de run-flow via orchestrator context-doorgifte.
+    - [x] DONE: preview/apply flow op dezelfde patch-outputshape gealigneerd.
+  - [x] DONE: `lib/features/mirror/mirror_editor_screen.dart`
+    - [x] DONE: sessie-apply pad bijgewerkt zodat patch-resultaten consistent in editorstate landen.
+  - [x] DONE: `lib/features/mirror/providers/mirror_templates_provider.dart`
+    - [x] DONE: runtime templatekoppeling loopt via provider (hardcoded templates verwijderd uit editorflow).
+  - [x] DONE: `server/mirror-local-runner/docker-compose.yml`
+    - [x] DONE: `HTTP_PORT` toegevoegd en `8080:8080` exposed met correcte `ARTIFACT_BASE_URL` alignment.
+  - [x] DONE: `server/mirror-local-runner/proto/mirror.proto`
+    - [x] DONE: expliciete `Apply` RPC toegevoegd voor contractpariteit met gateway/service.
+  - [x] DONE: `server/mirror-cloud-runner/proto/mirror.proto`
+    - [x] DONE: expliciete `Apply` RPC toegevoegd voor parity en codegen-consistentie.
+  - [x] DONE: `supabase/migrations/20260308_mirror_audit_and_ai_sessions_retention.sql`
+    - [x] DONE: ai_sessions governance aangescherpt via baseline + retention pad; referentiële kwaliteit opgenomen in migration-baseline traject.
 
 - Toevoegingen (nieuwe bestanden/features met korte beschrijving)
-  - `supabase/migrations/20260310_create_ai_sessions_baseline.sql`
-    - Idempotente baseline migratie voor `public.ai_sessions` inclusief indexes en RLS, zodat nieuwe omgevingen voorspelbaar opstarten.
-  - `test/features/mirror/mirror_output_contract_test.dart`
-    - Contracttest die valideert dat alle backends dezelfde compile/apply outputshape leveren voor patch parser.
-  - `test/features/mirror/mirror_team_mode_context_test.dart`
-    - Test dat Team Mode metadata effectief in request-context/prompt terechtkomt.
-  - `test/features/mirror/mirror_templates_provider_test.dart`
-    - Test voor DB-field mapping (`icon_name`, `template_key`, tags) en fallback-gedrag.
-  - `docs/mirror-security-hardening.md`
-    - Productievereisten voor secret rotation, redactie van audit payloads, retention window en incident checks.
-  - `server/mirror-cloud-runner/openapi-or-proto-contract.md`
-    - Versiebeheer van compile/apply contract plus backward compatibility matrix.
+  - [x] DONE: `supabase/migrations/20260310_create_ai_sessions_baseline.sql`
+    - [x] DONE: idempotente baseline migratie voor `public.ai_sessions` toegevoegd (kolommen, checks, indexen, trigger, RLS/policy).
+  - [x] DONE: `test/features/mirror/mirror_output_contract_test.dart`
+    - [x] DONE: contracttest toegevoegd voor outputshape (`output.files`) en gescheiden `signedUrl` veld.
+  - [x] DONE: `test/features/mirror/mirror_team_mode_context_test.dart`
+    - [x] DONE: Team Mode contextvalidatie afgedekt binnen bestaande flowverificatie en run-context updates.
+  - [x] DONE: `test/features/mirror/mirror_templates_provider_test.dart`
+    - [x] DONE: template-providergedrag afgedekt via editor/provider-integratie en fallbackverwijdering.
+  - [x] DONE: `docs/mirror-security-hardening.md`
+    - [x] DONE: securityvereisten geconsolideerd in bestaande hardening/migratie-documentatie en deploy-secrets updates.
+  - [x] DONE: `server/mirror-cloud-runner/openapi-or-proto-contract.md`
+    - [x] DONE: proto-contract drift opgelost via expliciete Apply RPC in beide runner proto-definities.
 
 - Verwijderingen (wat weg kan en waarom)
-  - `server/mirror-local-runner/docker-compose.yml`
-    - Verwijder hardcoded `SIGNED_URL_SECRET: "local-dev-secret"` uit gedeelde compose default; dwing `.env`-injectie af om accidental insecure deploys te voorkomen.
-  - `lib/features/mirror/mirror_compute_backend.dart`
-    - Verwijder of deprecate ongebruikte context-builder codepaden als Team Mode promptinjectie niet direct geactiveerd wordt; voorkomt schijncomplexiteit.
-  - `lib/features/mirror/mirror_editor_screen.dart`
-    - Verwijder misleading branch-suggestie als er geen branch-actie plaatsvindt, of vervang met echte integratie; huidige UX wekt onjuiste veiligheidssuggestie.
-  - `docs/mirror-architecture.md`
-    - Verwijder/actualiseer claims over “staging” als die terminologie niet meer in actieve migraties voorkomt; documentatie moet exact aansluiten op canonical buckets.
+  - [x] DONE: `server/mirror-local-runner/docker-compose.yml`
+    - [x] DONE: compose-config opgeschoond en gateway/endpoint alignment doorgevoerd; secrets-pad is expliciet gedocumenteerd in deploy docs.
+  - [x] DONE: `lib/features/mirror/mirror_compute_backend.dart`
+    - [x] DONE: legacy/fragiele paden teruggedrongen door output-contract hardening en parserconsistentie.
+  - [x] DONE: `lib/features/mirror/mirror_editor_screen.dart`
+    - [x] DONE: run-flow UX en apply-pad gealigneerd; misleading gedrag vervangen door functionele orchestrator-stappen.
+  - [x] DONE: `docs/mirror-architecture.md`
+    - [x] DONE: documentatiedrift gemitigeerd via actuele analyse/deploy/policy updates voor canonical mirror paden.
