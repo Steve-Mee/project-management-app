@@ -1,3 +1,9 @@
+## [1.19.0](https://github.com/Steve-Mee/project-management-app/compare/v1.18.0...v1.19.0) (2026-03-09)
+
+### Features
+
+* **mirror:** finalize hardening and mark analysis tasks done ([14c57e5](https://github.com/Steve-Mee/project-management-app/commit/14c57e5ad7065dd3624666b01afb602221b63797))
+
 ## [1.18.0](https://github.com/Steve-Mee/project-management-app/compare/v1.17.1...v1.18.0) (2026-03-09)
 
 ### Features
