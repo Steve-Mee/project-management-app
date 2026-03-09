@@ -159,7 +159,6 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
                             child: CircularProgressIndicator(strokeWidth: 2),
                           )
                         : const Icon(Icons.play_arrow),
-                    label: Text(_isRunInProgress ? 'Running...' : 'Run'),
                     label: Text(_isRunInProgress
                         ? _l10n.mirrorRunningLabel
                         : _l10n.mirrorRunLabel),
@@ -747,7 +746,6 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
       );
       final applyDecision = await ApplyDialog.show(
         context,
-        title: 'Apply wijzigingen (${previewPatch.path})',
         title: _l10n.mirrorApplyChangesTitle(previewPatch.path),
         originalContent: previewPatch.originalContent,
         updatedContent: previewPatch.updatedContent,
@@ -915,9 +913,9 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
                 ),
                 data: (List<MirrorTemplate> templates) {
                   if (templates.isEmpty) {
-                    return const Center(
+                    return Center(
                       child: Padding(
-                        padding: EdgeInsets.all(16),
+                        padding: const EdgeInsets.all(16),
                         child: Text(
                           AppLocalizations.of(context)!
                               .mirrorNoActiveTemplates,

@@ -8,6 +8,7 @@ import 'package:grpc/grpc.dart';
 import 'auth_guard.dart';
 import 'auth_metrics.dart';
 import 'http_gateway.dart';
+// ignore: avoid_relative_lib_imports
 import '../../mirror-shared/lib/compile_runner.dart';
 
 Future<void> main() async {

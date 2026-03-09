@@ -6,7 +6,9 @@ import 'package:crypto/crypto.dart';
 import 'package:grpc/grpc.dart';
 
 import 'http_gateway.dart';
+// ignore: avoid_relative_lib_imports
 import '../../mirror-shared/lib/compile_runner.dart';
+// ignore: avoid_relative_lib_imports
 import '../../mirror-cloud-runner/lib/auth_guard.dart';
 
 Future<void> main() async {
