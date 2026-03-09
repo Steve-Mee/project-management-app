@@ -31,64 +31,72 @@
    fly apps create <your-app-name>
    ```
 
-6. Stel runtime secrets in (pas keys/values aan op jouw omgeving).
+6. Stel runtime secrets in (required).
    ```bash
    fly secrets set \
-     SUPABASE_URL="<supabase-url>" \
-     SUPABASE_SERVICE_ROLE_KEY="<supabase-service-role-key>" \
-     OPENAI_API_KEY="<openai-api-key>" \
-     MIRROR_ENV="production"
+     SIGNED_URL_SECRET="<strong-random-secret>" \
+     MIRROR_SERVICE_TOKEN="<service-token-for-edge-to-runner-auth>" \
+     MIRROR_JWT_SECRET="<jwt-shared-secret>" \
+     ARTIFACT_BASE_URL="https://<your-app-name>.fly.dev/artifacts"
    ```
 
-7. (Optioneel) Stel gewone config variables in als je die gebruikt.
+7. (Optioneel) Stel extra JWT- en policy-gerelateerde secrets in.
+   ```bash
+   fly secrets set \
+     MIRROR_JWT_KEYS_BY_KID="<kid1:secret1,kid2:secret2>" \
+     MIRROR_JWT_AUDIENCE="<expected-audience>" \
+     MIRROR_JWT_ISSUER="<expected-issuer>"
+   ```
+
+8. (Optioneel) Stel gewone config variables in als je die gebruikt.
    ```bash
    fly deploy --build-only
    fly config save
    ```
 
-8. Deploy de service.
+9. Deploy de service.
    ```bash
    fly deploy
    ```
 
-9. Controleer de status van machines en release.
+10. Controleer de status van machines en release.
    ```bash
    fly status
    fly releases
    fly machines list
    ```
 
-10. Controleer health en endpoint.
+11. Controleer health en endpoint.
     ```bash
     fly checks list
     fly open
     ```
 
-11. Bekijk live logs voor runtime validatie.
+12. Bekijk live logs voor runtime validatie.
     ```bash
     fly logs
     ```
 
-12. Test een smoke request tegen de publieke app URL.
+13. Test een smoke request tegen de publieke app URL.
     ```bash
     fly ips list
     # Gebruik daarna je endpoint (voorbeeld):
     # curl https://<your-app-name>.fly.dev/health
     ```
 
-13. Rollback naar vorige release bij issues.
+14. Rollback naar vorige release bij issues.
     ```bash
     fly releases
     fly deploy --image <previous-image-reference>
     ```
 
-14. Scale instellingen updaten (CPU/RAM/instances) na succesvolle deploy.
+15. Scale instellingen updaten (CPU/RAM/instances) na succesvolle deploy.
     ```bash
     fly scale count 1
     fly scale vm shared-cpu-1x --memory 512
     ```
 
-15. Verifieer definitieve productie-status.
+16. Verifieer definitieve productie-status.
     ```bash
     fly status
     fly checks list

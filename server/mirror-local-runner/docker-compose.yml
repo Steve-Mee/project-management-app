@@ -11,7 +11,7 @@ services:
     environment:
       PORT: "50051"
       MIRROR_WORKSPACE_ROOT: "/tmp/mirror-local-workspaces"
-      ARTIFACT_BASE_URL: "http://127.0.0.1:50051/artifacts"
+      ARTIFACT_BASE_URL: "http://127.0.0.1:8080/artifacts"
       SIGNED_URL_SECRET: "local-dev-secret"
     volumes:
       - mirror_local_workspace:/tmp/mirror-local-workspaces
