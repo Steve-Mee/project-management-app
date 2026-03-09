@@ -268,3 +268,4 @@ WITH CHECK (auth.uid() = user_id);
 
 -- Mirror/ai_sessions/storage policies are managed via versioned migrations in
 -- supabase/migrations to avoid policy drift between environments.
+-- Legacy mirror_staging policy references have been removed from this file.

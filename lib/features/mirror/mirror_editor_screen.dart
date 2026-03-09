@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:xterm/xterm.dart';
+import '../../l10n/app_localizations.dart';
 
 import '../../core/providers/mirror_provider.dart';
 import '../../core/providers/mirror_session_provider.dart';
@@ -50,6 +51,8 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
 
   MirrorSessionNotifier get _sessionNotifier =>
       ref.read(mirrorSessionProvider(_sessionKey).notifier);
+
+  AppLocalizations get _l10n => AppLocalizations.of(context)!;
 
   @override
   void initState() {
@@ -98,12 +101,12 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Mirror Editor'),
+        title: Text(_l10n.mirrorEditorTitle),
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: _openTemplatesGallery,
         icon: const Icon(Icons.auto_awesome),
-        label: const Text('Templates'),
+        label: Text(_l10n.mirrorTemplatesLabel),
       ),
       body: SafeArea(
         child: Padding(
@@ -112,14 +115,14 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
               _ModeSelector(
+                l10n: _l10n,
                 selectedMode: _selectedMode,
                 isPremium: isPremium,
                 onModeChanged: (String mode) {
                   if (mode == 'cloud' && !isPremium) {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text(
-                            'Cloud mode is beschikbaar voor premium gebruikers.'),
+                      SnackBar(
+                        content: Text(_l10n.mirrorCloudPremiumOnly),
                       ),
                     );
                     return;
@@ -142,7 +145,9 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
                   FilledButton.tonalIcon(
                     onPressed: _toggleVoiceInput,
                     icon: Icon(_isListening ? Icons.mic : Icons.mic_none),
-                    label: Text(_isListening ? 'Listening...' : 'Voice Input'),
+                    label: Text(_isListening
+                        ? _l10n.mirrorListeningLabel
+                        : _l10n.mirrorVoiceInputLabel),
                   ),
                   const SizedBox(width: 8),
                   OutlinedButton.icon(
@@ -155,6 +160,9 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
                           )
                         : const Icon(Icons.play_arrow),
                     label: Text(_isRunInProgress ? 'Running...' : 'Run'),
+                    label: Text(_isRunInProgress
+                        ? _l10n.mirrorRunningLabel
+                        : _l10n.mirrorRunLabel),
                   ),
                 ],
               ),
@@ -244,7 +252,7 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
           color: Theme.of(context).colorScheme.surfaceContainerHigh,
           child: Text(
-            'Files',
+            _l10n.mirrorFilesLabel,
             style: Theme.of(context).textTheme.titleSmall,
           ),
         ),
@@ -320,7 +328,7 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
           color: Theme.of(context).colorScheme.surfaceContainerHigh,
           child: Text(
-            'Terminal',
+            _l10n.mirrorTerminalLabel,
             style: Theme.of(context).textTheme.titleSmall,
           ),
         ),
@@ -358,7 +366,7 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
           color: Theme.of(context).colorScheme.surfaceContainerLow,
           child: Text(
-            'Live AI Output',
+            _l10n.mirrorLiveOutputLabel,
             style: Theme.of(context).textTheme.titleSmall,
           ),
         ),
@@ -366,7 +374,7 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
           child: sessionState.liveOutput.isEmpty
               ? Center(
                   child: Text(
-                    'Waiting for realtime output...',
+                    _l10n.mirrorWaitingRealtime,
                     style: Theme.of(context).textTheme.bodySmall,
                   ),
                 )
@@ -533,8 +541,7 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
         return;
       }
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-            content: Text('Voice input is not available on this device.')),
+        SnackBar(content: Text(_l10n.mirrorVoiceUnavailable)),
       );
       _appendTerminalLine('Voice input unavailable.');
       return;
@@ -595,9 +602,7 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
         return;
       }
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Het geselecteerde bestand is leeg.'),
-        ),
+        SnackBar(content: Text(_l10n.mirrorSelectedFileEmpty)),
       );
       return;
     }
@@ -645,7 +650,7 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
                 'Unknown generate error.';
         _appendTerminalLine('Mirror generate failed: $errorText');
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Generate mislukt: $errorText')),
+          SnackBar(content: Text(_l10n.mirrorGenerateFailed(errorText))),
         );
         return;
       }
@@ -699,7 +704,7 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
             _firstNonEmpty(compileResult.errors.join(' | '), 'Unknown compile error.')!;
         _appendTerminalLine('Mirror compile failed: $errorText');
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Compile mislukt: $errorText')),
+          SnackBar(content: Text(_l10n.mirrorCompileFailed(errorText))),
         );
         return;
       }
@@ -723,9 +728,7 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
       if (patches.isEmpty) {
         _appendTerminalLine('No patch preview available after compile.');
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Geen wijzigingen gedetecteerd na compile.'),
-          ),
+          SnackBar(content: Text(_l10n.mirrorNoChangesAfterCompile)),
         );
         return;
       }
@@ -745,6 +748,7 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
       final applyDecision = await ApplyDialog.show(
         context,
         title: 'Apply wijzigingen (${previewPatch.path})',
+        title: _l10n.mirrorApplyChangesTitle(previewPatch.path),
         originalContent: previewPatch.originalContent,
         updatedContent: previewPatch.updatedContent,
         suggestedBranch: 'mirror/${widget.projectId}-${widget.taskId}',
@@ -759,9 +763,7 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
       if (!applyApproved) {
         _appendTerminalLine('Step 4/5: apply cancelled by user.');
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Apply geannuleerd.'),
-          ),
+          SnackBar(content: Text(_l10n.mirrorApplyCanceled)),
         );
         return;
       }
@@ -798,9 +800,7 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
         }
         _appendTerminalLine('Mirror run completed successfully.');
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Mirror run succesvol afgerond.'),
-          ),
+          SnackBar(content: Text(_l10n.mirrorRunSuccess)),
         );
         return;
       }
@@ -809,7 +809,7 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
       _appendTerminalLine('Mirror apply failed: $errorText');
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Apply mislukt: $errorText'),
+          content: Text(_l10n.mirrorApplyFailed(errorText)),
         ),
       );
     } catch (error) {
@@ -819,7 +819,7 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
       }
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Mirror run gecrasht: $error'),
+          content: Text(_l10n.mirrorRunCrashed(error.toString())),
         ),
       );
     } finally {
@@ -907,7 +907,7 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
                         FilledButton.tonalIcon(
                           onPressed: () => ref.refresh(mirrorTemplatesProvider),
                           icon: const Icon(Icons.refresh),
-                          label: const Text('Opnieuw proberen'),
+                          label: Text(AppLocalizations.of(context)!.retryButton),
                         ),
                       ],
                     ),
@@ -919,7 +919,8 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
                       child: Padding(
                         padding: EdgeInsets.all(16),
                         child: Text(
-                          'Geen actieve templates beschikbaar.',
+                          AppLocalizations.of(context)!
+                              .mirrorNoActiveTemplates,
                           textAlign: TextAlign.center,
                         ),
                       ),
@@ -953,7 +954,7 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
     }
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('Template geladen: ${template.title}'),
+        content: Text(_l10n.mirrorTemplateLoaded(template.title)),
       ),
     );
   }
@@ -1028,11 +1029,13 @@ List<String> mergeLiveOutputWithCap({
 
 class _ModeSelector extends StatelessWidget {
   const _ModeSelector({
+    required this.l10n,
     required this.selectedMode,
     required this.isPremium,
     required this.onModeChanged,
   });
 
+  final AppLocalizations l10n;
   final String selectedMode;
   final bool isPremium;
   final ValueChanged<String> onModeChanged;
@@ -1041,7 +1044,7 @@ class _ModeSelector extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: <Widget>[
-        const Text('Mode:'),
+        Text(l10n.mirrorModeLabel),
         const SizedBox(width: 12),
         Expanded(
           child: DropdownButtonFormField<String>(
@@ -1051,15 +1054,15 @@ class _ModeSelector extends StatelessWidget {
               isDense: true,
             ),
             items: <DropdownMenuItem<String>>[
-              const DropdownMenuItem<String>(
+              DropdownMenuItem<String>(
                 value: 'private',
-                child: Text('Private'),
+                child: Text(l10n.mirrorPrivateMode),
               ),
               DropdownMenuItem<String>(
                 value: 'cloud',
                 child: Row(
                   children: <Widget>[
-                    const Text('Cloud'),
+                    Text(l10n.mirrorCloudMode),
                     const SizedBox(width: 8),
                     if (!isPremium)
                       Container(
@@ -1071,7 +1074,7 @@ class _ModeSelector extends StatelessWidget {
                               Theme.of(context).colorScheme.secondaryContainer,
                         ),
                         child: Text(
-                          'Premium',
+                          l10n.mirrorPremiumLabel,
                           style: Theme.of(context).textTheme.labelSmall,
                         ),
                       ),
@@ -1090,4 +1093,69 @@ class _ModeSelector extends StatelessWidget {
       ],
     );
   }
+}
+
+extension _MirrorEditorL10n on AppLocalizations {
+  String get mirrorEditorTitle => localeName.startsWith('nl')
+    ? 'Mirror Editor'
+    : 'Mirror Editor';
+  String get mirrorTemplatesLabel =>
+    localeName.startsWith('nl') ? 'Templates' : 'Templates';
+  String get mirrorCloudPremiumOnly => localeName.startsWith('nl')
+    ? 'Cloud mode is beschikbaar voor premium gebruikers.'
+    : 'Cloud mode is available for premium users.';
+  String get mirrorListeningLabel =>
+    localeName.startsWith('nl') ? 'Luisteren...' : 'Listening...';
+  String get mirrorVoiceInputLabel =>
+    localeName.startsWith('nl') ? 'Spraakinvoer' : 'Voice Input';
+  String get mirrorRunningLabel =>
+    localeName.startsWith('nl') ? 'Draait...' : 'Running...';
+  String get mirrorRunLabel => localeName.startsWith('nl') ? 'Run' : 'Run';
+  String get mirrorFilesLabel => localeName.startsWith('nl') ? 'Bestanden' : 'Files';
+  String get mirrorTerminalLabel =>
+    localeName.startsWith('nl') ? 'Terminal' : 'Terminal';
+  String get mirrorLiveOutputLabel =>
+    localeName.startsWith('nl') ? 'Live AI Output' : 'Live AI Output';
+  String get mirrorWaitingRealtime => localeName.startsWith('nl')
+    ? 'Wachten op realtime output...'
+    : 'Waiting for realtime output...';
+  String get mirrorVoiceUnavailable => localeName.startsWith('nl')
+    ? 'Spraakinvoer is niet beschikbaar op dit apparaat.'
+    : 'Voice input is not available on this device.';
+  String get mirrorSelectedFileEmpty => localeName.startsWith('nl')
+    ? 'Het geselecteerde bestand is leeg.'
+    : 'The selected file is empty.';
+  String mirrorGenerateFailed(String errorText) => localeName.startsWith('nl')
+    ? 'Generate mislukt: $errorText'
+    : 'Generate failed: $errorText';
+  String mirrorCompileFailed(String errorText) => localeName.startsWith('nl')
+    ? 'Compile mislukt: $errorText'
+    : 'Compile failed: $errorText';
+  String get mirrorNoChangesAfterCompile => localeName.startsWith('nl')
+    ? 'Geen wijzigingen gedetecteerd na compile.'
+    : 'No changes detected after compile.';
+  String mirrorApplyChangesTitle(String path) => localeName.startsWith('nl')
+    ? 'Apply wijzigingen ($path)'
+    : 'Apply changes ($path)';
+  String get mirrorApplyCanceled =>
+    localeName.startsWith('nl') ? 'Apply geannuleerd.' : 'Apply canceled.';
+  String get mirrorRunSuccess => localeName.startsWith('nl')
+    ? 'Mirror run succesvol afgerond.'
+    : 'Mirror run completed successfully.';
+  String mirrorApplyFailed(String errorText) => localeName.startsWith('nl')
+    ? 'Apply mislukt: $errorText'
+    : 'Apply failed: $errorText';
+  String mirrorRunCrashed(String errorText) => localeName.startsWith('nl')
+    ? 'Mirror run gecrasht: $errorText'
+    : 'Mirror run crashed: $errorText';
+  String get mirrorNoActiveTemplates => localeName.startsWith('nl')
+    ? 'Geen actieve templates beschikbaar.'
+    : 'No active templates available.';
+  String mirrorTemplateLoaded(String title) => localeName.startsWith('nl')
+    ? 'Template geladen: $title'
+    : 'Template loaded: $title';
+  String get mirrorModeLabel => localeName.startsWith('nl') ? 'Mode:' : 'Mode:';
+  String get mirrorPrivateMode => localeName.startsWith('nl') ? 'Private' : 'Private';
+  String get mirrorCloudMode => localeName.startsWith('nl') ? 'Cloud' : 'Cloud';
+  String get mirrorPremiumLabel => localeName.startsWith('nl') ? 'Premium' : 'Premium';
 }
