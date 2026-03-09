@@ -9,6 +9,7 @@ import 'package:xterm/xterm.dart';
 import '../../core/providers/mirror_provider.dart';
 import '../../core/providers/mirror_session_provider.dart';
 import 'apply_dialog.dart';
+import 'providers/mirror_templates_provider.dart';
 import 'services/mirror_orchestrator_service.dart';
 import 'templates_gallery.dart';
 import 'widgets/monaco_editor_host.dart';
@@ -32,7 +33,7 @@ class MirrorEditorScreen extends ConsumerStatefulWidget {
 class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
   static const int _maxLiveOutputLines = 500;
   static const Duration _realtimeDebounceDuration = Duration(milliseconds: 300);
-  static const List<MirrorTemplate> _defaultTemplates = <MirrorTemplate>[
+  static const List<MirrorTemplate> _fallbackTemplates = <MirrorTemplate>[
     MirrorTemplate(
       id: 'dart-service',
       title: 'Dart Service',
@@ -875,6 +876,8 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
   }
 
   Future<void> _openTemplatesGallery() async {
+    ref.invalidate(mirrorTemplatesProvider);
+
     await showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
@@ -882,11 +885,80 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
       builder: (BuildContext context) {
         return SizedBox(
           height: MediaQuery.sizeOf(context).height * 0.7,
-          child: TemplatesGallery(
-            templates: _defaultTemplates,
-            onTemplateSelected: (MirrorTemplate template) {
-              Navigator.of(context).pop();
-              _applyTemplateToSelectedFile(template);
+          child: Consumer(
+            builder: (BuildContext context, WidgetRef ref, Widget? child) {
+              final templatesAsync = ref.watch(mirrorTemplatesProvider);
+
+              return templatesAsync.when(
+                loading: () => const Center(
+                  child: CircularProgressIndicator(),
+                ),
+                error: (_, __) => Column(
+                  children: <Widget>[
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
+                      child: Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(8),
+                          color: Theme.of(context)
+                              .colorScheme
+                              .surfaceContainerHighest,
+                        ),
+                        child: const Text(
+                          'Templates uit database laden mislukte. Fallback templates worden getoond.',
+                        ),
+                      ),
+                    ),
+                    Expanded(
+                      child: TemplatesGallery(
+                        templates: _fallbackTemplates,
+                        onTemplateSelected: (MirrorTemplate template) {
+                          Navigator.of(context).pop();
+                          _applyTemplateToSelectedFile(template);
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+                data: (List<MirrorTemplate> templates) {
+                  final resolvedTemplates =
+                      templates.isEmpty ? _fallbackTemplates : templates;
+                  final usingFallback = templates.isEmpty;
+
+                  return Column(
+                    children: <Widget>[
+                      if (usingFallback)
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
+                          child: Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(8),
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .surfaceContainerHighest,
+                            ),
+                            child: const Text(
+                              'Geen actieve templates in database. Fallback templates worden getoond.',
+                            ),
+                          ),
+                        ),
+                      Expanded(
+                        child: TemplatesGallery(
+                          templates: resolvedTemplates,
+                          onTemplateSelected: (MirrorTemplate template) {
+                            Navigator.of(context).pop();
+                            _applyTemplateToSelectedFile(template);
+                          },
+                        ),
+                      ),
+                    ],
+                  );
+                },
+              );
             },
           ),
         );
