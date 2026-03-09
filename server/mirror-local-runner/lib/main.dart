@@ -17,8 +17,9 @@ Future<void> main() async {
       Platform.environment['MIRROR_WORKSPACE_ROOT'] ?? '/tmp/mirror-local-workspaces';
   final signedUrlSecret = _requireEnv('SIGNED_URL_SECRET');
   final artifactBaseUrl = _requireEnv('ARTIFACT_BASE_URL');
-  final authGuardEnabled =
-      _isTrue(Platform.environment['MIRROR_AUTH_GUARD_ENABLED']);
+  final authGuardEnabled = _isTrue(
+    Platform.environment['MIRROR_AUTH_GUARD_ENABLED'] ?? 'true',
+  );
   final authGuard = authGuardEnabled
       ? AuthGuard(
           serviceToken: _requireEnv('MIRROR_SERVICE_TOKEN'),

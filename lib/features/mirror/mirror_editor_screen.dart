@@ -65,9 +65,10 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
       if (!mounted) {
         return;
       }
-      _appendTerminalLine('Mirror terminal ready.');
+      _appendTerminalLine(_l10n.mirrorTerminalReady);
       _appendTerminalLine(
-          'Project: ${widget.projectId} Task: ${widget.taskId}');
+        _l10n.mirrorProjectTaskLine(widget.projectId, widget.taskId),
+      );
     });
     if (widget.debugRealtimeRecords != null) {
       _debugRealtimeSubscription = widget.debugRealtimeRecords!.listen(
@@ -136,7 +137,7 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
               ),
               const SizedBox(height: 12),
               Text(
-                'Project: ${widget.projectId}  •  Task: ${widget.taskId}',
+                _l10n.mirrorProjectTaskHeader(widget.projectId, widget.taskId),
                 style: Theme.of(context).textTheme.bodySmall,
               ),
               const SizedBox(height: 8),
@@ -488,7 +489,7 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
     _pendingRealtimeLines.clear();
 
     _sessionNotifier.appendLiveOutput(flushedLines, maxLines: _maxLiveOutputLines);
-    _appendTerminalLine('Realtime output ontvangen (${flushedLines.length} regels).');
+    _appendTerminalLine(_l10n.mirrorRealtimeOutputReceived(flushedLines.length));
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!_liveOutputScrollController.hasClients) {
@@ -518,7 +519,7 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
 
     final status = record['status'];
     if (status != null) {
-      return <String>['Status: $status'];
+      return <String>[_l10n.mirrorStatusLine(status.toString())];
     }
 
     return const <String>[];
@@ -530,7 +531,7 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
       setState(() {
         _isListening = false;
       });
-      _appendTerminalLine('Voice input stopped.');
+      _appendTerminalLine(_l10n.mirrorVoiceStopped);
       return;
     }
 
@@ -542,14 +543,14 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(_l10n.mirrorVoiceUnavailable)),
       );
-      _appendTerminalLine('Voice input unavailable.');
+      _appendTerminalLine(_l10n.mirrorVoiceUnavailableTerminal);
       return;
     }
 
     setState(() {
       _isListening = true;
     });
-    _appendTerminalLine('Voice input started...');
+    _appendTerminalLine(_l10n.mirrorVoiceStarted);
 
     await _speechToText.listen(
       onResult: (result) {
@@ -570,7 +571,7 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
 
         final selectedFile =
             ref.read(mirrorSessionProvider(_sessionKey)).selectedFile;
-        _appendTerminalLine('Voice appended to $selectedFile');
+        _appendTerminalLine(_l10n.mirrorVoiceAppended(selectedFile));
 
         if (result.finalResult) {
           setState(() {
@@ -596,7 +597,7 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
     final selectedContent = sessionState.files[selectedFile]?.trim() ?? '';
 
     if (selectedContent.isEmpty) {
-      _appendTerminalLine('Run aborted: selected file is empty ($selectedFile).');
+      _appendTerminalLine(_l10n.mirrorRunAbortedFileEmpty(selectedFile));
       if (!mounted) {
         return;
       }
@@ -610,8 +611,8 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
       _isRunInProgress = true;
     });
 
-    _appendTerminalLine('Starting Mirror run for $selectedFile...');
-    _appendTerminalLine('Flow: generate -> compile -> preview -> apply');
+    _appendTerminalLine(_l10n.mirrorRunStarting(selectedFile));
+    _appendTerminalLine(_l10n.mirrorRunFlowLine);
 
     try {
       final backend = await ref.read(mirrorBackendProvider.future);
@@ -637,7 +638,7 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
         metadata: Map<String, dynamic>.from(executionContext.metadata),
       );
 
-      _appendTerminalLine('Step 1/5: generate request sent...');
+      _appendTerminalLine(_l10n.mirrorStepGenerateSent);
       final generateResult = await orchestrator.generate(
         ref: ref,
         sessionKey: _sessionKey,
@@ -656,18 +657,20 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
                   generateResult.message,
                   generateResult.diagnostics.join(' | '),
                 ) ??
-                'Unknown generate error.';
-        _appendTerminalLine('Mirror generate failed: $errorText');
+                  _l10n.mirrorUnknownGenerateError;
+                _appendTerminalLine(_l10n.mirrorGenerateFailedTerminal(errorText));
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(_l10n.mirrorGenerateFailed(errorText))),
         );
         return;
       }
 
-      _appendTerminalLine('Step 1/5: generate completed.');
+      _appendTerminalLine(_l10n.mirrorStepGenerateCompleted);
       if (generateResult.diagnostics.isNotEmpty) {
         _appendTerminalLine(
-          'Generate diagnostics: ${generateResult.diagnostics.join(' | ')}',
+          _l10n.mirrorGenerateDiagnostics(
+            generateResult.diagnostics.join(' | '),
+          ),
         );
       }
 
@@ -694,7 +697,7 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
       final runPrompt = _firstNonEmpty(generateResult.code, selectedContent) ??
           selectedContent;
 
-      _appendTerminalLine('Step 2/5: compile request sent...');
+      _appendTerminalLine(_l10n.mirrorStepCompileSent);
       final compileResult = await orchestrator.compile(
         ref: ref,
         sessionKey: _sessionKey,
@@ -709,22 +712,22 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
 
       if (!compileResult.success) {
         final errorText =
-            _firstNonEmpty(compileResult.errors.join(' | '), 'Unknown compile error.')!;
-        _appendTerminalLine('Mirror compile failed: $errorText');
+          _firstNonEmpty(compileResult.errors.join(' | '), _l10n.mirrorUnknownCompileError)!;
+        _appendTerminalLine(_l10n.mirrorCompileFailedTerminal(errorText));
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(_l10n.mirrorCompileFailed(errorText))),
         );
         return;
       }
 
-      _appendTerminalLine('Step 2/5: compile completed.');
+      _appendTerminalLine(_l10n.mirrorStepCompileCompleted);
       if (compileResult.warnings.isNotEmpty) {
         _appendTerminalLine(
-          'Compile warnings: ${compileResult.warnings.join(' | ')}',
+          _l10n.mirrorCompileWarnings(compileResult.warnings.join(' | ')),
         );
       }
 
-      _appendTerminalLine('Step 3/5: building patch preview...');
+      _appendTerminalLine(_l10n.mirrorStepPreviewBuilding);
       final patches = _buildPreviewPatches(
         backend: backend,
         context: originalCompileContext,
@@ -734,7 +737,7 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
       );
 
       if (patches.isEmpty) {
-        _appendTerminalLine('No patch preview available after compile.');
+        _appendTerminalLine(_l10n.mirrorNoPatchPreviewTerminal);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(_l10n.mirrorNoChangesAfterCompile)),
         );
@@ -742,7 +745,7 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
       }
 
       _appendTerminalLine(
-        'Step 3/5: preview ready for ${patches.length} file(s).',
+        _l10n.mirrorStepPreviewReady(patches.length),
       );
 
       final previewPatch = patches.firstWhere(
@@ -751,7 +754,7 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
       );
 
       _appendTerminalLine(
-        'Step 4/5: waiting for ApplyDialog confirmation (${previewPatch.path})...',
+        _l10n.mirrorStepApplyWaiting(previewPatch.path),
       );
       final applyDecision = await ApplyDialog.show(
         context,
@@ -768,14 +771,14 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
       final applyApproved = applyDecision?.apply == true &&
           applyDecision?.acceptRisk == true;
       if (!applyApproved) {
-        _appendTerminalLine('Step 4/5: apply cancelled by user.');
+        _appendTerminalLine(_l10n.mirrorStepApplyCanceled);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(_l10n.mirrorApplyCanceled)),
         );
         return;
       }
 
-      _appendTerminalLine('Step 5/5: apply request sent...');
+      _appendTerminalLine(_l10n.mirrorStepApplySent);
       final applyContext = ProjectContext(
         projectId: originalCompileContext.projectId,
         taskId: originalCompileContext.taskId,
@@ -802,25 +805,25 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
         );
         if (applyResult.appliedFiles.isNotEmpty) {
           _appendTerminalLine(
-            'Applied files: ${applyResult.appliedFiles.join(', ')}',
+            _l10n.mirrorAppliedFiles(applyResult.appliedFiles.join(', ')),
           );
         }
-        _appendTerminalLine('Mirror run completed successfully.');
+        _appendTerminalLine(_l10n.mirrorRunCompletedTerminal);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(_l10n.mirrorRunSuccess)),
         );
         return;
       }
 
-      final errorText = applyResult.message ?? 'Unknown apply error.';
-      _appendTerminalLine('Mirror apply failed: $errorText');
+      final errorText = applyResult.message ?? _l10n.mirrorUnknownApplyError;
+      _appendTerminalLine(_l10n.mirrorApplyFailedTerminal(errorText));
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(_l10n.mirrorApplyFailed(errorText)),
         ),
       );
     } catch (error) {
-      _appendTerminalLine('Mirror run crashed: $error');
+      _appendTerminalLine(_l10n.mirrorRunCrashedTerminal(error.toString()));
       if (!mounted) {
         return;
       }
@@ -906,8 +909,8 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: <Widget>[
-                        const Text(
-                          'Templates konden niet worden geladen.',
+                        Text(
+                          _l10n.mirrorTemplatesLoadFailed,
                           textAlign: TextAlign.center,
                         ),
                         const SizedBox(height: 8),
@@ -963,7 +966,7 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
     final selectedFile = ref.read(mirrorSessionProvider(_sessionKey)).selectedFile;
     _sessionNotifier.updateSelectedFileContent(template.seedContent);
     _appendTerminalLine(
-      'Template toegepast op $selectedFile: ${template.title}',
+      _l10n.mirrorTemplateAppliedTerminal(selectedFile, template.title),
     );
     if (!mounted) {
       return;
@@ -1112,6 +1115,111 @@ class _ModeSelector extends StatelessWidget {
 }
 
 extension _MirrorEditorL10n on AppLocalizations {
+  String get mirrorTerminalReady => localeName.startsWith('nl')
+  ? 'Mirror terminal is klaar.'
+  : 'Mirror terminal is ready.';
+  String mirrorProjectTaskLine(String projectId, String taskId) =>
+    localeName.startsWith('nl')
+      ? 'Project: $projectId Taak: $taskId'
+      : 'Project: $projectId Task: $taskId';
+  String mirrorProjectTaskHeader(String projectId, String taskId) =>
+    localeName.startsWith('nl')
+      ? 'Project: $projectId  •  Taak: $taskId'
+      : 'Project: $projectId  •  Task: $taskId';
+  String mirrorRealtimeOutputReceived(int lineCount) => localeName.startsWith('nl')
+  ? 'Realtime output ontvangen ($lineCount regels).'
+  : 'Realtime output received ($lineCount lines).';
+  String mirrorStatusLine(String status) =>
+    localeName.startsWith('nl') ? 'Status: $status' : 'Status: $status';
+  String get mirrorVoiceStopped =>
+    localeName.startsWith('nl') ? 'Spraakinvoer gestopt.' : 'Voice input stopped.';
+  String get mirrorVoiceUnavailableTerminal => localeName.startsWith('nl')
+    ? 'Spraakinvoer niet beschikbaar.'
+    : 'Voice input unavailable.';
+  String get mirrorVoiceStarted =>
+    localeName.startsWith('nl') ? 'Spraakinvoer gestart...' : 'Voice input started...';
+  String mirrorVoiceAppended(String filePath) => localeName.startsWith('nl')
+    ? 'Spraak toegevoegd aan $filePath'
+    : 'Voice appended to $filePath';
+  String mirrorRunAbortedFileEmpty(String filePath) => localeName.startsWith('nl')
+    ? 'Run afgebroken: geselecteerd bestand is leeg ($filePath).'
+    : 'Run aborted: selected file is empty ($filePath).';
+  String mirrorRunStarting(String filePath) => localeName.startsWith('nl')
+    ? 'Mirror-run gestart voor $filePath...'
+    : 'Starting Mirror run for $filePath...';
+  String get mirrorRunFlowLine => localeName.startsWith('nl')
+    ? 'Flow: generate -> compile -> preview -> apply'
+    : 'Flow: generate -> compile -> preview -> apply';
+  String get mirrorStepGenerateSent => localeName.startsWith('nl')
+    ? 'Stap 1/5: generate-verzoek verstuurd...'
+    : 'Step 1/5: generate request sent...';
+  String get mirrorUnknownGenerateError => localeName.startsWith('nl')
+    ? 'Onbekende generate-fout.'
+    : 'Unknown generate error.';
+  String mirrorGenerateFailedTerminal(String errorText) => localeName.startsWith('nl')
+    ? 'Mirror generate mislukt: $errorText'
+    : 'Mirror generate failed: $errorText';
+  String get mirrorStepGenerateCompleted => localeName.startsWith('nl')
+    ? 'Stap 1/5: generate voltooid.'
+    : 'Step 1/5: generate completed.';
+  String mirrorGenerateDiagnostics(String text) => localeName.startsWith('nl')
+    ? 'Generate-diagnostiek: $text'
+    : 'Generate diagnostics: $text';
+  String get mirrorStepCompileSent => localeName.startsWith('nl')
+    ? 'Stap 2/5: compile-verzoek verstuurd...'
+    : 'Step 2/5: compile request sent...';
+  String get mirrorUnknownCompileError => localeName.startsWith('nl')
+    ? 'Onbekende compile-fout.'
+    : 'Unknown compile error.';
+  String mirrorCompileFailedTerminal(String errorText) => localeName.startsWith('nl')
+    ? 'Mirror compile mislukt: $errorText'
+    : 'Mirror compile failed: $errorText';
+  String get mirrorStepCompileCompleted => localeName.startsWith('nl')
+    ? 'Stap 2/5: compile voltooid.'
+    : 'Step 2/5: compile completed.';
+  String mirrorCompileWarnings(String text) => localeName.startsWith('nl')
+    ? 'Compile-waarschuwingen: $text'
+    : 'Compile warnings: $text';
+  String get mirrorStepPreviewBuilding => localeName.startsWith('nl')
+    ? 'Stap 3/5: patch-preview wordt opgebouwd...'
+    : 'Step 3/5: building patch preview...';
+  String get mirrorNoPatchPreviewTerminal => localeName.startsWith('nl')
+    ? 'Geen patch-preview beschikbaar na compile.'
+    : 'No patch preview available after compile.';
+  String mirrorStepPreviewReady(int fileCount) => localeName.startsWith('nl')
+    ? 'Stap 3/5: preview klaar voor $fileCount bestand(en).'
+    : 'Step 3/5: preview ready for $fileCount file(s).';
+  String mirrorStepApplyWaiting(String path) => localeName.startsWith('nl')
+    ? 'Stap 4/5: wachten op ApplyDialog-bevestiging ($path)...'
+    : 'Step 4/5: waiting for ApplyDialog confirmation ($path)...';
+  String get mirrorStepApplyCanceled => localeName.startsWith('nl')
+    ? 'Stap 4/5: apply geannuleerd door gebruiker.'
+    : 'Step 4/5: apply cancelled by user.';
+  String get mirrorStepApplySent => localeName.startsWith('nl')
+    ? 'Stap 5/5: apply-verzoek verstuurd...'
+    : 'Step 5/5: apply request sent...';
+  String mirrorAppliedFiles(String filesText) => localeName.startsWith('nl')
+    ? 'Toegepaste bestanden: $filesText'
+    : 'Applied files: $filesText';
+  String get mirrorRunCompletedTerminal => localeName.startsWith('nl')
+    ? 'Mirror-run succesvol afgerond.'
+    : 'Mirror run completed successfully.';
+  String get mirrorUnknownApplyError => localeName.startsWith('nl')
+    ? 'Onbekende apply-fout.'
+    : 'Unknown apply error.';
+  String mirrorApplyFailedTerminal(String errorText) => localeName.startsWith('nl')
+    ? 'Mirror apply mislukt: $errorText'
+    : 'Mirror apply failed: $errorText';
+  String mirrorRunCrashedTerminal(String errorText) => localeName.startsWith('nl')
+    ? 'Mirror-run gecrasht: $errorText'
+    : 'Mirror run crashed: $errorText';
+  String get mirrorTemplatesLoadFailed => localeName.startsWith('nl')
+    ? 'Templates konden niet worden geladen.'
+    : 'Templates could not be loaded.';
+  String mirrorTemplateAppliedTerminal(String selectedFile, String title) =>
+    localeName.startsWith('nl')
+      ? 'Template toegepast op $selectedFile: $title'
+      : 'Template applied to $selectedFile: $title';
   String get mirrorEditorTitle => localeName.startsWith('nl')
     ? 'Mirror Editor'
     : 'Mirror Editor';
