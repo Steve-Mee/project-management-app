@@ -1,3 +1,9 @@
+## [1.15.0](https://github.com/Steve-Mee/project-management-app/compare/v1.14.0...v1.15.0) (2026-03-09)
+
+### Features
+
+* **mirror:** wire run button to orchestrator pipeline ([738b69a](https://github.com/Steve-Mee/project-management-app/commit/738b69a80ae87099927d64dda4f3420bc495720e))
+
 ## [1.14.0](https://github.com/Steve-Mee/project-management-app/compare/v1.13.0...v1.14.0) (2026-03-09)
 
 ### Features
