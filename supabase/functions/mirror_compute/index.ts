@@ -76,11 +76,23 @@ function resolveForwardEndpoint(mode: 'private' | 'cloud', action: 'compile' | '
   }
 
   const normalized = configured.replace(/\/$/, '')
-  if (normalized.endsWith('/compile') || normalized.endsWith('/apply')) {
-    return normalized
+  const actionNormalized = normalized.replace(/\/(compile|apply)$/i, '')
+
+  return `${actionNormalized}/${action}`
+}
+
+async function hasUseMirrorPermission(
+  supabase: ReturnType<typeof createClient>,
+): Promise<boolean> {
+  const { data, error } = await supabase.rpc('has_permission', {
+    permission_name: 'use_mirror',
+  })
+
+  if (error) {
+    throw new Error(`permission_rpc_failed:${error.message}`)
   }
 
-  return `${normalized}/${action}`
+  return data === true
 }
 
 function resolveActionFromPath(pathname: string): 'compile' | 'apply' | null {
@@ -470,6 +482,36 @@ Deno.serve(async (req: Request) => {
           idempotencyKey,
         },
         400,
+      )
+    }
+
+    let canUseMirror = false
+    try {
+      canUseMirror = await hasUseMirrorPermission(supabase)
+    } catch (error) {
+      return errorResponse(
+        {
+          code: 'unauthorized',
+          message: 'Mirror permission check failed',
+          retryable: false,
+          requestId,
+          idempotencyKey,
+          details: String(error),
+        },
+        403,
+      )
+    }
+
+    if (!canUseMirror) {
+      return errorResponse(
+        {
+          code: 'unauthorized',
+          message: 'Insufficient permissions: use_mirror required',
+          retryable: false,
+          requestId,
+          idempotencyKey,
+        },
+        403,
       )
     }
 
