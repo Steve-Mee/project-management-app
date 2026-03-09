@@ -1,3 +1,9 @@
+## [1.18.0](https://github.com/Steve-Mee/project-management-app/compare/v1.17.1...v1.18.0) (2026-03-09)
+
+### Features
+
+* **runners:** add http gateway endpoints for compile/apply parity ([50b5d39](https://github.com/Steve-Mee/project-management-app/commit/50b5d39b87980cc1fee38fca12b4408a082fe1cd))
+
 ## [1.17.1](https://github.com/Steve-Mee/project-management-app/compare/v1.17.0...v1.17.1) (2026-03-09)
 
 ### Bug Fixes
