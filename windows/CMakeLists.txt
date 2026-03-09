@@ -12,6 +12,14 @@ set(BINARY_NAME "my_project_management_app")
 # versions of CMake.
 cmake_policy(VERSION 3.14...3.25)
 
+# Keep compatibility with plugins that still use add_custom_command(TARGET ... DEPENDS),
+# which is rejected under newer CMP0175 behavior. Some plugin subprojects call
+# cmake_minimum_required() and don't set this policy, so provide a default too.
+if(POLICY CMP0175)
+  set(CMAKE_POLICY_DEFAULT_CMP0175 OLD)
+  cmake_policy(SET CMP0175 OLD)
+endif()
+
 # Define build configuration option.
 get_property(IS_MULTICONFIG GLOBAL PROPERTY GENERATOR_IS_MULTI_CONFIG)
 if(IS_MULTICONFIG)
