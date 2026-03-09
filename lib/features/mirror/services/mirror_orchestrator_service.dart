@@ -21,6 +21,24 @@ class MirrorOrchestrationResult {
   final Object? error;
 }
 
+class MirrorOutboxEntry {
+  const MirrorOutboxEntry({
+    required this.operation,
+    required this.sessionKey,
+    required this.prompt,
+    required this.context,
+    required this.mode,
+    required this.createdAt,
+  });
+
+  final String operation;
+  final String sessionKey;
+  final String prompt;
+  final ProjectContext context;
+  final String mode;
+  final DateTime createdAt;
+}
+
 class MirrorOrchestratorService {
   MirrorOrchestratorService({
     required MirrorComputeBackend backend,
@@ -31,6 +49,10 @@ class MirrorOrchestratorService {
   final MirrorComputeBackend _backend;
   final int maxRetries;
   final Duration initialBackoff;
+  final List<MirrorOutboxEntry> _outboxQueue = <MirrorOutboxEntry>[];
+
+  List<MirrorOutboxEntry> get queuedOutboxEntries =>
+      List<MirrorOutboxEntry>.unmodifiable(_outboxQueue);
 
   Future<MirrorOrchestrationResult> runGenerateCompileApply({
     required WidgetRef ref,
@@ -159,6 +181,13 @@ class MirrorOrchestratorService {
         liveLine: 'Generate done.',
       );
     } else {
+      _queueOutboxStub(
+        operation: 'generate',
+        sessionKey: sessionKey,
+        prompt: prompt,
+        context: context,
+        mode: mode,
+      );
       _emitStatus(
         ref,
         sessionKey,
@@ -208,6 +237,13 @@ class MirrorOrchestratorService {
         liveLine: 'Compile done.',
       );
     } else {
+      _queueOutboxStub(
+        operation: 'compile',
+        sessionKey: sessionKey,
+        prompt: prompt,
+        context: context,
+        mode: mode,
+      );
       _emitStatus(
         ref,
         sessionKey,
@@ -259,6 +295,13 @@ class MirrorOrchestratorService {
         liveLine: 'Apply done.',
       );
     } else {
+      _queueOutboxStub(
+        operation: 'apply',
+        sessionKey: sessionKey,
+        prompt: prompt,
+        context: context,
+        mode: mode,
+      );
       _emitStatus(
         ref,
         sessionKey,
@@ -336,5 +379,24 @@ class MirrorOrchestratorService {
     if (liveLine != null && liveLine.trim().isNotEmpty) {
       notifier.appendLiveOutput(<String>[liveLine]);
     }
+  }
+
+  void _queueOutboxStub({
+    required String operation,
+    required String sessionKey,
+    required String prompt,
+    required ProjectContext context,
+    required String mode,
+  }) {
+    _outboxQueue.add(
+      MirrorOutboxEntry(
+        operation: operation,
+        sessionKey: sessionKey,
+        prompt: prompt,
+        context: context,
+        mode: mode,
+        createdAt: DateTime.now().toUtc(),
+      ),
+    );
   }
 }

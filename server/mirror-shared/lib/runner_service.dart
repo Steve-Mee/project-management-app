@@ -1,4 +1,6 @@
+import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:crypto/crypto.dart';
 import 'package:grpc/grpc.dart';
@@ -19,6 +21,152 @@ typedef RunnerCompileMeasured = void Function({
   required Duration latency,
   required bool success,
 });
+
+typedef RunnerGatewayStarter = Future<void> Function();
+typedef RunnerGatewayStopper = Future<void> Function();
+
+class RunnerBootstrapConfig {
+  const RunnerBootstrapConfig({
+    required this.runnerName,
+    required this.grpcPort,
+    required this.services,
+    required this.startGateway,
+    required this.stopGateway,
+    required this.log,
+    this.bindAddress = '0.0.0.0',
+    this.startupContext = const <String, Object?>{},
+  });
+
+  final String runnerName;
+  final int grpcPort;
+  final List<Service> services;
+  final RunnerGatewayStarter startGateway;
+  final RunnerGatewayStopper stopGateway;
+  final RunnerLog log;
+  final String bindAddress;
+  final Map<String, Object?> startupContext;
+}
+
+class RunnerRuntime {
+  RunnerRuntime({
+    required Server server,
+    required RunnerGatewayStopper stopGateway,
+  })  : _server = server,
+        _stopGateway = stopGateway;
+
+  final Server _server;
+  final RunnerGatewayStopper _stopGateway;
+
+  Future<void> shutdown() async {
+    await _stopGateway();
+    await _server.shutdown();
+  }
+}
+
+Future<RunnerRuntime> bootstrapRunner(RunnerBootstrapConfig config) async {
+  final server = Server.create(
+    services: config.services,
+    codecRegistry:
+        CodecRegistry(codecs: const <Codec>[GzipCodec(), IdentityCodec()]),
+  );
+
+  await server.serve(address: config.bindAddress, port: config.grpcPort);
+  await config.startGateway();
+
+  config.log(
+    'info',
+    '${config.runnerName} started',
+    context: <String, Object?>{
+      'grpcPort': config.grpcPort,
+      ...config.startupContext,
+    },
+  );
+
+  final runtime = RunnerRuntime(
+    server: server,
+    stopGateway: config.stopGateway,
+  );
+
+  ProcessSignal.sigint.watch().listen((_) async {
+    config.log('info', 'shutdown signal received');
+    await runtime.shutdown();
+    exit(0);
+  });
+
+  return runtime;
+}
+
+Future<int> cleanupOldWorkspaces(
+  String rootPath, {
+  required Duration maxAge,
+  required RunnerLog log,
+}) async {
+  final root = Directory(rootPath);
+  if (!await root.exists()) {
+    await root.create(recursive: true);
+    log(
+      'info',
+      'workspace root created',
+      context: <String, Object?>{'rootPath': rootPath},
+    );
+    return 0;
+  }
+
+  final cutoff = DateTime.now().toUtc().subtract(maxAge);
+  final toDelete = <Directory>[];
+
+  await for (final entity in root.list(recursive: true, followLinks: false)) {
+    if (entity is! Directory) {
+      continue;
+    }
+    try {
+      final modified = (await entity.stat()).modified.toUtc();
+      if (modified.isBefore(cutoff)) {
+        toDelete.add(entity);
+      }
+    } catch (_) {
+      // Ignore inaccessible workspace paths during cleanup.
+    }
+  }
+
+  toDelete.sort((a, b) => b.path.length.compareTo(a.path.length));
+  var removed = 0;
+  for (final dir in toDelete) {
+    try {
+      if (await dir.exists()) {
+        await dir.delete(recursive: true);
+        removed += 1;
+      }
+    } catch (_) {
+      // Best-effort cleanup.
+    }
+  }
+
+  log(
+    'info',
+    'workspace cleanup finished',
+    context: <String, Object?>{
+      'rootPath': rootPath,
+      'removedDirectories': removed,
+      'maxAgeHours': maxAge.inHours,
+    },
+  );
+  return removed;
+}
+
+Timer startWorkspaceCleanupScheduler(
+  String rootPath, {
+  required Duration maxAge,
+  required Duration interval,
+  required RunnerLog log,
+}) {
+  return Timer.periodic(
+    interval,
+    (_) => unawaited(
+      cleanupOldWorkspaces(rootPath, maxAge: maxAge, log: log),
+    ),
+  );
+}
 
 class RunnerAuthVerdict {
   const RunnerAuthVerdict._({

@@ -268,4 +268,4 @@ WITH CHECK (auth.uid() = user_id);
 
 -- Mirror/ai_sessions/storage policies are managed via versioned migrations in
 -- supabase/migrations to avoid policy drift between environments.
--- Legacy Mirror bucket policy references have been removed from this file.
+-- Canonical Mirror buckets are `mirror-signed-inputs` and `mirror-backups`.

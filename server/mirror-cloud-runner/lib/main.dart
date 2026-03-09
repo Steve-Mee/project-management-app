@@ -2,8 +2,6 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:grpc/grpc.dart';
-
 import 'auth_guard.dart';
 import 'auth_metrics.dart';
 import 'http_gateway.dart';
@@ -34,40 +32,17 @@ Future<void> main() async {
     requiredIssuer: requiredIssuer,
   );
 
-  await _cleanupOldWorkspaces(workspaceRoot, maxAge: const Duration(hours: 24));
-  Timer.periodic(
-    const Duration(hours: 1),
-    (_) => unawaited(
-      _cleanupOldWorkspaces(workspaceRoot, maxAge: const Duration(hours: 24)),
-    ),
+  await cleanupOldWorkspaces(
+    workspaceRoot,
+    maxAge: const Duration(hours: 24),
+    log: _log,
   );
-
-  final server = Server.create(
-    services: <Service>[
-      MirrorRunnerService(
-        workspaceRoot: workspaceRoot,
-        artifactBaseUrl: artifactBaseUrl,
-        signedUrlSecret: signedUrlSecret,
-        verifyAuth: (Map<String, String> metadata) {
-          final verdict = authGuard.verify(metadata);
-          if (verdict.authorized) {
-            return const RunnerAuthVerdict.authorized();
-          }
-          return RunnerAuthVerdict.denied(reasonCode: verdict.reasonCode);
-        },
-        onAuthDenied: metrics.recordAuthDenied,
-        onCompileMeasured: ({required Duration latency, required bool success}) {
-          metrics.recordCompile(latency: latency, success: success);
-        },
-        metricsSnapshot: metrics.snapshot,
-        log: _log,
-      ),
-    ],
-    codecRegistry:
-        CodecRegistry(codecs: const <Codec>[GzipCodec(), IdentityCodec()]),
+  startWorkspaceCleanupScheduler(
+    workspaceRoot,
+    maxAge: const Duration(hours: 24),
+    interval: const Duration(hours: 1),
+    log: _log,
   );
-
-  await server.serve(address: '0.0.0.0', port: grpcPort);
 
   final gateway = MirrorHttpGateway(
     bindAddress: '0.0.0.0',
@@ -75,24 +50,41 @@ Future<void> main() async {
     grpcHost: '127.0.0.1',
     grpcPort: grpcPort,
   );
-  await gateway.start();
 
-  _log(
-    'info',
-    'mirror-cloud-runner started',
-    context: <String, Object?>{
-      'httpPort': httpPort,
-      'grpcPort': grpcPort,
-      'workspaceRoot': workspaceRoot,
-    },
+  await bootstrapRunner(
+    RunnerBootstrapConfig(
+      runnerName: 'mirror-cloud-runner',
+      grpcPort: grpcPort,
+      services: <MirrorRunnerService>[
+        MirrorRunnerService(
+          workspaceRoot: workspaceRoot,
+          artifactBaseUrl: artifactBaseUrl,
+          signedUrlSecret: signedUrlSecret,
+          verifyAuth: (Map<String, String> metadata) {
+            final verdict = authGuard.verify(metadata);
+            if (verdict.authorized) {
+              return const RunnerAuthVerdict.authorized();
+            }
+            return RunnerAuthVerdict.denied(reasonCode: verdict.reasonCode);
+          },
+          onAuthDenied: metrics.recordAuthDenied,
+          onCompileMeasured:
+              ({required Duration latency, required bool success}) {
+            metrics.recordCompile(latency: latency, success: success);
+          },
+          metricsSnapshot: metrics.snapshot,
+          log: _log,
+        ),
+      ],
+      startGateway: gateway.start,
+      stopGateway: gateway.stop,
+      log: _log,
+      startupContext: <String, Object?>{
+        'httpPort': httpPort,
+        'workspaceRoot': workspaceRoot,
+      },
+    ),
   );
-
-  ProcessSignal.sigint.watch().listen((_) async {
-    _log('info', 'shutdown signal received');
-    await gateway.stop();
-    await server.shutdown();
-    exit(0);
-  });
 }
 
 String _requireEnv(String key) {
@@ -103,58 +95,6 @@ String _requireEnv(String key) {
     throw StateError('Missing required environment variable: $key');
   }
   return value;
-}
-
-Future<int> _cleanupOldWorkspaces(String rootPath,
-    {required Duration maxAge}) async {
-  final root = Directory(rootPath);
-  if (!await root.exists()) {
-    await root.create(recursive: true);
-    _log('info', 'workspace root created',
-        context: <String, Object?>{'rootPath': rootPath});
-    return 0;
-  }
-
-  final cutoff = DateTime.now().toUtc().subtract(maxAge);
-  final toDelete = <Directory>[];
-
-  await for (final entity in root.list(recursive: true, followLinks: false)) {
-    if (entity is! Directory) {
-      continue;
-    }
-    try {
-      final modified = (await entity.stat()).modified.toUtc();
-      if (modified.isBefore(cutoff)) {
-        toDelete.add(entity);
-      }
-    } catch (_) {
-      // Ignore inaccessible workspace paths during cleanup.
-    }
-  }
-
-  toDelete.sort((a, b) => b.path.length.compareTo(a.path.length));
-  var removed = 0;
-  for (final dir in toDelete) {
-    try {
-      if (await dir.exists()) {
-        await dir.delete(recursive: true);
-        removed += 1;
-      }
-    } catch (_) {
-      // Best-effort cleanup.
-    }
-  }
-
-  _log(
-    'info',
-    'workspace cleanup finished',
-    context: <String, Object?>{
-      'rootPath': rootPath,
-      'removedDirectories': removed,
-      'maxAgeHours': maxAge.inHours,
-    },
-  );
-  return removed;
 }
 
 void _log(String level, String message,

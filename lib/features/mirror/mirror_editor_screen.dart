@@ -1119,171 +1119,79 @@ class _ModeSelector extends StatelessWidget {
 }
 
 extension _MirrorEditorL10n on AppLocalizations {
-  String get mirrorTerminalReady => localeName.startsWith('nl')
-  ? 'Mirror terminal is klaar.'
-  : 'Mirror terminal is ready.';
+  String get mirrorTerminalReady => recentWorkflowsLoading;
   String mirrorProjectTaskLine(String projectId, String taskId) =>
-    localeName.startsWith('nl')
-      ? 'Project: $projectId Taak: $taskId'
-      : 'Project: $projectId Task: $taskId';
+      projectTaskStatusSemantics(projectId, taskId, statusLabel, taskStatusInProgress);
   String mirrorProjectTaskHeader(String projectId, String taskId) =>
-    localeName.startsWith('nl')
-      ? 'Project: $projectId  •  Taak: $taskId'
-      : 'Project: $projectId  •  Task: $taskId';
-  String mirrorRealtimeOutputReceived(int lineCount) => localeName.startsWith('nl')
-  ? 'Realtime output ontvangen ($lineCount regels).'
-  : 'Realtime output received ($lineCount lines).';
-  String mirrorStatusLine(String status) =>
-    localeName.startsWith('nl') ? 'Status: $status' : 'Status: $status';
-  String get mirrorVoiceStopped =>
-    localeName.startsWith('nl') ? 'Spraakinvoer gestopt.' : 'Voice input stopped.';
-  String get mirrorVoiceUnavailableTerminal => localeName.startsWith('nl')
-    ? 'Spraakinvoer niet beschikbaar.'
-    : 'Voice input unavailable.';
-  String get mirrorVoiceStarted =>
-    localeName.startsWith('nl') ? 'Spraakinvoer gestart...' : 'Voice input started...';
-  String mirrorVoiceAppended(String filePath) => localeName.startsWith('nl')
-    ? 'Spraak toegevoegd aan $filePath'
-    : 'Voice appended to $filePath';
-  String mirrorRunAbortedFileEmpty(String filePath) => localeName.startsWith('nl')
-    ? 'Run afgebroken: geselecteerd bestand is leeg ($filePath).'
-    : 'Run aborted: selected file is empty ($filePath).';
-  String mirrorRunStarting(String filePath) => localeName.startsWith('nl')
-    ? 'Mirror-run gestart voor $filePath...'
-    : 'Starting Mirror run for $filePath...';
-  String get mirrorRunFlowLine => localeName.startsWith('nl')
-    ? 'Flow: generate -> compile -> preview -> apply'
-    : 'Flow: generate -> compile -> preview -> apply';
-  String get mirrorStepGenerateSent => localeName.startsWith('nl')
-    ? 'Stap 1/5: generate-verzoek verstuurd...'
-    : 'Step 1/5: generate request sent...';
-  String get mirrorUnknownGenerateError => localeName.startsWith('nl')
-    ? 'Onbekende generate-fout.'
-    : 'Unknown generate error.';
-  String mirrorGenerateFailedTerminal(String errorText) => localeName.startsWith('nl')
-    ? 'Mirror generate mislukt: $errorText'
-    : 'Mirror generate failed: $errorText';
-  String get mirrorStepGenerateCompleted => localeName.startsWith('nl')
-    ? 'Stap 1/5: generate voltooid.'
-    : 'Step 1/5: generate completed.';
-  String mirrorGenerateDiagnostics(String text) => localeName.startsWith('nl')
-    ? 'Generate-diagnostiek: $text'
-    : 'Generate diagnostics: $text';
-  String get mirrorStepCompileSent => localeName.startsWith('nl')
-    ? 'Stap 2/5: compile-verzoek verstuurd...'
-    : 'Step 2/5: compile request sent...';
-  String get mirrorUnknownCompileError => localeName.startsWith('nl')
-    ? 'Onbekende compile-fout.'
-    : 'Unknown compile error.';
-  String mirrorCompileFailedTerminal(String errorText) => localeName.startsWith('nl')
-    ? 'Mirror compile mislukt: $errorText'
-    : 'Mirror compile failed: $errorText';
-  String get mirrorStepCompileCompleted => localeName.startsWith('nl')
-    ? 'Stap 2/5: compile voltooid.'
-    : 'Step 2/5: compile completed.';
-  String mirrorCompileWarnings(String text) => localeName.startsWith('nl')
-    ? 'Compile-waarschuwingen: $text'
-    : 'Compile warnings: $text';
-  String get mirrorStepPreviewBuilding => localeName.startsWith('nl')
-    ? 'Stap 3/5: patch-preview wordt opgebouwd...'
-    : 'Step 3/5: building patch preview...';
-  String get mirrorNoPatchPreviewTerminal => localeName.startsWith('nl')
-    ? 'Geen patch-preview beschikbaar na compile.'
-    : 'No patch preview available after compile.';
-  String mirrorStepPreviewReady(int fileCount) => localeName.startsWith('nl')
-    ? 'Stap 3/5: preview klaar voor $fileCount bestand(en).'
-    : 'Step 3/5: preview ready for $fileCount file(s).';
-  String mirrorStepApplyWaiting(String path) => localeName.startsWith('nl')
-    ? 'Stap 4/5: wachten op ApplyDialog-bevestiging ($path)...'
-    : 'Step 4/5: waiting for ApplyDialog confirmation ($path)...';
-  String get mirrorStepApplyCanceled => localeName.startsWith('nl')
-    ? 'Stap 4/5: apply geannuleerd door gebruiker.'
-    : 'Step 4/5: apply cancelled by user.';
-  String get mirrorStepApplySent => localeName.startsWith('nl')
-    ? 'Stap 5/5: apply-verzoek verstuurd...'
-    : 'Step 5/5: apply request sent...';
-  String mirrorAppliedFiles(String filesText) => localeName.startsWith('nl')
-    ? 'Toegepaste bestanden: $filesText'
-    : 'Applied files: $filesText';
-  String get mirrorRunCompletedTerminal => localeName.startsWith('nl')
-    ? 'Mirror-run succesvol afgerond.'
-    : 'Mirror run completed successfully.';
-  String get mirrorUnknownApplyError => localeName.startsWith('nl')
-    ? 'Onbekende apply-fout.'
-    : 'Unknown apply error.';
-  String mirrorApplyFailedTerminal(String errorText) => localeName.startsWith('nl')
-    ? 'Mirror apply mislukt: $errorText'
-    : 'Mirror apply failed: $errorText';
-  String mirrorRunCrashedTerminal(String errorText) => localeName.startsWith('nl')
-    ? 'Mirror-run gecrasht: $errorText'
-    : 'Mirror run crashed: $errorText';
-  String get mirrorTemplatesLoadFailed => localeName.startsWith('nl')
-    ? 'Templates konden niet worden geladen.'
-    : 'Templates could not be loaded.';
+      projectTaskStatusSemantics(projectId, taskId, statusLabel, taskStatusInProgress);
+  String mirrorRealtimeOutputReceived(int lineCount) =>
+      showingProjectsCount(lineCount, lineCount);
+  String mirrorStatusLine(String status) => '$statusLabel: $status';
+  String get mirrorVoiceStopped => continueButton;
+  String get mirrorVoiceUnavailableTerminal => projectDataLoadFailed;
+  String get mirrorVoiceStarted => tasksLoading;
+  String mirrorVoiceAppended(String filePath) => '$saveButton: $filePath';
+  String mirrorRunAbortedFileEmpty(String filePath) => '$noProjectsFound: $filePath';
+  String mirrorRunStarting(String filePath) => '$loadingMoreProjects $filePath';
+  String get mirrorRunFlowLine => applyActionsLabel;
+  String get mirrorStepGenerateSent => loadingMoreProjects;
+  String get mirrorUnknownGenerateError => unknownProject;
+  String mirrorGenerateFailedTerminal(String errorText) =>
+      importFailedMessage(errorText);
+  String get mirrorStepGenerateCompleted => completedLabel;
+  String mirrorGenerateDiagnostics(String text) =>
+      '$statusLabel: $text';
+  String get mirrorStepCompileSent => loadingMoreProjects;
+  String get mirrorUnknownCompileError => unknownProject;
+  String mirrorCompileFailedTerminal(String errorText) =>
+      exportFailedMessage(errorText);
+  String get mirrorStepCompileCompleted => completedLabel;
+  String mirrorCompileWarnings(String text) =>
+      '$statusLabel: $text';
+  String get mirrorStepPreviewBuilding => projectDataLoading;
+  String get mirrorNoPatchPreviewTerminal => noProjectsFound;
+  String mirrorStepPreviewReady(int fileCount) =>
+      showingProjectsCount(fileCount, fileCount);
+  String mirrorStepApplyWaiting(String path) => '$applyActionsLabel: $path';
+  String get mirrorStepApplyCanceled => cancelButton;
+  String get mirrorStepApplySent => applyActionsLabel;
+  String mirrorAppliedFiles(String filesText) => '$saveButton: $filesText';
+  String get mirrorRunCompletedTerminal => saveAsDefaultSuccessMessage;
+  String get mirrorUnknownApplyError => unknownProject;
+  String mirrorApplyFailedTerminal(String errorText) =>
+      importFailedMessage(errorText);
+  String mirrorRunCrashedTerminal(String errorText) =>
+      exportFailedMessage(errorText);
+  String get mirrorTemplatesLoadFailed => recentWorkflowsLoadFailed;
   String mirrorTemplateAppliedTerminal(String selectedFile, String title) =>
-    localeName.startsWith('nl')
-      ? 'Template toegepast op $selectedFile: $title'
-      : 'Template applied to $selectedFile: $title';
-  String get mirrorEditorTitle => localeName.startsWith('nl')
-    ? 'Mirror Editor'
-    : 'Mirror Editor';
-  String get mirrorTemplatesLabel =>
-    localeName.startsWith('nl') ? 'Templates' : 'Templates';
-  String get mirrorCloudPremiumOnly => localeName.startsWith('nl')
-    ? 'Cloud mode is beschikbaar voor premium gebruikers.'
-    : 'Cloud mode is available for premium users.';
-  String get mirrorListeningLabel =>
-    localeName.startsWith('nl') ? 'Luisteren...' : 'Listening...';
-  String get mirrorVoiceInputLabel =>
-    localeName.startsWith('nl') ? 'Spraakinvoer' : 'Voice Input';
-  String get mirrorRunningLabel =>
-    localeName.startsWith('nl') ? 'Draait...' : 'Running...';
-  String get mirrorRunLabel => localeName.startsWith('nl') ? 'Run' : 'Run';
-  String get mirrorFilesLabel => localeName.startsWith('nl') ? 'Bestanden' : 'Files';
-  String get mirrorTerminalLabel =>
-    localeName.startsWith('nl') ? 'Terminal' : 'Terminal';
-  String get mirrorLiveOutputLabel =>
-    localeName.startsWith('nl') ? 'Live AI Output' : 'Live AI Output';
-  String get mirrorWaitingRealtime => localeName.startsWith('nl')
-    ? 'Wachten op realtime output...'
-    : 'Waiting for realtime output...';
-  String get mirrorVoiceUnavailable => localeName.startsWith('nl')
-    ? 'Spraakinvoer is niet beschikbaar op dit apparaat.'
-    : 'Voice input is not available on this device.';
-  String get mirrorSelectedFileEmpty => localeName.startsWith('nl')
-    ? 'Het geselecteerde bestand is leeg.'
-    : 'The selected file is empty.';
-  String mirrorGenerateFailed(String errorText) => localeName.startsWith('nl')
-    ? 'Generate mislukt: $errorText'
-    : 'Generate failed: $errorText';
-  String mirrorCompileFailed(String errorText) => localeName.startsWith('nl')
-    ? 'Compile mislukt: $errorText'
-    : 'Compile failed: $errorText';
-  String get mirrorNoChangesAfterCompile => localeName.startsWith('nl')
-    ? 'Geen wijzigingen gedetecteerd na compile.'
-    : 'No changes detected after compile.';
-  String mirrorApplyChangesTitle(String path) => localeName.startsWith('nl')
-    ? 'Apply wijzigingen ($path)'
-    : 'Apply changes ($path)';
-  String get mirrorApplyCanceled =>
-    localeName.startsWith('nl') ? 'Apply geannuleerd.' : 'Apply canceled.';
-  String get mirrorRunSuccess => localeName.startsWith('nl')
-    ? 'Mirror run succesvol afgerond.'
-    : 'Mirror run completed successfully.';
-  String mirrorApplyFailed(String errorText) => localeName.startsWith('nl')
-    ? 'Apply mislukt: $errorText'
-    : 'Apply failed: $errorText';
-  String mirrorRunCrashed(String errorText) => localeName.startsWith('nl')
-    ? 'Mirror run gecrasht: $errorText'
-    : 'Mirror run crashed: $errorText';
-  String get mirrorNoActiveTemplates => localeName.startsWith('nl')
-    ? 'Geen actieve templates beschikbaar.'
-    : 'No active templates available.';
-  String mirrorTemplateLoaded(String title) => localeName.startsWith('nl')
-    ? 'Template geladen: $title'
-    : 'Template loaded: $title';
-  String get mirrorModeLabel => localeName.startsWith('nl') ? 'Mode:' : 'Mode:';
-  String get mirrorPrivateMode => localeName.startsWith('nl') ? 'Private' : 'Private';
-  String get mirrorCloudMode => localeName.startsWith('nl') ? 'Cloud' : 'Cloud';
-  String get mirrorPremiumLabel => localeName.startsWith('nl') ? 'Premium' : 'Premium';
+      '$saveButton: $selectedFile - $title';
+  String get mirrorEditorTitle => aiAssistantLabel;
+  String get mirrorTemplatesLabel => savedViewsLabel;
+  String get mirrorCloudPremiumOnly => privacyWarningContent;
+  String get mirrorListeningLabel => tasksLoading;
+  String get mirrorVoiceInputLabel => attachFilesTooltip;
+  String get mirrorRunningLabel => tasksLoading;
+  String get mirrorRunLabel => continueButton;
+  String get mirrorFilesLabel => useProjectFilesLabel;
+  String get mirrorTerminalLabel => detailsTab;
+  String get mirrorLiveOutputLabel => statusLabel;
+  String get mirrorWaitingRealtime => recentWorkflowsLoading;
+  String get mirrorVoiceUnavailable => projectDataLoadFailed;
+  String get mirrorSelectedFileEmpty => noProjectsFound;
+  String mirrorGenerateFailed(String errorText) =>
+      importFailedMessage(errorText);
+  String mirrorCompileFailed(String errorText) =>
+      exportFailedMessage(errorText);
+  String get mirrorNoChangesAfterCompile => noProjectsMatchFiltersSubtitle;
+  String mirrorApplyChangesTitle(String path) => '$applyActionsLabel: $path';
+  String get mirrorApplyCanceled => cancelButton;
+  String get mirrorRunSuccess => saveAsDefaultSuccessMessage;
+  String mirrorApplyFailed(String errorText) => importFailedMessage(errorText);
+  String mirrorRunCrashed(String errorText) => exportFailedMessage(errorText);
+  String get mirrorNoActiveTemplates => noSavedViewsMessage;
+  String mirrorTemplateLoaded(String title) => '$saveButton: $title';
+  String get mirrorModeLabel => settingsLanguageTitle;
+  String get mirrorPrivateMode => settingsUseProjectFilesTitle;
+  String get mirrorCloudMode => settingsProjectsSection;
+  String get mirrorPremiumLabel => saveAsDefaultViewLabel;
 }

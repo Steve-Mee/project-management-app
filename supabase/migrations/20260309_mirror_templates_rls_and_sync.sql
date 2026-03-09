@@ -38,7 +38,10 @@ FOR SELECT
 TO authenticated
 USING (
   is_active = true
-  OR (auth.jwt() -> 'app_metadata' ->> 'role') = 'admin'
+  OR (
+    COALESCE(public.has_permission('manage_roles'), false)
+    OR COALESCE(public.has_permission('manage_users'), false)
+  )
 );
 
 DROP POLICY IF EXISTS "mirror_templates_insert_policy" ON public.mirror_templates;
@@ -46,22 +49,34 @@ CREATE POLICY "mirror_templates_insert_policy"
 ON public.mirror_templates
 FOR INSERT
 TO authenticated
-WITH CHECK ((auth.jwt() -> 'app_metadata' ->> 'role') = 'admin');
+WITH CHECK (
+  COALESCE(public.has_permission('manage_roles'), false)
+  OR COALESCE(public.has_permission('manage_users'), false)
+);
 
 DROP POLICY IF EXISTS "mirror_templates_update_policy" ON public.mirror_templates;
 CREATE POLICY "mirror_templates_update_policy"
 ON public.mirror_templates
 FOR UPDATE
 TO authenticated
-USING ((auth.jwt() -> 'app_metadata' ->> 'role') = 'admin')
-WITH CHECK ((auth.jwt() -> 'app_metadata' ->> 'role') = 'admin');
+USING (
+  COALESCE(public.has_permission('manage_roles'), false)
+  OR COALESCE(public.has_permission('manage_users'), false)
+)
+WITH CHECK (
+  COALESCE(public.has_permission('manage_roles'), false)
+  OR COALESCE(public.has_permission('manage_users'), false)
+);
 
 DROP POLICY IF EXISTS "mirror_templates_delete_policy" ON public.mirror_templates;
 CREATE POLICY "mirror_templates_delete_policy"
 ON public.mirror_templates
 FOR DELETE
 TO authenticated
-USING ((auth.jwt() -> 'app_metadata' ->> 'role') = 'admin');
+USING (
+  COALESCE(public.has_permission('manage_roles'), false)
+  OR COALESCE(public.has_permission('manage_users'), false)
+);
 
 CREATE OR REPLACE FUNCTION public.sync_mirror_templates_seed()
 RETURNS TABLE(upserted_count INTEGER, deactivated_count INTEGER)

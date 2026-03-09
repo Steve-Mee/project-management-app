@@ -95,5 +95,4 @@
     - Verwijder gedeelten met gedupliceerde bootstraplogica na centralisatie in shared runner bootstrap.
   - Screen-level Mirror tekstdefinities in `lib/features/mirror/mirror_editor_screen.dart`
     - Verwijder na ARB migratie om i18n-architectuur te vereenvoudigen.
-  - Legacy documentatiereferenties naar niet-bestaande `mirror_staging` bucketnaam
-    - Verwijder of vervang door actuele bucketnamen (`mirror-signed-inputs`, `mirror-backups`) om operationele verwarring te voorkomen.
+  - Legacy documentatiereferenties zijn geharmoniseerd naar actuele bucketnamen (`mirror-signed-inputs`, `mirror-backups`).

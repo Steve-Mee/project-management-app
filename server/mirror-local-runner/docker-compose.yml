@@ -7,17 +7,18 @@ services:
       dockerfile: Dockerfile
     container_name: mirror-local-runner
     ports:
-      - "50051:50051"
-      - "8080:8080"
+      - "127.0.0.1:50051:50051"
+      - "127.0.0.1:8080:8080"
     environment:
       PORT: "50051"
       HTTP_PORT: "8080"
+      MIRROR_BIND_ADDRESS: "0.0.0.0"
       MIRROR_WORKSPACE_ROOT: "/tmp/mirror-local-workspaces"
       ARTIFACT_BASE_URL: "http://localhost:8080/artifacts"
-      SIGNED_URL_SECRET: "${SIGNED_URL_SECRET}"
+      SIGNED_URL_SECRET: "${SIGNED_URL_SECRET:?SIGNED_URL_SECRET is required}"
       MIRROR_AUTH_GUARD_ENABLED: "${MIRROR_AUTH_GUARD_ENABLED:-true}"
-      MIRROR_SERVICE_TOKEN: "${MIRROR_SERVICE_TOKEN}"
-      MIRROR_JWT_SECRET: "${MIRROR_JWT_SECRET}"
+      MIRROR_SERVICE_TOKEN: "${MIRROR_SERVICE_TOKEN:?MIRROR_SERVICE_TOKEN is required}"
+      MIRROR_JWT_SECRET: "${MIRROR_JWT_SECRET:?MIRROR_JWT_SECRET is required}"
       MIRROR_JWT_KEYS_BY_KID: "${MIRROR_JWT_KEYS_BY_KID:-}"
       MIRROR_JWT_AUDIENCE: "${MIRROR_JWT_AUDIENCE:-}"
       MIRROR_JWT_ISSUER: "${MIRROR_JWT_ISSUER:-}"

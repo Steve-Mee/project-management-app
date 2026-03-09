@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:project_management_app/features/mirror/mirror_editor_screen.dart';
 
 void main() {
   group('Mirror new-file patch apply contract', () {
@@ -22,6 +23,28 @@ void main() {
           contains('void upsertFileContent({required String path, required String content})'));
       expect(providerSource, contains('updatedFiles[path] = content;'));
       expect(providerSource, contains('state = state.copyWith(files: updatedFiles);'));
+    });
+
+    test('realtime output merge keeps only latest max lines', () {
+      final merged = mergeLiveOutputWithCap(
+        currentLines: List<String>.generate(480, (int i) => 'current-$i'),
+        incomingLines: List<String>.generate(80, (int i) => 'incoming-$i'),
+        maxLines: 500,
+      );
+
+      expect(merged.length, 500);
+      expect(merged.first, 'current-60');
+      expect(merged.last, 'incoming-79');
+    });
+
+    test('realtime output merge preserves all lines below cap', () {
+      final merged = mergeLiveOutputWithCap(
+        currentLines: const <String>['a', 'b'],
+        incomingLines: const <String>['c', 'd'],
+        maxLines: 500,
+      );
+
+      expect(merged, const <String>['a', 'b', 'c', 'd']);
     });
   });
 }
