@@ -1,3 +1,9 @@
+## [1.21.1](https://github.com/Steve-Mee/project-management-app/compare/v1.21.0...v1.21.1) (2026-03-09)
+
+### Bug Fixes
+
+* **mirror:** apply uses original compile context ([a93739e](https://github.com/Steve-Mee/project-management-app/commit/a93739ed11a19069bf12608df57741533d6f0e9a))
+
 ## [1.21.0](https://github.com/Steve-Mee/project-management-app/compare/v1.20.1...v1.21.0) (2026-03-09)
 
 ### Features
