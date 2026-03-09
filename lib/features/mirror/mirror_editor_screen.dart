@@ -878,8 +878,6 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
   }
 
   Future<void> _openTemplatesGallery() async {
-    ref.invalidate(mirrorTemplatesProvider);
-
     await showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
@@ -907,7 +905,7 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
                         ),
                         const SizedBox(height: 12),
                         FilledButton.tonalIcon(
-                          onPressed: () => ref.invalidate(mirrorTemplatesProvider),
+                          onPressed: () => ref.refresh(mirrorTemplatesProvider),
                           icon: const Icon(Icons.refresh),
                           label: const Text('Opnieuw proberen'),
                         ),

@@ -12,7 +12,7 @@ final mirrorTemplatesProvider = FutureProvider<List<MirrorTemplate>>((ref) async
   try {
     final rows = await client
         .from('mirror_templates')
-        .select('id,title,description,seed_content,tags')
+      .select('id,template_key,title,description,seed_content,tags,icon_name')
         .eq('is_active', true)
         .order('updated_at', ascending: false)
         .limit(100);
@@ -28,7 +28,9 @@ final mirrorTemplatesProvider = FutureProvider<List<MirrorTemplate>>((ref) async
 });
 
 MirrorTemplate _toTemplate(Map<String, dynamic> row) {
-  final id = (row['id'] ?? '').toString();
+  final templateKey = (row['template_key'] ?? '').toString().trim();
+  final rawId = (row['id'] ?? '').toString().trim();
+  final id = templateKey.isNotEmpty ? templateKey : rawId;
   final title = (row['title'] ?? 'Untitled template').toString();
   final description = (row['description'] ?? '').toString();
   final seedContent = (row['seed_content'] ?? '').toString();
@@ -42,24 +44,58 @@ MirrorTemplate _toTemplate(Map<String, dynamic> row) {
     id: id,
     title: title,
     description: description,
-    icon: _iconForTemplate(row),
+    icon: _iconForTemplate(
+      templateKey: templateKey,
+      iconName: (row['icon_name'] ?? '').toString(),
+    ),
     seedContent: seedContent,
     tags: tags,
   );
 }
 
-IconData _iconForTemplate(Map<String, dynamic> row) {
-  final kind = (row['kind'] ?? row['type'] ?? '').toString().toLowerCase();
-
-  switch (kind) {
-    case 'widget':
+IconData _iconForTemplate({
+  required String templateKey,
+  required String iconName,
+}) {
+  final normalizedIcon = iconName.trim().toLowerCase();
+  switch (normalizedIcon) {
+    case 'widgets':
       return Icons.widgets;
-    case 'service':
+    case 'settings':
+    case 'build':
       return Icons.settings;
-    case 'doc':
-    case 'markdown':
+    case 'description':
+    case 'article':
       return Icons.description;
-    default:
-      return Icons.auto_awesome;
+    case 'code':
+      return Icons.code;
+    case 'bug_report':
+      return Icons.bug_report;
+    case 'terminal':
+      return Icons.terminal;
+    case 'rocket_launch':
+      return Icons.rocket_launch;
+    case 'bolt':
+      return Icons.bolt;
+    case 'palette':
+      return Icons.palette;
+    case 'data_object':
+      return Icons.data_object;
+    case 'storage':
+      return Icons.storage;
   }
+
+  final normalizedKey = templateKey.toLowerCase();
+  if (normalizedKey.contains('widget') || normalizedKey.contains('ui')) {
+      return Icons.widgets;
+  }
+  if (normalizedKey.contains('service') ||
+      normalizedKey.contains('backend')) {
+      return Icons.settings;
+  }
+  if (normalizedKey.contains('doc') || normalizedKey.contains('markdown')) {
+      return Icons.description;
+  }
+
+  return Icons.auto_awesome;
 }
