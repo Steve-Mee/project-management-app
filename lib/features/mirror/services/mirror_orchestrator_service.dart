@@ -33,7 +33,7 @@ class MirrorOrchestratorService {
   final Duration initialBackoff;
 
   Future<MirrorOrchestrationResult> runGenerateCompileApply({
-    required Ref ref,
+    required WidgetRef ref,
     required String sessionKey,
     required String prompt,
     required ProjectContext context,
@@ -122,7 +122,7 @@ class MirrorOrchestratorService {
   }
 
   Future<GenerateResult> generate({
-    required Ref ref,
+    required WidgetRef ref,
     required String sessionKey,
     required String prompt,
     required ProjectContext context,
@@ -172,7 +172,7 @@ class MirrorOrchestratorService {
   }
 
   Future<CompileResult> compile({
-    required Ref ref,
+    required WidgetRef ref,
     required String sessionKey,
     required String prompt,
     required ProjectContext context,
@@ -220,7 +220,7 @@ class MirrorOrchestratorService {
   }
 
   Future<ApplyResult> apply({
-    required Ref ref,
+    required WidgetRef ref,
     required String sessionKey,
     required String prompt,
     required ProjectContext context,
@@ -272,7 +272,7 @@ class MirrorOrchestratorService {
 
   Future<T> _withRetries<T>({
     required String operationName,
-    required Ref ref,
+    required WidgetRef ref,
     required String sessionKey,
     required Future<T> Function() operation,
     required bool Function(T value) isSuccess,
@@ -322,7 +322,7 @@ class MirrorOrchestratorService {
   }
 
   void _emitStatus(
-    Ref ref,
+    WidgetRef ref,
     String sessionKey, {
     String? terminalLine,
     String? liveLine,
