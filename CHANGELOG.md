@@ -1,3 +1,9 @@
+## [1.23.0](https://github.com/Steve-Mee/project-management-app/compare/v1.22.0...v1.23.0) (2026-03-09)
+
+### Features
+
+* **mirror:** finalize i18n, cleanup legacy policy note, and apply-context contract test ([67d7c58](https://github.com/Steve-Mee/project-management-app/commit/67d7c58d97ccbc16f8215e5c200bfea60a9ac550))
+
 ## [1.22.0](https://github.com/Steve-Mee/project-management-app/compare/v1.21.2...v1.22.0) (2026-03-09)
 
 ### Features
