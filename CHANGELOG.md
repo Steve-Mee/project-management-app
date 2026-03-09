@@ -1,3 +1,9 @@
+## [1.26.0](https://github.com/Steve-Mee/project-management-app/compare/v1.25.0...v1.26.0) (2026-03-09)
+
+### Features
+
+* **mirror:** add realtime payload guards and debounce memory caps with truncation logging ([6199ab9](https://github.com/Steve-Mee/project-management-app/commit/6199ab9155088adedda205d704f981eab42b1dc7))
+
 ## [1.25.0](https://github.com/Steve-Mee/project-management-app/compare/v1.24.0...v1.25.0) (2026-03-09)
 
 ### Features
