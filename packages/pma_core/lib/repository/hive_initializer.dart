@@ -90,6 +90,7 @@ class HiveInitializer {
         'projects': await _exportProjectsBox(),
         'tasks': await _exportTasksBox(),
         'project_meta': await _exportProjectMetaBox(),
+        'mirror_outbox': await _exportGenericBox('mirror_outbox'),
         'settings': await _exportGenericBox('settings'),
         'auth': await _exportGenericBox('auth'),
         'project_filters': await _exportGenericBox('project_filters'),
@@ -126,6 +127,7 @@ class HiveInitializer {
     await _restoreProjectsBox(boxes['projects']);
     await _restoreTasksBox(boxes['tasks']);
     await _restoreProjectMetaBox(boxes['project_meta']);
+    await _restoreGenericBox('mirror_outbox', boxes['mirror_outbox']);
     await _restoreGenericBox('settings', boxes['settings']);
     await _restoreGenericBox('auth', boxes['auth']);
     await _restoreGenericBox('project_filters', boxes['project_filters']);
@@ -262,7 +264,8 @@ class HiveInitializer {
     return name == 'auth' ||
         name == 'settings' ||
         name == 'ai_usage' ||
-        name == 'local_tokens';
+      name == 'local_tokens' ||
+      name == 'mirror_outbox';
   }
 
   static String _encryptionKeyForBox(String name) {
