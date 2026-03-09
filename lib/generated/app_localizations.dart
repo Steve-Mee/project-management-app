@@ -2780,6 +2780,396 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Advanced AI planning is currently disabled by admin'**
   String get featureFlagAiAdvancedPlanningDisabledMessage;
+
+  /// Terminal line shown when Mirror editor initializes.
+  ///
+  /// In en, this message translates to:
+  /// **'Loading recent workflows...'**
+  String get mirrorTerminalReady;
+
+  /// Terminal line showing active project and task context.
+  ///
+  /// In en, this message translates to:
+  /// **'Project {projectId}, task {taskId}, status Status, In progress'**
+  String mirrorProjectTaskLine(String projectId, String taskId);
+
+  /// Header text showing active project and task context.
+  ///
+  /// In en, this message translates to:
+  /// **'Project {projectId}, task {taskId}, status Status, In progress'**
+  String mirrorProjectTaskHeader(String projectId, String taskId);
+
+  /// Terminal line when realtime output lines are flushed.
+  ///
+  /// In en, this message translates to:
+  /// **'Showing {lineCount} of {lineCount} projects'**
+  String mirrorRealtimeOutputReceived(int lineCount);
+
+  /// Generic status line for Mirror realtime records.
+  ///
+  /// In en, this message translates to:
+  /// **'Status: {status}'**
+  String mirrorStatusLine(String status);
+
+  /// Terminal line shown when voice input is stopped.
+  ///
+  /// In en, this message translates to:
+  /// **'Continue'**
+  String get mirrorVoiceStopped;
+
+  /// Terminal line shown when voice input is unavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not load project data.'**
+  String get mirrorVoiceUnavailableTerminal;
+
+  /// Terminal line shown when voice input starts.
+  ///
+  /// In en, this message translates to:
+  /// **'Loading tasks...'**
+  String get mirrorVoiceStarted;
+
+  /// Terminal line when recognized voice text is appended.
+  ///
+  /// In en, this message translates to:
+  /// **'Save: {filePath}'**
+  String mirrorVoiceAppended(String filePath);
+
+  /// Terminal line shown when run is aborted for empty file content.
+  ///
+  /// In en, this message translates to:
+  /// **'No projects found: {filePath}'**
+  String mirrorRunAbortedFileEmpty(String filePath);
+
+  /// Terminal line shown when Mirror run begins for a file.
+  ///
+  /// In en, this message translates to:
+  /// **'Loading more projects... {filePath}'**
+  String mirrorRunStarting(String filePath);
+
+  /// Terminal line indicating the run flow stage.
+  ///
+  /// In en, this message translates to:
+  /// **'Apply Actions'**
+  String get mirrorRunFlowLine;
+
+  /// Terminal line shown when generate step starts.
+  ///
+  /// In en, this message translates to:
+  /// **'Loading more projects...'**
+  String get mirrorStepGenerateSent;
+
+  /// Fallback generate error text in Mirror flow.
+  ///
+  /// In en, this message translates to:
+  /// **'Unknown project'**
+  String get mirrorUnknownGenerateError;
+
+  /// Terminal line shown when generate step fails.
+  ///
+  /// In en, this message translates to:
+  /// **'Import failed: {errorText}'**
+  String mirrorGenerateFailedTerminal(String errorText);
+
+  /// Terminal line shown when generate step completes.
+  ///
+  /// In en, this message translates to:
+  /// **'Completed'**
+  String get mirrorStepGenerateCompleted;
+
+  /// Terminal diagnostics line for generate output.
+  ///
+  /// In en, this message translates to:
+  /// **'Status: {text}'**
+  String mirrorGenerateDiagnostics(String text);
+
+  /// Terminal line shown when compile step starts.
+  ///
+  /// In en, this message translates to:
+  /// **'Loading more projects...'**
+  String get mirrorStepCompileSent;
+
+  /// Fallback compile error text in Mirror flow.
+  ///
+  /// In en, this message translates to:
+  /// **'Unknown project'**
+  String get mirrorUnknownCompileError;
+
+  /// Terminal line shown when compile step fails.
+  ///
+  /// In en, this message translates to:
+  /// **'Export failed: {errorText}'**
+  String mirrorCompileFailedTerminal(String errorText);
+
+  /// Terminal line shown when compile step completes.
+  ///
+  /// In en, this message translates to:
+  /// **'Completed'**
+  String get mirrorStepCompileCompleted;
+
+  /// Terminal warnings line for compile output.
+  ///
+  /// In en, this message translates to:
+  /// **'Status: {text}'**
+  String mirrorCompileWarnings(String text);
+
+  /// Terminal line shown while preview patches are being built.
+  ///
+  /// In en, this message translates to:
+  /// **'Loading project data...'**
+  String get mirrorStepPreviewBuilding;
+
+  /// Terminal line shown when no preview patch is available.
+  ///
+  /// In en, this message translates to:
+  /// **'No projects found'**
+  String get mirrorNoPatchPreviewTerminal;
+
+  /// Terminal line shown when preview patches are ready.
+  ///
+  /// In en, this message translates to:
+  /// **'Showing {fileCount} of {fileCount} projects'**
+  String mirrorStepPreviewReady(int fileCount);
+
+  /// Terminal line shown while waiting for apply confirmation.
+  ///
+  /// In en, this message translates to:
+  /// **'Apply Actions: {path}'**
+  String mirrorStepApplyWaiting(String path);
+
+  /// Terminal line shown when apply confirmation is canceled.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel'**
+  String get mirrorStepApplyCanceled;
+
+  /// Terminal line shown when apply step is submitted.
+  ///
+  /// In en, this message translates to:
+  /// **'Apply Actions'**
+  String get mirrorStepApplySent;
+
+  /// Terminal line listing files applied by Mirror.
+  ///
+  /// In en, this message translates to:
+  /// **'Save: {filesText}'**
+  String mirrorAppliedFiles(String filesText);
+
+  /// Terminal line shown when Mirror run completes successfully.
+  ///
+  /// In en, this message translates to:
+  /// **'Filter saved as default'**
+  String get mirrorRunCompletedTerminal;
+
+  /// Fallback apply error text in Mirror flow.
+  ///
+  /// In en, this message translates to:
+  /// **'Unknown project'**
+  String get mirrorUnknownApplyError;
+
+  /// Terminal line shown when apply step fails.
+  ///
+  /// In en, this message translates to:
+  /// **'Import failed: {errorText}'**
+  String mirrorApplyFailedTerminal(String errorText);
+
+  /// Terminal line shown when Mirror run crashes.
+  ///
+  /// In en, this message translates to:
+  /// **'Export failed: {errorText}'**
+  String mirrorRunCrashedTerminal(String errorText);
+
+  /// Message shown when template gallery cannot be loaded.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not load recent workflows.'**
+  String get mirrorTemplatesLoadFailed;
+
+  /// Terminal line shown after applying a Mirror template.
+  ///
+  /// In en, this message translates to:
+  /// **'Save: {selectedFile} - {title}'**
+  String mirrorTemplateAppliedTerminal(String selectedFile, String title);
+
+  /// Mirror editor screen title.
+  ///
+  /// In en, this message translates to:
+  /// **'AI Assistant'**
+  String get mirrorEditorTitle;
+
+  /// Label for opening Mirror templates gallery.
+  ///
+  /// In en, this message translates to:
+  /// **'Saved Views'**
+  String get mirrorTemplatesLabel;
+
+  /// Snack bar shown when cloud mode is blocked for non-premium users.
+  ///
+  /// In en, this message translates to:
+  /// **'Warning: Sensitive data can be read.'**
+  String get mirrorCloudPremiumOnly;
+
+  /// Button label while Mirror voice capture is active.
+  ///
+  /// In en, this message translates to:
+  /// **'Loading tasks...'**
+  String get mirrorListeningLabel;
+
+  /// Button label to start Mirror voice input.
+  ///
+  /// In en, this message translates to:
+  /// **'Attach files'**
+  String get mirrorVoiceInputLabel;
+
+  /// Button label while Mirror run is in progress.
+  ///
+  /// In en, this message translates to:
+  /// **'Loading tasks...'**
+  String get mirrorRunningLabel;
+
+  /// Button label for starting Mirror run.
+  ///
+  /// In en, this message translates to:
+  /// **'Continue'**
+  String get mirrorRunLabel;
+
+  /// Title for Mirror file explorer pane.
+  ///
+  /// In en, this message translates to:
+  /// **'Use project files'**
+  String get mirrorFilesLabel;
+
+  /// Title for Mirror terminal pane.
+  ///
+  /// In en, this message translates to:
+  /// **'Details'**
+  String get mirrorTerminalLabel;
+
+  /// Title for Mirror live output pane.
+  ///
+  /// In en, this message translates to:
+  /// **'Status'**
+  String get mirrorLiveOutputLabel;
+
+  /// Placeholder text while waiting for live output.
+  ///
+  /// In en, this message translates to:
+  /// **'Loading recent workflows...'**
+  String get mirrorWaitingRealtime;
+
+  /// Snack bar when voice input is unavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not load project data.'**
+  String get mirrorVoiceUnavailable;
+
+  /// Snack bar when selected file has no runnable content.
+  ///
+  /// In en, this message translates to:
+  /// **'No projects found'**
+  String get mirrorSelectedFileEmpty;
+
+  /// Snack bar when generate step fails.
+  ///
+  /// In en, this message translates to:
+  /// **'Import failed: {errorText}'**
+  String mirrorGenerateFailed(String errorText);
+
+  /// Snack bar when compile step fails.
+  ///
+  /// In en, this message translates to:
+  /// **'Export failed: {errorText}'**
+  String mirrorCompileFailed(String errorText);
+
+  /// Snack bar when compile produced no applicable changes.
+  ///
+  /// In en, this message translates to:
+  /// **'Try changing or clearing your filters'**
+  String get mirrorNoChangesAfterCompile;
+
+  /// Dialog title for applying Mirror changes.
+  ///
+  /// In en, this message translates to:
+  /// **'Apply Actions: {path}'**
+  String mirrorApplyChangesTitle(String path);
+
+  /// Snack bar when apply action is canceled.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel'**
+  String get mirrorApplyCanceled;
+
+  /// Snack bar when Mirror run succeeds.
+  ///
+  /// In en, this message translates to:
+  /// **'Filter saved as default'**
+  String get mirrorRunSuccess;
+
+  /// Snack bar when apply step fails.
+  ///
+  /// In en, this message translates to:
+  /// **'Import failed: {errorText}'**
+  String mirrorApplyFailed(String errorText);
+
+  /// Snack bar when Mirror run crashes.
+  ///
+  /// In en, this message translates to:
+  /// **'Export failed: {errorText}'**
+  String mirrorRunCrashed(String errorText);
+
+  /// Message shown when no active Mirror templates are available.
+  ///
+  /// In en, this message translates to:
+  /// **'No saved views yet'**
+  String get mirrorNoActiveTemplates;
+
+  /// Snack bar shown when template content is loaded into editor.
+  ///
+  /// In en, this message translates to:
+  /// **'Save: {title}'**
+  String mirrorTemplateLoaded(String title);
+
+  /// Label for Mirror mode selector.
+  ///
+  /// In en, this message translates to:
+  /// **'Language'**
+  String get mirrorModeLabel;
+
+  /// Mirror mode option label for private mode.
+  ///
+  /// In en, this message translates to:
+  /// **'Use project files'**
+  String get mirrorPrivateMode;
+
+  /// Mirror mode option label for cloud mode.
+  ///
+  /// In en, this message translates to:
+  /// **'Projects'**
+  String get mirrorCloudMode;
+
+  /// Badge label shown on premium-only cloud mode option.
+  ///
+  /// In en, this message translates to:
+  /// **'Save as Default'**
+  String get mirrorPremiumLabel;
+
+  /// Retry button label in Mirror template loading error state.
+  ///
+  /// In en, this message translates to:
+  /// **'Try again'**
+  String get mirrorRetryButton;
+
+  /// Tooltip for opening Mirror editor from project screens.
+  ///
+  /// In en, this message translates to:
+  /// **'Open Mirror Editor'**
+  String get mirrorOpenEditorTooltip;
+
+  /// Snack bar message when Mirror cannot be opened for the current account.
+  ///
+  /// In en, this message translates to:
+  /// **'Mirror is not available for your account.'**
+  String get mirrorUnavailableForAccount;
 }
 
 class _AppLocalizationsDelegate

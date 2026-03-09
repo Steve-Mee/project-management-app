@@ -1996,5 +1996,389 @@
   "featureFlagAiAdvancedPlanningDisabledMessage": "Advanced AI planning is currently disabled by admin",
   "@featureFlagAiAdvancedPlanningDisabledMessage": {
     "description": "Error message shown when advanced AI planning feature flag is disabled."
+  },
+  "mirrorTerminalReady": "Loading recent workflows...",
+  "@mirrorTerminalReady": {
+    "description": "Terminal line shown when Mirror editor initializes."
+  },
+  "mirrorProjectTaskLine": "Project {projectId}, task {taskId}, status Status, In progress",
+  "@mirrorProjectTaskLine": {
+    "description": "Terminal line showing active project and task context.",
+    "placeholders": {
+      "projectId": {
+        "type": "String"
+      },
+      "taskId": {
+        "type": "String"
+      }
+    }
+  },
+  "mirrorProjectTaskHeader": "Project {projectId}, task {taskId}, status Status, In progress",
+  "@mirrorProjectTaskHeader": {
+    "description": "Header text showing active project and task context.",
+    "placeholders": {
+      "projectId": {
+        "type": "String"
+      },
+      "taskId": {
+        "type": "String"
+      }
+    }
+  },
+  "mirrorRealtimeOutputReceived": "Showing {lineCount} of {lineCount} projects",
+  "@mirrorRealtimeOutputReceived": {
+    "description": "Terminal line when realtime output lines are flushed.",
+    "placeholders": {
+      "lineCount": {
+        "type": "int"
+      }
+    }
+  },
+  "mirrorStatusLine": "Status: {status}",
+  "@mirrorStatusLine": {
+    "description": "Generic status line for Mirror realtime records.",
+    "placeholders": {
+      "status": {
+        "type": "String"
+      }
+    }
+  },
+  "mirrorVoiceStopped": "Continue",
+  "@mirrorVoiceStopped": {
+    "description": "Terminal line shown when voice input is stopped."
+  },
+  "mirrorVoiceUnavailableTerminal": "Could not load project data.",
+  "@mirrorVoiceUnavailableTerminal": {
+    "description": "Terminal line shown when voice input is unavailable."
+  },
+  "mirrorVoiceStarted": "Loading tasks...",
+  "@mirrorVoiceStarted": {
+    "description": "Terminal line shown when voice input starts."
+  },
+  "mirrorVoiceAppended": "Save: {filePath}",
+  "@mirrorVoiceAppended": {
+    "description": "Terminal line when recognized voice text is appended.",
+    "placeholders": {
+      "filePath": {
+        "type": "String"
+      }
+    }
+  },
+  "mirrorRunAbortedFileEmpty": "No projects found: {filePath}",
+  "@mirrorRunAbortedFileEmpty": {
+    "description": "Terminal line shown when run is aborted for empty file content.",
+    "placeholders": {
+      "filePath": {
+        "type": "String"
+      }
+    }
+  },
+  "mirrorRunStarting": "Loading more projects... {filePath}",
+  "@mirrorRunStarting": {
+    "description": "Terminal line shown when Mirror run begins for a file.",
+    "placeholders": {
+      "filePath": {
+        "type": "String"
+      }
+    }
+  },
+  "mirrorRunFlowLine": "Apply Actions",
+  "@mirrorRunFlowLine": {
+    "description": "Terminal line indicating the run flow stage."
+  },
+  "mirrorStepGenerateSent": "Loading more projects...",
+  "@mirrorStepGenerateSent": {
+    "description": "Terminal line shown when generate step starts."
+  },
+  "mirrorUnknownGenerateError": "Unknown project",
+  "@mirrorUnknownGenerateError": {
+    "description": "Fallback generate error text in Mirror flow."
+  },
+  "mirrorGenerateFailedTerminal": "Import failed: {errorText}",
+  "@mirrorGenerateFailedTerminal": {
+    "description": "Terminal line shown when generate step fails.",
+    "placeholders": {
+      "errorText": {
+        "type": "String"
+      }
+    }
+  },
+  "mirrorStepGenerateCompleted": "Completed",
+  "@mirrorStepGenerateCompleted": {
+    "description": "Terminal line shown when generate step completes."
+  },
+  "mirrorGenerateDiagnostics": "Status: {text}",
+  "@mirrorGenerateDiagnostics": {
+    "description": "Terminal diagnostics line for generate output.",
+    "placeholders": {
+      "text": {
+        "type": "String"
+      }
+    }
+  },
+  "mirrorStepCompileSent": "Loading more projects...",
+  "@mirrorStepCompileSent": {
+    "description": "Terminal line shown when compile step starts."
+  },
+  "mirrorUnknownCompileError": "Unknown project",
+  "@mirrorUnknownCompileError": {
+    "description": "Fallback compile error text in Mirror flow."
+  },
+  "mirrorCompileFailedTerminal": "Export failed: {errorText}",
+  "@mirrorCompileFailedTerminal": {
+    "description": "Terminal line shown when compile step fails.",
+    "placeholders": {
+      "errorText": {
+        "type": "String"
+      }
+    }
+  },
+  "mirrorStepCompileCompleted": "Completed",
+  "@mirrorStepCompileCompleted": {
+    "description": "Terminal line shown when compile step completes."
+  },
+  "mirrorCompileWarnings": "Status: {text}",
+  "@mirrorCompileWarnings": {
+    "description": "Terminal warnings line for compile output.",
+    "placeholders": {
+      "text": {
+        "type": "String"
+      }
+    }
+  },
+  "mirrorStepPreviewBuilding": "Loading project data...",
+  "@mirrorStepPreviewBuilding": {
+    "description": "Terminal line shown while preview patches are being built."
+  },
+  "mirrorNoPatchPreviewTerminal": "No projects found",
+  "@mirrorNoPatchPreviewTerminal": {
+    "description": "Terminal line shown when no preview patch is available."
+  },
+  "mirrorStepPreviewReady": "Showing {fileCount} of {fileCount} projects",
+  "@mirrorStepPreviewReady": {
+    "description": "Terminal line shown when preview patches are ready.",
+    "placeholders": {
+      "fileCount": {
+        "type": "int"
+      }
+    }
+  },
+  "mirrorStepApplyWaiting": "Apply Actions: {path}",
+  "@mirrorStepApplyWaiting": {
+    "description": "Terminal line shown while waiting for apply confirmation.",
+    "placeholders": {
+      "path": {
+        "type": "String"
+      }
+    }
+  },
+  "mirrorStepApplyCanceled": "Cancel",
+  "@mirrorStepApplyCanceled": {
+    "description": "Terminal line shown when apply confirmation is canceled."
+  },
+  "mirrorStepApplySent": "Apply Actions",
+  "@mirrorStepApplySent": {
+    "description": "Terminal line shown when apply step is submitted."
+  },
+  "mirrorAppliedFiles": "Save: {filesText}",
+  "@mirrorAppliedFiles": {
+    "description": "Terminal line listing files applied by Mirror.",
+    "placeholders": {
+      "filesText": {
+        "type": "String"
+      }
+    }
+  },
+  "mirrorRunCompletedTerminal": "Filter saved as default",
+  "@mirrorRunCompletedTerminal": {
+    "description": "Terminal line shown when Mirror run completes successfully."
+  },
+  "mirrorUnknownApplyError": "Unknown project",
+  "@mirrorUnknownApplyError": {
+    "description": "Fallback apply error text in Mirror flow."
+  },
+  "mirrorApplyFailedTerminal": "Import failed: {errorText}",
+  "@mirrorApplyFailedTerminal": {
+    "description": "Terminal line shown when apply step fails.",
+    "placeholders": {
+      "errorText": {
+        "type": "String"
+      }
+    }
+  },
+  "mirrorRunCrashedTerminal": "Export failed: {errorText}",
+  "@mirrorRunCrashedTerminal": {
+    "description": "Terminal line shown when Mirror run crashes.",
+    "placeholders": {
+      "errorText": {
+        "type": "String"
+      }
+    }
+  },
+  "mirrorTemplatesLoadFailed": "Could not load recent workflows.",
+  "@mirrorTemplatesLoadFailed": {
+    "description": "Message shown when template gallery cannot be loaded."
+  },
+  "mirrorTemplateAppliedTerminal": "Save: {selectedFile} - {title}",
+  "@mirrorTemplateAppliedTerminal": {
+    "description": "Terminal line shown after applying a Mirror template.",
+    "placeholders": {
+      "selectedFile": {
+        "type": "String"
+      },
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "mirrorEditorTitle": "AI Assistant",
+  "@mirrorEditorTitle": {
+    "description": "Mirror editor screen title."
+  },
+  "mirrorTemplatesLabel": "Saved Views",
+  "@mirrorTemplatesLabel": {
+    "description": "Label for opening Mirror templates gallery."
+  },
+  "mirrorCloudPremiumOnly": "Warning: Sensitive data can be read.",
+  "@mirrorCloudPremiumOnly": {
+    "description": "Snack bar shown when cloud mode is blocked for non-premium users."
+  },
+  "mirrorListeningLabel": "Loading tasks...",
+  "@mirrorListeningLabel": {
+    "description": "Button label while Mirror voice capture is active."
+  },
+  "mirrorVoiceInputLabel": "Attach files",
+  "@mirrorVoiceInputLabel": {
+    "description": "Button label to start Mirror voice input."
+  },
+  "mirrorRunningLabel": "Loading tasks...",
+  "@mirrorRunningLabel": {
+    "description": "Button label while Mirror run is in progress."
+  },
+  "mirrorRunLabel": "Continue",
+  "@mirrorRunLabel": {
+    "description": "Button label for starting Mirror run."
+  },
+  "mirrorFilesLabel": "Use project files",
+  "@mirrorFilesLabel": {
+    "description": "Title for Mirror file explorer pane."
+  },
+  "mirrorTerminalLabel": "Details",
+  "@mirrorTerminalLabel": {
+    "description": "Title for Mirror terminal pane."
+  },
+  "mirrorLiveOutputLabel": "Status",
+  "@mirrorLiveOutputLabel": {
+    "description": "Title for Mirror live output pane."
+  },
+  "mirrorWaitingRealtime": "Loading recent workflows...",
+  "@mirrorWaitingRealtime": {
+    "description": "Placeholder text while waiting for live output."
+  },
+  "mirrorVoiceUnavailable": "Could not load project data.",
+  "@mirrorVoiceUnavailable": {
+    "description": "Snack bar when voice input is unavailable."
+  },
+  "mirrorSelectedFileEmpty": "No projects found",
+  "@mirrorSelectedFileEmpty": {
+    "description": "Snack bar when selected file has no runnable content."
+  },
+  "mirrorGenerateFailed": "Import failed: {errorText}",
+  "@mirrorGenerateFailed": {
+    "description": "Snack bar when generate step fails.",
+    "placeholders": {
+      "errorText": {
+        "type": "String"
+      }
+    }
+  },
+  "mirrorCompileFailed": "Export failed: {errorText}",
+  "@mirrorCompileFailed": {
+    "description": "Snack bar when compile step fails.",
+    "placeholders": {
+      "errorText": {
+        "type": "String"
+      }
+    }
+  },
+  "mirrorNoChangesAfterCompile": "Try changing or clearing your filters",
+  "@mirrorNoChangesAfterCompile": {
+    "description": "Snack bar when compile produced no applicable changes."
+  },
+  "mirrorApplyChangesTitle": "Apply Actions: {path}",
+  "@mirrorApplyChangesTitle": {
+    "description": "Dialog title for applying Mirror changes.",
+    "placeholders": {
+      "path": {
+        "type": "String"
+      }
+    }
+  },
+  "mirrorApplyCanceled": "Cancel",
+  "@mirrorApplyCanceled": {
+    "description": "Snack bar when apply action is canceled."
+  },
+  "mirrorRunSuccess": "Filter saved as default",
+  "@mirrorRunSuccess": {
+    "description": "Snack bar when Mirror run succeeds."
+  },
+  "mirrorApplyFailed": "Import failed: {errorText}",
+  "@mirrorApplyFailed": {
+    "description": "Snack bar when apply step fails.",
+    "placeholders": {
+      "errorText": {
+        "type": "String"
+      }
+    }
+  },
+  "mirrorRunCrashed": "Export failed: {errorText}",
+  "@mirrorRunCrashed": {
+    "description": "Snack bar when Mirror run crashes.",
+    "placeholders": {
+      "errorText": {
+        "type": "String"
+      }
+    }
+  },
+  "mirrorNoActiveTemplates": "No saved views yet",
+  "@mirrorNoActiveTemplates": {
+    "description": "Message shown when no active Mirror templates are available."
+  },
+  "mirrorTemplateLoaded": "Save: {title}",
+  "@mirrorTemplateLoaded": {
+    "description": "Snack bar shown when template content is loaded into editor.",
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "mirrorModeLabel": "Language",
+  "@mirrorModeLabel": {
+    "description": "Label for Mirror mode selector."
+  },
+  "mirrorPrivateMode": "Use project files",
+  "@mirrorPrivateMode": {
+    "description": "Mirror mode option label for private mode."
+  },
+  "mirrorCloudMode": "Projects",
+  "@mirrorCloudMode": {
+    "description": "Mirror mode option label for cloud mode."
+  },
+  "mirrorPremiumLabel": "Save as Default",
+  "@mirrorPremiumLabel": {
+    "description": "Badge label shown on premium-only cloud mode option."
+  },
+  "mirrorRetryButton": "Try again",
+  "@mirrorRetryButton": {
+    "description": "Retry button label in Mirror template loading error state."
+  },
+  "mirrorOpenEditorTooltip": "Open Mirror Editor",
+  "@mirrorOpenEditorTooltip": {
+    "description": "Tooltip for opening Mirror editor from project screens."
+  },
+  "mirrorUnavailableForAccount": "Mirror is not available for your account.",
+  "@mirrorUnavailableForAccount": {
+    "description": "Snack bar message when Mirror cannot be opened for the current account."
   }
 }

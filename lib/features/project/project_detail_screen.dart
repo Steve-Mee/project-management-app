@@ -282,7 +282,7 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen>
           ),
         IconButton(
           icon: const Icon(Icons.open_in_new),
-          tooltip: 'Open Mirror Editor',
+          tooltip: l10n.mirrorOpenEditorTooltip,
           onPressed: primaryTaskId == null
               ? null
               : () => _openMirrorEditor(
@@ -326,8 +326,8 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen>
 
     if (payload == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Mirror is not available for your account.'),
+        SnackBar(
+          content: Text(AppLocalizations.of(context)!.mirrorUnavailableForAccount),
         ),
       );
       return;

@@ -1450,4 +1450,247 @@ class AppLocalizationsRu extends AppLocalizations {
   @override
   String get featureFlagAiAdvancedPlanningDisabledMessage =>
       'Advanced AI planning is currently disabled by admin';
+
+  @override
+  String get mirrorTerminalReady => 'Loading recent workflows...';
+
+  @override
+  String mirrorProjectTaskLine(String projectId, String taskId) {
+    return 'Project $projectId, task $taskId, status Status, In progress';
+  }
+
+  @override
+  String mirrorProjectTaskHeader(String projectId, String taskId) {
+    return 'Project $projectId, task $taskId, status Status, In progress';
+  }
+
+  @override
+  String mirrorRealtimeOutputReceived(int lineCount) {
+    return 'Showing $lineCount of $lineCount projects';
+  }
+
+  @override
+  String mirrorStatusLine(String status) {
+    return 'Status: $status';
+  }
+
+  @override
+  String get mirrorVoiceStopped => 'Continue';
+
+  @override
+  String get mirrorVoiceUnavailableTerminal => 'Could not load project data.';
+
+  @override
+  String get mirrorVoiceStarted => 'Loading tasks...';
+
+  @override
+  String mirrorVoiceAppended(String filePath) {
+    return 'Save: $filePath';
+  }
+
+  @override
+  String mirrorRunAbortedFileEmpty(String filePath) {
+    return 'No projects found: $filePath';
+  }
+
+  @override
+  String mirrorRunStarting(String filePath) {
+    return 'Loading more projects... $filePath';
+  }
+
+  @override
+  String get mirrorRunFlowLine => 'Apply Actions';
+
+  @override
+  String get mirrorStepGenerateSent => 'Loading more projects...';
+
+  @override
+  String get mirrorUnknownGenerateError => 'Unknown project';
+
+  @override
+  String mirrorGenerateFailedTerminal(String errorText) {
+    return 'Import failed: $errorText';
+  }
+
+  @override
+  String get mirrorStepGenerateCompleted => 'Completed';
+
+  @override
+  String mirrorGenerateDiagnostics(String text) {
+    return 'Status: $text';
+  }
+
+  @override
+  String get mirrorStepCompileSent => 'Loading more projects...';
+
+  @override
+  String get mirrorUnknownCompileError => 'Unknown project';
+
+  @override
+  String mirrorCompileFailedTerminal(String errorText) {
+    return 'Export failed: $errorText';
+  }
+
+  @override
+  String get mirrorStepCompileCompleted => 'Completed';
+
+  @override
+  String mirrorCompileWarnings(String text) {
+    return 'Status: $text';
+  }
+
+  @override
+  String get mirrorStepPreviewBuilding => 'Loading project data...';
+
+  @override
+  String get mirrorNoPatchPreviewTerminal => 'No projects found';
+
+  @override
+  String mirrorStepPreviewReady(int fileCount) {
+    return 'Showing $fileCount of $fileCount projects';
+  }
+
+  @override
+  String mirrorStepApplyWaiting(String path) {
+    return 'Apply Actions: $path';
+  }
+
+  @override
+  String get mirrorStepApplyCanceled => 'Cancel';
+
+  @override
+  String get mirrorStepApplySent => 'Apply Actions';
+
+  @override
+  String mirrorAppliedFiles(String filesText) {
+    return 'Save: $filesText';
+  }
+
+  @override
+  String get mirrorRunCompletedTerminal => 'Filter saved as default';
+
+  @override
+  String get mirrorUnknownApplyError => 'Unknown project';
+
+  @override
+  String mirrorApplyFailedTerminal(String errorText) {
+    return 'Import failed: $errorText';
+  }
+
+  @override
+  String mirrorRunCrashedTerminal(String errorText) {
+    return 'Export failed: $errorText';
+  }
+
+  @override
+  String get mirrorTemplatesLoadFailed => 'Could not load recent workflows.';
+
+  @override
+  String mirrorTemplateAppliedTerminal(String selectedFile, String title) {
+    return 'Save: $selectedFile - $title';
+  }
+
+  @override
+  String get mirrorEditorTitle => 'AI Assistant';
+
+  @override
+  String get mirrorTemplatesLabel => 'Saved Views';
+
+  @override
+  String get mirrorCloudPremiumOnly => 'Warning: Sensitive data can be read.';
+
+  @override
+  String get mirrorListeningLabel => 'Loading tasks...';
+
+  @override
+  String get mirrorVoiceInputLabel => 'Attach files';
+
+  @override
+  String get mirrorRunningLabel => 'Loading tasks...';
+
+  @override
+  String get mirrorRunLabel => 'Continue';
+
+  @override
+  String get mirrorFilesLabel => 'Use project files';
+
+  @override
+  String get mirrorTerminalLabel => 'Details';
+
+  @override
+  String get mirrorLiveOutputLabel => 'Status';
+
+  @override
+  String get mirrorWaitingRealtime => 'Loading recent workflows...';
+
+  @override
+  String get mirrorVoiceUnavailable => 'Could not load project data.';
+
+  @override
+  String get mirrorSelectedFileEmpty => 'No projects found';
+
+  @override
+  String mirrorGenerateFailed(String errorText) {
+    return 'Import failed: $errorText';
+  }
+
+  @override
+  String mirrorCompileFailed(String errorText) {
+    return 'Export failed: $errorText';
+  }
+
+  @override
+  String get mirrorNoChangesAfterCompile =>
+      'Try changing or clearing your filters';
+
+  @override
+  String mirrorApplyChangesTitle(String path) {
+    return 'Apply Actions: $path';
+  }
+
+  @override
+  String get mirrorApplyCanceled => 'Cancel';
+
+  @override
+  String get mirrorRunSuccess => 'Filter saved as default';
+
+  @override
+  String mirrorApplyFailed(String errorText) {
+    return 'Import failed: $errorText';
+  }
+
+  @override
+  String mirrorRunCrashed(String errorText) {
+    return 'Export failed: $errorText';
+  }
+
+  @override
+  String get mirrorNoActiveTemplates => 'No saved views yet';
+
+  @override
+  String mirrorTemplateLoaded(String title) {
+    return 'Save: $title';
+  }
+
+  @override
+  String get mirrorModeLabel => 'Language';
+
+  @override
+  String get mirrorPrivateMode => 'Use project files';
+
+  @override
+  String get mirrorCloudMode => 'Projects';
+
+  @override
+  String get mirrorPremiumLabel => 'Save as Default';
+
+  @override
+  String get mirrorRetryButton => 'Try again';
+
+  @override
+  String get mirrorOpenEditorTooltip => 'Open Mirror Editor';
+
+  @override
+  String get mirrorUnavailableForAccount =>
+      'Mirror is not available for your account.';
 }

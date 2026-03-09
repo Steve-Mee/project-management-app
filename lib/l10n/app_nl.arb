@@ -1401,5 +1401,389 @@
   "session_refresh_failed": "Sessie vernieuwen mislukt",
   "@session_refresh_failed": {
     "description": "Foutmelding wanneer sessie vernieuwen mislukt."
+  },
+  "mirrorTerminalReady": "Recente workflows laden...",
+  "@mirrorTerminalReady": {
+    "description": "Terminalregel wanneer de Mirror-editor wordt geopend."
+  },
+  "mirrorProjectTaskLine": "Project {projectId}, taak {taskId}, status Status, Bezig",
+  "@mirrorProjectTaskLine": {
+    "description": "Terminalregel met actieve project- en taakcontext.",
+    "placeholders": {
+      "projectId": {
+        "type": "String"
+      },
+      "taskId": {
+        "type": "String"
+      }
+    }
+  },
+  "mirrorProjectTaskHeader": "Project {projectId}, taak {taskId}, status Status, Bezig",
+  "@mirrorProjectTaskHeader": {
+    "description": "Headertekst met actieve project- en taakcontext.",
+    "placeholders": {
+      "projectId": {
+        "type": "String"
+      },
+      "taskId": {
+        "type": "String"
+      }
+    }
+  },
+  "mirrorRealtimeOutputReceived": "Toont {lineCount} van {lineCount} projecten",
+  "@mirrorRealtimeOutputReceived": {
+    "description": "Terminalregel wanneer realtime outputregels zijn verwerkt.",
+    "placeholders": {
+      "lineCount": {
+        "type": "int"
+      }
+    }
+  },
+  "mirrorStatusLine": "Status: {status}",
+  "@mirrorStatusLine": {
+    "description": "Algemene statusregel voor Mirror realtime records.",
+    "placeholders": {
+      "status": {
+        "type": "String"
+      }
+    }
+  },
+  "mirrorVoiceStopped": "Doorgaan",
+  "@mirrorVoiceStopped": {
+    "description": "Terminalregel wanneer spraakinvoer wordt gestopt."
+  },
+  "mirrorVoiceUnavailableTerminal": "Kon projectgegevens niet laden.",
+  "@mirrorVoiceUnavailableTerminal": {
+    "description": "Terminalregel wanneer spraakinvoer niet beschikbaar is."
+  },
+  "mirrorVoiceStarted": "Taken laden...",
+  "@mirrorVoiceStarted": {
+    "description": "Terminalregel wanneer spraakinvoer start."
+  },
+  "mirrorVoiceAppended": "Opslaan: {filePath}",
+  "@mirrorVoiceAppended": {
+    "description": "Terminalregel wanneer herkende spraaktekst is toegevoegd.",
+    "placeholders": {
+      "filePath": {
+        "type": "String"
+      }
+    }
+  },
+  "mirrorRunAbortedFileEmpty": "Geen projecten gevonden: {filePath}",
+  "@mirrorRunAbortedFileEmpty": {
+    "description": "Terminalregel wanneer uitvoeren wordt afgebroken voor lege bestandsinhoud.",
+    "placeholders": {
+      "filePath": {
+        "type": "String"
+      }
+    }
+  },
+  "mirrorRunStarting": "Meer projecten laden... {filePath}",
+  "@mirrorRunStarting": {
+    "description": "Terminalregel wanneer Mirror-uitvoering voor een bestand start.",
+    "placeholders": {
+      "filePath": {
+        "type": "String"
+      }
+    }
+  },
+  "mirrorRunFlowLine": "Apply Actions",
+  "@mirrorRunFlowLine": {
+    "description": "Terminalregel die de uitvoeringsflow aangeeft."
+  },
+  "mirrorStepGenerateSent": "Meer projecten laden...",
+  "@mirrorStepGenerateSent": {
+    "description": "Terminalregel wanneer de generate-stap start."
+  },
+  "mirrorUnknownGenerateError": "Onbekend project",
+  "@mirrorUnknownGenerateError": {
+    "description": "Fallback-fouttekst voor generate in Mirror-flow."
+  },
+  "mirrorGenerateFailedTerminal": "Import mislukt: {errorText}",
+  "@mirrorGenerateFailedTerminal": {
+    "description": "Terminalregel wanneer de generate-stap faalt.",
+    "placeholders": {
+      "errorText": {
+        "type": "String"
+      }
+    }
+  },
+  "mirrorStepGenerateCompleted": "Voltooid",
+  "@mirrorStepGenerateCompleted": {
+    "description": "Terminalregel wanneer de generate-stap voltooid is."
+  },
+  "mirrorGenerateDiagnostics": "Status: {text}",
+  "@mirrorGenerateDiagnostics": {
+    "description": "Terminalregel voor generate-diagnostiek.",
+    "placeholders": {
+      "text": {
+        "type": "String"
+      }
+    }
+  },
+  "mirrorStepCompileSent": "Meer projecten laden...",
+  "@mirrorStepCompileSent": {
+    "description": "Terminalregel wanneer de compile-stap start."
+  },
+  "mirrorUnknownCompileError": "Onbekend project",
+  "@mirrorUnknownCompileError": {
+    "description": "Fallback-fouttekst voor compile in Mirror-flow."
+  },
+  "mirrorCompileFailedTerminal": "Export mislukt: {errorText}",
+  "@mirrorCompileFailedTerminal": {
+    "description": "Terminalregel wanneer de compile-stap faalt.",
+    "placeholders": {
+      "errorText": {
+        "type": "String"
+      }
+    }
+  },
+  "mirrorStepCompileCompleted": "Voltooid",
+  "@mirrorStepCompileCompleted": {
+    "description": "Terminalregel wanneer de compile-stap voltooid is."
+  },
+  "mirrorCompileWarnings": "Status: {text}",
+  "@mirrorCompileWarnings": {
+    "description": "Terminalregel voor compile-waarschuwingen.",
+    "placeholders": {
+      "text": {
+        "type": "String"
+      }
+    }
+  },
+  "mirrorStepPreviewBuilding": "Projectgegevens laden...",
+  "@mirrorStepPreviewBuilding": {
+    "description": "Terminalregel tijdens opbouwen van previewpatches."
+  },
+  "mirrorNoPatchPreviewTerminal": "Geen projecten gevonden",
+  "@mirrorNoPatchPreviewTerminal": {
+    "description": "Terminalregel wanneer geen previewpatch beschikbaar is."
+  },
+  "mirrorStepPreviewReady": "Toont {fileCount} van {fileCount} projecten",
+  "@mirrorStepPreviewReady": {
+    "description": "Terminalregel wanneer previewpatches klaar zijn.",
+    "placeholders": {
+      "fileCount": {
+        "type": "int"
+      }
+    }
+  },
+  "mirrorStepApplyWaiting": "Apply Actions: {path}",
+  "@mirrorStepApplyWaiting": {
+    "description": "Terminalregel terwijl wordt gewacht op apply-bevestiging.",
+    "placeholders": {
+      "path": {
+        "type": "String"
+      }
+    }
+  },
+  "mirrorStepApplyCanceled": "Annuleren",
+  "@mirrorStepApplyCanceled": {
+    "description": "Terminalregel wanneer apply-bevestiging wordt geannuleerd."
+  },
+  "mirrorStepApplySent": "Apply Actions",
+  "@mirrorStepApplySent": {
+    "description": "Terminalregel wanneer de apply-stap is verstuurd."
+  },
+  "mirrorAppliedFiles": "Opslaan: {filesText}",
+  "@mirrorAppliedFiles": {
+    "description": "Terminalregel met bestanden die zijn toegepast door Mirror.",
+    "placeholders": {
+      "filesText": {
+        "type": "String"
+      }
+    }
+  },
+  "mirrorRunCompletedTerminal": "Filter opgeslagen als standaard",
+  "@mirrorRunCompletedTerminal": {
+    "description": "Terminalregel wanneer Mirror-uitvoering succesvol is voltooid."
+  },
+  "mirrorUnknownApplyError": "Onbekend project",
+  "@mirrorUnknownApplyError": {
+    "description": "Fallback-fouttekst voor apply in Mirror-flow."
+  },
+  "mirrorApplyFailedTerminal": "Import mislukt: {errorText}",
+  "@mirrorApplyFailedTerminal": {
+    "description": "Terminalregel wanneer de apply-stap faalt.",
+    "placeholders": {
+      "errorText": {
+        "type": "String"
+      }
+    }
+  },
+  "mirrorRunCrashedTerminal": "Export mislukt: {errorText}",
+  "@mirrorRunCrashedTerminal": {
+    "description": "Terminalregel wanneer Mirror-uitvoering crasht.",
+    "placeholders": {
+      "errorText": {
+        "type": "String"
+      }
+    }
+  },
+  "mirrorTemplatesLoadFailed": "Kon recente workflows niet laden.",
+  "@mirrorTemplatesLoadFailed": {
+    "description": "Melding wanneer de templates-galerij niet geladen kan worden."
+  },
+  "mirrorTemplateAppliedTerminal": "Opslaan: {selectedFile} - {title}",
+  "@mirrorTemplateAppliedTerminal": {
+    "description": "Terminalregel na toepassen van een Mirror-template.",
+    "placeholders": {
+      "selectedFile": {
+        "type": "String"
+      },
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "mirrorEditorTitle": "AI Assistent",
+  "@mirrorEditorTitle": {
+    "description": "Titel van het Mirror editor-scherm."
+  },
+  "mirrorTemplatesLabel": "Opgeslagen Weergaven",
+  "@mirrorTemplatesLabel": {
+    "description": "Label voor het openen van de Mirror templates-galerij."
+  },
+  "mirrorCloudPremiumOnly": "Waarschuwing: Gevoelige data kan worden gelezen.",
+  "@mirrorCloudPremiumOnly": {
+    "description": "Snackbarmelding wanneer cloudmodus is geblokkeerd voor niet-premium gebruikers."
+  },
+  "mirrorListeningLabel": "Taken laden...",
+  "@mirrorListeningLabel": {
+    "description": "Knoplabel terwijl Mirror-spraakopname actief is."
+  },
+  "mirrorVoiceInputLabel": "Bestanden koppelen",
+  "@mirrorVoiceInputLabel": {
+    "description": "Knoplabel om Mirror-spraakinvoer te starten."
+  },
+  "mirrorRunningLabel": "Taken laden...",
+  "@mirrorRunningLabel": {
+    "description": "Knoplabel terwijl Mirror-uitvoering bezig is."
+  },
+  "mirrorRunLabel": "Doorgaan",
+  "@mirrorRunLabel": {
+    "description": "Knoplabel om Mirror-uitvoering te starten."
+  },
+  "mirrorFilesLabel": "Gebruik project bestanden",
+  "@mirrorFilesLabel": {
+    "description": "Titel voor het Mirror bestandsverkenner-paneel."
+  },
+  "mirrorTerminalLabel": "Details",
+  "@mirrorTerminalLabel": {
+    "description": "Titel voor het Mirror terminal-paneel."
+  },
+  "mirrorLiveOutputLabel": "Status",
+  "@mirrorLiveOutputLabel": {
+    "description": "Titel voor het Mirror live output-paneel."
+  },
+  "mirrorWaitingRealtime": "Recente workflows laden...",
+  "@mirrorWaitingRealtime": {
+    "description": "Placeholdertekst tijdens wachten op live output."
+  },
+  "mirrorVoiceUnavailable": "Kon projectgegevens niet laden.",
+  "@mirrorVoiceUnavailable": {
+    "description": "Snackbarmelding wanneer spraakinvoer niet beschikbaar is."
+  },
+  "mirrorSelectedFileEmpty": "Geen projecten gevonden",
+  "@mirrorSelectedFileEmpty": {
+    "description": "Snackbarmelding wanneer geselecteerd bestand geen uitvoerbare inhoud heeft."
+  },
+  "mirrorGenerateFailed": "Import mislukt: {errorText}",
+  "@mirrorGenerateFailed": {
+    "description": "Snackbarmelding wanneer de generate-stap faalt.",
+    "placeholders": {
+      "errorText": {
+        "type": "String"
+      }
+    }
+  },
+  "mirrorCompileFailed": "Export mislukt: {errorText}",
+  "@mirrorCompileFailed": {
+    "description": "Snackbarmelding wanneer de compile-stap faalt.",
+    "placeholders": {
+      "errorText": {
+        "type": "String"
+      }
+    }
+  },
+  "mirrorNoChangesAfterCompile": "Probeer je filters te wijzigen of te wissen",
+  "@mirrorNoChangesAfterCompile": {
+    "description": "Snackbarmelding wanneer compile geen toepasbare wijzigingen oplevert."
+  },
+  "mirrorApplyChangesTitle": "Apply Actions: {path}",
+  "@mirrorApplyChangesTitle": {
+    "description": "Dialoogtitel voor het toepassen van Mirror-wijzigingen.",
+    "placeholders": {
+      "path": {
+        "type": "String"
+      }
+    }
+  },
+  "mirrorApplyCanceled": "Annuleren",
+  "@mirrorApplyCanceled": {
+    "description": "Snackbarmelding wanneer apply wordt geannuleerd."
+  },
+  "mirrorRunSuccess": "Filter opgeslagen als standaard",
+  "@mirrorRunSuccess": {
+    "description": "Snackbarmelding wanneer Mirror-uitvoering succesvol is."
+  },
+  "mirrorApplyFailed": "Import mislukt: {errorText}",
+  "@mirrorApplyFailed": {
+    "description": "Snackbarmelding wanneer de apply-stap faalt.",
+    "placeholders": {
+      "errorText": {
+        "type": "String"
+      }
+    }
+  },
+  "mirrorRunCrashed": "Export mislukt: {errorText}",
+  "@mirrorRunCrashed": {
+    "description": "Snackbarmelding wanneer Mirror-uitvoering crasht.",
+    "placeholders": {
+      "errorText": {
+        "type": "String"
+      }
+    }
+  },
+  "mirrorNoActiveTemplates": "Nog geen opgeslagen weergaven",
+  "@mirrorNoActiveTemplates": {
+    "description": "Melding wanneer geen actieve Mirror-templates beschikbaar zijn."
+  },
+  "mirrorTemplateLoaded": "Opslaan: {title}",
+  "@mirrorTemplateLoaded": {
+    "description": "Snackbarmelding wanneer template-inhoud in de editor is geladen.",
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "mirrorModeLabel": "Taal",
+  "@mirrorModeLabel": {
+    "description": "Label voor de Mirror-modusselector."
+  },
+  "mirrorPrivateMode": "Gebruik project bestanden",
+  "@mirrorPrivateMode": {
+    "description": "Mirror modusoptie label voor private mode."
+  },
+  "mirrorCloudMode": "Projecten",
+  "@mirrorCloudMode": {
+    "description": "Mirror modusoptie label voor cloud mode."
+  },
+  "mirrorPremiumLabel": "Opslaan als Standaard",
+  "@mirrorPremiumLabel": {
+    "description": "Badge-label op premium-only cloud mode optie."
+  },
+  "mirrorRetryButton": "Opnieuw proberen",
+  "@mirrorRetryButton": {
+    "description": "Opnieuw-knoplabel in de Mirror template-laadfoutstatus."
+  },
+  "mirrorOpenEditorTooltip": "Open Mirror Editor",
+  "@mirrorOpenEditorTooltip": {
+    "description": "Tooltip voor het openen van de Mirror-editor vanuit projectschermen."
+  },
+  "mirrorUnavailableForAccount": "Mirror is not available for your account.",
+  "@mirrorUnavailableForAccount": {
+    "description": "Snackbarmelding wanneer Mirror niet beschikbaar is voor het huidige account."
   }
 }

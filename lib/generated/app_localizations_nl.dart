@@ -1453,4 +1453,249 @@ class AppLocalizationsNl extends AppLocalizations {
   @override
   String get featureFlagAiAdvancedPlanningDisabledMessage =>
       'Advanced AI planning is currently disabled by admin';
+
+  @override
+  String get mirrorTerminalReady => 'Recente workflows laden...';
+
+  @override
+  String mirrorProjectTaskLine(String projectId, String taskId) {
+    return 'Project $projectId, taak $taskId, status Status, Bezig';
+  }
+
+  @override
+  String mirrorProjectTaskHeader(String projectId, String taskId) {
+    return 'Project $projectId, taak $taskId, status Status, Bezig';
+  }
+
+  @override
+  String mirrorRealtimeOutputReceived(int lineCount) {
+    return 'Toont $lineCount van $lineCount projecten';
+  }
+
+  @override
+  String mirrorStatusLine(String status) {
+    return 'Status: $status';
+  }
+
+  @override
+  String get mirrorVoiceStopped => 'Doorgaan';
+
+  @override
+  String get mirrorVoiceUnavailableTerminal =>
+      'Kon projectgegevens niet laden.';
+
+  @override
+  String get mirrorVoiceStarted => 'Taken laden...';
+
+  @override
+  String mirrorVoiceAppended(String filePath) {
+    return 'Opslaan: $filePath';
+  }
+
+  @override
+  String mirrorRunAbortedFileEmpty(String filePath) {
+    return 'Geen projecten gevonden: $filePath';
+  }
+
+  @override
+  String mirrorRunStarting(String filePath) {
+    return 'Meer projecten laden... $filePath';
+  }
+
+  @override
+  String get mirrorRunFlowLine => 'Apply Actions';
+
+  @override
+  String get mirrorStepGenerateSent => 'Meer projecten laden...';
+
+  @override
+  String get mirrorUnknownGenerateError => 'Onbekend project';
+
+  @override
+  String mirrorGenerateFailedTerminal(String errorText) {
+    return 'Import mislukt: $errorText';
+  }
+
+  @override
+  String get mirrorStepGenerateCompleted => 'Voltooid';
+
+  @override
+  String mirrorGenerateDiagnostics(String text) {
+    return 'Status: $text';
+  }
+
+  @override
+  String get mirrorStepCompileSent => 'Meer projecten laden...';
+
+  @override
+  String get mirrorUnknownCompileError => 'Onbekend project';
+
+  @override
+  String mirrorCompileFailedTerminal(String errorText) {
+    return 'Export mislukt: $errorText';
+  }
+
+  @override
+  String get mirrorStepCompileCompleted => 'Voltooid';
+
+  @override
+  String mirrorCompileWarnings(String text) {
+    return 'Status: $text';
+  }
+
+  @override
+  String get mirrorStepPreviewBuilding => 'Projectgegevens laden...';
+
+  @override
+  String get mirrorNoPatchPreviewTerminal => 'Geen projecten gevonden';
+
+  @override
+  String mirrorStepPreviewReady(int fileCount) {
+    return 'Toont $fileCount van $fileCount projecten';
+  }
+
+  @override
+  String mirrorStepApplyWaiting(String path) {
+    return 'Apply Actions: $path';
+  }
+
+  @override
+  String get mirrorStepApplyCanceled => 'Annuleren';
+
+  @override
+  String get mirrorStepApplySent => 'Apply Actions';
+
+  @override
+  String mirrorAppliedFiles(String filesText) {
+    return 'Opslaan: $filesText';
+  }
+
+  @override
+  String get mirrorRunCompletedTerminal => 'Filter opgeslagen als standaard';
+
+  @override
+  String get mirrorUnknownApplyError => 'Onbekend project';
+
+  @override
+  String mirrorApplyFailedTerminal(String errorText) {
+    return 'Import mislukt: $errorText';
+  }
+
+  @override
+  String mirrorRunCrashedTerminal(String errorText) {
+    return 'Export mislukt: $errorText';
+  }
+
+  @override
+  String get mirrorTemplatesLoadFailed => 'Kon recente workflows niet laden.';
+
+  @override
+  String mirrorTemplateAppliedTerminal(String selectedFile, String title) {
+    return 'Opslaan: $selectedFile - $title';
+  }
+
+  @override
+  String get mirrorEditorTitle => 'AI Assistent';
+
+  @override
+  String get mirrorTemplatesLabel => 'Opgeslagen Weergaven';
+
+  @override
+  String get mirrorCloudPremiumOnly =>
+      'Waarschuwing: Gevoelige data kan worden gelezen.';
+
+  @override
+  String get mirrorListeningLabel => 'Taken laden...';
+
+  @override
+  String get mirrorVoiceInputLabel => 'Bestanden koppelen';
+
+  @override
+  String get mirrorRunningLabel => 'Taken laden...';
+
+  @override
+  String get mirrorRunLabel => 'Doorgaan';
+
+  @override
+  String get mirrorFilesLabel => 'Gebruik project bestanden';
+
+  @override
+  String get mirrorTerminalLabel => 'Details';
+
+  @override
+  String get mirrorLiveOutputLabel => 'Status';
+
+  @override
+  String get mirrorWaitingRealtime => 'Recente workflows laden...';
+
+  @override
+  String get mirrorVoiceUnavailable => 'Kon projectgegevens niet laden.';
+
+  @override
+  String get mirrorSelectedFileEmpty => 'Geen projecten gevonden';
+
+  @override
+  String mirrorGenerateFailed(String errorText) {
+    return 'Import mislukt: $errorText';
+  }
+
+  @override
+  String mirrorCompileFailed(String errorText) {
+    return 'Export mislukt: $errorText';
+  }
+
+  @override
+  String get mirrorNoChangesAfterCompile =>
+      'Probeer je filters te wijzigen of te wissen';
+
+  @override
+  String mirrorApplyChangesTitle(String path) {
+    return 'Apply Actions: $path';
+  }
+
+  @override
+  String get mirrorApplyCanceled => 'Annuleren';
+
+  @override
+  String get mirrorRunSuccess => 'Filter opgeslagen als standaard';
+
+  @override
+  String mirrorApplyFailed(String errorText) {
+    return 'Import mislukt: $errorText';
+  }
+
+  @override
+  String mirrorRunCrashed(String errorText) {
+    return 'Export mislukt: $errorText';
+  }
+
+  @override
+  String get mirrorNoActiveTemplates => 'Nog geen opgeslagen weergaven';
+
+  @override
+  String mirrorTemplateLoaded(String title) {
+    return 'Opslaan: $title';
+  }
+
+  @override
+  String get mirrorModeLabel => 'Taal';
+
+  @override
+  String get mirrorPrivateMode => 'Gebruik project bestanden';
+
+  @override
+  String get mirrorCloudMode => 'Projecten';
+
+  @override
+  String get mirrorPremiumLabel => 'Opslaan als Standaard';
+
+  @override
+  String get mirrorRetryButton => 'Opnieuw proberen';
+
+  @override
+  String get mirrorOpenEditorTooltip => 'Open Mirror Editor';
+
+  @override
+  String get mirrorUnavailableForAccount =>
+      'Mirror is not available for your account.';
 }

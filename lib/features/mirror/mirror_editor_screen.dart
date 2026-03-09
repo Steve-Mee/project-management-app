@@ -5,7 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:xterm/xterm.dart';
-import '../../l10n/app_localizations.dart';
+import '../../generated/app_localizations.dart';
 
 import '../../core/providers/mirror_provider.dart';
 import '../../core/providers/mirror_session_provider.dart';
@@ -926,7 +926,7 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
                             final _ = ref.refresh(mirrorTemplatesProvider);
                           },
                           icon: const Icon(Icons.refresh),
-                          label: Text(AppLocalizations.of(context)!.retryButton),
+                          label: Text(_l10n.mirrorRetryButton),
                         ),
                       ],
                     ),
@@ -938,8 +938,7 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
                       child: Padding(
                         padding: const EdgeInsets.all(16),
                         child: Text(
-                          AppLocalizations.of(context)!
-                              .mirrorNoActiveTemplates,
+                          _l10n.mirrorNoActiveTemplates,
                           textAlign: TextAlign.center,
                         ),
                       ),
@@ -1116,82 +1115,4 @@ class _ModeSelector extends StatelessWidget {
       ],
     );
   }
-}
-
-extension _MirrorEditorL10n on AppLocalizations {
-  String get mirrorTerminalReady => recentWorkflowsLoading;
-  String mirrorProjectTaskLine(String projectId, String taskId) =>
-      projectTaskStatusSemantics(projectId, taskId, statusLabel, taskStatusInProgress);
-  String mirrorProjectTaskHeader(String projectId, String taskId) =>
-      projectTaskStatusSemantics(projectId, taskId, statusLabel, taskStatusInProgress);
-  String mirrorRealtimeOutputReceived(int lineCount) =>
-      showingProjectsCount(lineCount, lineCount);
-  String mirrorStatusLine(String status) => '$statusLabel: $status';
-  String get mirrorVoiceStopped => continueButton;
-  String get mirrorVoiceUnavailableTerminal => projectDataLoadFailed;
-  String get mirrorVoiceStarted => tasksLoading;
-  String mirrorVoiceAppended(String filePath) => '$saveButton: $filePath';
-  String mirrorRunAbortedFileEmpty(String filePath) => '$noProjectsFound: $filePath';
-  String mirrorRunStarting(String filePath) => '$loadingMoreProjects $filePath';
-  String get mirrorRunFlowLine => applyActionsLabel;
-  String get mirrorStepGenerateSent => loadingMoreProjects;
-  String get mirrorUnknownGenerateError => unknownProject;
-  String mirrorGenerateFailedTerminal(String errorText) =>
-      importFailedMessage(errorText);
-  String get mirrorStepGenerateCompleted => completedLabel;
-  String mirrorGenerateDiagnostics(String text) =>
-      '$statusLabel: $text';
-  String get mirrorStepCompileSent => loadingMoreProjects;
-  String get mirrorUnknownCompileError => unknownProject;
-  String mirrorCompileFailedTerminal(String errorText) =>
-      exportFailedMessage(errorText);
-  String get mirrorStepCompileCompleted => completedLabel;
-  String mirrorCompileWarnings(String text) =>
-      '$statusLabel: $text';
-  String get mirrorStepPreviewBuilding => projectDataLoading;
-  String get mirrorNoPatchPreviewTerminal => noProjectsFound;
-  String mirrorStepPreviewReady(int fileCount) =>
-      showingProjectsCount(fileCount, fileCount);
-  String mirrorStepApplyWaiting(String path) => '$applyActionsLabel: $path';
-  String get mirrorStepApplyCanceled => cancelButton;
-  String get mirrorStepApplySent => applyActionsLabel;
-  String mirrorAppliedFiles(String filesText) => '$saveButton: $filesText';
-  String get mirrorRunCompletedTerminal => saveAsDefaultSuccessMessage;
-  String get mirrorUnknownApplyError => unknownProject;
-  String mirrorApplyFailedTerminal(String errorText) =>
-      importFailedMessage(errorText);
-  String mirrorRunCrashedTerminal(String errorText) =>
-      exportFailedMessage(errorText);
-  String get mirrorTemplatesLoadFailed => recentWorkflowsLoadFailed;
-  String mirrorTemplateAppliedTerminal(String selectedFile, String title) =>
-      '$saveButton: $selectedFile - $title';
-  String get mirrorEditorTitle => aiAssistantLabel;
-  String get mirrorTemplatesLabel => savedViewsLabel;
-  String get mirrorCloudPremiumOnly => privacyWarningContent;
-  String get mirrorListeningLabel => tasksLoading;
-  String get mirrorVoiceInputLabel => attachFilesTooltip;
-  String get mirrorRunningLabel => tasksLoading;
-  String get mirrorRunLabel => continueButton;
-  String get mirrorFilesLabel => useProjectFilesLabel;
-  String get mirrorTerminalLabel => detailsTab;
-  String get mirrorLiveOutputLabel => statusLabel;
-  String get mirrorWaitingRealtime => recentWorkflowsLoading;
-  String get mirrorVoiceUnavailable => projectDataLoadFailed;
-  String get mirrorSelectedFileEmpty => noProjectsFound;
-  String mirrorGenerateFailed(String errorText) =>
-      importFailedMessage(errorText);
-  String mirrorCompileFailed(String errorText) =>
-      exportFailedMessage(errorText);
-  String get mirrorNoChangesAfterCompile => noProjectsMatchFiltersSubtitle;
-  String mirrorApplyChangesTitle(String path) => '$applyActionsLabel: $path';
-  String get mirrorApplyCanceled => cancelButton;
-  String get mirrorRunSuccess => saveAsDefaultSuccessMessage;
-  String mirrorApplyFailed(String errorText) => importFailedMessage(errorText);
-  String mirrorRunCrashed(String errorText) => exportFailedMessage(errorText);
-  String get mirrorNoActiveTemplates => noSavedViewsMessage;
-  String mirrorTemplateLoaded(String title) => '$saveButton: $title';
-  String get mirrorModeLabel => settingsLanguageTitle;
-  String get mirrorPrivateMode => settingsUseProjectFilesTitle;
-  String get mirrorCloudMode => settingsProjectsSection;
-  String get mirrorPremiumLabel => saveAsDefaultViewLabel;
 }

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:project_management_app/generated/app_localizations.dart';
 import 'package:pma_core/providers/task/task_providers.dart';
 import 'package:pma_core/providers/project_providers.dart';
 import 'package:pma_core/providers/auth/auth_providers.dart';
@@ -54,7 +55,7 @@ class _ExpandableTaskCardState extends ConsumerState<ExpandableTaskCard> {
                 IconButton(
                   icon: const Icon(Icons.open_in_new),
                   onPressed: () => _openMirrorEditor(),
-                  tooltip: 'Open Mirror Editor',
+                  tooltip: AppLocalizations.of(context)!.mirrorOpenEditorTooltip,
                 ),
                 // Assignment button
                 IconButton(
@@ -287,8 +288,8 @@ class _ExpandableTaskCardState extends ConsumerState<ExpandableTaskCard> {
 
     if (payload == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Mirror is not available for your account.'),
+        SnackBar(
+          content: Text(AppLocalizations.of(context)!.mirrorUnavailableForAccount),
         ),
       );
       return;
