@@ -900,7 +900,7 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
                 loading: () => const Center(
                   child: CircularProgressIndicator(),
                 ),
-                error: (_, __) => Center(
+                error: (Object error, StackTrace stackTrace) => Center(
                   child: Padding(
                     padding: const EdgeInsets.all(16),
                     child: Column(
@@ -910,9 +910,18 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
                           'Templates konden niet worden geladen.',
                           textAlign: TextAlign.center,
                         ),
+                        const SizedBox(height: 8),
+                        Text(
+                          error.toString(),
+                          textAlign: TextAlign.center,
+                          style: Theme.of(context).textTheme.bodySmall,
+                        ),
                         const SizedBox(height: 12),
                         FilledButton.tonalIcon(
-                          onPressed: () => ref.refresh(mirrorTemplatesProvider),
+                          onPressed: () {
+                            ref.invalidate(mirrorTemplatesProvider);
+                            ref.refresh(mirrorTemplatesProvider);
+                          },
                           icon: const Icon(Icons.refresh),
                           label: Text(AppLocalizations.of(context)!.retryButton),
                         ),

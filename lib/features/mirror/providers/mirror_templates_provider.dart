@@ -1,5 +1,3 @@
-library;
-
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -9,31 +7,37 @@ import '../templates_gallery.dart';
 final mirrorTemplatesProvider = FutureProvider<List<MirrorTemplate>>((ref) async {
   final client = Supabase.instance.client;
 
-  try {
-    final rows = await client
-        .from('mirror_templates')
+  final rows = await client
+      .from('mirror_templates')
       .select('id,template_key,title,description,seed_content,tags,icon_name')
-        .eq('is_active', true)
-        .order('updated_at', ascending: false)
-        .limit(100);
+      .eq('is_active', true)
+      .order('updated_at', ascending: false)
+      .limit(100);
 
-    return rows
-        .whereType<Map>()
-        .map((item) => Map<String, dynamic>.from(item))
-        .map(_toTemplate)
-        .toList(growable: false);
-  } catch (_) {
-    return const <MirrorTemplate>[];
-  }
+  return rows
+      .whereType<Map>()
+      .map((item) => Map<String, dynamic>.from(item))
+      .map(_toTemplate)
+      .toList(growable: false);
 });
 
 MirrorTemplate _toTemplate(Map<String, dynamic> row) {
-  final templateKey = (row['template_key'] ?? '').toString().trim();
+  final templateKey = _readString(
+    row,
+    const <String>['template_key', 'templateKey', 'key'],
+  );
   final rawId = (row['id'] ?? '').toString().trim();
   final id = templateKey.isNotEmpty ? templateKey : rawId;
-  final title = (row['title'] ?? 'Untitled template').toString();
-  final description = (row['description'] ?? '').toString();
-  final seedContent = (row['seed_content'] ?? '').toString();
+  final title = _readString(
+    row,
+    const <String>['title'],
+    fallback: 'Untitled template',
+  );
+  final description = _readString(row, const <String>['description']);
+  final seedContent = _readString(
+    row,
+    const <String>['seed_content', 'seedContent', 'content'],
+  );
 
   final tagsRaw = row['tags'];
   final tags = tagsRaw is List
@@ -46,11 +50,29 @@ MirrorTemplate _toTemplate(Map<String, dynamic> row) {
     description: description,
     icon: _iconForTemplate(
       templateKey: templateKey,
-      iconName: (row['icon_name'] ?? '').toString(),
+      iconName: _readString(row, const <String>['icon_name', 'iconName', 'icon']),
     ),
     seedContent: seedContent,
     tags: tags,
   );
+}
+
+String _readString(
+  Map<String, dynamic> row,
+  List<String> keys, {
+  String fallback = '',
+}) {
+  for (final key in keys) {
+    final value = row[key];
+    if (value == null) {
+      continue;
+    }
+    final normalized = value.toString().trim();
+    if (normalized.isNotEmpty) {
+      return normalized;
+    }
+  }
+  return fallback;
 }
 
 IconData _iconForTemplate({
