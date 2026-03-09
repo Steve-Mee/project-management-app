@@ -1,3 +1,9 @@
+## [1.27.0](https://github.com/Steve-Mee/project-management-app/compare/v1.26.0...v1.27.0) (2026-03-09)
+
+### Features
+
+* **mirror:** add mirror_runner_mode AB policy and enforce shared gateway quotas (500 files, 50MB, 300s) across cloud/local runners with structured contract errors ([8be21b9](https://github.com/Steve-Mee/project-management-app/commit/8be21b91655204baa6b3c9bb50f056857f4c1c18))
+
 ## [1.26.0](https://github.com/Steve-Mee/project-management-app/compare/v1.25.0...v1.26.0) (2026-03-09)
 
 ### Features
