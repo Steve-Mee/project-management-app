@@ -1,3 +1,9 @@
+## [1.21.2](https://github.com/Steve-Mee/project-management-app/compare/v1.21.1...v1.21.2) (2026-03-09)
+
+### Bug Fixes
+
+* **mirror:** map template_key/icon_name via templates provider ([f8c10ee](https://github.com/Steve-Mee/project-management-app/commit/f8c10ee54e04bb5b6636f7edb2a6f1180fa6388c))
+
 ## [1.21.1](https://github.com/Steve-Mee/project-management-app/compare/v1.21.0...v1.21.1) (2026-03-09)
 
 ### Bug Fixes
