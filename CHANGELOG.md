@@ -1,3 +1,9 @@
+## [1.24.0](https://github.com/Steve-Mee/project-management-app/compare/v1.23.1...v1.24.0) (2026-03-09)
+
+### Features
+
+* **mirror:** persist orchestrator outbox in Hive with idempotency and retry metadata ([8533b50](https://github.com/Steve-Mee/project-management-app/commit/8533b501e5e4c1362baa67a1bf17358f64e78d6d))
+
 ## [1.23.1](https://github.com/Steve-Mee/project-management-app/compare/v1.23.0...v1.23.1) (2026-03-09)
 
 ### Bug Fixes
