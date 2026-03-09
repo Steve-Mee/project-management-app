@@ -2,30 +2,36 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:http/http.dart' as http;
-import 'package:supabase_flutter/supabase_flutter.dart';
+
+import '../../core/services/mirror_premium_service.dart';
 
 import 'edge_function_backend.dart';
 import 'mirror_compute_backend.dart';
 
-typedef PremiumAccessResolver = FutureOr<bool> Function(User? user);
-
 class CloudFlyBackend implements MirrorComputeBackend {
   CloudFlyBackend({
-    SupabaseClient? client,
+    required MirrorPremiumService premiumService,
+    this.accessTokenProvider,
     this.httpEndpoint,
     this.timeout = const Duration(seconds: 45),
     this.maxRetries = 3,
     this.initialBackoff = const Duration(milliseconds: 350),
-    PremiumAccessResolver? premiumResolver,
-  }) : _client = client ?? Supabase.instance.client,
-       _premiumResolver = premiumResolver ?? _defaultPremiumResolver;
+  }) : _premiumService = premiumService;
 
-  final SupabaseClient _client;
+  final MirrorPremiumService _premiumService;
+  final String? Function()? accessTokenProvider;
   final String? httpEndpoint;
   final Duration timeout;
   final int maxRetries;
   final Duration initialBackoff;
-  final PremiumAccessResolver _premiumResolver;
+
+  String? get _accessToken {
+    final token = accessTokenProvider?.call();
+    if (token != null && token.trim().isNotEmpty) {
+      return token.trim();
+    }
+    return null;
+  }
 
   bool get supportsApply {
     try {
@@ -71,8 +77,7 @@ class CloudFlyBackend implements MirrorComputeBackend {
     required ProjectContext context,
     required String mode,
   }) async {
-    final user = _client.auth.currentUser;
-    final hasPremium = await _premiumResolver(user);
+    final hasPremium = await _premiumService.isPremium();
     if (!hasPremium) {
       return const CompileResult(
         success: false,
@@ -89,7 +94,7 @@ class CloudFlyBackend implements MirrorComputeBackend {
       'metadata': context.metadata,
     };
 
-    return _compileViaHttp(payload, _client.auth.currentSession?.accessToken);
+    return _compileViaHttp(payload, _accessToken);
   }
 
   @override
@@ -98,8 +103,7 @@ class CloudFlyBackend implements MirrorComputeBackend {
     required ProjectContext context,
     required String mode,
   }) async {
-    final user = _client.auth.currentUser;
-    final hasPremium = await _premiumResolver(user);
+    final hasPremium = await _premiumService.isPremium();
     if (!hasPremium) {
       return const ApplyResult(
         success: false,
@@ -135,7 +139,7 @@ class CloudFlyBackend implements MirrorComputeBackend {
         final raw = await _postRawWithRetries(
           endpoint: endpoint,
           payload: payload,
-          accessToken: _client.auth.currentSession?.accessToken,
+          accessToken: _accessToken,
         );
 
         if (!raw.success || raw.body == null) {
@@ -386,23 +390,6 @@ class CloudFlyBackend implements MirrorComputeBackend {
     }
   }
 
-  static bool _defaultPremiumResolver(User? user) {
-    if (user == null) {
-      return false;
-    }
-
-    final appMetadata = user.appMetadata;
-    final userMetadata = user.userMetadata;
-
-    final planValue =
-        appMetadata['plan'] ??
-        appMetadata['subscription'] ??
-        userMetadata?['plan'] ??
-        userMetadata?['subscription'];
-
-    final normalized = planValue?.toString().toLowerCase().trim() ?? '';
-    return normalized == 'premium' || normalized == 'pro' || normalized == 'enterprise';
-  }
 }
 
 enum _MirrorHttpErrorCode {

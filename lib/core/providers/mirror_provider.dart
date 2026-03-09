@@ -104,6 +104,7 @@ final mirrorTeamModeEnabledProvider = Provider<bool>((ref) {
 
 final mirrorBackendProvider = FutureProvider<MirrorComputeBackend>((ref) async {
   final mode = ref.watch(mirrorModeProvider);
+  final premiumService = ref.watch(mirrorPremiumServiceProvider);
   final isPremium = await ref.watch(mirrorPremiumProvider.future);
   const policy = MirrorAccessPolicy();
   final decision = policy.resolveRequestedMode(
@@ -112,7 +113,11 @@ final mirrorBackendProvider = FutureProvider<MirrorComputeBackend>((ref) async {
   );
 
   if (decision.effectiveMode == 'cloud' && isPremium) {
-    return CloudFlyBackend();
+    return CloudFlyBackend(
+      premiumService: premiumService,
+      accessTokenProvider: () =>
+          Supabase.instance.client.auth.currentSession?.accessToken,
+    );
   }
 
   if (decision.effectiveMode == 'cloud' && !isPremium) {
