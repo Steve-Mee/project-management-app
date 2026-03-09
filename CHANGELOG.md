@@ -1,3 +1,9 @@
+## [1.23.1](https://github.com/Steve-Mee/project-management-app/compare/v1.23.0...v1.23.1) (2026-03-09)
+
+### Bug Fixes
+
+* resolve mirror analyzer issues and import lints ([cac5fc0](https://github.com/Steve-Mee/project-management-app/commit/cac5fc0c8007fc6b4dbb5ed3b85a6fd49cb2e4c5))
+
 ## [1.23.0](https://github.com/Steve-Mee/project-management-app/compare/v1.22.0...v1.23.0) (2026-03-09)
 
 ### Features
