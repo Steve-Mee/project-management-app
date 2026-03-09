@@ -1,3 +1,10 @@
+## [1.17.1](https://github.com/Steve-Mee/project-management-app/compare/v1.17.0...v1.17.1) (2026-03-09)
+
+### Bug Fixes
+
+* **mirror-compute:** enforce action endpoint and use_mirror permission rpc ([e21f511](https://github.com/Steve-Mee/project-management-app/commit/e21f5114eb5529be8ea1f640c3a22eede7e2defd))
+* **mirror:** align orchestrator ref types with widget usage ([2809115](https://github.com/Steve-Mee/project-management-app/commit/2809115a79551da96975fc762046041843d7829c))
+
 ## [1.17.0](https://github.com/Steve-Mee/project-management-app/compare/v1.16.0...v1.17.0) (2026-03-09)
 
 ### Features
