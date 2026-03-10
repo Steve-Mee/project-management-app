@@ -204,6 +204,7 @@ function normalizeUuidOrNull(value: string | undefined, fallback: string): strin
 const MAX_REQUEST_BODY_BYTES = 512 * 1024
 const MAX_IDEMPOTENCY_RESPONSE_BODY_BYTES = 64 * 1024
 const DEFAULT_IDEMPOTENCY_TTL_SECONDS = 120
+const IDEMPOTENCY_PROCESSING_STALE_SECONDS = 300
 
 function normalizeNonEmptyString(value: unknown): string | undefined {
   if (typeof value !== 'string') {
@@ -332,6 +333,89 @@ function idempotencyExpiresAtIso(): string {
   return new Date(Date.now() + idempotencyTtlSeconds() * 1000).toISOString()
 }
 
+function isExpiredIso(iso: string | undefined): boolean {
+  if (!iso) {
+    return true
+  }
+
+  const parsed = Date.parse(iso)
+  if (Number.isNaN(parsed)) {
+    return true
+  }
+
+  return parsed <= Date.now()
+}
+
+function parseRequestTimestamp(requestId: string | undefined): number | null {
+  if (!requestId) {
+    return null
+  }
+
+  const match = requestId.match(/^compile-(\d{6,})$/)
+  if (!match || !match[1]) {
+    return null
+  }
+
+  const parsed = Number.parseInt(match[1], 10)
+  if (!Number.isFinite(parsed)) {
+    return null
+  }
+
+  // request_id is generated using microseconds.
+  return Math.floor(parsed / 1000)
+}
+
+function isProcessingClaimStale(record: IdempotencyRecord): boolean {
+  if (record.status !== 'processing') {
+    return false
+  }
+
+  const timestamp = parseRequestTimestamp(record.request_id)
+  if (timestamp == null) {
+    return false
+  }
+
+  return Date.now() - timestamp > IDEMPOTENCY_PROCESSING_STALE_SECONDS * 1000
+}
+
+async function resetIdempotencyKeyClaim({
+  supabase,
+  userId,
+  action,
+  idempotencyKey,
+  requestHash,
+  requestId,
+}: {
+  supabase: ReturnType<typeof createClient>
+  userId: string
+  action: 'compile' | 'apply'
+  idempotencyKey: string
+  requestHash: string
+  requestId: string
+}): Promise<boolean> {
+  const { data, error } = await supabase
+    .from('mirror_request_idempotency')
+    .update({
+      request_hash: requestHash,
+      request_id: requestId,
+      status: 'processing',
+      response_status: null,
+      response_body: null,
+      response_content_type: null,
+      expires_at: idempotencyExpiresAtIso(),
+    })
+    .eq('user_id', userId)
+    .eq('action', action)
+    .eq('idempotency_key', idempotencyKey)
+    .select('request_id')
+
+  if (error) {
+    throw new Error(`idempotency_reset_failed:${error.message}`)
+  }
+
+  return Array.isArray(data) && data.length > 0
+}
+
 function normalizeResponseBodyForStore(rawBody: string): string {
   const bytes = new TextEncoder().encode(rawBody)
   if (bytes.length <= MAX_IDEMPOTENCY_RESPONSE_BODY_BYTES) {
@@ -378,8 +462,6 @@ async function claimIdempotencyKey({
   requestHash: string
   requestId: string
 }): Promise<IdempotencyClaimResult> {
-  const nowIso = new Date().toISOString()
-
   const { data: existing, error: selectError } = await supabase
     .from('mirror_request_idempotency')
     .select(
@@ -388,7 +470,6 @@ async function claimIdempotencyKey({
     .eq('user_id', userId)
     .eq('action', action)
     .eq('idempotency_key', idempotencyKey)
-    .gt('expires_at', nowIso)
     .maybeSingle<IdempotencyRecord>()
 
   if (selectError) {
@@ -396,15 +477,42 @@ async function claimIdempotencyKey({
   }
 
   if (existing) {
+    const expired = isExpiredIso(existing.expires_at)
+    const staleProcessing = isProcessingClaimStale(existing)
+
     if (existing.request_hash !== requestHash) {
+      if (expired || staleProcessing) {
+        await resetIdempotencyKeyClaim({
+          supabase,
+          userId,
+          action,
+          idempotencyKey,
+          requestHash,
+          requestId,
+        })
+        return { kind: 'claimed' }
+      }
+
       return { kind: 'conflict', record: existing }
     }
 
-    if (existing.status === 'completed' || existing.status === 'failed') {
+    if ((existing.status === 'completed' || existing.status === 'failed') && !expired) {
       return { kind: 'replay', record: existing }
     }
 
-    return { kind: 'in_progress', record: existing }
+    if (!expired && existing.status === 'processing' && !staleProcessing) {
+      return { kind: 'in_progress', record: existing }
+    }
+
+    await resetIdempotencyKeyClaim({
+      supabase,
+      userId,
+      action,
+      idempotencyKey,
+      requestHash,
+      requestId,
+    })
+    return { kind: 'claimed' }
   }
 
   const { error: insertError } = await supabase.from('mirror_request_idempotency').insert({
@@ -428,7 +536,6 @@ async function claimIdempotencyKey({
         .eq('user_id', userId)
         .eq('action', action)
         .eq('idempotency_key', idempotencyKey)
-        .gt('expires_at', nowIso)
         .maybeSingle<IdempotencyRecord>()
 
       if (raceSelectError) {
@@ -436,15 +543,42 @@ async function claimIdempotencyKey({
       }
 
       if (raceWinner) {
+        const expired = isExpiredIso(raceWinner.expires_at)
+        const staleProcessing = isProcessingClaimStale(raceWinner)
+
         if (raceWinner.request_hash !== requestHash) {
+          if (expired || staleProcessing) {
+            await resetIdempotencyKeyClaim({
+              supabase,
+              userId,
+              action,
+              idempotencyKey,
+              requestHash,
+              requestId,
+            })
+            return { kind: 'claimed' }
+          }
+
           return { kind: 'conflict', record: raceWinner }
         }
 
-        if (raceWinner.status === 'completed' || raceWinner.status === 'failed') {
+        if ((raceWinner.status === 'completed' || raceWinner.status === 'failed') && !expired) {
           return { kind: 'replay', record: raceWinner }
         }
 
-        return { kind: 'in_progress', record: raceWinner }
+        if (!expired && raceWinner.status === 'processing' && !staleProcessing) {
+          return { kind: 'in_progress', record: raceWinner }
+        }
+
+        await resetIdempotencyKeyClaim({
+          supabase,
+          userId,
+          action,
+          idempotencyKey,
+          requestHash,
+          requestId,
+        })
+        return { kind: 'claimed' }
       }
     }
 
@@ -477,7 +611,7 @@ async function finalizeIdempotencyKey({
   responseBody: string
   responseContentType: string
 }): Promise<void> {
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from('mirror_request_idempotency')
     .update({
       status,
@@ -491,9 +625,17 @@ async function finalizeIdempotencyKey({
     .eq('user_id', userId)
     .eq('action', action)
     .eq('idempotency_key', idempotencyKey)
+    .eq('request_id', requestId)
+    .eq('request_hash', requestHash)
+    .eq('status', 'processing')
+    .select('request_id')
 
   if (error) {
     throw new Error(`idempotency_update_failed:${error.message}`)
+  }
+
+  if (!Array.isArray(data) || data.length === 0) {
+    throw new Error('idempotency_update_conflict:no_matching_processing_claim')
   }
 }
 
