@@ -1,3 +1,9 @@
+## [1.29.0](https://github.com/Steve-Mee/project-management-app/compare/v1.28.2...v1.29.0) (2026-03-10)
+
+### Features
+
+* **mirror:** add realtime event-id/updated_at dedup set in editor ([c37862e](https://github.com/Steve-Mee/project-management-app/commit/c37862ee549e1292b136a457b820c25df34afb88))
+
 ## [1.28.2](https://github.com/Steve-Mee/project-management-app/compare/v1.28.1...v1.28.2) (2026-03-10)
 
 ### Bug Fixes
