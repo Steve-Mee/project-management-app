@@ -1,3 +1,4 @@
+// ARCHITECTURE LOCK: Mirror Gateway = thin proxy only. Compute always on Fly.io or local runner.
 import 'dart:async';
 import 'dart:collection';
 import 'dart:convert';
@@ -214,12 +215,14 @@ class MirrorOutboxReplayService {
     this.maxRetries = 2,
     this.initialBackoff = const Duration(milliseconds: 250),
     this.maxReplayAttempts = 8,
+    this.replayTickInterval = const Duration(seconds: 8),
   }) : _ref = ref;
 
   final Ref _ref;
   final int maxRetries;
   final Duration initialBackoff;
   final int maxReplayAttempts;
+  final Duration replayTickInterval;
   static const String _outboxBoxName = 'mirror_outbox';
   static const String _outboxEncryptionKey =
       'hive_encryption_key_mirror_outbox';
@@ -230,13 +233,22 @@ class MirrorOutboxReplayService {
   Future<void>? _readyFuture;
   Box<Map<dynamic, dynamic>>? _outboxBox;
   bool _isReplaying = false;
+  bool _isDisposed = false;
+  Timer? _replayTicker;
 
   List<MirrorOutboxEntry> get queuedEntries =>
       List<MirrorOutboxEntry>.unmodifiable(_queue.values.toList());
 
   Future<void> bootstrap() async {
     await _ensureReady();
+    _startReplayTicker();
     await replayDueEntries(reason: 'app_start');
+  }
+
+  Future<void> dispose() async {
+    _isDisposed = true;
+    _replayTicker?.cancel();
+    _replayTicker = null;
   }
 
   Future<void> onConnectivityChange(ConnectivityResult connectivity) async {
@@ -294,7 +306,16 @@ class MirrorOutboxReplayService {
     );
   }
 
-  Future<void> replayDueEntries({String reason = 'manual'}) async {
+  Future<void> replayDueEntries({
+    String reason = 'manual',
+    Future<MirrorOutboxOperationResult> Function(MirrorOutboxEntry entry)?
+        operationExecutor,
+    Future<void> Function(MirrorOutboxEntry entry)? onReplaySuccess,
+  }) async {
+    if (_isDisposed) {
+      return;
+    }
+
     await _ensureReady();
     if (_isReplaying) {
       return;
@@ -319,7 +340,12 @@ class MirrorOutboxReplayService {
         });
 
       for (final entry in dueEntries) {
-        await _replayEntry(entry, reason: reason);
+        await _replayEntry(
+          entry,
+          reason: reason,
+          operationExecutor: operationExecutor,
+          onReplaySuccess: onReplaySuccess,
+        );
       }
     } finally {
       _isReplaying = false;
@@ -329,6 +355,9 @@ class MirrorOutboxReplayService {
   Future<void> _replayEntry(
     MirrorOutboxEntry entry, {
     required String reason,
+    Future<MirrorOutboxOperationResult> Function(MirrorOutboxEntry entry)?
+        operationExecutor,
+    Future<void> Function(MirrorOutboxEntry entry)? onReplaySuccess,
   }) async {
     _emitStatus(
       entry.sessionKey,
@@ -337,10 +366,16 @@ class MirrorOutboxReplayService {
       liveLine: 'Outbox replay: ${entry.operation}',
     );
 
-    final attempt = await _attemptOperation(entry);
+    final attempt = await _attemptOperation(
+      entry,
+      operationExecutor: operationExecutor,
+    );
     if (attempt.success) {
       _queue.remove(entry.idempotencyKey);
       await _deleteOutboxEntry(entry.idempotencyKey);
+      if (onReplaySuccess != null) {
+        await onReplaySuccess(entry);
+      }
       _emitStatus(
         entry.sessionKey,
         terminalLine:
@@ -390,12 +425,18 @@ class MirrorOutboxReplayService {
     );
   }
 
-  Future<_ReplayAttempt> _attemptOperation(MirrorOutboxEntry entry) async {
+  Future<_ReplayAttempt> _attemptOperation(
+    MirrorOutboxEntry entry, {
+    Future<MirrorOutboxOperationResult> Function(MirrorOutboxEntry entry)?
+        operationExecutor,
+  }) async {
     var backoff = initialBackoff;
 
     for (var attempt = 1; attempt <= maxRetries + 1; attempt += 1) {
       try {
-        final operationResult = await _executeOperation(entry);
+        final operationResult = operationExecutor == null
+            ? await _executeOperation(entry)
+            : await operationExecutor(entry);
         if (operationResult.success) {
           if (entry.operation == 'apply') {
             await _refreshTaskAndSubTaskCaches(entry.context, entry.sessionKey);
@@ -441,7 +482,9 @@ class MirrorOutboxReplayService {
     return const _ReplayAttempt(success: false, failureMessage: 'unreachable');
   }
 
-  Future<_OperationResult> _executeOperation(MirrorOutboxEntry entry) async {
+  Future<MirrorOutboxOperationResult> _executeOperation(
+    MirrorOutboxEntry entry,
+  ) async {
     final backend = await _ref.read(mirrorBackendProvider.future);
     switch (entry.operation) {
       case 'generate':
@@ -450,7 +493,7 @@ class MirrorOutboxReplayService {
           context: entry.context,
           mode: entry.mode,
         );
-        return _OperationResult(
+        return MirrorOutboxOperationResult(
           success: result.success,
           message: result.message ?? result.diagnostics.join(' | '),
         );
@@ -460,7 +503,7 @@ class MirrorOutboxReplayService {
           context: entry.context,
           mode: entry.mode,
         );
-        return _OperationResult(
+        return MirrorOutboxOperationResult(
           success: result.success,
           message: result.errors.join(' | '),
         );
@@ -473,12 +516,12 @@ class MirrorOutboxReplayService {
           mode: entry.mode,
           compileFingerprint: compileFingerprint,
         );
-        return _OperationResult(
+        return MirrorOutboxOperationResult(
           success: result.success,
           message: result.message,
         );
       default:
-        return _OperationResult(
+        return MirrorOutboxOperationResult(
           success: false,
           message: 'Unknown outbox operation: ${entry.operation}',
         );
@@ -568,7 +611,16 @@ class MirrorOutboxReplayService {
     String? terminalLine,
     String? liveLine,
   }) {
-    final notifier = _ref.read(mirrorSessionProvider(sessionKey).notifier);
+    if (_isDisposed) {
+      return;
+    }
+
+    late final dynamic notifier;
+    try {
+      notifier = _ref.read(mirrorSessionProvider(sessionKey).notifier);
+    } catch (_) {
+      return;
+    }
     if (terminalLine != null && terminalLine.trim().isNotEmpty) {
       notifier.appendTerminalLine(terminalLine);
     }
@@ -592,6 +644,16 @@ class MirrorOutboxReplayService {
     final box = await _openOutboxBox();
     _outboxBox = box;
     _rebuildQueueCache(box);
+  }
+
+  void _startReplayTicker() {
+    if (replayTickInterval <= Duration.zero) {
+      return;
+    }
+    _replayTicker?.cancel();
+    _replayTicker = Timer.periodic(replayTickInterval, (_) {
+      unawaited(replayDueEntries(reason: 'periodic_tick'));
+    });
   }
 
   void _rebuildQueueCache(Box<Map<dynamic, dynamic>> box) {
@@ -645,8 +707,8 @@ class MirrorOutboxReplayService {
   }
 }
 
-class _OperationResult {
-  const _OperationResult({required this.success, this.message});
+class MirrorOutboxOperationResult {
+  const MirrorOutboxOperationResult({required this.success, this.message});
 
   final bool success;
   final String? message;
@@ -663,6 +725,10 @@ final mirrorOutboxReplayServiceProvider = Provider<MirrorOutboxReplayService>((r
   final service = MirrorOutboxReplayService(ref: ref);
 
   unawaited(service.bootstrap());
+
+  ref.onDispose(() {
+    unawaited(service.dispose());
+  });
 
   ref.listen<AsyncValue<ConnectivityResult>>(
     connectivityProvider,

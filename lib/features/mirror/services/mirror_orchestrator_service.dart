@@ -56,6 +56,8 @@ class MirrorOrchestratorService {
     ApplyResult? applyResult;
 
     try {
+      await _replayQueuedWork(ref, reason: 'pre_orchestration');
+
       generateResult = await generate(
         ref: ref,
         sessionKey: sessionKey,
@@ -140,6 +142,8 @@ class MirrorOrchestratorService {
     required ProjectContext context,
     required String mode,
   }) async {
+    await _replayQueuedWork(ref, reason: 'pre_generate');
+
     _emitStatus(
       ref,
       sessionKey,
@@ -180,7 +184,11 @@ class MirrorOrchestratorService {
         lastError: result.message ?? result.diagnostics.join(' | '),
       );
       unawaited(
-        _replayService(ref).replayDueEntries(reason: 'post_generate_failure'),
+        _replayService(ref).replayDueEntries(
+          reason: 'post_generate_failure',
+          operationExecutor: _createOutboxExecutor(),
+          onReplaySuccess: _onOutboxReplaySuccess(ref),
+        ),
       );
       _emitStatus(
         ref,
@@ -201,6 +209,8 @@ class MirrorOrchestratorService {
     required ProjectContext context,
     required String mode,
   }) async {
+    await _replayQueuedWork(ref, reason: 'pre_compile');
+
     _emitStatus(
       ref,
       sessionKey,
@@ -240,7 +250,11 @@ class MirrorOrchestratorService {
         lastError: result.errors.join(' | '),
       );
       unawaited(
-        _replayService(ref).replayDueEntries(reason: 'post_compile_failure'),
+        _replayService(ref).replayDueEntries(
+          reason: 'post_compile_failure',
+          operationExecutor: _createOutboxExecutor(),
+          onReplaySuccess: _onOutboxReplaySuccess(ref),
+        ),
       );
       _emitStatus(
         ref,
@@ -261,6 +275,8 @@ class MirrorOrchestratorService {
     required String mode,
     String? compileFingerprint,
   }) async {
+    await _replayQueuedWork(ref, reason: 'pre_apply');
+
     _emitStatus(
       ref,
       sessionKey,
@@ -320,7 +336,11 @@ class MirrorOrchestratorService {
         lastError: result.message,
       );
       unawaited(
-        _replayService(ref).replayDueEntries(reason: 'post_apply_failure'),
+        _replayService(ref).replayDueEntries(
+          reason: 'post_apply_failure',
+          operationExecutor: _createOutboxExecutor(),
+          onReplaySuccess: _onOutboxReplaySuccess(ref),
+        ),
       );
       _emitStatus(
         ref,
@@ -429,6 +449,75 @@ class MirrorOrchestratorService {
     if (liveLine != null && liveLine.trim().isNotEmpty) {
       notifier.appendLiveOutput(<String>[liveLine]);
     }
+  }
+
+  Future<void> _replayQueuedWork(WidgetRef ref, {required String reason}) async {
+    await _replayService(ref).replayDueEntries(
+      reason: reason,
+      operationExecutor: _createOutboxExecutor(),
+      onReplaySuccess: _onOutboxReplaySuccess(ref),
+    );
+  }
+
+  Future<MirrorOutboxOperationResult> Function(MirrorOutboxEntry entry)
+      _createOutboxExecutor() {
+    return (MirrorOutboxEntry entry) async {
+      switch (entry.operation) {
+        case 'generate':
+          final result = await _backend.generate(
+            prompt: entry.prompt,
+            context: entry.context,
+            mode: entry.mode,
+          );
+          return MirrorOutboxOperationResult(
+            success: result.success,
+            message: result.message ?? result.diagnostics.join(' | '),
+          );
+        case 'compile':
+          final result = await _backend.compile(
+            prompt: entry.prompt,
+            context: entry.context,
+            mode: entry.mode,
+          );
+          return MirrorOutboxOperationResult(
+            success: result.success,
+            message: result.errors.join(' | '),
+          );
+        case 'apply':
+          final compileFingerprint =
+              entry.context.metadata['compileFingerprint']?.toString();
+          final result = await _backend.apply(
+            prompt: entry.prompt,
+            context: entry.context,
+            mode: entry.mode,
+            compileFingerprint: compileFingerprint,
+          );
+          return MirrorOutboxOperationResult(
+            success: result.success,
+            message: result.message,
+          );
+        default:
+          return MirrorOutboxOperationResult(
+            success: false,
+            message: 'Unknown outbox operation: ${entry.operation}',
+          );
+      }
+    };
+  }
+
+  Future<void> Function(MirrorOutboxEntry entry) _onOutboxReplaySuccess(
+    WidgetRef ref,
+  ) {
+    return (MirrorOutboxEntry entry) async {
+      if (entry.operation != 'apply') {
+        return;
+      }
+      await _refreshTaskAndSubTaskCaches(
+        ref: ref,
+        context: entry.context,
+        sessionKey: entry.sessionKey,
+      );
+    };
   }
 
   MirrorOutboxReplayService _replayService(WidgetRef ref) {
