@@ -1,19 +1,17 @@
 // ARCHITECTURE LOCK: Mirror Gateway = thin proxy only. Compute always on Fly.io or local runner.
 import 'dart:async';
-import 'dart:collection';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
-import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:xterm/xterm.dart';
 import '../../generated/app_localizations.dart';
 
 import '../../core/providers/mirror_session_provider.dart';
 import 'models/mirror_template.dart';
-import 'providers/mirror_editor_orchestration_provider.dart';
 import 'providers/mirror_templates_provider.dart';
-import 'services/mirror_realtime_service.dart';
+import 'services/mirror_editor_realtime_controller.dart';
+import 'services/mirror_editor_run_service.dart';
 import 'templates_gallery.dart';
 import 'widgets/monaco_editor_host.dart';
 import '../../core/providers/mirror_provider.dart';
@@ -39,11 +37,9 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
   late final Terminal _terminal;
   late final TerminalController _terminalController;
   late final stt.SpeechToText _speechToText;
-  late final MirrorRealtimeService _realtimeService;
-  late final MirrorRealtimeEventSetDeduplicator _realtimeDeduplicator;
+  late final MirrorEditorRealtimeController _realtimeController;
+  late final MirrorEditorRunService _runService;
   final ScrollController _liveOutputScrollController = ScrollController();
-  RealtimeChannel? _aiOutputChannel;
-  StreamSubscription<Map<String, dynamic>>? _debugRealtimeSubscription;
   bool _isListening = false;
   bool _isRunInProgress = false;
 
@@ -61,14 +57,12 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
     _terminal = Terminal(maxLines: 1000);
     _terminalController = TerminalController();
     _speechToText = stt.SpeechToText();
-    _realtimeService = MirrorRealtimeService(
+    _realtimeController = MirrorEditorRealtimeController(
       projectId: widget.projectId,
       taskId: widget.taskId,
       sessionKey: _sessionKey,
     );
-    _realtimeDeduplicator = MirrorRealtimeEventSetDeduplicator(
-      maxEntries: _realtimeService.maxProcessedRealtimeEventIds,
-    );
+    _runService = const MirrorEditorRunService();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) {
         return;
@@ -78,24 +72,19 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
         _l10n.mirrorProjectTaskLine(widget.projectId, widget.taskId),
       );
     });
-    if (widget.debugRealtimeRecords != null) {
-      _debugRealtimeSubscription = widget.debugRealtimeRecords!.listen(
-        (Map<String, dynamic> record) {
-          _handleRealtimeRecord(record, enforceScope: false);
-        },
-      );
-    } else {
-      _subscribeToLiveOutput();
-    }
+    _realtimeController.start(
+      debugRealtimeRecords: widget.debugRealtimeRecords,
+      isMounted: () => mounted,
+      onFlush: _handleRealtimeFlush,
+      onTerminalLine: _appendTerminalLine,
+      realtimeOutputReceivedLabel: _realtimeOutputReceivedLabel,
+      statusLineLabel: _statusLineLabel,
+    );
   }
 
   @override
   void dispose() {
-    if (_aiOutputChannel != null) {
-      Supabase.instance.client.removeChannel(_aiOutputChannel!);
-    }
-    _debugRealtimeSubscription?.cancel();
-    _realtimeService.dispose();
+    _realtimeController.dispose();
     _liveOutputScrollController.dispose();
     super.dispose();
   }
@@ -163,7 +152,30 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
                   ),
                   const SizedBox(width: 8),
                   OutlinedButton.icon(
-                    onPressed: _isRunInProgress ? null : _runCurrentFileInTerminal,
+                    onPressed: _isRunInProgress
+                        ? null
+                        : () {
+                            _runService.runCurrentFileInTerminal(
+                              context: context,
+                              ref: ref,
+                              projectId: widget.projectId,
+                              taskId: widget.taskId,
+                              selectedMode: _selectedMode,
+                              sessionKey: _sessionKey,
+                              l10n: _l10n,
+                              isRunInProgress: _isRunInProgress,
+                              isMounted: () => mounted,
+                              setRunInProgress: (bool inProgress) {
+                                if (!mounted) {
+                                  return;
+                                }
+                                setState(() {
+                                  _isRunInProgress = inProgress;
+                                });
+                              },
+                              appendTerminalLine: _appendTerminalLine,
+                            );
+                          },
                     icon: _isRunInProgress
                         ? const SizedBox(
                             width: 16,
@@ -418,63 +430,21 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
     );
   }
 
-  void _subscribeToLiveOutput() {
-    final currentUserId = Supabase.instance.client.auth.currentUser?.id;
-    if (currentUserId == null || currentUserId.isEmpty) {
+  void _handleRealtimeFlush(List<String> lines) {
+    _sessionNotifier.appendLiveOutput(lines, maxLines: 500);
+    if (!mounted) {
       return;
     }
-
-    final topic =
-        'mirror_ai_sessions:$currentUserId:${widget.projectId}:${widget.taskId}';
-    final channel =
-        Supabase.instance.client.channel('mirror-ai-output-$topic');
-
-    _aiOutputChannel = channel
-        .onBroadcast(
-          event: 'ai_session_update',
-          callback: (Map<String, dynamic> payload, [String? _]) {
-            final record = _realtimeService.extractBroadcastRecord(payload);
-            if (record == null) {
-              return;
-            }
-            _handleRealtimeRecord(record);
-          },
-        )
-        .subscribe();
-  }
-
-  void _handleRealtimeRecord(
-    Map<String, dynamic> record, {
-    bool enforceScope = true,
-  }) {
-    if (!_realtimeDeduplicator.shouldProcess(record)) {
-      return;
-    }
-
-    _realtimeService.handleRealtimeRecord(
-      record: record,
-      mounted: mounted,
-      onFlush: (List<String> lines) {
-        _sessionNotifier.appendLiveOutput(lines, maxLines: 500);
-        if (!mounted) {
-          return;
-        }
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (!_liveOutputScrollController.hasClients) {
-            return;
-          }
-          _liveOutputScrollController.animateTo(
-            _liveOutputScrollController.position.maxScrollExtent,
-            duration: const Duration(milliseconds: 180),
-            curve: Curves.easeOut,
-          );
-        });
-      },
-      onTerminalLine: _appendTerminalLine,
-      realtimeOutputReceivedLabel: (int count) => _l10n.mirrorRealtimeOutputReceived(count),
-      statusLineLabel: _l10n.mirrorStatusLine,
-      enforceScope: enforceScope,
-    );
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!_liveOutputScrollController.hasClients) {
+        return;
+      }
+      _liveOutputScrollController.animateTo(
+        _liveOutputScrollController.position.maxScrollExtent,
+        duration: const Duration(milliseconds: 180),
+        curve: Curves.easeOut,
+      );
+    });
   }
 
   Future<void> _toggleVoiceInput() async {
@@ -537,37 +507,6 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
       // ignore: deprecated_member_use
       listenMode: stt.ListenMode.dictation,
     );
-  }
-
-  Future<void> _runCurrentFileInTerminal() async {
-    if (_isRunInProgress) {
-      return;
-    }
-
-    setState(() {
-      _isRunInProgress = true;
-    });
-
-    try {
-      final orchestrationService = ref.read(mirrorEditorOrchestrationServiceProvider);
-      await orchestrationService.runCurrentFileInTerminal(
-        context: context,
-        ref: ref,
-        projectId: widget.projectId,
-        taskId: widget.taskId,
-        selectedMode: _selectedMode,
-        sessionKey: _sessionKey,
-        l10n: _l10n,
-        isMounted: () => mounted,
-        appendTerminalLine: _appendTerminalLine,
-      );
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isRunInProgress = false;
-        });
-      }
-    }
   }
 
   Future<void> _openTemplatesGallery() async {
@@ -664,7 +603,13 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
     _sessionNotifier.appendTerminalLine(line, maxLines: 1000);
     _terminal.write('$line\\r\\n');
   }
+  String _realtimeOutputReceivedLabel(int count) {
+    return _l10n.mirrorRealtimeOutputReceived(count);
+  }
 
+  String _statusLineLabel(String status) {
+    return _l10n.mirrorStatusLine(status);
+  }
   IconData _iconForFile(String path) {
     if (path.endsWith('.dart')) {
       return Icons.code;
@@ -686,56 +631,6 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
       return 'json';
     }
     return 'plaintext';
-  }
-}
-
-class MirrorRealtimeEventSetDeduplicator {
-  MirrorRealtimeEventSetDeduplicator({this.maxEntries = 2000});
-
-  final int maxEntries;
-  final Set<String> _seenKeys = <String>{};
-  final Queue<String> _seenOrder = Queue<String>();
-
-  bool shouldProcess(Map<String, dynamic> record) {
-    final key = _buildSetKey(record);
-    if (key == null) {
-      return true;
-    }
-
-    if (_seenKeys.contains(key)) {
-      return false;
-    }
-
-    _seenKeys.add(key);
-    _seenOrder.addLast(key);
-
-    while (_seenOrder.length > maxEntries) {
-      final oldest = _seenOrder.removeFirst();
-      _seenKeys.remove(oldest);
-    }
-
-    return true;
-  }
-
-  String? _buildSetKey(Map<String, dynamic> record) {
-    final rawEventId =
-        record['event_id']?.toString() ??
-        record['id']?.toString() ??
-        record['version_id']?.toString();
-
-    if (rawEventId != null) {
-      final eventId = rawEventId.trim();
-      if (eventId.isNotEmpty) {
-        return 'event:$eventId';
-      }
-    }
-
-    final updatedAt = parseRealtimeRecordUpdatedAt(record['updated_at']);
-    if (updatedAt != null) {
-      return 'updated_at:${updatedAt.toIso8601String()}';
-    }
-
-    return null;
   }
 }
 

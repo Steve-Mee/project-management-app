@@ -417,3 +417,53 @@ String buildRealtimeRecordDedupKey({
 
   return 'hash:$hash';
 }
+
+class MirrorRealtimeEventSetDeduplicator {
+  MirrorRealtimeEventSetDeduplicator({this.maxEntries = 2000});
+
+  final int maxEntries;
+  final Set<String> _seenKeys = <String>{};
+  final Queue<String> _seenOrder = Queue<String>();
+
+  bool shouldProcess(Map<String, dynamic> record) {
+    final key = _buildSetKey(record);
+    if (key == null) {
+      return true;
+    }
+
+    if (_seenKeys.contains(key)) {
+      return false;
+    }
+
+    _seenKeys.add(key);
+    _seenOrder.addLast(key);
+
+    while (_seenOrder.length > maxEntries) {
+      final oldest = _seenOrder.removeFirst();
+      _seenKeys.remove(oldest);
+    }
+
+    return true;
+  }
+
+  String? _buildSetKey(Map<String, dynamic> record) {
+    final rawEventId =
+        record['event_id']?.toString() ??
+        record['id']?.toString() ??
+        record['version_id']?.toString();
+
+    if (rawEventId != null) {
+      final eventId = rawEventId.trim();
+      if (eventId.isNotEmpty) {
+        return 'event:$eventId';
+      }
+    }
+
+    final updatedAt = parseRealtimeRecordUpdatedAt(record['updated_at']);
+    if (updatedAt != null) {
+      return 'updated_at:${updatedAt.toIso8601String()}';
+    }
+
+    return null;
+  }
+}
