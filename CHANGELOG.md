@@ -1,3 +1,9 @@
+## [1.28.0](https://github.com/Steve-Mee/project-management-app/compare/v1.27.0...v1.28.0) (2026-03-10)
+
+### Features
+
+* **mirror:** harden runtime flow and finalize readiness docs ([a711be5](https://github.com/Steve-Mee/project-management-app/commit/a711be525b50e5537a8115658dcafd3c8c09bc6e))
+
 ## [1.27.0](https://github.com/Steve-Mee/project-management-app/compare/v1.26.0...v1.27.0) (2026-03-09)
 
 ### Features
