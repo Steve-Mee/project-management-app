@@ -1,262 +1,129 @@
-// ARCHITECTURE LOCK: Mirror Gateway = thin proxy only. Compute always on Fly.io or local runner.
-# Mirror Feature — Diepgaande Architectuur- en Code Review Analyse
-
-**Datum:** 2026-03-10  
-**Reviewer:** Senior Flutter/Supabase Architect  
-**Scope:** Volledige Mirror-implementatie (Supabase, Mirror Gateway thin proxy, gRPC Backend, Dart/Flutter Core, UI, Tests, Docs)  
-**Geanalyseerde bestanden:** 45+ bestanden inclusief providers, services, migraties, tests en documentatie
-
----
-
 ### 1. Algemene beoordeling
-
-**Sterke punten**
-
-- **Clean Architecture**: Harde scheiding tussen `MirrorComputeBackend` (abstracte contract), concrete backends (`MirrorGatewayBackend`, `CloudFlyBackend`, `PrivateGrpcBackend`) en de UI-laag. Providers delegeren correct naar services.
-- **Uitstekende Offline-First**: `_MirrorOfflineCache`, `MirrorOutboxReplayService`, Hive-boxen voor mode-persistentie, fallback-varianten bij AB-test timeout — allemaal correct geïmplementeerd met exponential backoff.
-- **Sterke Security-laag**: Owner-prefixed storage paths (`<auth.uid>/<projectId>/...`), RLS op elke tabel, private buckets, fingerprint-checks bij apply, `ApplySecurityArtifacts` flow voor backup/signed-input staging.
-- **Gedifferentieerde Auth-checks**: `MirrorAccessPolicy` is een pure, testbare klasse zonder framework-afhankelijkheden. `MirrorPremiumService` heeft in-flight deduplicatie, TTL-cache (5 min) én metadata-fallback.
-- **Realtime Hardening**: Scoped broadcast topics (`mirror_ai_sessions:<uid>:<pid>:<tid>`), debouncing (300 ms), deduplicatie via LRU-achtige event-id set (max 2000 items), per-event char- en linelimieten.
-- **Audit Trail**: `mirror_apply_audit_events` tabel met fingerprints (`file_set_fingerprint`, `applied_files_fingerprint`, `diff_fingerprint`), actor-veld, en retentielogica. Volledig SECURITY DEFINER met gefixeerd `search_path`.
-- **Goede documentatie**: `mirror-architecture.md`, `mirror-threat-model.md`, `mirror-ops-runbook.md`, `mirror-bucket-contract.md`, `mirror-production-readiness-checklist.md` zijn professioneel en volledig.
-- **Brede testcoverage**: Dedicated testbestanden voor realtime dedup, security flow, outbox persistence, apply contract, editor integration en premium service.
-- **Compile-fingerprint veiligheidsslot**: Apply wordt geblokkeerd bij fingerprint-mismatch — verhindert "time-of-check to time-of-use" aanvallen op de preview.
-- **DB-first template beheer**: `sync_mirror_templates_seed()` stored procedure maakt de database de enige source of truth voor templates.
-- **`MirrorAccessPolicy` multi-constraint gate**: Controleert zowel `isPremium` als `runnerModeVariant` AB-variant voordat cloud-mode wordt toegestaan.
-
-**Zwakke punten**
-
-- ~~**Hardcoded Nederlandse tekst in `apply_dialog.dart`**~~: ✅ **Opgelost** — `AppLocalizations` import toegevoegd, beide strings vervangen door `mirrorApplyRiskAcknowledgeTitle` en `mirrorApplyRiskAcknowledgeSubtitle` ARB-keys; alle 13 locales bijgewerkt.
-- **`PrivateGrpcBackend` gebruikt `ChannelCredentials.insecure()`**: TLS uitgeschakeld voor alle omgevingen — acceptabel voor localhost dev, maar actief beveiligingsrisico bij Docker/productie.
-- **Proto-contract semantisch onjuist**: `Apply(CompileRequest) returns (CompileResponse)` — Apply is een distincte operatie. Hetzelfde type als Compile blokkeert toekomstige apply-specifieke velden en wekt verwarring.
-- **`MirrorGatewayBackend` wordt nooit geselecteerd via `mirrorBackendProvider`**: Volledig geïmplementeerd maar niet aangesloten op de provider-routing — onduidelijk gebruik.
-- **Dubbele modus-state**: `_selectedMode` (lokale Widget state) en `mirrorProvider.state.mode` (Riverpod) worden handmatig gesynchroniseerd via een `if`-check in `build()`. Fragiel en risico op desync.
-- **`MirrorOutboxEntry` slaat broncode op in Hive onbeperkt**: Volledige `context.files` geserialiseerd in outbox — security- en opslagrisico bij grote of gevoelige sessies.
-- **`mirrorTemplatesProvider` heeft geen TTL of refresh-strategie**: Enkel `FutureProvider` zonder keepAlive of periodieke invalidatie.
-- **Geen client-side rate limiting op generate/compile/apply**: UI blokkeert de knop tijdens een actieve run maar beschermt niet tegen parallelle instanties of snelle navigatieopeenvolging.
-- **`MirrorEditorScreen` abonneert niet opnieuw na Supabase reconnect**: Kanaal wordt niet opnieuw gesubscribed bij verbindingsherstel.
-- **`supabase/functions/mirror-gateway/` ontbreekt in de repository**: Vermeld in docs maar niet aanwezig — risico op deployment-drift.
-- **Significante hoeveelheid openstaand productie-readiness werk**: Pen-test, staging rollout, load test, canary, JWT-rotation runbook, GDPR/DSAR — allemaal nog open.
-
-**Overall score (1-10): 7.2 / 10**
-
-De implementatie is kwalitatief sterk voor een feature gebouwd via 36 prompts: architectuurkeuzes zijn verdedigbaar, security is serieus aangepakt, en offline-first coverage is boven gemiddeld. De score wordt gedrukt door eerder ontbrekende gateway-koppeling in de repo, hardcoded Nederlandse tekst, onveilige gRPC-credentials, semantisch zwak proto-contract, en significante openstaande productie-readiness items.
-
----
+- Sterke punten
+  - Duidelijke architectuurgrenzen zijn expliciet vastgelegd en consequent toegepast: de Edge Function blijft een thin proxy, compute draait in runners, en de UI-orchestratie is opgesplitst over dedicated services.
+  - De Mirror-flow bevat meerdere security-rails: compile/apply consistency checks, preview fingerprint-validatie, signed-input/backup artifacts, en owner-scoped bucket policies.
+  - De implementatie sluit goed aan op bestaande app-patronen: Riverpod providers, pma_core-hergebruik, project/task-bridge via `openMirrorFromTask`, en niet-blokkerende UX-fallbacks.
+  - Realtime-architectuur is volwassen: broadcast topics zijn user/project/task-scoped, payload guarding is aanwezig, en deduplicatie is expliciet ingebouwd.
+  - Testoppervlak voor Mirror is breed (contract-, integration-, widget- en security-flow tests) en de CI bevat expliciete Mirror checks.
+- Zwakke punten
+  - Kritieke DB-contract-gap: in de repository ontbreekt een migration voor tabel `mirror_request_idempotency`, terwijl de gateway deze tabel verplicht gebruikt voor claim/finalize logic.
+  - Idempotency-end-to-end is functioneel niet volledig: client-side backends sturen geen stabiele `x-idempotency-key` header mee, waardoor outbox-idempotency niet doorloopt tot de gateway-laag.
+  - Autorisatie op schermniveau is impliciet via entrypoints; `MirrorEditorScreen` heeft zelf geen harde permission-guard. Directe navigatie/constructie kan daardoor policy-verwarring geven.
+  - Caching/offline gedrag is bruikbaar maar kan stale beslissingen geven (AB-variant en modeherstel met TTL) zonder expliciete freshness-contracten met server-timestamps.
+  - Consistentiepunt: `CloudFlyBackend` is aanwezig maar niet opgenomen in de actieve backend-selectieflow; dit verhoogt onderhoudslast en ambiguiteit.
+- Overall score (1-10)
+  - 8.2/10
 
 ### 2. Laag-voor-laag analyse
+- Supabase / Database laag
+  - Positief:
+    - Storage hardening is sterk uitgewerkt in `supabase/migrations/20260308_mirror_storage_hardening.sql` met private buckets (`mirror-signed-inputs`, `mirror-backups`) en owner-folder RLS-guards via `storage.foldername(name)[1] = auth.uid()::text`.
+    - Audit + retention is aanwezig in `supabase/migrations/20260308_mirror_audit_and_ai_sessions_retention.sql` met indexes, RLS, cleanup-functie en pg_cron scheduling.
+    - Realtime topic-scoping is correct in `supabase/migrations/20260309_mirror_ai_sessions_broadcast_topics.sql`.
+    - Templates zijn DB-first met RLS en seed-sync in `supabase/migrations/20260309_mirror_templates_rls_and_sync.sql`.
+  - Risico's:
+    - `mirror_request_idempotency` schema ontbreekt in migraties (niet gevonden in `supabase/migrations/**` of SQL-bestanden), terwijl `supabase/functions/mirror-gateway/index.ts` deze tabel hard vereist.
+    - Template-RLS gebruikt `manage_roles` of `manage_users`; dit is functioneel werkbaar maar semantisch grof voor templatebeheer.
+  - Integratiekwaliteit:
+    - SQL contracttests bestaan (`test/supabase/mirror_storage_rls_contract_test.sql`, `test/supabase/mirror_rls_contract.sql`), wat governance versterkt.
 
-**Supabase / Database laag**
+- Edge Functions & gRPC backend laag
+  - Positief:
+    - `supabase/functions/mirror-gateway/index.ts` heeft sterke request-validatie: auth-check, payload-limiet, normalisatie, structured errors, timeout handling en idempotency-claim/finalize met stale-claim recovery.
+    - Runner-architectuur is coherent: `server/mirror-shared/lib/http_gateway.dart` als gedeelde HTTP->gRPC bridge, plus cloud/local runners met auth guard en quota-config.
+    - `server/mirror-shared/lib/compile_runner.dart` heeft write-policy controls (prefix-allowlist, denied segments/extensions, max files/bytes).
+  - Risico's:
+    - End-to-end idempotency-key propagatie ontbreekt client-side; gateway genereert anders nieuwe key per call.
+    - CORS in `supabase/functions/_shared/cors.ts` staat op wildcard (`Access-Control-Allow-Origin: *`), wat voor productie meestal te breed is tenzij upstream strikt afschermt.
+  - Best-practice fit:
+    - gRPC en HTTP gateway layering is goed en schaalbaar; auth_guard in runners is degelijk (JWT/signature/issuer/audience checks).
 
-`mirror_templates` tabel heeft `template_key` (UNIQUE), `is_active`, `seed_managed` flags en deterministische seed-synchronisatie via `sync_mirror_templates_seed()` stored procedure — solide DB-first patroon. RLS-policies zijn correct: SELECT publiek voor `is_active = true`, write-operaties vereisen `manage_roles` of `manage_users`. `COALESCE(..., false)` beschermt tegen NULL-retournerende permission-functies.
+- Dart/Flutter core & providers laag
+  - Positief:
+    - `lib/core/providers/mirror_provider.dart` combineert premium, mode-policy, AB-variants en offline fallback op een nette Riverpod-manier.
+    - `packages/pma_core/lib/services/mirror_access_policy.dart` centraliseert mode resolution (requested -> effective).
+    - `lib/core/providers/mirror_session_provider.dart` hydrateert context netjes uit repositorydata en houdt editor-state coherent.
+  - Risico's:
+    - Offline variant/mode cache kan stale worden zonder server-side freshness-marker; TTL alleen is niet altijd voldoende bij snelle experimentwissels.
+    - `lib/core/auth/permissions.dart` en `packages/pma_core/lib/auth/permissions.dart` bevatten duplicaat `use_mirror` constant.
 
-`mirror_apply_audit_events` bevat alle forensische kolommen: `actor_user_id`, fingerprints, `artifact_ids`, `idempotency_key`. Retentiefunctie `cleanup_ai_sessions_retention()` is SECURITY DEFINER met gefixeerde `search_path = public` — correct tegen path-injection. Storage RLS gebruikt `storage.foldername(name)[1] = auth.uid()::text` — correcte owner-bounded bucket toegang.
+- UI & UX laag (editor, dialogs, realtime)
+  - Positief:
+    - `lib/features/mirror/mirror_editor_screen.dart` is effectief als pure UI-shell en gebruikt extracted services (`mirror_editor_run_service.dart`, `mirror_editor_realtime_controller.dart`, `mirror_editor_orchestration_service.dart`).
+    - Apply-flow met preview + risk-acknowledgement + suggested branch in `lib/features/mirror/apply_dialog.dart` past bij veilige AI-changes.
+    - Realtime-output wordt gedebounced en bounded verwerkt (`mirror_realtime_service.dart`) om UI-spam te beperken.
+  - Risico's:
+    - `MirrorEditorScreen` bevat geen expliciete eigen permission-guard, dus vertrouwt volledig op correcte entrypoint-routing.
+    - `apply_dialog.dart` gebruikt deels hardcoded NL strings/buttons (`Nee`, `Ja, toepassen`, `Git branch advies`) i.p.v. volledige l10n-consistentie met de rest van de app.
 
-Scoped broadcast topics (`mirror_ai_sessions:<uid>:<pid>:<tid>`) voorkomen cross-user data leakage. De `realtime.messages` RLS-policy controleert `split_part(realtime.topic(), ':', 2) = auth.uid()::text`.
+- Security, permissions & premium checks
+  - Positief:
+    - Permission-gating op launchpad is aanwezig via `openMirrorFromTask` (`lib/core/providers/ai_chat_provider.dart`) met `use_mirror` check.
+    - Premium gating is aanwezig in provider-policy en cloud backends (`mirror_premium_service.dart`, `mirror_provider.dart`, `cloud_fly_backend.dart`).
+    - Apply security artifacts en storage signatures zijn goed afgedicht in `mirror_compute_backend.dart`.
+  - Risico's:
+    - Premium fallback leunt op metadata wanneer `subscriptions` query faalt; dit is bewust robust, maar kan entitlement drift geven als metadata niet synchroon is.
+    - Outbox-opslag valt in fallback naar onversleutelde Hive bij encryptie-falen (`mirror_outbox_replay_service.dart`), anders dan fail-closed pattern in andere Mirror boxes.
 
-Aandachtspunten:
-- DELETE-policy op `mirror_apply_audit_events` staat gebruikers toe eigen audit-records te verwijderen. Audit events dienen immutable te zijn voor forensische volledigheid. Overweeg de policy te verwijderen en retentie uitsluitend via server-side functie af te handelen.
-- Geen composite index op `(user_id, project_id, task_id)` voor queries die op alle drie filteren — meest voorkomend bij audit-lookups.
-- Geen `BEFORE UPDATE` trigger op `mirror_templates.updated_at` — handmatige updates via admin-UI updaten de timestamp niet automatisch.
-- `project_id` en `task_id` zijn tekstvelden zonder DB-FK naar kernentiteiten — dataintegriteit en cleanup afhankelijk van applicatielogica.
+- Offline / Hive / caching laag
+  - Positief:
+    - Duidelijke offline-architectuur met afzonderlijke encrypted boxes, TTL envelopes, auth/premium invalidation, en replay-mechanisme voor outbox.
+    - Replay-engine bevat retries, jittered backoff, periodic ticks, en last-write-wins queue semantics.
+  - Risico's:
+    - Idempotency key wordt wel lokaal berekend voor outbox, maar niet gepropageerd als transport header naar gateway; daardoor is replay minder strikt deduped server-side.
+    - Cachingpolicy voor AB-varianten mist expliciete server-version handshakes.
 
----
-
-**Mirror Gateway & gRPC backend laag**
-
-`MirrorGatewayBackend` heeft correcte retrylogica met exponential backoff, aparte compile/apply endpoint routing, en fingerprint-verificatie. `CloudFlyBackend` voert dubbele premium-check uit per aanroep — defensief juist. `secureApply()` extension coördineert de volledige security-artifact lifecycle op herbruikbare wijze. `computeCompileResultFingerprint()` sorteert file-entries voor de hash — deterministisch bij volgorde-variaties. `persistApplyToHive()` heeft expliciete budgetlimieten: max 50 files, 100k chars, 40 history entries.
-
-Aandachtspunten:
-- `PrivateGrpcBackend` serialiseert naar `utf8.encode(jsonEncode(...))` en stuurt ruwe bytes — JSON-over-raw-bytes in plaats van echte protobuf marshaling. Het proto-bestand is documentatieartifact zonder runtime enforcement.
-- `PrivateGrpcBackend.apply()` negeert het `compileFingerprint` argument — de fingerprint-check die in `MirrorGatewayBackend` aanwezig is, ontbreekt hier volledig.
-- `ChannelCredentials.insecure()` hardcoded voor alle omgevingen. In Docker/Fly.io-scenario geeft dit onversleuteld verkeer.
-- `MirrorGatewayBackend.apply()` heeft een `useSecureApply = false` pad — apply zonder security artifacts. De flag heeft default `true` maar een misconfiguratie kan stille achteruitgang veroorzaken zonder productie-guard.
-- `MirrorGatewayBackend` wordt nooit geselecteerd via `mirrorBackendProvider` in `mirror_provider.dart` — de provider kiest altijd `CloudFlyBackend` of `PrivateGrpcBackend`.
-- `CloudFlyBackend.apply()` doet een dubbele compile-aanroep (preflight + apply) — verdubbelt compute-kosten per apply.
-
----
-
-**Dart/Flutter core & providers laag**
-
-`MirrorNotifier` extends `Notifier<MirrorState>` (niet `AsyncNotifier`) — correct voor synchrone UI-beschikbaarheid van state. `_hydrateFromCache()` via `unawaited()` vanuit `build()` houdt de build non-blocking. `refreshPremiumFromMetadata()` invalideert provider en forceert terugval naar private mode als premium verlopen is. `MirrorSessionNotifier` als `FamilyNotifier` met `sessionKey` parameter geeft correcte per-sessie-isolatie. `MirrorAccessPolicy` is een pure Dart-klasse zonder framework-afhankelijkheden. `_MirrorOfflineCache.invalidateOnPremiumChange()` en `invalidateOnAuthChange()` voorkomen premium-spoofing via gestale cache na user-switch.
-
-Aandachtspunten:
-- `mirrorModeProvider` is een onafhankelijke `StateProvider<String>` die ook gewatcht wordt door `mirrorProvider.build()`. Wanneer `setMode()` wordt aangeroepen, worden zowel `mirrorModeProvider.state` als `state.mode` bijgewerkt — twee bronnen van waarheid die uit sync kunnen lopen.
-- `mirrorBackendProvider` is een `FutureProvider` die opnieuw berekend wordt bij mode-wijziging — maar in-flight aanroepen via de oude backend-instantie worden niet geannuleerd. Race conditions mogelijk bij modus-wisseling tijdens actieve run.
-- `MirrorOrchestratorService` accepteert `WidgetRef` als parameter per methode — koppelt de service aan de widget-lifecycle. Gebruik liever `Ref` zodat de service ook buiten widgets testbaar is.
-- `unawaited()` fouten worden stilzwijgend gesmoord — overweeg logging via `AppLogger` voor traceerbaarheid in productie.
-- `MirrorSessionState.initial()` maakt state aan met lege velden en overschrijft direct via `copyWith()` — semantisch verwarrend, initialiseer direct met correcte waarden.
-
----
-
-**UI & UX laag (editor, dialogs, realtime)**
-
-`MirrorEditorScreen` is responsief met breakpoint op 900px (Row ↔ Column). `_ModeSelector` is een extracte `StatelessWidget` — clean separation. `TemplatesGallery` past `crossAxisCount` dynamisch aan op breedte. Apply dialog toont diff-preview, branch-suggestie en risico-acknowledgement toggle vóór uitvoering. `_openTemplatesGallery()` gebruikt een `Consumer` voor lazy loading — correcte aanpak. Template laadfout toont een retry-knop die de provider invalideert. Voice input is defensief geïmplementeerd met beschikbaarheidscheck en terminal/SnackBar feedback.
-
-Aandachtspunten:
-- ~~**Hardcoded Nederlandse tekst** in `apply_dialog.dart` regels ~105-113~~ — ✅ **Opgelost**: beide strings vervangen door `AppLocalizations.of(context)!.mirrorApplyRiskAcknowledgeTitle` / `mirrorApplyRiskAcknowledgeSubtitle`; keys toegevoegd aan alle 13 ARB-locales.
-- `_selectedMode` local state desync: synchronisatie via `if`-check in `build()` is een anti-pattern. Gebruik `ref.listen()` voor side-effect-gebaseerde state updates buiten de build-methode.
-- `MirrorEditorScreen` hersubscribert niet na Supabase reconnect — `_subscribeToLiveOutput()` eenmalig in `initState()`. Voeg een `ChannelState`-listener toe voor automatisch herstel.
-- `ListView` in file explorer gebruikt `sessionState.files.keys.elementAt(index)` — O(n) indexering. Cache de keys als `List<String>` buiten de builder.
-- Geen empty-state voor file explorer wanneer `sessionState.files` leeg is bij hydration-fout.
-- Terminal-paneel split 50%/50% — bij smalle viewport geeft dit een slecht bruikbare terminal. Overweeg een draggable splitter of vaste minimale breedte.
-
----
-
-**Security, permissions & premium checks**
-
-`openMirrorFromTask()` controleert `hasPermissionProvider(AppPermissions.useMirror)` — gating op permissieniveau. `MirrorPremiumService._resolvePremium()` heeft dual-check: eerst metadata, dan `subscriptions` DB-tabel met Stripe-validatie. Apply-flow vereist `acceptRisk` toggle. Signed URLs worden nooit volledig gelogd conform het threat model.
-
-Aandachtspunten:
-- `mirrorProvider.build()` leest `isPremium` synchroon via `.valueOrNull ?? false` — UI toont kortdurend "niet-premium" ook als gebruiker premium is. Voeg een `isCheckingPremium` loading state toe.
-- `PrivateGrpcBackend` heeft geen token-verificatie — stuurt naar `127.0.0.1:50051` zonder auth-header. Expliciete documentatie en bewaking vereist bij productie.
-- `MirrorEditorScreen` heeft geen interne fallback-guard voor de `use_mirror` permissie — als de route direct wordt aangeroepen (deep link, test, toekomstige navigatiewijziging) bestaat er geen scherm-niveau guard.
-- Audit DELETE-policy ondermijnt forensische integriteit (zie Database-laag).
-- `AppPermissions.useMirror` check is client-side only — Mirror Gateway zou ook permissie moeten valideren via JWT-claims.
-
----
-
-**Offline / Hive / caching laag**
-
-`_MirrorOfflineCache` gebruikt `EncryptedHiveBox` correct. Offline-fallback cascade voor AB-varianten: live → cache → hardcoded fallback. `MirrorOutboxReplayService` heeft idempotency-sleutels, exponential backoff, connectiviteitsdetectie via `connectivity_plus`, en max retry count — productiewaardig outbox-patroon. `persistApplyToHive()` heeft strakke budgetlimieten.
-
-Aandachtspunten:
-- `MirrorOutboxEntry` serialiseert volledige `context.files` — bij grote projecten met gevoelige code worden alle bestanden in memory en op schijf bewaard in de outbox. Overweeg slechts fingerprints/paden op te slaan.
-- Geen TTL op gecachte AB-test varianten — gebruiker krijgt verouderde assignment tot een succesvolle live-aanroep. Voeg max-age toe (bijv. 24 uur).
-- `_processedRealtimeEventIds` set in `MirrorRealtimeService` kan bij hoge event-frequentie significant geheugen innemen vóór eviction (max 2000 items).
-- `appendTerminalLine` accepteert een `maxLines` parameter vanuit de UI — de limiet is UI-bepaald, niet notifier-bepaald. Dit maakt de interface fragiel.
-- `mirrorSessionProvider` heeft geen `autoDispose` — bij veel unieke sessies accumuleren notifiers in de Riverpod-container.
-
----
-
-**Integratie met bestaande app**
-
-`openMirrorFromTask()` in `AiChatBridgeNotifier` is de enige entry point — single responsibility. Integratie in `expandable_task_card.dart` en `project_detail_screen.dart` is consistent via dezelfde navigatieflow. `mirrorSessionProvider` als `FamilyNotifier` met `sessionKey` geeft correcte per-sessie-isolatie. `aiChatBridgeProvider` bewaart de launch-payload voor hernavigatie.
-
-Aandachtspunten:
-- `MirrorEditorScreen` heeft geen interne permissiecheck — screen-level guard ontbreekt bij directe route-aanroepen (zie Security-laag).
-- `aiChatBridgeProvider` state wordt niet gecleard na succesvolle launch — stale payload kan onbedoelde state veroorzaken bij hernavigatie. `clearMirrorLaunchRequest()` moet expliciet worden aangeroepen na het openen van de editor.
-- `mirrorProvider` is een globale `NotifierProvider` — bij multi-project bewerkingen (toekomstige feature) zorgt dit voor mode-conflicten. Overweeg te migreren naar een `FamilyNotifier` op projectId.
-- `expandable_task_card.dart` bevat hardcoded Nederlandse strings in de sub-task sectie (`'Sub-tasks'`, `'Generate'`, `'Assign task'`) — pre-existing probleem in hetzelfde bestand als de Mirror-integratiecode.
-
----
+- Integratie met bestaande app
+  - Positief:
+    - Integratie is netjes via bestaande project/task UI entrypoints:
+      - `lib/features/project/project_detail_screen.dart`
+      - `lib/features/project/expandable_task_card.dart`
+      - bridge: `lib/core/providers/ai_chat_provider.dart`
+    - Mirror sluit aan op bestaande task/subtask invalidation na apply (`mirror_orchestrator_service.dart`).
+    - README en docs zijn bijgewerkt met architecture lock en operationele contracten.
+  - Risico's:
+    - Omdat integratie vooral via imperative `Navigator.push` gebeurt, ontbreekt een centrale route guard voor Mirror op app-routingniveau.
 
 ### 3. Concrete aanbevelingen
+- Wijzigingen (met exacte bestandsnamen en wat te veranderen)
+  - `supabase/migrations/20260310_mirror_request_idempotency.sql`
+    - Voeg een nieuwe migration toe die `public.mirror_request_idempotency` creëert met unieke sleutel `(user_id, action, idempotency_key)`, `request_hash`, `request_id`, statusvelden, expiry, indexes en RLS-policy passend bij gateway-gebruik.
+  - `lib/features/mirror/mirror_gateway_backend.dart`
+    - Voeg support toe voor het meesturen van een stabiele idempotency header (`x-idempotency-key`) vanuit context/metadata zodat retries/outbox op gateway-niveau echt idempotent worden.
+  - `lib/features/mirror/cloud_fly_backend.dart`
+    - Zelfde idempotency-header propagatie als boven; align compile/apply request headers met gateway-contract.
+  - `lib/features/mirror/services/mirror_outbox_replay_service.dart`
+    - Zet `idempotencyKey` expliciet in `ProjectContext.metadata` bij enqueue/replay zodat backendlaag deze key kan doorgeven aan HTTP requests.
+  - `lib/features/mirror/mirror_editor_screen.dart`
+    - Voeg een defensieve runtime guard toe voor `use_mirror` (bijv. read-only fallback of snelle exit-snackbar) om directe screen-instantiatie af te dekken.
+  - `lib/features/mirror/apply_dialog.dart`
+    - Vervang hardcoded NL tekst door `AppLocalizations` keys voor volledige i18n-consistentie.
+  - `supabase/functions/_shared/cors.ts`
+    - Beperk `Access-Control-Allow-Origin` in productie naar allowlist i.p.v. wildcard, of maak het env-configureerbaar.
+  - `lib/features/mirror/providers/mirror_templates_provider.dart`
+    - Overweeg paginering/filtering hooks voor grotere template-catalogi en server-side search-optie.
+  - `supabase/migrations/20260309_mirror_templates_rls_and_sync.sql`
+    - Introduceer meer specifieke template-admin permission (bijv. `manage_templates`) i.p.v. alleen role/user-management permissies.
+  - `lib/core/providers/mirror_provider.dart`
+    - Voeg freshness metadata toe (bijv. variant timestamp/version) voor betere invalidatie van AB-variant cache na reconnect.
 
-**Wijzigingen (met exacte bestandsnamen en wat te veranderen)**
+- Toevoegingen (nieuwe bestanden/features met korte beschrijving)
+  - `supabase/migrations/20260310_mirror_request_idempotency.sql`
+    - Nieuwe canonical migration voor gateway-idempotency contract.
+  - `test/supabase/mirror_idempotency_contract.sql`
+    - SQL contracttest voor aanwezigheid, constraints, indexes en policies van `mirror_request_idempotency`.
+  - `test/features/mirror/mirror_http_idempotency_header_test.dart`
+    - Test dat backends bij retries/outbox dezelfde `x-idempotency-key` doorgeven.
+  - `test/features/mirror/mirror_permission_guard_test.dart`
+    - Widget/integration test die directe opening van Mirror zonder `use_mirror` permission afvangt.
+  - `docs/mirror-security-hardening.md`
+    - Compact document met CORS-policy, idempotency schema, key rotation, en expected threat mitigations per laag.
 
-~~`lib/features/mirror/apply_dialog.dart` — Vervang de twee hardcoded Nederlandse strings door ARB-lokalisatiekeys.~~ ✅ **Toegepast** (2026-03-10): `AppLocalizations` import toegevoegd, `const Text(...)` vervangen door `Text(AppLocalizations.of(context)!.mirrorApplyRiskAcknowledgeTitle/Subtitle)`, keys `mirrorApplyRiskAcknowledgeTitle`, `mirrorApplyRiskAcknowledgeSubtitle` en `mirrorPermissionDenied` toegevoegd aan alle 13 ARB-locales.
-
-`lib/features/mirror/private_grpc_backend.dart` — Maak TLS credentials configureerbaar door een `ChannelCredentials credentials` constructor-parameter toe te voegen die standaard `ChannelCredentials.insecure()` is maar overschrijfbaar voor productie-deployments.
-
-`lib/features/mirror/private_grpc_backend.dart` — Voeg fingerprint-check toe in `apply()` analoog aan `MirrorGatewayBackend.apply()`: vergelijk `compileFingerprint` met de actuele fingerprint van de compile-aanroep vóór toepassing.
-
-`lib/features/mirror/mirror_editor_screen.dart` — Vervang `_selectedMode` lokale variabele en de `if (_selectedMode != mirrorState.mode)` check in `build()` door een `ref.listen<MirrorState>(mirrorProvider, ...)` in `initState()` zodat mode-updates via een side-effect worden verwerkt.
-
-`lib/features/mirror/mirror_editor_screen.dart` — Voeg een `ChannelState`-listener toe aan het Supabase Realtime kanaal die bij `closed` of `errored` status automatisch hersubscribert via `_subscribeToLiveOutput()`.
-
-`supabase/migrations/20260308_mirror_audit_and_ai_sessions_retention.sql` — Verwijder de `mirror_apply_audit_events_delete_own` policy en verplaats retentie exclusief naar de SECURITY DEFINER retentiefunctie.
-
-`lib/features/mirror/mirror_editor_screen.dart` — Cache `sessionState.files.keys.toList()` buiten de `ListView.builder` itemBuilder voor O(1) indexering in plaats van O(n) `elementAt`.
-
-`lib/features/mirror/mirror_gateway_backend.dart` — Markeer `useSecureApply = false` pad als dev-only via een `assert(!kReleaseMode, ...)` guard zodat het nooit stilzwijgend in productie activeert.
-
-`lib/core/providers/mirror_session_provider.dart` — Voeg `autoDispose` toe aan `mirrorSessionProvider` om geheugenaccumulatie bij meerdere unieke sessies te voorkomen. Pas corresponderende test-overrides aan.
-
-`lib/features/mirror/services/mirror_outbox_replay_service.dart` — Beperk de geserialiseerde `context.files` in `MirrorOutboxEntry` tot fingerprints/paden en haal bestanden pas op bij replay, zodat gevoelige broncode niet onnodig opgeslagen wordt.
-
-`lib/core/providers/mirror_provider.dart` — Verwijder de re-exports van `cloud_fly_backend.dart`, `mirror_compute_backend.dart` en `private_grpc_backend.dart`. Concrete implementaties horen niet publiek beschikbaar te zijn via de provider-module.
-
----
-
-**Toevoegingen (nieuwe bestanden/features met korte beschrijving)**
-
-`supabase/functions/mirror-gateway/index.ts` — Houd Mirror Gateway als thin proxy in de repository met bearer token validatie via `supabase.auth.getUser()`, request body size check (max 512 KB), route naar `/compile` of `/apply` endpoint, `x-request-id` en `x-idempotency-key` propagation en structured error responses. Dit blijft een **P1 gate** voor productie.
-
-`lib/features/mirror/mirror_editor_screen.dart` — Voeg een interne permissiecheck toe binnen `build()` als vangnet voor directe route-aanroepen:
-```dart
-final canUseMirror = ref.watch(hasPermissionProvider(AppPermissions.useMirror));
-if (!canUseMirror) {
-  return Scaffold(body: Center(child: Text(l10n.mirrorPermissionDenied)));
-}
-```
-
-`supabase/migrations/20260310_mirror_templates_updated_at_trigger.sql` — `BEFORE UPDATE` trigger op `mirror_templates` die automatisch `updated_at = NOW()` instelt bij elke wijziging.
-
-`supabase/migrations/20260310_mirror_audit_composite_index.sql` — Composite index `(user_id, project_id, task_id, created_at DESC)` op `mirror_apply_audit_events` voor queries die op alle drie kolommen filteren.
-
-`l10n/*.arb` — Voeg ontbrekende lokalisatiekeys toe: `mirrorApplyRiskAcknowledgeTitle`, `mirrorApplyRiskAcknowledgeSubtitle`, `mirrorPermissionDenied`.
-
-`lib/features/mirror/providers/mirror_templates_provider.dart` — Voeg periodieke cache-invalidatie toe via een `Timer` in `FutureProvider.autoDispose` (bijv. elke 30 minuten) zodat templates proactief worden ververst zonder app-herstart.
-
-`server/mirror-shared/proto/mirror.proto` — Consolideer de identieke proto-bestanden van local en cloud runner naar één gedeeld bestand. Definieer separate `ApplyRequest`/`ApplyResponse` types:
-```protobuf
-message ApplyRequest {
-  string prompt = 1; string project_id = 2; string task_id = 3;
-  string mode = 4; map<string, string> files = 5;
-  string metadata_json = 6; string compile_fingerprint = 7; string backup_id = 8;
-}
-message ApplyResponse {
-  bool success = 1; repeated string applied_files = 2;
-  string message = 3; repeated string errors = 4;
-}
-service MirrorComputeService {
-  rpc Compile(CompileRequest) returns (CompileResponse);
-  rpc Apply(ApplyRequest) returns (ApplyResponse);
-}
-```
-
-`.github/workflows/` of CI-configuratie — Lint-check op deprecated bucket-namen (`mirror_staging`, `mirror-staging`) en vergeet `supabase/functions/mirror-gateway/index.ts` aan te melden in deployment-CI zodat de afwezigheid van de file een build-fout geeft.
-
----
-
-**Verwijderingen (wat weg kan en waarom)**
-
-`lib/features/mirror/mirror_gateway_backend.dart` — Verwijder het `useSecureApply = false` code-pad volledig zodra de dev-only use-case is geëlimineerd. Het is een security-achteruitgang zonder productiewaarde.
-
-`lib/core/providers/mirror_provider.dart` — Verwijder `mirrorModeProvider` en `mirrorOfflineWarningProvider` als onafhankelijke `StateProvider`-instanties. Consolideer mode en offline warning volledig in `MirrorNotifier.state` en elimineer de dubbele bronnen van waarheid.
-
-`server/mirror-local-runner/proto/mirror.proto` en `server/mirror-cloud-runner/proto/mirror.proto` — Verwijder beide na consolidatie naar `server/mirror-shared/proto/mirror.proto` (zie Toevoegingen). Twee identieke proto-bestanden veroorzaken onnodige drift bij toekomstige wijzigingen.
-
-`lib/core/providers/mirror_provider.dart` export re-exports (`cloud_fly_backend.dart`, `mirror_compute_backend.dart`, `private_grpc_backend.dart`) — Verwijder de re-exports. Concrete implementaties publiceren via de provider-module doorbreekt encapsulatie en vergroot de publieke API onnodig.
-
----
-
-## Bijlage: Prioriteringsmatrix
-
-| ID | Item | Bestand | Risico | Prioriteit |
-|----|------|---------|--------|-----------|
-| W1 | ~~Lokaliseer apply_dialog Nederlandse tekst~~ | `apply_dialog.dart` | ~~Medium (i18n breuk)~~ | ✅ **Opgelost** |
-| W2 | Configureerbare TLS in PrivateGrpcBackend | `private_grpc_backend.dart` | Hoog (onversleuteld) | **P1** |
-| W6 | Verwijder DELETE op audit-tabel | SQL-migratie | Hoog (audit integrity) | **P1** |
-| T1 | Mirror Gateway in repo houden | `supabase/functions/` | Hoog (deployment drift) | **P1** |
-| T2 | Permission guard in MirrorEditorScreen | `mirror_editor_screen.dart` | Hoog (bypass risico) | **P1** |
-| W3 | Fingerprint-check in PrivateGrpcBackend.apply() | `private_grpc_backend.dart` | Hoog (TOCTOU) | **P2** |
-| W4 | Vervang `_selectedMode` met `ref.listen()` | `mirror_editor_screen.dart` | Medium (state desync) | **P2** |
-| W5 | Hersubscribeer Realtime bij reconnect | `mirror_editor_screen.dart` | Medium (stille failures) | **P2** |
-| T7 | Fix Apply proto-contract (ApplyRequest/Response) | `mirror.proto` | Medium (semantic debt) | **P2** |
-| V2 | Consolideer dubbele mirrorModeProvider | `mirror_provider.dart` | Medium (code kwaliteit) | **P3** |
-| T3 | `updated_at` trigger voor mirror_templates | SQL-migratie | Laag (data kwaliteit) | **P3** |
-| T5 | TTL op mirrorTemplatesProvider | `mirror_templates_provider.dart` | Laag (versheid) | **P3** |
-| V1 | Verwijder `useSecureApply = false` pad | `mirror_gateway_backend.dart` | Medium (security hygiene) | **P3** |
-| T6 | Composite index op audit tabel | SQL-migratie | Laag (performance) | **P3** |
-| V4 | Consolideer identieke proto-bestanden | `server/*/proto/` | Laag (drift) | **P3** |
-
-## Bijlage: Openstaande Productie-Gate Items (per 2026-03-10)
-
-Op basis van `docs/mirror-production-readiness-checklist.md` zijn de volgende items nog open en blokkeren release:
-
-1. Migration dry-run op staging — deadline 2026-03-18
-2. Rollback SQL voor alle Mirror-migraties — deadline 2026-03-20
-3. Pen-test voor signed URL leakage en replay — deadline 2026-03-24
-4. JWT rotation runbook end-to-end getest — deadline 2026-03-19
-5. Load test voor burst compile/apply traffic — deadline 2026-03-27
-6. End-to-end staging smoke tests in CI — deadline 2026-03-24
-7. Staging rollout met gecombineerde versies — deadline 2026-03-30
-8. Canary cohort 24u gemonitord — deadline 2026-03-31
-9. GDPR/DSAR procedure gevalideerd — deadline 2026-03-28
-10. Observability dashboard live — deadline 2026-03-22
-
-**Aanbeveling**: Items 1, 2, 3, 4 en 5 zijn harde pre-release gates. Zonder deze items is Mirror **niet productierijp** ondanks de sterke implementatiekwaliteit.
-
-
+- Verwijderingen (wat weg kan en waarom)
+  - `lib/features/mirror/cloud_fly_backend.dart`
+    - Verwijder of deprecate als de actieve architectuur exclusief `MirrorGatewayBackend` gebruikt voor cloudpad; voorkomt dubbele codepaden en drift.
+  - Eén van de dubbele permission-definities:
+    - `lib/core/auth/permissions.dart` of `packages/pma_core/lib/auth/permissions.dart`
+    - Houd één canonical bron aan om inconsistentie te voorkomen.
+  - Legacy/documentaire verwijzingen naar niet-canonieke bucketnamen (zoals `mirror_staging`) buiten compat-notes.
+    - Houd naming strak op `mirror-signed-inputs` en `mirror-backups` om operationele fouten te voorkomen.
