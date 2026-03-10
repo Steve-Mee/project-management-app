@@ -1,3 +1,9 @@
+## [1.28.1](https://github.com/Steve-Mee/project-management-app/compare/v1.28.0...v1.28.1) (2026-03-10)
+
+### Bug Fixes
+
+* **mirror:** lokaliseer hardcoded Nederlandse tekst in apply_dialog ([02a312f](https://github.com/Steve-Mee/project-management-app/commit/02a312f070ceeaf664cd22356333985846a091be))
+
 ## [1.28.0](https://github.com/Steve-Mee/project-management-app/compare/v1.27.0...v1.28.0) (2026-03-10)
 
 ### Features
