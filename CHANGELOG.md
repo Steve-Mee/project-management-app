@@ -1,3 +1,9 @@
+## [1.28.2](https://github.com/Steve-Mee/project-management-app/compare/v1.28.1...v1.28.2) (2026-03-10)
+
+### Bug Fixes
+
+* **mirror:** resolve provider autoDispose type mismatch and backend hardening\n\n- Update MirrorSessionNotifier to AutoDisposeFamilyNotifier for provider bound match\n- Keep mirrorSessionProvider as autoDispose.family\n- Simplify MirrorSessionState.initial construction\n- Make PrivateGrpcBackend channel credentials configurable ([a5cb7d5](https://github.com/Steve-Mee/project-management-app/commit/a5cb7d510301273937e2339b93a9e62c430eca91))
+
 ## [1.28.1](https://github.com/Steve-Mee/project-management-app/compare/v1.28.0...v1.28.1) (2026-03-10)
 
 ### Bug Fixes
