@@ -1,3 +1,4 @@
+// ARCHITECTURE LOCK: Mirror Gateway = thin proxy only. Compute always on Fly.io or local runner.
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
@@ -33,6 +34,14 @@ class CompileRunnerFileWritePolicy {
       'windows/',
       'node_modules/',
     ],
+    this.deniedPathSegments = const <String>[
+      '.git',
+      '.dart_tool',
+      '.idea',
+      '.svn',
+      '.hg',
+      '__pycache__',
+    ],
     this.deniedFileExtensions = const <String>[
       '.exe',
       '.dll',
@@ -51,13 +60,20 @@ class CompileRunnerFileWritePolicy {
       '.pdb',
       '.tmp',
     ],
+    this.maxFiles = 500,
     this.maxFileBytes = 512 * 1024,
+    this.maxWorkspaceBytes = 50 * 1024 * 1024,
+    this.maxPathBytes = 1024,
   });
 
   final List<String> allowedPathPrefixes;
   final List<String> deniedPathPrefixes;
+  final List<String> deniedPathSegments;
   final List<String> deniedFileExtensions;
+  final int maxFiles;
   final int maxFileBytes;
+  final int maxWorkspaceBytes;
+  final int maxPathBytes;
 }
 
 class CompileRunnerContractError {
@@ -146,11 +162,12 @@ class CompileRunner {
       );
     }
 
-    final writeValidation = _validateFileWritePolicy(
+    final validatedWritePlan = _validateAndBuildWritePlan(
       files: request.files,
       requestId: requestId,
     );
-    if (writeValidation != null) {
+    if (validatedWritePlan.violation != null) {
+      final writeValidation = validatedWritePlan.violation!;
       return _contractErrorResult(
         requestId: requestId,
         code: writeValidation.code,
@@ -164,7 +181,11 @@ class CompileRunner {
     );
     await workspace.create(recursive: true);
 
-    final writeResult = await _writeFiles(workspace, request.files, requestId);
+    final writeResult = await _writeFiles(
+      workspace,
+      validatedWritePlan.entries,
+      requestId,
+    );
     if (writeResult != null) {
       return _contractErrorResult(
         requestId: requestId,
@@ -282,96 +303,174 @@ class CompileRunner {
       );
   }
 
-  _FileWritePolicyViolation? _validateFileWritePolicy({
+  _ValidatedFileWritePlan _validateAndBuildWritePlan({
     required Map<String, String> files,
     required String requestId,
   }) {
+    if (files.length > fileWritePolicy.maxFiles) {
+      return _ValidatedFileWritePlan(
+        entries: const <_ValidatedFileWriteEntry>[],
+        violation: _FileWritePolicyViolation(
+          code: 'payload_too_large',
+          message: 'File count exceeds write policy limit.',
+          details: <String, Object?>{
+            'maxFiles': fileWritePolicy.maxFiles,
+            'receivedFiles': files.length,
+            'requestId': requestId,
+          },
+        ),
+      );
+    }
+
+    var workspaceBytes = 0;
+    final entries = <_ValidatedFileWriteEntry>[];
+
     for (final entry in files.entries) {
       final normalized = _normalizePath(entry.key);
       if (normalized == null) {
-        return _FileWritePolicyViolation(
-          code: 'bad_request',
-          message: 'Invalid file path; traversal or absolute paths are not allowed.',
-          details: <String, Object?>{
-            'path': entry.key,
-            'requestId': requestId,
-          },
+        return _ValidatedFileWritePlan(
+          entries: entries,
+          violation: _FileWritePolicyViolation(
+            code: 'bad_request',
+            message:
+                'Invalid file path; traversal or absolute paths are not allowed.',
+            details: <String, Object?>{
+              'path': entry.key,
+              'requestId': requestId,
+            },
+          ),
+        );
+      }
+
+      final pathBytes = utf8.encode(normalized).length;
+      if (pathBytes > fileWritePolicy.maxPathBytes) {
+        return _ValidatedFileWritePlan(
+          entries: entries,
+          violation: _FileWritePolicyViolation(
+            code: 'payload_too_large',
+            message: 'File path exceeds write policy path-byte limit.',
+            details: <String, Object?>{
+              'path': normalized,
+              'maxPathBytes': fileWritePolicy.maxPathBytes,
+              'receivedPathBytes': pathBytes,
+              'requestId': requestId,
+            },
+          ),
         );
       }
 
       if (_isDeniedPath(normalized)) {
-        return _FileWritePolicyViolation(
-          code: 'forbidden_path',
-          message: 'File path is denied by write policy.',
-          details: <String, Object?>{
-            'path': normalized,
-            'requestId': requestId,
-          },
+        return _ValidatedFileWritePlan(
+          entries: entries,
+          violation: _FileWritePolicyViolation(
+            code: 'forbidden_path',
+            message: 'File path is denied by write policy.',
+            details: <String, Object?>{
+              'path': normalized,
+              'requestId': requestId,
+            },
+          ),
+        );
+      }
+
+      if (_hasDeniedPathSegment(normalized)) {
+        return _ValidatedFileWritePlan(
+          entries: entries,
+          violation: _FileWritePolicyViolation(
+            code: 'forbidden_path',
+            message: 'File path contains denied path segment.',
+            details: <String, Object?>{
+              'path': normalized,
+              'deniedPathSegments': fileWritePolicy.deniedPathSegments,
+              'requestId': requestId,
+            },
+          ),
         );
       }
 
       if (!_isAllowedPath(normalized)) {
-        return _FileWritePolicyViolation(
-          code: 'forbidden_path',
-          message: 'File path is outside allowed write prefixes.',
-          details: <String, Object?>{
-            'path': normalized,
-            'allowedPathPrefixes': fileWritePolicy.allowedPathPrefixes,
-            'requestId': requestId,
-          },
+        return _ValidatedFileWritePlan(
+          entries: entries,
+          violation: _FileWritePolicyViolation(
+            code: 'forbidden_path',
+            message: 'File path is outside allowed write prefixes.',
+            details: <String, Object?>{
+              'path': normalized,
+              'allowedPathPrefixes': fileWritePolicy.allowedPathPrefixes,
+              'requestId': requestId,
+            },
+          ),
         );
       }
 
       if (_isDeniedFileType(normalized)) {
-        return _FileWritePolicyViolation(
-          code: 'forbidden_file_type',
-          message: 'File type is denied by write policy.',
-          details: <String, Object?>{
-            'path': normalized,
-            'deniedFileExtensions': fileWritePolicy.deniedFileExtensions,
-            'requestId': requestId,
-          },
+        return _ValidatedFileWritePlan(
+          entries: entries,
+          violation: _FileWritePolicyViolation(
+            code: 'forbidden_file_type',
+            message: 'File type is denied by write policy.',
+            details: <String, Object?>{
+              'path': normalized,
+              'deniedFileExtensions': fileWritePolicy.deniedFileExtensions,
+              'requestId': requestId,
+            },
+          ),
         );
       }
 
       final bytes = utf8.encode(entry.value).length;
       if (bytes > fileWritePolicy.maxFileBytes) {
-        return _FileWritePolicyViolation(
-          code: 'payload_too_large',
-          message: 'File content exceeds per-file size limit.',
-          details: <String, Object?>{
-            'path': normalized,
-            'maxFileBytes': fileWritePolicy.maxFileBytes,
-            'receivedBytes': bytes,
-            'requestId': requestId,
-          },
+        return _ValidatedFileWritePlan(
+          entries: entries,
+          violation: _FileWritePolicyViolation(
+            code: 'payload_too_large',
+            message: 'File content exceeds per-file size limit.',
+            details: <String, Object?>{
+              'path': normalized,
+              'maxFileBytes': fileWritePolicy.maxFileBytes,
+              'receivedBytes': bytes,
+              'requestId': requestId,
+            },
+          ),
         );
       }
+
+      workspaceBytes += pathBytes + bytes;
+      if (workspaceBytes > fileWritePolicy.maxWorkspaceBytes) {
+        return _ValidatedFileWritePlan(
+          entries: entries,
+          violation: _FileWritePolicyViolation(
+            code: 'payload_too_large',
+            message: 'Workspace payload exceeds total write policy limit.',
+            details: <String, Object?>{
+              'maxWorkspaceBytes': fileWritePolicy.maxWorkspaceBytes,
+              'receivedWorkspaceBytes': workspaceBytes,
+              'requestId': requestId,
+            },
+          ),
+        );
+      }
+
+      entries.add(
+        _ValidatedFileWriteEntry(
+          normalizedPath: normalized,
+          content: entry.value,
+        ),
+      );
     }
 
-    return null;
+    return _ValidatedFileWritePlan(entries: entries);
   }
 
   Future<_FileWritePolicyViolation?> _writeFiles(
     Directory workspace,
-    Map<String, String> files,
+    List<_ValidatedFileWriteEntry> entries,
     String requestId,
   ) async {
-    for (final entry in files.entries) {
-      final normalized = _normalizePath(entry.key);
-      if (normalized == null) {
-        return _FileWritePolicyViolation(
-          code: 'bad_request',
-          message: 'Invalid file path; traversal or absolute paths are not allowed.',
-          details: <String, Object?>{
-            'path': entry.key,
-            'requestId': requestId,
-          },
-        );
-      }
-      final target = File('${workspace.path}/$normalized');
+    for (final entry in entries) {
+      final target = File('${workspace.path}/${entry.normalizedPath}');
       await target.parent.create(recursive: true);
-      await target.writeAsString(entry.value);
+      await target.writeAsString(entry.content);
     }
     return null;
   }
@@ -416,6 +515,26 @@ class CompileRunner {
         return true;
       }
     }
+    return false;
+  }
+
+  bool _hasDeniedPathSegment(String normalizedPath) {
+    final segments = normalizedPath.split('/');
+    if (segments.isEmpty) {
+      return false;
+    }
+
+    final denied = fileWritePolicy.deniedPathSegments
+        .map((segment) => segment.trim().toLowerCase())
+        .where((segment) => segment.isNotEmpty)
+        .toSet();
+
+    for (final segment in segments) {
+      if (denied.contains(segment.toLowerCase())) {
+        return true;
+      }
+    }
+
     return false;
   }
 
@@ -507,6 +626,26 @@ class _FileWritePolicyViolation {
   final String code;
   final String message;
   final Object? details;
+}
+
+class _ValidatedFileWritePlan {
+  const _ValidatedFileWritePlan({
+    required this.entries,
+    this.violation,
+  });
+
+  final List<_ValidatedFileWriteEntry> entries;
+  final _FileWritePolicyViolation? violation;
+}
+
+class _ValidatedFileWriteEntry {
+  const _ValidatedFileWriteEntry({
+    required this.normalizedPath,
+    required this.content,
+  });
+
+  final String normalizedPath;
+  final String content;
 }
 
 class CommandResult {
