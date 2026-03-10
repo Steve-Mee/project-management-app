@@ -1,3 +1,9 @@
+## [1.30.0](https://github.com/Steve-Mee/project-management-app/compare/v1.29.1...v1.30.0) (2026-03-10)
+
+### Features
+
+* **mirror-gateway:** harden idempotency claim and finalize semantics ([dbf0972](https://github.com/Steve-Mee/project-management-app/commit/dbf097265e94f9f02f4c0c831ea509246398dcf0))
+
 ## [1.29.1](https://github.com/Steve-Mee/project-management-app/compare/v1.29.0...v1.29.1) (2026-03-10)
 
 ### Bug Fixes
