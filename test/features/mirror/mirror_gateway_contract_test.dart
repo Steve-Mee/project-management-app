@@ -1,17 +1,18 @@
+// ARCHITECTURE LOCK: Mirror Gateway = thin proxy only. Compute always on Fly.io or local runner.
 import 'dart:convert';
 import 'dart:io';
 
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:project_management_app/features/mirror/edge_function_backend.dart';
+import 'package:project_management_app/features/mirror/mirror_gateway_backend.dart';
 import 'package:project_management_app/features/mirror/mirror_compute_backend.dart';
 
 void main() {
-  group('Mirror edge function contract', () {
-    test('edge function keeps explicit compile/apply path dispatch', () {
+  group('Mirror gateway contract', () {
+    test('gateway keeps explicit compile/apply path dispatch', () {
       final source =
-          _readRepoFile('supabase/functions/mirror_compute/index.ts');
+          _readRepoFile('supabase/functions/mirror-gateway/index.ts');
 
       expect(source, contains('function resolveActionFromPath'));
       expect(source, contains("normalized.endsWith('/compile')"));
@@ -45,10 +46,10 @@ void main() {
         );
       });
 
-      final backend = EdgeFunctionBackend(
+      final backend = MirrorGatewayBackend(
         httpClient: mockClient,
         httpEndpoint:
-            'https://edge.example/functions/v1/mirror_compute/compile',
+            'https://edge.example/functions/v1/mirror-gateway/compile',
       );
 
       const context = ProjectContext(
@@ -65,7 +66,7 @@ void main() {
       );
 
       expect(capturedUri.toString(),
-          contains('/functions/v1/mirror_compute/compile'));
+          contains('/functions/v1/mirror-gateway/compile'));
       expect(
           capturedAuth == null || capturedAuth!.startsWith('Bearer '), isTrue);
       expect(capturedBody?['prompt'], 'compile this');
@@ -86,10 +87,10 @@ void main() {
         return http.Response('denied', 403);
       });
 
-      final backend = EdgeFunctionBackend(
+      final backend = MirrorGatewayBackend(
         httpClient: mockClient,
         httpEndpoint:
-            'https://edge.example/functions/v1/mirror_compute/compile',
+            'https://edge.example/functions/v1/mirror-gateway/compile',
       );
 
       const context = ProjectContext(projectId: 'p', taskId: 't');
@@ -119,10 +120,10 @@ void main() {
         );
       });
 
-      final backend = EdgeFunctionBackend(
+      final backend = MirrorGatewayBackend(
         httpClient: mockClient,
         applyHttpEndpoint:
-            'https://edge.example/functions/v1/mirror_compute/apply',
+            'https://edge.example/functions/v1/mirror-gateway/apply',
         useSecureApply: false,
       );
 
@@ -139,7 +140,7 @@ void main() {
       );
 
       expect(capturedUri.toString(),
-          contains('/functions/v1/mirror_compute/apply'));
+          contains('/functions/v1/mirror-gateway/apply'));
       expect(capturedBody?['prompt'], 'apply this change');
       expect(capturedBody?['projectId'], 'project-1');
       expect(capturedBody?['taskId'], 'task-1');
@@ -154,10 +155,10 @@ void main() {
         return http.Response('upstream down', 502);
       });
 
-      final backend = EdgeFunctionBackend(
+      final backend = MirrorGatewayBackend(
         httpClient: mockClient,
         applyHttpEndpoint:
-            'https://edge.example/functions/v1/mirror_compute/apply',
+            'https://edge.example/functions/v1/mirror-gateway/apply',
         useSecureApply: false,
       );
 
@@ -178,19 +179,19 @@ void main() {
       expect(result.message ?? '', contains('upstream down'));
     });
 
-    test('apply route contract is explicit in edge + flutter backend wiring',
+    test('apply route contract is explicit in gateway + flutter backend wiring',
         () {
-      final edgeSource =
-          _readRepoFile('supabase/functions/mirror_compute/index.ts');
+      final gatewaySource =
+          _readRepoFile('supabase/functions/mirror-gateway/index.ts');
       final flutterSource =
-          _readRepoFile('lib/features/mirror/edge_function_backend.dart');
+          _readRepoFile('lib/features/mirror/mirror_gateway_backend.dart');
 
-      expect(edgeSource, contains('resolveActionFromPath'));
-      expect(edgeSource, contains("normalized.endsWith('/apply')"));
-      expect(edgeSource,
+      expect(gatewaySource, contains('resolveActionFromPath'));
+      expect(gatewaySource, contains("normalized.endsWith('/apply')"));
+      expect(gatewaySource,
           contains('resolveForwardEndpoint(normalized.mode, action)'));
 
-      expect(flutterSource, contains('/functions/v1/mirror_compute/apply'));
+      expect(flutterSource, contains('/functions/v1/mirror-gateway/apply'));
       expect(flutterSource, contains('applyHttpEndpoint'));
       expect(flutterSource, contains('supabase_url_missing'));
     });
@@ -220,3 +221,5 @@ String _readRepoFile(String relativePath) {
 
   throw StateError('Unable to locate file for contract test: $relativePath');
 }
+
+

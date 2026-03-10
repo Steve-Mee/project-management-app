@@ -1,3 +1,4 @@
+// ARCHITECTURE LOCK: Mirror Gateway = thin proxy only. Compute always on Fly.io or local runner.
 # Mirror Production Readiness Checklist
 
 Status legend:
@@ -12,7 +13,7 @@ Status legend:
 - [x] Supabase bootstrap SQL no longer owns Mirror schema.
 - [x] Mirror schema changes live in versioned migrations only.
 - [ ] ADR for Mirror data ownership is linked from architecture docs. (Owner: Platform Architecture, Deadline: 2026-03-21)
-- [x] Service boundaries documented for Edge Function vs runners.
+- [x] Service boundaries documented for Mirror Gateway (thin proxy only) vs runners.
 
 ## 2. Database And Migrations
 
@@ -25,7 +26,7 @@ Status legend:
 
 ## 3. Security, Auth, And RLS
 
-- [x] Edge Function enforces bearer auth and request idempotency.
+- [x] Mirror Gateway enforces bearer auth and request idempotency.
 - [x] Request body size guard enforced (max 512KB).
 - [x] Apply payload normalization enforced for actor/artifact fields.
 - [x] Storage policies restrict signed input/backup object access to owner path.
@@ -60,7 +61,7 @@ Status legend:
 
 ## 7. Test Coverage
 
-- [x] Mirror edge contract tests exist for compile/apply pathing.
+- [x] Mirror gateway contract tests exist for compile/apply pathing.
 - [x] Apply flow contract test added.
 - [x] Premium precedence integration tests added (metadata vs subscriptions).
 - [ ] Golden/widget tests for templates gallery DB-empty and DB-populated states. (Owner: QA Automation, Deadline: 2026-03-20)

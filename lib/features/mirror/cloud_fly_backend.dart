@@ -1,3 +1,4 @@
+// ARCHITECTURE LOCK: Mirror Gateway = thin proxy only. Compute always on Fly.io or local runner.
 import 'dart:async';
 import 'dart:convert';
 
@@ -5,7 +6,7 @@ import 'package:http/http.dart' as http;
 
 import '../../core/services/mirror_premium_service.dart';
 
-import 'edge_function_backend.dart';
+import 'mirror_gateway_backend.dart';
 import 'mirror_compute_backend.dart';
 
 class CloudFlyBackend implements MirrorComputeBackend {
@@ -35,7 +36,7 @@ class CloudFlyBackend implements MirrorComputeBackend {
 
   bool get supportsApply {
     try {
-      EdgeFunctionBackend.resolveApplyEndpoint(
+      MirrorGatewayBackend.resolveApplyEndpoint(
         compileHttpEndpoint: httpEndpoint,
       );
       return true;
@@ -334,13 +335,13 @@ class CloudFlyBackend implements MirrorComputeBackend {
       );
     }
 
-    return EdgeFunctionBackend.resolveApplyEndpoint(
+    return MirrorGatewayBackend.resolveApplyEndpoint(
       compileHttpEndpoint: httpEndpoint,
     );
   }
 
   String _requireCompileEndpoint() {
-    return EdgeFunctionBackend.resolveCompileEndpoint(
+    return MirrorGatewayBackend.resolveCompileEndpoint(
       httpEndpoint: httpEndpoint,
     );
   }
@@ -445,3 +446,5 @@ class _RawHttpResult {
   final String? body;
   final List<String> errors;
 }
+
+

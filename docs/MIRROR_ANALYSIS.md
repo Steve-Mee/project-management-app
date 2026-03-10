@@ -1,3 +1,4 @@
+// ARCHITECTURE LOCK: Mirror Gateway = thin proxy only. Compute always on Fly.io or local runner.
 # Mirror Feature — Diepgaande Architectuur- en Code Review Analyse
 
 **Datum:** 2026-03-10  
@@ -11,7 +12,7 @@
 
 **Sterke punten**
 
-- **Clean Architecture**: Harde scheiding tussen `MirrorComputeBackend` (abstracte contract), concrete backends (`EdgeFunctionBackend`, `CloudFlyBackend`, `PrivateGrpcBackend`) en de UI-laag. Providers delegeren correct naar services.
+- **Clean Architecture**: Harde scheiding tussen `MirrorComputeBackend` (abstracte contract), concrete backends (`MirrorGatewayBackend`, `CloudFlyBackend`, `PrivateGrpcBackend`) en de UI-laag. Providers delegeren correct naar services.
 - **Uitstekende Offline-First**: `_MirrorOfflineCache`, `MirrorOutboxReplayService`, Hive-boxen voor mode-persistentie, fallback-varianten bij AB-test timeout — allemaal correct geïmplementeerd met exponential backoff.
 - **Sterke Security-laag**: Owner-prefixed storage paths (`<auth.uid>/<projectId>/...`), RLS op elke tabel, private buckets, fingerprint-checks bij apply, `ApplySecurityArtifacts` flow voor backup/signed-input staging.
 - **Gedifferentieerde Auth-checks**: `MirrorAccessPolicy` is een pure, testbare klasse zonder framework-afhankelijkheden. `MirrorPremiumService` heeft in-flight deduplicatie, TTL-cache (5 min) én metadata-fallback.
@@ -28,13 +29,13 @@
 - ~~**Hardcoded Nederlandse tekst in `apply_dialog.dart`**~~: ✅ **Opgelost** — `AppLocalizations` import toegevoegd, beide strings vervangen door `mirrorApplyRiskAcknowledgeTitle` en `mirrorApplyRiskAcknowledgeSubtitle` ARB-keys; alle 13 locales bijgewerkt.
 - **`PrivateGrpcBackend` gebruikt `ChannelCredentials.insecure()`**: TLS uitgeschakeld voor alle omgevingen — acceptabel voor localhost dev, maar actief beveiligingsrisico bij Docker/productie.
 - **Proto-contract semantisch onjuist**: `Apply(CompileRequest) returns (CompileResponse)` — Apply is een distincte operatie. Hetzelfde type als Compile blokkeert toekomstige apply-specifieke velden en wekt verwarring.
-- **`EdgeFunctionBackend` wordt nooit geselecteerd via `mirrorBackendProvider`**: Volledig geïmplementeerd maar niet aangesloten op de provider-routing — onduidelijk gebruik.
+- **`MirrorGatewayBackend` wordt nooit geselecteerd via `mirrorBackendProvider`**: Volledig geïmplementeerd maar niet aangesloten op de provider-routing — onduidelijk gebruik.
 - **Dubbele modus-state**: `_selectedMode` (lokale Widget state) en `mirrorProvider.state.mode` (Riverpod) worden handmatig gesynchroniseerd via een `if`-check in `build()`. Fragiel en risico op desync.
 - **`MirrorOutboxEntry` slaat broncode op in Hive onbeperkt**: Volledige `context.files` geserialiseerd in outbox — security- en opslagrisico bij grote of gevoelige sessies.
 - **`mirrorTemplatesProvider` heeft geen TTL of refresh-strategie**: Enkel `FutureProvider` zonder keepAlive of periodieke invalidatie.
 - **Geen client-side rate limiting op generate/compile/apply**: UI blokkeert de knop tijdens een actieve run maar beschermt niet tegen parallelle instanties of snelle navigatieopeenvolging.
 - **`MirrorEditorScreen` abonneert niet opnieuw na Supabase reconnect**: Kanaal wordt niet opnieuw gesubscribed bij verbindingsherstel.
-- **`supabase/functions/mirror_compute/` ontbreekt in de repository**: Vermeld in docs maar niet aanwezig — risico op deployment-drift.
+- **`supabase/functions/mirror-gateway/` ontbreekt in de repository**: Vermeld in docs maar niet aanwezig — risico op deployment-drift.
 - **Significante hoeveelheid openstaand productie-readiness werk**: Pen-test, staging rollout, load test, canary, JWT-rotation runbook, GDPR/DSAR — allemaal nog open.
 
 **Overall score (1-10): 7.2 / 10**
@@ -63,14 +64,14 @@ Aandachtspunten:
 
 **Edge Functions & gRPC backend laag**
 
-`EdgeFunctionBackend` heeft correcte retrylogica met exponential backoff, aparte compile/apply endpoint routing, en fingerprint-verificatie. `CloudFlyBackend` voert dubbele premium-check uit per aanroep — defensief juist. `secureApply()` extension coördineert de volledige security-artifact lifecycle op herbruikbare wijze. `computeCompileResultFingerprint()` sorteert file-entries voor de hash — deterministisch bij volgorde-variaties. `persistApplyToHive()` heeft expliciete budgetlimieten: max 50 files, 100k chars, 40 history entries.
+`MirrorGatewayBackend` heeft correcte retrylogica met exponential backoff, aparte compile/apply endpoint routing, en fingerprint-verificatie. `CloudFlyBackend` voert dubbele premium-check uit per aanroep — defensief juist. `secureApply()` extension coördineert de volledige security-artifact lifecycle op herbruikbare wijze. `computeCompileResultFingerprint()` sorteert file-entries voor de hash — deterministisch bij volgorde-variaties. `persistApplyToHive()` heeft expliciete budgetlimieten: max 50 files, 100k chars, 40 history entries.
 
 Aandachtspunten:
 - `PrivateGrpcBackend` serialiseert naar `utf8.encode(jsonEncode(...))` en stuurt ruwe bytes — JSON-over-raw-bytes in plaats van echte protobuf marshaling. Het proto-bestand is documentatieartifact zonder runtime enforcement.
-- `PrivateGrpcBackend.apply()` negeert het `compileFingerprint` argument — de fingerprint-check die in `EdgeFunctionBackend` aanwezig is, ontbreekt hier volledig.
+- `PrivateGrpcBackend.apply()` negeert het `compileFingerprint` argument — de fingerprint-check die in `MirrorGatewayBackend` aanwezig is, ontbreekt hier volledig.
 - `ChannelCredentials.insecure()` hardcoded voor alle omgevingen. In Docker/Fly.io-scenario geeft dit onversleuteld verkeer.
-- `EdgeFunctionBackend.apply()` heeft een `useSecureApply = false` pad — apply zonder security artifacts. De flag heeft default `true` maar een misconfiguratie kan stille achteruitgang veroorzaken zonder productie-guard.
-- `EdgeFunctionBackend` wordt nooit geselecteerd via `mirrorBackendProvider` in `mirror_provider.dart` — de provider kiest altijd `CloudFlyBackend` of `PrivateGrpcBackend`.
+- `MirrorGatewayBackend.apply()` heeft een `useSecureApply = false` pad — apply zonder security artifacts. De flag heeft default `true` maar een misconfiguratie kan stille achteruitgang veroorzaken zonder productie-guard.
+- `MirrorGatewayBackend` wordt nooit geselecteerd via `mirrorBackendProvider` in `mirror_provider.dart` — de provider kiest altijd `CloudFlyBackend` of `PrivateGrpcBackend`.
 - `CloudFlyBackend.apply()` doet een dubbele compile-aanroep (preflight + apply) — verdubbelt compute-kosten per apply.
 
 ---
@@ -148,7 +149,7 @@ Aandachtspunten:
 
 `lib/features/mirror/private_grpc_backend.dart` — Maak TLS credentials configureerbaar door een `ChannelCredentials credentials` constructor-parameter toe te voegen die standaard `ChannelCredentials.insecure()` is maar overschrijfbaar voor productie-deployments.
 
-`lib/features/mirror/private_grpc_backend.dart` — Voeg fingerprint-check toe in `apply()` analoog aan `EdgeFunctionBackend.apply()`: vergelijk `compileFingerprint` met de actuele fingerprint van de compile-aanroep vóór toepassing.
+`lib/features/mirror/private_grpc_backend.dart` — Voeg fingerprint-check toe in `apply()` analoog aan `MirrorGatewayBackend.apply()`: vergelijk `compileFingerprint` met de actuele fingerprint van de compile-aanroep vóór toepassing.
 
 `lib/features/mirror/mirror_editor_screen.dart` — Vervang `_selectedMode` lokale variabele en de `if (_selectedMode != mirrorState.mode)` check in `build()` door een `ref.listen<MirrorState>(mirrorProvider, ...)` in `initState()` zodat mode-updates via een side-effect worden verwerkt.
 
@@ -158,7 +159,7 @@ Aandachtspunten:
 
 `lib/features/mirror/mirror_editor_screen.dart` — Cache `sessionState.files.keys.toList()` buiten de `ListView.builder` itemBuilder voor O(1) indexering in plaats van O(n) `elementAt`.
 
-`lib/features/mirror/edge_function_backend.dart` — Markeer `useSecureApply = false` pad als dev-only via een `assert(!kReleaseMode, ...)` guard zodat het nooit stilzwijgend in productie activeert.
+`lib/features/mirror/mirror_gateway_backend.dart` — Markeer `useSecureApply = false` pad als dev-only via een `assert(!kReleaseMode, ...)` guard zodat het nooit stilzwijgend in productie activeert.
 
 `lib/core/providers/mirror_session_provider.dart` — Voeg `autoDispose` toe aan `mirrorSessionProvider` om geheugenaccumulatie bij meerdere unieke sessies te voorkomen. Pas corresponderende test-overrides aan.
 
@@ -170,7 +171,7 @@ Aandachtspunten:
 
 **Toevoegingen (nieuwe bestanden/features met korte beschrijving)**
 
-`supabase/functions/mirror_compute/index.ts` — Voeg de Edge Function toe aan de repository (momenteel gedocumenteerd maar afwezig). Minimale implementatie: bearer token validatie via `supabase.auth.getUser()`, request body size check (max 512 KB), route naar `/compile` of `/apply` endpoint, `x-request-id` en `x-idempotency-key` propagation, structured error responses. Dit is een **P1 blocker** voor productie.
+`supabase/functions/mirror-gateway/index.ts` — Voeg de Edge Function toe aan de repository (momenteel gedocumenteerd maar afwezig). Minimale implementatie: bearer token validatie via `supabase.auth.getUser()`, request body size check (max 512 KB), route naar `/compile` of `/apply` endpoint, `x-request-id` en `x-idempotency-key` propagation, structured error responses. Dit is een **P1 blocker** voor productie.
 
 `lib/features/mirror/mirror_editor_screen.dart` — Voeg een interne permissiecheck toe binnen `build()` als vangnet voor directe route-aanroepen:
 ```dart
@@ -205,13 +206,13 @@ service MirrorComputeService {
 }
 ```
 
-`.github/workflows/` of CI-configuratie — Lint-check op deprecated bucket-namen (`mirror_staging`, `mirror-staging`) en vergeet `supabase/functions/mirror_compute/index.ts` aan te melden in deployment-CI zodat de afwezigheid van de file een build-fout geeft.
+`.github/workflows/` of CI-configuratie — Lint-check op deprecated bucket-namen (`mirror_staging`, `mirror-staging`) en vergeet `supabase/functions/mirror-gateway/index.ts` aan te melden in deployment-CI zodat de afwezigheid van de file een build-fout geeft.
 
 ---
 
 **Verwijderingen (wat weg kan en waarom)**
 
-`lib/features/mirror/edge_function_backend.dart` — Verwijder het `useSecureApply = false` code-pad volledig zodra de dev-only use-case is geëlimineerd. Het is een security-achteruitgang zonder productiewaarde.
+`lib/features/mirror/mirror_gateway_backend.dart` — Verwijder het `useSecureApply = false` code-pad volledig zodra de dev-only use-case is geëlimineerd. Het is een security-achteruitgang zonder productiewaarde.
 
 `lib/core/providers/mirror_provider.dart` — Verwijder `mirrorModeProvider` en `mirrorOfflineWarningProvider` als onafhankelijke `StateProvider`-instanties. Consolideer mode en offline warning volledig in `MirrorNotifier.state` en elimineer de dubbele bronnen van waarheid.
 
@@ -237,7 +238,7 @@ service MirrorComputeService {
 | V2 | Consolideer dubbele mirrorModeProvider | `mirror_provider.dart` | Medium (code kwaliteit) | **P3** |
 | T3 | `updated_at` trigger voor mirror_templates | SQL-migratie | Laag (data kwaliteit) | **P3** |
 | T5 | TTL op mirrorTemplatesProvider | `mirror_templates_provider.dart` | Laag (versheid) | **P3** |
-| V1 | Verwijder `useSecureApply = false` pad | `edge_function_backend.dart` | Medium (security hygiene) | **P3** |
+| V1 | Verwijder `useSecureApply = false` pad | `mirror_gateway_backend.dart` | Medium (security hygiene) | **P3** |
 | T6 | Composite index op audit tabel | SQL-migratie | Laag (performance) | **P3** |
 | V4 | Consolideer identieke proto-bestanden | `server/*/proto/` | Laag (drift) | **P3** |
 
@@ -257,3 +258,5 @@ Op basis van `docs/mirror-production-readiness-checklist.md` zijn de volgende it
 10. Observability dashboard live — deadline 2026-03-22
 
 **Aanbeveling**: Items 1, 2, 3, 4 en 5 zijn harde pre-release gates. Zonder deze items is Mirror **niet productierijp** ondanks de sterke implementatiekwaliteit.
+
+

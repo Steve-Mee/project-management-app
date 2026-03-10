@@ -1,3 +1,4 @@
+// ARCHITECTURE LOCK: Mirror Gateway = thin proxy only. Compute always on Fly.io or local runner.
 # Mirror Architecture
 
 ## Purpose
@@ -11,7 +12,7 @@ The architecture in this document covers:
 - Mirror Editor UI (`MirrorEditorScreen`)
 - Mirror state and backend selection (`mirrorProvider`, `mirrorBackendProvider`)
 - Compute backend contract (`MirrorComputeBackend`) and concrete backends
-- Supabase Edge Function routing (`mirror_compute`)
+- Mirror Gateway routing (`mirror-gateway`, thin proxy only)
 - Runner execution service (cloud/local runner)
 - Storage and session persistence (`ai_sessions`, `mirror-signed-inputs`, `mirror-backups`)
 
@@ -39,15 +40,15 @@ The architecture in this document covers:
 - Contract: `lib/features/mirror/mirror_compute_backend.dart`
 - Implementations:
 - `cloud_fly_backend.dart`
-- `edge_function_backend.dart`
+- `mirror_gateway_backend.dart`
 - `private_grpc_backend.dart`
 - Responsibilities:
 - Normalize compile/apply requests
 - Perform retries/error mapping
 - Handle patch/apply/backup helpers where applicable
 
-### Edge Layer
-- Function: `supabase/functions/mirror_compute/index.ts`
+### Gateway Layer
+- Function: `supabase/functions/mirror-gateway/index.ts`
 - Responsibilities:
 - Validate request/auth context
 - Forward compile/apply requests to runner endpoint
@@ -105,7 +106,7 @@ sequenceDiagram
     participant UI as MirrorEditorScreen (UI)
     participant Provider as Mirror Provider/Bridge
     participant Backend as MirrorComputeBackend
-    participant Edge as Supabase Edge Function
+    participant Gateway as Mirror Gateway (thin proxy)
     participant Runner as Mirror Runner
     participant Storage as DB + Storage
 
@@ -118,19 +119,19 @@ sequenceDiagram
     Provider-->>UI: Updated mirror state
 
     UI->>Backend: compile(request)
-    Backend->>Edge: POST /compile (normalized payload)
-    Edge->>Runner: Forward compile request
+    Backend->>Gateway: POST /compile (normalized payload)
+    Gateway->>Runner: Forward compile request
     Runner->>Storage: Read/write signed-input and backup artifacts
-    Runner-->>Edge: Compile result + diagnostics
-    Edge-->>Backend: Structured response/error
+    Runner-->>Gateway: Compile result + diagnostics
+    Gateway-->>Backend: Structured response/error
     Backend-->>UI: Compile output for editor/live panel
 
     UI->>Backend: apply(request)
-    Backend->>Edge: POST /apply
-    Edge->>Runner: Forward apply request
+    Backend->>Gateway: POST /apply
+    Gateway->>Runner: Forward apply request
     Runner->>Storage: Persist backups + applied artifacts
-    Runner-->>Edge: Apply status
-    Edge-->>Backend: Structured response
+    Runner-->>Gateway: Apply status
+    Gateway-->>Backend: Structured response
     Backend-->>UI: Apply complete + refresh state
 
     Runner->>Storage: Update ai_sessions versions/status
@@ -140,29 +141,31 @@ sequenceDiagram
 ## Control Flow Notes
 - Mode control is provider-first. UI reflects provider state; provider enforces policy.
 - Cloud mode must pass premium checks before backend selection remains cloud.
-- Backend classes abstract transport details, so UI does not depend on edge/runner protocol changes.
+- Backend classes abstract transport details, so UI does not depend on gateway/runner protocol changes.
 - Realtime output is session-driven and should remain capped client-side to avoid unbounded UI memory.
 
 ## Reliability and Safety
-- Use retries with bounded backoff for transient edge/runner failures.
-- Return typed/structured errors from edge and backend to keep UI decisions deterministic.
+- Use retries with bounded backoff for transient gateway/runner failures.
+- Return typed/structured errors from gateway and backend to keep UI decisions deterministic.
 - Fail closed on missing critical runner secrets.
 - Keep artifact cleanup/lifecycle jobs active to avoid storage growth.
 
 ## Security Boundaries
-- UI does not decide authorization; provider/backend/edge must enforce it.
-- Edge validates auth context and forwards only authorized requests.
+- UI does not decide authorization; provider/backend/gateway must enforce it.
+- Mirror Gateway validates auth context and forwards only authorized requests.
 - Storage access is policy-protected (owner-scoped paths and RLS).
 - Premium entitlement should have a single source of truth across provider/backend selection.
 
 ## Extension Points
 - Add additional modes (for example `team`) by extending provider mode policy and backend mapping.
 - Add richer diff/apply strategies in backend contract without changing UI entry points.
-- Add telemetry hooks at provider/backend/edge boundaries for latency and failure analysis.
+- Add telemetry hooks at provider/backend/gateway boundaries for latency and failure analysis.
 
 ## Operational Checklist
-- Confirm edge endpoint contract matches active backend implementation.
+- Confirm Mirror Gateway endpoint contract matches active backend implementation.
 - Confirm runner environment secrets are set and no insecure defaults are used.
 - Confirm canonical storage buckets and policies exist for `mirror-signed-inputs` and `mirror-backups`.
 - Confirm realtime update filters include project/task scope.
 - Confirm test coverage includes premium gating, mode switching, and output capping.
+
+

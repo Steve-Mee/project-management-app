@@ -1,3 +1,4 @@
+// ARCHITECTURE LOCK: Mirror Gateway = thin proxy only. Compute always on Fly.io or local runner.
 library;
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -70,3 +71,4 @@ final aiChatBridgeProvider =
     NotifierProvider<AiChatBridgeNotifier, MirrorLaunchPayload?>(
   AiChatBridgeNotifier.new,
 );
+

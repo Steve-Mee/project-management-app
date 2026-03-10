@@ -1,10 +1,11 @@
+// ARCHITECTURE LOCK: Mirror Gateway = thin proxy only. Compute always on Fly.io or local runner.
 import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
-import 'package:project_management_app/features/mirror/edge_function_backend.dart';
+import 'package:project_management_app/features/mirror/mirror_gateway_backend.dart';
 import 'package:project_management_app/features/mirror/mirror_compute_backend.dart';
 
 void main() {
@@ -38,10 +39,10 @@ void main() {
         );
       });
 
-      final backend = EdgeFunctionBackend(
+      final backend = MirrorGatewayBackend(
         httpClient: mockClient,
         applyHttpEndpoint:
-            'https://edge.example/functions/v1/mirror_compute/apply',
+            'https://edge.example/functions/v1/mirror-gateway/apply',
         useSecureApply: false,
       );
 
@@ -63,7 +64,7 @@ void main() {
       );
 
       expect(capturedUri.toString(),
-          contains('/functions/v1/mirror_compute/apply'));
+          contains('/functions/v1/mirror-gateway/apply'));
       expect(capturedBody?['prompt'], 'apply patch');
       expect(capturedBody?['projectId'], 'project-7');
       expect(capturedBody?['taskId'], 'task-42');
@@ -123,3 +124,5 @@ String _readRepoFile(String relativePath) {
 
   throw StateError('Unable to locate file for contract test: $relativePath');
 }
+
+

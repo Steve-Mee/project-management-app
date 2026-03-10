@@ -1,3 +1,4 @@
+// ARCHITECTURE LOCK: Mirror Gateway = thin proxy only. Compute always on Fly.io or local runner.
 library;
 
 import 'dart:async';
@@ -10,12 +11,12 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../ab_testing_service.dart';
 import '../services/mirror_premium_service.dart';
-import '../../features/mirror/cloud_fly_backend.dart';
 import '../../features/mirror/mirror_compute_backend.dart';
+import '../../features/mirror/mirror_gateway_backend.dart';
 import '../../features/mirror/private_grpc_backend.dart';
 
-export '../../features/mirror/cloud_fly_backend.dart';
 export '../../features/mirror/mirror_compute_backend.dart';
+export '../../features/mirror/mirror_gateway_backend.dart';
 export '../../features/mirror/private_grpc_backend.dart';
 
 class MirrorState {
@@ -128,9 +129,14 @@ final mirrorRunnerModeVariantProvider = FutureProvider<String>((ref) async {
   }
 });
 
+final mirrorGatewayBackendProvider = Provider<MirrorGatewayBackend>((ref) {
+  return MirrorGatewayBackend(
+    client: Supabase.instance.client,
+  );
+});
+
 final mirrorBackendProvider = FutureProvider<MirrorComputeBackend>((ref) async {
   final mode = ref.watch(mirrorModeProvider);
-  final premiumService = ref.watch(mirrorPremiumServiceProvider);
   final isPremium = await ref.watch(mirrorPremiumProvider.future);
   final runnerModeVariant =
       await ref.watch(mirrorRunnerModeVariantProvider.future);
@@ -142,11 +148,7 @@ final mirrorBackendProvider = FutureProvider<MirrorComputeBackend>((ref) async {
   );
 
   if (decision.effectiveMode == 'cloud' && isPremium) {
-    return CloudFlyBackend(
-      premiumService: premiumService,
-      accessTokenProvider: () =>
-          Supabase.instance.client.auth.currentSession?.accessToken,
-    );
+    return ref.watch(mirrorGatewayBackendProvider);
   }
 
   return PrivateGrpcBackend();
@@ -445,3 +447,5 @@ class _CacheEnvelope {
     return raw is T ? raw : null;
   }
 }
+
+

@@ -1,3 +1,4 @@
+// ARCHITECTURE LOCK: Mirror Gateway = thin proxy only. Compute always on Fly.io or local runner.
 import 'dart:async';
 import 'dart:convert';
 
@@ -8,8 +9,8 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../core/config/app_config.dart';
 import 'mirror_compute_backend.dart';
 
-class EdgeFunctionBackend implements MirrorComputeBackend {
-  EdgeFunctionBackend({
+class MirrorGatewayBackend implements MirrorComputeBackend {
+  MirrorGatewayBackend({
     SupabaseClient? client,
     http.Client? httpClient,
     this.httpEndpoint,
@@ -259,7 +260,7 @@ class EdgeFunctionBackend implements MirrorComputeBackend {
         prompt: prompt,
         patches: patches,
         artifacts: artifacts,
-        backend: 'edge_function',
+        backend: 'mirror_gateway',
         updatedFiles: updatedFiles,
       );
     }
@@ -334,12 +335,12 @@ class EdgeFunctionBackend implements MirrorComputeBackend {
         }
 
         final code = response.statusCode == 401 || response.statusCode == 403
-            ? _MirrorEdgeHttpErrorCode.unauthorized
-            : response.statusCode == 429
-                ? _MirrorEdgeHttpErrorCode.rateLimited
-                : response.statusCode >= 500
-                    ? _MirrorEdgeHttpErrorCode.server
-                    : _MirrorEdgeHttpErrorCode.badRequest;
+          ? _MirrorGatewayHttpErrorCode.unauthorized
+          : response.statusCode == 429
+            ? _MirrorGatewayHttpErrorCode.rateLimited
+            : response.statusCode >= 500
+              ? _MirrorGatewayHttpErrorCode.server
+              : _MirrorGatewayHttpErrorCode.badRequest;
 
         return CompileResult(
           success: false,
@@ -357,7 +358,7 @@ class EdgeFunctionBackend implements MirrorComputeBackend {
 
         return const CompileResult(
           success: false,
-          errors: <String>['timeout: Edge HTTP /compile request timed out.'],
+          errors: <String>['timeout: Mirror Gateway HTTP /compile request timed out.'],
         );
       } catch (error) {
         if (attempt <= maxRetries) {
@@ -374,7 +375,7 @@ class EdgeFunctionBackend implements MirrorComputeBackend {
     }
   }
 
-  Future<_RawEdgeResult> _postRaw({
+  Future<_RawGatewayResult> _postRaw({
     required String endpoint,
     required String prompt,
     required ProjectContext context,
@@ -412,7 +413,7 @@ class EdgeFunctionBackend implements MirrorComputeBackend {
 
         final bodyText = response.body;
         if (response.statusCode >= 200 && response.statusCode < 300) {
-          return _RawEdgeResult(success: true, body: bodyText);
+          return _RawGatewayResult(success: true, body: bodyText);
         }
 
         final retriable = response.statusCode == 408 ||
@@ -425,14 +426,14 @@ class EdgeFunctionBackend implements MirrorComputeBackend {
         }
 
         final code = response.statusCode == 401 || response.statusCode == 403
-            ? _MirrorEdgeHttpErrorCode.unauthorized
-            : response.statusCode == 429
-                ? _MirrorEdgeHttpErrorCode.rateLimited
-                : response.statusCode >= 500
-                    ? _MirrorEdgeHttpErrorCode.server
-                    : _MirrorEdgeHttpErrorCode.badRequest;
+          ? _MirrorGatewayHttpErrorCode.unauthorized
+          : response.statusCode == 429
+            ? _MirrorGatewayHttpErrorCode.rateLimited
+            : response.statusCode >= 500
+              ? _MirrorGatewayHttpErrorCode.server
+              : _MirrorGatewayHttpErrorCode.badRequest;
 
-        return _RawEdgeResult(
+        return _RawGatewayResult(
           success: false,
           errors: <String>[
             '${code.value}: HTTP ${response.statusCode}',
@@ -445,9 +446,9 @@ class EdgeFunctionBackend implements MirrorComputeBackend {
           backoff *= 2;
           continue;
         }
-        return const _RawEdgeResult(
+        return const _RawGatewayResult(
           success: false,
-          errors: <String>['timeout: Edge HTTP /apply request timed out.'],
+          errors: <String>['timeout: Mirror Gateway HTTP /apply request timed out.'],
         );
       } catch (error) {
         if (attempt <= maxRetries) {
@@ -455,7 +456,7 @@ class EdgeFunctionBackend implements MirrorComputeBackend {
           backoff *= 2;
           continue;
         }
-        return _RawEdgeResult(
+        return _RawGatewayResult(
           success: false,
           errors: <String>['network: ${error.toString()}'],
         );
@@ -497,7 +498,7 @@ class EdgeFunctionBackend implements MirrorComputeBackend {
     }
 
     final base = _requireSupabaseBaseUrl();
-    return '$base/functions/v1/mirror_compute/compile';
+    return '$base/functions/v1/mirror-gateway/compile';
   }
 
   static String resolveApplyEndpoint({
@@ -526,14 +527,14 @@ class EdgeFunctionBackend implements MirrorComputeBackend {
 
   static String _defaultApplyEndpoint() {
     final base = _requireSupabaseBaseUrl();
-    return '$base/functions/v1/mirror_compute/apply';
+    return '$base/functions/v1/mirror-gateway/apply';
   }
 
   static String _requireSupabaseBaseUrl() {
     final configured = AppConfig.supabaseUrl?.trim();
     if (configured == null || configured.isEmpty) {
       throw StateError(
-        'supabase_url_missing: Set AppConfig.supabaseUrl or provide explicit EdgeFunctionBackend endpoints.',
+        'supabase_url_missing: Set AppConfig.supabaseUrl or provide explicit MirrorGatewayBackend endpoints.',
       );
     }
     return configured;
@@ -552,19 +553,19 @@ class EdgeFunctionBackend implements MirrorComputeBackend {
   }
 }
 
-enum _MirrorEdgeHttpErrorCode {
+enum _MirrorGatewayHttpErrorCode {
   unauthorized('unauthorized'),
   rateLimited('rate_limited'),
   badRequest('bad_request'),
   server('server_error');
 
-  const _MirrorEdgeHttpErrorCode(this.value);
+  const _MirrorGatewayHttpErrorCode(this.value);
 
   final String value;
 }
 
-class _RawEdgeResult {
-  const _RawEdgeResult({
+class _RawGatewayResult {
+  const _RawGatewayResult({
     required this.success,
     this.body,
     this.errors = const <String>[],
@@ -587,3 +588,5 @@ String _fingerprintFileMap(Map<String, String> files) {
   }
   return sha256.convert(utf8.encode(buffer.toString())).toString();
 }
+
+

@@ -1,7 +1,8 @@
+// ARCHITECTURE LOCK: Mirror Gateway = thin proxy only. Compute always on Fly.io or local runner.
 # Mirror Threat Model
 
 ## Purpose
-Mirror processes user-authenticated compile/apply requests and temporary artifacts across client, edge, runner, and storage layers.
+Mirror processes user-authenticated compile/apply requests and temporary artifacts across client, Mirror Gateway, runner, and storage layers.
 
 This document identifies high-risk threat scenarios and defines required controls, detection signals, and response actions.
 
@@ -10,14 +11,14 @@ The threat model in this document covers:
 
 - Signed input upload/download URLs
 - Runner endpoint exposure (`/compile`, `/apply`)
-- Token misuse across edge and runner boundaries
+- Token misuse across Mirror Gateway and runner boundaries
 - Replay attacks on compile/apply requests
 - Related storage and audit boundaries
 
 ## System Boundaries
 ### Trust Zones
 - Client zone: authenticated app session and user-owned request payloads
-- Edge zone: Supabase Edge Function `mirror_compute`
+- Gateway zone: Mirror Gateway `mirror-gateway` (Supabase Edge Function thin proxy only)
 - Runner zone: cloud/local runner services
 - Storage zone: Supabase Storage buckets (`mirror-signed-inputs`, `mirror-backups`)
 - Data zone: `ai_sessions` and `mirror_apply_audit_events`
@@ -95,7 +96,7 @@ The threat model in this document covers:
 - Cross-tenant or cross-user artifact operations if policy checks fail
 
 #### Required Controls
-- Validate bearer auth at edge on every request
+- Validate bearer auth at Mirror Gateway on every request
 - Validate runner JWTs against active key map (`kid` aware)
 - Keep service tokens out of client binaries and browser-visible channels
 - Rotate keys with overlap window and monitored cutover
@@ -158,3 +159,4 @@ The threat model in this document covers:
 - `docs/mirror-bucket-contract.md`
 - `docs/mirror-production-readiness-checklist.md`
 - `docs/supabase-setup.md`
+

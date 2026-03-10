@@ -1,3 +1,4 @@
+# ARCHITECTURE LOCK: Mirror Gateway = thin proxy only. Compute always on Fly.io or local runner.
 name: CI
 
 on:
@@ -42,8 +43,8 @@ jobs:
       - name: Run pma_core tests
         run: flutter test packages/pma_core/test
 
-      - name: Run Mirror edge contract test
-        run: flutter test test/features/mirror/edge_function_contract_test.dart
+      - name: Run Mirror gateway contract test
+        run: flutter test test/features/mirror/mirror_gateway_contract_test.dart
 
       - name: Run Mirror Monaco host contract test
         run: flutter test test/features/mirror/monaco_host_contract_test.dart

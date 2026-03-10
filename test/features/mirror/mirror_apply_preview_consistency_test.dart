@@ -1,3 +1,4 @@
+// ARCHITECTURE LOCK: Mirror Gateway = thin proxy only. Compute always on Fly.io or local runner.
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
@@ -19,7 +20,7 @@ void main() {
       final contract =
           _readRepoFile('lib/features/mirror/mirror_compute_backend.dart');
       final grpc = _readRepoFile('lib/features/mirror/private_grpc_backend.dart');
-      final edge = _readRepoFile('lib/features/mirror/edge_function_backend.dart');
+      final edge = _readRepoFile('lib/features/mirror/mirror_gateway_backend.dart');
       final cloud = _readRepoFile('lib/features/mirror/cloud_fly_backend.dart');
 
       expect(contract, contains('String? compileFingerprint'));
@@ -59,3 +60,5 @@ String _readRepoFile(String relativePath) {
 
   throw StateError('Unable to locate file for contract test: $relativePath');
 }
+
+

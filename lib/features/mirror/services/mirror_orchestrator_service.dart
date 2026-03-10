@@ -1,3 +1,4 @@
+// ARCHITECTURE LOCK: Mirror Gateway = thin proxy only. Compute always on Fly.io or local runner.
 import 'dart:async';
 import 'dart:math';
 
@@ -448,3 +449,5 @@ class MirrorOrchestratorService {
     return Duration(milliseconds: max(1, jittered));
   }
 }
+
+

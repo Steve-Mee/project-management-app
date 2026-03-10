@@ -1,8 +1,9 @@
+// ARCHITECTURE LOCK: Mirror Gateway = thin proxy only. Compute always on Fly.io or local runner.
 # Mirror Ops Runbook
 
 ## Scope
 This runbook covers production operations for the Mirror compile/apply pipeline:
-- Supabase Edge Function `mirror_compute`
+- Mirror Gateway `mirror-gateway` (Supabase Edge Function thin proxy only)
 - Cloud runner (`server/mirror-cloud-runner`)
 - Supabase Storage buckets `mirror-signed-inputs` and `mirror-backups`
 
@@ -12,10 +13,10 @@ Canonical naming note:
 
 ## Architecture Contract
 Request flow:
-1. Client calls `POST /functions/v1/mirror_compute/compile` or `POST /functions/v1/mirror_compute/apply`
-2. Edge validates bearer token via Supabase Auth
-3. Edge forwards request to mode-specific upstream endpoint (`private` or `cloud`)
-4. Edge returns upstream body and propagates `x-request-id` + `x-idempotency-key`
+1. Client calls `POST /functions/v1/mirror-gateway/compile` or `POST /functions/v1/mirror-gateway/apply`
+2. Mirror Gateway validates bearer token via Supabase Auth
+3. Mirror Gateway forwards request to mode-specific upstream endpoint (`private` or `cloud`)
+4. Mirror Gateway returns upstream body and propagates `x-request-id` + `x-idempotency-key`
 
 Storage contract:
 - Object paths for Mirror artifacts must start with authenticated user id:
@@ -28,7 +29,7 @@ Apply audit contract:
 - Required fields include actor (`actor_user_id`), artifact ids (`artifact_ids`/`backup_id`), and fingerprints (`file_set_fingerprint`, `applied_files_fingerprint`, `diff_fingerprint`)
 
 ## Required Environment Variables
-Edge Function:
+Mirror Gateway function:
 - `SUPABASE_URL`
 - `SUPABASE_ANON_KEY`
 - `PRIVATE_COMPUTE_ENDPOINT`
@@ -62,12 +63,12 @@ AB/remote-config contract:
 ## SLO and Error Budgets
 - Compile availability target: 99.9%
 - Apply availability target: 99.9%
-- Edge timeout budget: < 1% of requests per rolling 30 days
+- Gateway timeout budget: < 1% of requests per rolling 30 days
 - Auth denied spikes are actionable when > 3x baseline for 15 minutes
 
 ## On-Call Triage
 1. Confirm whether impact is `compile`, `apply`, or both.
-2. Check edge logs for:
+2. Check Mirror Gateway logs for:
 - `code=timeout`
 - `code=upstream_error`
 - `code=unauthorized`
@@ -78,7 +79,7 @@ AB/remote-config contract:
 ## Incident Playbooks
 ### A. Unauthorized errors increase
 1. Confirm bearer token presence in client request headers.
-2. Confirm `SUPABASE_URL` and `SUPABASE_ANON_KEY` correctness in edge env.
+2. Confirm `SUPABASE_URL` and `SUPABASE_ANON_KEY` correctness in Mirror Gateway env.
 3. For runner-side denials, verify `MIRROR_JWT_KEYS_BY_KID` JSON is valid and contains active `kid`.
 4. Keep `MIRROR_JWT_SECRET` as fallback during rotation window.
 
@@ -91,7 +92,7 @@ AB/remote-config contract:
 
 ### C. Apply path or patch failures
 1. Validate route used is `/apply` (not `/compile`).
-2. Validate idempotency key propagation in edge response headers.
+2. Validate idempotency key propagation in Mirror Gateway response headers.
 3. Confirm backup/signed-input artifacts are written to owner-prefixed paths.
 4. Check gateway structured errors for quota rejections:
 - `payload_too_large` (workspace/request bytes)
@@ -119,14 +120,15 @@ Run in SQL editor (service role):
 6. Remove old key after stable window.
 
 ## Safe Rollback
-1. Roll back edge and runner to last known good release.
+1. Roll back Mirror Gateway and runner to last known good release.
 2. Keep schema and RLS migrations intact unless a migration-specific issue is confirmed.
 3. Re-run contract tests:
-- `flutter test test/features/mirror/edge_function_contract_test.dart`
+- `flutter test test/features/mirror/mirror_gateway_contract_test.dart`
 - SQL contract test script in `test/supabase/mirror_storage_rls_contract_test.sql`
 
 ## Operational Checks After Deploy
 - `flutter analyze`
-- `flutter test test/features/mirror/edge_function_contract_test.dart`
+- `flutter test test/features/mirror/mirror_gateway_contract_test.dart`
 - Execute SQL contract checks in Supabase SQL editor.
 - Validate one real compile and one real apply request in staging.
+

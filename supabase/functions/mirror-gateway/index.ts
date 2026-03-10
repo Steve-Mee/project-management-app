@@ -1,4 +1,5 @@
-// Mirror compute forwarding function.
+// ARCHITECTURE LOCK: Mirror Gateway = thin proxy only. Compute always on Fly.io or local runner.
+// Mirror Gateway forwarding function (thin proxy only).
 // Forwards authenticated requests to HTTP POST /compile backends with timeout,
 // retries handled upstream, and structured error responses.
 // @ts-ignore - ESM import for Supabase in Deno runtime
@@ -314,7 +315,7 @@ async function writeApplyAuditEvent({
 
   const { error } = await supabase.from('mirror_apply_audit_events').insert(payload)
   if (error) {
-    console.error('mirror_compute apply audit write failed:', error.message)
+    console.error('mirror-gateway apply audit write failed:', error.message)
   }
 }
 
@@ -816,7 +817,7 @@ Deno.serve(async (req: Request) => {
         event: 'apply_started',
         success: null,
         details: {
-          source: 'edge_function',
+          source: 'mirror_gateway',
           filesCount: Object.keys(normalized.files ?? {}).length,
         },
       })
@@ -879,7 +880,7 @@ Deno.serve(async (req: Request) => {
             responseContentType: 'application/json',
           })
         } catch (idempotencyError) {
-          console.error('mirror_compute idempotency finalize failed:', idempotencyError)
+          console.error('mirror-gateway idempotency finalize failed:', idempotencyError)
         }
 
         if (action === 'apply') {
@@ -931,7 +932,7 @@ Deno.serve(async (req: Request) => {
           responseContentType: 'application/json',
         })
       } catch (idempotencyError) {
-        console.error('mirror_compute idempotency finalize failed:', idempotencyError)
+        console.error('mirror-gateway idempotency finalize failed:', idempotencyError)
       }
 
       if (action === 'apply') {
@@ -984,7 +985,7 @@ Deno.serve(async (req: Request) => {
           responseContentType: contentType,
         })
       } catch (idempotencyError) {
-        console.error('mirror_compute idempotency finalize failed:', idempotencyError)
+        console.error('mirror-gateway idempotency finalize failed:', idempotencyError)
       }
 
       if (action === 'apply') {
@@ -1038,7 +1039,7 @@ Deno.serve(async (req: Request) => {
         responseContentType: contentType,
       })
     } catch (idempotencyError) {
-      console.error('mirror_compute idempotency finalize failed:', idempotencyError)
+      console.error('mirror-gateway idempotency finalize failed:', idempotencyError)
     }
 
     if (action === 'apply') {
@@ -1096,7 +1097,7 @@ Deno.serve(async (req: Request) => {
       )
     }
 
-    console.error('mirror_compute forwarding error:', error)
+    console.error('mirror-gateway forwarding error:', error)
     return errorResponse(
       {
         code: 'internal_error',
@@ -1110,3 +1111,4 @@ Deno.serve(async (req: Request) => {
     )
   }
 })
+
