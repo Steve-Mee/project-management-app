@@ -1,3 +1,9 @@
+## [1.31.0](https://github.com/Steve-Mee/project-management-app/compare/v1.30.0...v1.31.0) (2026-03-10)
+
+### Features
+
+* **mirror-editor:** extract realtime and run orchestration into dedicated services ([346c890](https://github.com/Steve-Mee/project-management-app/commit/346c89002c1502b58968da1a572c363c1a1a30a1))
+
 ## [1.30.0](https://github.com/Steve-Mee/project-management-app/compare/v1.29.1...v1.30.0) (2026-03-10)
 
 ### Features
