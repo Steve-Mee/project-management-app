@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:project_management_app/features/mirror/mirror_editor_screen.dart';
+import 'package:project_management_app/features/mirror/services/mirror_realtime_service.dart';
 
 void main() {
   group('Mirror editor integration', () {

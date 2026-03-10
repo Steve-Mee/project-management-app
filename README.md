@@ -120,6 +120,8 @@ Mirror compute forwarding now uses action-consistent HTTP endpoints and runner p
 - Cloud and local mirror runners expose HTTP `/compile` and `/apply` gateways backed by internal gRPC services.
 - Shared gateway implementation lives in `server/mirror-shared/lib/http_gateway.dart` and is reused by both runners.
 - Apply history and apply audit persistence use encrypted Hive storage, with production fail-closed behavior when encryption initialization fails.
+- Canonical Mirror storage buckets are `mirror-signed-inputs` and `mirror-backups`; legacy names such as `mirror_staging` are non-canonical.
+- Operational and security contracts are documented in `docs/mirror-ops-runbook.md`, `docs/mirror-bucket-contract.md`, and `docs/mirror-threat-model.md`.
 
 ## Modular Architecture
 
@@ -215,6 +217,10 @@ For acceptance checklist, verification flow, and install steps, see [`docs/pwa-s
 | [docs/release-pipeline.md](docs/release-pipeline.md) | Issue #075 release checklist, semantic-release/Fastlane flow, manual beta trigger, and secrets |
 | [docs/release-hardening-checklist.md](docs/release-hardening-checklist.md) | Handover checklist met Done/Pending External, secrets en go-live sign-off |
 | [docs/modularization.md](docs/modularization.md) | Issue #070 modularization acceptance checklist and deferred routing summary |
+| [docs/mirror-production-readiness-checklist.md](docs/mirror-production-readiness-checklist.md) | Mirror production readiness gate with owner/deadline tracking |
+| [docs/mirror-ops-runbook.md](docs/mirror-ops-runbook.md) | Mirror compile/apply operations runbook, triage, and rollback flow |
+| [docs/mirror-bucket-contract.md](docs/mirror-bucket-contract.md) | Canonical Mirror bucket naming and object path contract |
+| [docs/mirror-threat-model.md](docs/mirror-threat-model.md) | Mirror threat scenarios and required controls for signed URLs, tokens, runner exposure, and replay |
 | [docs/model-location-policy.md](docs/model-location-policy.md) | Canonical model ownership policy (`pma_core` as source of truth) and de-duplication plan |
 | [docs/provider-import-migration.md](docs/provider-import-migration.md) | Canonical provider import paths and phased migration guidance for legacy compatibility barrels |
 | [docs/legacy-ui-kit-removal.md](docs/legacy-ui-kit-removal.md) | Issue #056 migration note and replacement checklist for removing legacy UI kit/GetX usage |

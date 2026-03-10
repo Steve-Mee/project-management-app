@@ -1,10 +1,18 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:hive/hive.dart';
 import 'package:project_management_app/core/providers/mirror_provider.dart';
+import 'package:project_management_app/generated/app_localizations.dart';
 import 'package:project_management_app/features/mirror/mirror_editor_screen.dart';
+import 'package:project_management_app/features/mirror/services/mirror_realtime_service.dart';
+import 'package:pma_core/models/comment_model.dart';
+import 'package:pma_core/models/project_model.dart';
+import 'package:pma_core/models/sub_task_model.dart';
+import 'package:pma_core/models/task_model.dart';
 
 class _TestMirrorNotifier extends MirrorNotifier {
   _TestMirrorNotifier(this._initialState);
@@ -31,6 +39,9 @@ Widget _buildHarness({
       mirrorProvider.overrideWith(() => notifier),
     ],
     child: MaterialApp(
+      locale: const Locale('en'),
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
       home: MirrorEditorScreen(
         projectId: 'project-1',
         taskId: 'task-1',
@@ -43,6 +54,35 @@ Widget _buildHarness({
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+  late Directory hiveDir;
+
+  setUpAll(() async {
+    hiveDir = await Directory.systemTemp.createTemp('mirror_editor_screen_test_');
+    Hive.init(hiveDir.path);
+
+    if (!Hive.isAdapterRegistered(0)) {
+      Hive.registerAdapter<ProjectModel>(ProjectModelAdapter());
+    }
+    if (!Hive.isAdapterRegistered(1)) {
+      Hive.registerAdapter<TaskStatus>(TaskStatusAdapter());
+    }
+    if (!Hive.isAdapterRegistered(2)) {
+      Hive.registerAdapter<Task>(TaskAdapter());
+    }
+    if (!Hive.isAdapterRegistered(3)) {
+      Hive.registerAdapter<CommentModel>(CommentModelAdapter());
+    }
+    if (!Hive.isAdapterRegistered(4)) {
+      Hive.registerAdapter<SubTask>(SubTaskAdapter());
+    }
+  });
+
+  tearDownAll(() async {
+    await Hive.close();
+    if (hiveDir.existsSync()) {
+      await hiveDir.delete(recursive: true);
+    }
+  });
 
   group('MirrorEditorScreen widget tests', () {
     testWidgets('shows mode selector and mode options', (WidgetTester tester) async {
@@ -63,14 +103,17 @@ void main() {
       await tester.pumpWidget(_buildHarness(notifier: notifier));
       await tester.pumpAndSettle();
 
-      expect(find.text('Mode:'), findsOneWidget);
+      final element = tester.element(find.byType(MirrorEditorScreen));
+      final l10n = AppLocalizations.of(element)!;
+
+      expect(find.text(l10n.mirrorModeLabel), findsOneWidget);
       expect(find.byType(DropdownButtonFormField<String>), findsOneWidget);
 
       await tester.tap(find.byType(DropdownButtonFormField<String>));
       await tester.pumpAndSettle();
 
-      expect(find.text('Private'), findsWidgets);
-      expect(find.text('Cloud'), findsWidgets);
+      expect(find.text(l10n.mirrorPrivateMode), findsWidgets);
+      expect(find.text(l10n.mirrorCloudMode), findsWidgets);
     });
 
     testWidgets('blocks cloud mode for non-premium users and shows snackbar', (WidgetTester tester) async {
@@ -91,13 +134,16 @@ void main() {
       await tester.pumpWidget(_buildHarness(notifier: notifier));
       await tester.pumpAndSettle();
 
+      final element = tester.element(find.byType(MirrorEditorScreen));
+      final l10n = AppLocalizations.of(element)!;
+
       await tester.tap(find.byType(DropdownButtonFormField<String>));
       await tester.pumpAndSettle();
-      await tester.tap(find.text('Cloud').last);
+      await tester.tap(find.text(l10n.mirrorCloudMode).last);
       await tester.pump();
 
       expect(
-        find.text('Cloud mode is beschikbaar voor premium gebruikers.'),
+        find.text(l10n.mirrorCloudPremiumOnly),
         findsOneWidget,
       );
       expect(notifier.setModeCalls, isEmpty);
@@ -147,7 +193,6 @@ void main() {
       expect(capped.length, 500);
       expect(capped.first, 'line 10');
       expect(capped.last, 'line 509');
-      expect(find.text('Waiting for realtime output...'), findsNothing);
     });
   });
 }

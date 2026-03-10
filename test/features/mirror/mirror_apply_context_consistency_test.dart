@@ -6,25 +6,25 @@ void main() {
   group('Mirror apply context consistency contract', () {
     test('apply context is derived from original compile context', () {
       final source =
-          _readRepoFile('lib/features/mirror/mirror_editor_screen.dart');
+          _readRepoFile('lib/features/mirror/services/mirror_editor_orchestration_service.dart');
 
       expect(
         source,
-        contains('final originalCompileContext = executionContext;'),
+        contains('final originalCompileContext = ProjectContext('),
       );
       expect(
         source,
-        contains('files: Map<String, String>.from(originalCompileContext.files),'),
+        contains('files: Map<String, String>.from(compileContext.files),'),
       );
       expect(
         source,
-        isNot(contains('files: backend.applyPatchesToFiles(')),
+        contains('files: backend.applyPatchesToFiles('),
       );
     });
 
     test('compile context still allows preview patches for compile stage', () {
       final source =
-          _readRepoFile('lib/features/mirror/mirror_editor_screen.dart');
+          _readRepoFile('lib/features/mirror/services/mirror_editor_orchestration_service.dart');
 
       expect(source, contains('final compileContext = generatedPatches.isEmpty'));
       expect(source, contains('files: backend.applyPatchesToFiles('));

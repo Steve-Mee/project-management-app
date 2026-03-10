@@ -1,0 +1,160 @@
+# Mirror Threat Model
+
+## Purpose
+Mirror processes user-authenticated compile/apply requests and temporary artifacts across client, edge, runner, and storage layers.
+
+This document identifies high-risk threat scenarios and defines required controls, detection signals, and response actions.
+
+## Scope
+The threat model in this document covers:
+
+- Signed input upload/download URLs
+- Runner endpoint exposure (`/compile`, `/apply`)
+- Token misuse across edge and runner boundaries
+- Replay attacks on compile/apply requests
+- Related storage and audit boundaries
+
+## System Boundaries
+### Trust Zones
+- Client zone: authenticated app session and user-owned request payloads
+- Edge zone: Supabase Edge Function `mirror_compute`
+- Runner zone: cloud/local runner services
+- Storage zone: Supabase Storage buckets (`mirror-signed-inputs`, `mirror-backups`)
+- Data zone: `ai_sessions` and `mirror_apply_audit_events`
+
+### Security-Critical Assets
+- Bearer JWTs and service tokens
+- Signed URL tokens for object access
+- Apply payloads and patch artifacts
+- Backup artifacts and audit event records
+- Idempotency keys and request identifiers
+
+## Threat Scenarios
+
+### 1. Signed URL Leakage Or Over-Permission
+#### Attack
+- Attacker obtains a valid signed URL from logs, crash reports, browser history, or proxy traces.
+- URL is reused to read/write objects outside intended operation window.
+
+#### Impact
+- Unauthorized artifact access
+- Exfiltration of source files or backups
+- Potential overwrite of expected inputs
+
+#### Required Controls
+- Keep signed URL TTL short (default target: <= 5 minutes)
+- Scope signed URLs to a single object path and method
+- Enforce owner-prefixed object path contract: `<auth.uid>/<projectId>/<taskId>/...`
+- Never log full signed URLs in app/edge/runner logs
+- Use private buckets only; enforce RLS owner checks
+
+#### Detection
+- Spike in storage access outside normal compile/apply windows
+- Repeated access from different IPs for the same signed URL window
+- Failed owner-path policy checks in storage logs
+
+#### Response
+- Rotate storage signing key material per platform process
+- Invalidate affected object paths and regenerate artifacts
+- Review logging sinks for accidental URL exposure
+
+### 2. Runner Endpoint Exposure
+#### Attack
+- Runner endpoints are exposed publicly or weakly protected.
+- Attacker sends direct compile/apply requests bypassing edge policy.
+
+#### Impact
+- Unauthorized compute usage and cost amplification
+- Potential execution of malicious payloads
+- Bypass of standard auth, quota, and audit controls
+
+#### Required Controls
+- Require runner auth headers and JWT validation (`MIRROR_JWT_KEYS_BY_KID`)
+- Keep runner endpoints behind allowlisted network boundaries where possible
+- Fail closed when required runner secrets are missing
+- Enforce request size/file-count/workspace-byte limits in gateway
+- Maintain structured error responses without leaking internals
+
+#### Detection
+- Requests without expected request-id/idempotency headers
+- Elevated unauthorized/forbidden runner responses
+- Unusual compile/apply rate from unknown sources
+
+#### Response
+- Rotate runner secrets immediately
+- Restrict ingress and re-validate firewall/allowlist settings
+- Trigger incident triage for suspicious request patterns
+
+### 3. Token Misuse (Bearer Or Service Tokens)
+#### Attack
+- Stolen bearer token or service token is reused from another environment/device.
+- Token with stale key (`kid`) accepted due to weak rotation process.
+
+#### Impact
+- Unauthorized mirror operations under valid identity context
+- Cross-tenant or cross-user artifact operations if policy checks fail
+
+#### Required Controls
+- Validate bearer auth at edge on every request
+- Validate runner JWTs against active key map (`kid` aware)
+- Keep service tokens out of client binaries and browser-visible channels
+- Rotate keys with overlap window and monitored cutover
+- Enforce environment separation for dev/staging/prod secrets
+
+#### Detection
+- Auth denials spiking after key rotation
+- Requests with impossible geo/device patterns for a user
+- Repeated token validation failures for unknown `kid`
+
+#### Response
+- Revoke and rotate compromised tokens/keys
+- Force client re-authentication where needed
+- Audit access logs and affected artifact paths
+
+### 4. Replay Attacks (Compile/Apply)
+#### Attack
+- Attacker replays previously captured compile/apply request bodies.
+- Duplicate apply operations are attempted to trigger unsafe repeated writes.
+
+#### Impact
+- Duplicate operations, unexpected state transitions
+- Redundant or conflicting artifact updates
+- Increased resource consumption
+
+#### Required Controls
+- Require idempotency keys for apply and propagate across edge/runner
+- Persist idempotency claim state with TTL and terminal status
+- Reject in-progress and already-finalized replay attempts deterministically
+- Bind idempotency to operation + actor + project/task scope
+- Record replay conflicts in audit/event logs
+
+#### Detection
+- Repeated idempotency key usage across short windows
+- High conflict/in-progress replay response rates
+- Unexpected duplicate apply event fingerprints
+
+#### Response
+- Increase replay monitoring sensitivity
+- Block suspicious clients/IP ranges during active abuse
+- Review idempotency TTL and claim/finalize race handling
+
+## Abuse Case Matrix
+| Threat | Primary Control Owner | Residual Risk | Escalation Path |
+|---|---|---|---|
+| Signed URL leakage | Security Engineering | Medium | Security on-call -> SRE |
+| Runner exposure | SRE | Medium | SRE on-call -> Backend |
+| Token misuse | Security Engineering | Medium | Security on-call -> Auth owner |
+| Replay attacks | Backend API | Low/Medium | Backend on-call -> Security |
+
+## Verification Checklist
+- Signed URL TTL and path scoping validated in staging
+- Runner direct-call denial tested from non-allowlisted path
+- Key rotation runbook executed with active `kid` transition
+- Replay test cases cover conflict, in-progress, and finalized states
+- Storage logs and audit tables include request-id and idempotency correlation
+
+## Related Documents
+- `docs/mirror-ops-runbook.md`
+- `docs/mirror-bucket-contract.md`
+- `docs/mirror-production-readiness-checklist.md`
+- `docs/supabase-setup.md`

@@ -1,8 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-import '../templates_gallery.dart';
+import '../models/mirror_template.dart';
 
 final mirrorTemplatesProvider = FutureProvider<List<MirrorTemplate>>((ref) async {
   final client = Supabase.instance.client;
@@ -48,9 +47,10 @@ MirrorTemplate _toTemplate(Map<String, dynamic> row) {
     id: id,
     title: title,
     description: description,
-    icon: _iconForTemplate(
-      templateKey: templateKey,
-      iconName: _readString(row, const <String>['icon_name', 'iconName', 'icon']),
+    iconName: _readString(
+      row,
+      const <String>['icon_name', 'iconName', 'icon'],
+      fallback: templateKey,
     ),
     seedContent: seedContent,
     tags: tags,
@@ -75,49 +75,3 @@ String _readString(
   return fallback;
 }
 
-IconData _iconForTemplate({
-  required String templateKey,
-  required String iconName,
-}) {
-  final normalizedIcon = iconName.trim().toLowerCase();
-  switch (normalizedIcon) {
-    case 'widgets':
-      return Icons.widgets;
-    case 'settings':
-    case 'build':
-      return Icons.settings;
-    case 'description':
-    case 'article':
-      return Icons.description;
-    case 'code':
-      return Icons.code;
-    case 'bug_report':
-      return Icons.bug_report;
-    case 'terminal':
-      return Icons.terminal;
-    case 'rocket_launch':
-      return Icons.rocket_launch;
-    case 'bolt':
-      return Icons.bolt;
-    case 'palette':
-      return Icons.palette;
-    case 'data_object':
-      return Icons.data_object;
-    case 'storage':
-      return Icons.storage;
-  }
-
-  final normalizedKey = templateKey.toLowerCase();
-  if (normalizedKey.contains('widget') || normalizedKey.contains('ui')) {
-      return Icons.widgets;
-  }
-  if (normalizedKey.contains('service') ||
-      normalizedKey.contains('backend')) {
-      return Icons.settings;
-  }
-  if (normalizedKey.contains('doc') || normalizedKey.contains('markdown')) {
-      return Icons.description;
-  }
-
-  return Icons.auto_awesome;
-}

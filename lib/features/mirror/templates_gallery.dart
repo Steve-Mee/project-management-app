@@ -1,22 +1,5 @@
 import 'package:flutter/material.dart';
-
-class MirrorTemplate {
-  const MirrorTemplate({
-    required this.id,
-    required this.title,
-    required this.description,
-    required this.icon,
-    required this.seedContent,
-    this.tags = const <String>[],
-  });
-
-  final String id;
-  final String title;
-  final String description;
-  final IconData icon;
-  final String seedContent;
-  final List<String> tags;
-}
+import 'models/mirror_template.dart';
 
 class TemplatesGallery extends StatelessWidget {
   const TemplatesGallery({
@@ -87,7 +70,7 @@ class _TemplateCard extends StatelessWidget {
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: Icon(
-                      template.icon,
+                      _iconForTemplate(template),
                       size: 18,
                       color: colorScheme.onPrimaryContainer,
                     ),
@@ -140,4 +123,47 @@ class _TemplateCard extends StatelessWidget {
       ),
     );
   }
+}
+
+IconData _iconForTemplate(MirrorTemplate template) {
+  final normalizedIcon = template.iconName.trim().toLowerCase();
+  switch (normalizedIcon) {
+    case 'widgets':
+      return Icons.widgets;
+    case 'settings':
+    case 'build':
+      return Icons.settings;
+    case 'description':
+    case 'article':
+      return Icons.description;
+    case 'code':
+      return Icons.code;
+    case 'bug_report':
+      return Icons.bug_report;
+    case 'terminal':
+      return Icons.terminal;
+    case 'rocket_launch':
+      return Icons.rocket_launch;
+    case 'bolt':
+      return Icons.bolt;
+    case 'palette':
+      return Icons.palette;
+    case 'data_object':
+      return Icons.data_object;
+    case 'storage':
+      return Icons.storage;
+  }
+
+  final normalizedKey = template.id.toLowerCase();
+  if (normalizedKey.contains('widget') || normalizedKey.contains('ui')) {
+    return Icons.widgets;
+  }
+  if (normalizedKey.contains('service') || normalizedKey.contains('backend')) {
+    return Icons.settings;
+  }
+  if (normalizedKey.contains('doc') || normalizedKey.contains('markdown')) {
+    return Icons.description;
+  }
+
+  return Icons.auto_awesome;
 }

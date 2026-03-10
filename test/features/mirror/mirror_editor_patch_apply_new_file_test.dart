@@ -1,15 +1,15 @@
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:project_management_app/features/mirror/mirror_editor_screen.dart';
+import 'package:project_management_app/features/mirror/services/mirror_realtime_service.dart';
 
 void main() {
   group('Mirror new-file patch apply contract', () {
     test('editor apply flow upserts new files from patch previews', () {
       final editorSource =
-          _readRepoFile('lib/features/mirror/mirror_editor_screen.dart');
+          _readRepoFile('lib/features/mirror/services/mirror_editor_orchestration_service.dart');
 
-      expect(editorSource, contains('_sessionNotifier.upsertFileContent('));
+        expect(editorSource, contains('sessionNotifier.upsertFileContent('));
       expect(editorSource, contains('path: patch.path,'));
       expect(editorSource, contains('content: patch.updatedContent,'));
       expect(editorSource, contains('if (!existsInSession) {'));

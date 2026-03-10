@@ -133,7 +133,30 @@ abstract class MirrorComputeBackend {
     required String prompt,
     required ProjectContext context,
     required String mode,
+    String? compileFingerprint,
   });
+}
+
+String computeCompileResultFingerprint({
+  required String prompt,
+  required ProjectContext context,
+  required String mode,
+  required String output,
+}) {
+  final files = context.files.entries.toList()
+    ..sort((a, b) => a.key.compareTo(b.key));
+  final filesPayload = files
+      .map((entry) => '${entry.key}:${entry.value}')
+      .join('|');
+  final payload = <String>[
+    prompt,
+    context.projectId,
+    context.taskId,
+    mode,
+    filesPayload,
+    output,
+  ].join('||');
+  return sha256.convert(utf8.encode(payload)).toString();
 }
 
 extension MirrorPatchTools on MirrorComputeBackend {

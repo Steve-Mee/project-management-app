@@ -6,6 +6,10 @@ This runbook covers production operations for the Mirror compile/apply pipeline:
 - Cloud runner (`server/mirror-cloud-runner`)
 - Supabase Storage buckets `mirror-signed-inputs` and `mirror-backups`
 
+Canonical naming note:
+- Use only `mirror-signed-inputs` and `mirror-backups`
+- Do not use legacy/ambiguous names such as `mirror_staging`
+
 ## Architecture Contract
 Request flow:
 1. Client calls `POST /functions/v1/mirror_compute/compile` or `POST /functions/v1/mirror_compute/apply`
@@ -17,6 +21,7 @@ Storage contract:
 - Object paths for Mirror artifacts must start with authenticated user id:
 - `<auth.uid>/<projectId>/<taskId>/<backupId>/(input|backup)/<filePath>`
 - RLS policies enforce `storage.foldername(name)[1] = auth.uid()::text`
+- Bucket naming must follow `docs/mirror-bucket-contract.md`
 
 Apply audit contract:
 - Backend apply events are written to `public.mirror_apply_audit_events`

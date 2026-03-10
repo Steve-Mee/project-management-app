@@ -131,6 +131,7 @@ class PrivateGrpcBackend implements MirrorComputeBackend {
     required String prompt,
     required ProjectContext context,
     required String mode,
+    String? compileFingerprint,
   }) async {
     return secureApply(
       prompt: prompt,
@@ -152,9 +153,26 @@ class PrivateGrpcBackend implements MirrorComputeBackend {
           );
         }
 
+        final output = compileResult.output!;
+        if (compileFingerprint != null && compileFingerprint.isNotEmpty) {
+          final actualFingerprint = computeCompileResultFingerprint(
+            prompt: prompt,
+            context: context,
+            mode: mode,
+            output: output,
+          );
+          if (actualFingerprint != compileFingerprint) {
+            return const ApplyResult(
+              success: false,
+              message:
+                  'Apply blocked: preview fingerprint mismatch. Re-run preview before applying.',
+            );
+          }
+        }
+
         final patches = buildPatchesFromApplyPayload(
           context: context,
-          output: compileResult.output!,
+          output: output,
         );
 
         if (patches.isEmpty) {

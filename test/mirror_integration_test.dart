@@ -79,6 +79,7 @@ class _FakeMirrorBackend implements MirrorComputeBackend {
     required String prompt,
     required ProjectContext context,
     required String mode,
+    String? compileFingerprint,
   }) async {
     return ApplyResult(
       success: true,

@@ -94,6 +94,7 @@ class EdgeFunctionBackend implements MirrorComputeBackend {
     required String prompt,
     required ProjectContext context,
     required String mode,
+    String? compileFingerprint,
   }) async {
     late final String endpoint;
     try {
@@ -106,6 +107,36 @@ class EdgeFunctionBackend implements MirrorComputeBackend {
     }
 
     if (!useSecureApply) {
+      final preflight = await compile(
+        prompt: prompt,
+        context: context,
+        mode: mode,
+      );
+      if (!preflight.success || preflight.output == null) {
+        return ApplyResult(
+          success: false,
+          message: preflight.errors.isEmpty
+              ? 'Apply failed: compile output is empty.'
+              : preflight.errors.join(' | '),
+        );
+      }
+
+      if (compileFingerprint != null && compileFingerprint.isNotEmpty) {
+        final actualFingerprint = computeCompileResultFingerprint(
+          prompt: prompt,
+          context: context,
+          mode: mode,
+          output: preflight.output!,
+        );
+        if (actualFingerprint != compileFingerprint) {
+          return const ApplyResult(
+            success: false,
+            message:
+                'Apply blocked: preview fingerprint mismatch. Re-run preview before applying.',
+          );
+        }
+      }
+
       return _applyWithoutSecurity(
         endpoint: endpoint,
         prompt: prompt,
@@ -119,6 +150,36 @@ class EdgeFunctionBackend implements MirrorComputeBackend {
       context: context,
       mode: mode,
       onApply: (ApplySecurityArtifacts artifacts) async {
+        final preflight = await compile(
+          prompt: prompt,
+          context: context,
+          mode: mode,
+        );
+        if (!preflight.success || preflight.output == null) {
+          return ApplyResult(
+            success: false,
+            message: preflight.errors.isEmpty
+                ? 'Apply failed: compile output is empty.'
+                : preflight.errors.join(' | '),
+          );
+        }
+
+        if (compileFingerprint != null && compileFingerprint.isNotEmpty) {
+          final actualFingerprint = computeCompileResultFingerprint(
+            prompt: prompt,
+            context: context,
+            mode: mode,
+            output: preflight.output!,
+          );
+          if (actualFingerprint != compileFingerprint) {
+            return const ApplyResult(
+              success: false,
+              message:
+                  'Apply blocked: preview fingerprint mismatch. Re-run preview before applying.',
+            );
+          }
+        }
+
         return _executeApplyRequest(
           endpoint: endpoint,
           prompt: prompt,

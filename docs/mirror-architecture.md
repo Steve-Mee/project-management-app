@@ -13,7 +13,7 @@ The architecture in this document covers:
 - Compute backend contract (`MirrorComputeBackend`) and concrete backends
 - Supabase Edge Function routing (`mirror_compute`)
 - Runner execution service (cloud/local runner)
-- Storage and session persistence (`ai_sessions`, staging/backup storage)
+- Storage and session persistence (`ai_sessions`, `mirror-signed-inputs`, `mirror-backups`)
 
 ## Components
 
@@ -67,7 +67,7 @@ The architecture in this document covers:
 ### Storage Layer
 - Database:
 - `ai_sessions` table for session status and versions
-- Storage buckets (staging/signed-inputs/backups)
+- Storage buckets (`mirror-signed-inputs`, `mirror-backups`)
 - Responsibilities:
 - Persist mirror session states and generated versions
 - Retain artifacts for apply/restore flows
@@ -120,7 +120,7 @@ sequenceDiagram
     UI->>Backend: compile(request)
     Backend->>Edge: POST /compile (normalized payload)
     Edge->>Runner: Forward compile request
-    Runner->>Storage: Read/write staging/session artifacts
+    Runner->>Storage: Read/write signed-input and backup artifacts
     Runner-->>Edge: Compile result + diagnostics
     Edge-->>Backend: Structured response/error
     Backend-->>UI: Compile output for editor/live panel
@@ -163,6 +163,6 @@ sequenceDiagram
 ## Operational Checklist
 - Confirm edge endpoint contract matches active backend implementation.
 - Confirm runner environment secrets are set and no insecure defaults are used.
-- Confirm storage buckets and policies exist for signed-inputs/backups.
+- Confirm canonical storage buckets and policies exist for `mirror-signed-inputs` and `mirror-backups`.
 - Confirm realtime update filters include project/task scope.
 - Confirm test coverage includes premium gating, mode switching, and output capping.

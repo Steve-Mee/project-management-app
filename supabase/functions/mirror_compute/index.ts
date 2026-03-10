@@ -57,6 +57,24 @@ interface StructuredError {
   details?: unknown
 }
 
+interface IdempotencyRecord {
+  user_id: string
+  action: 'compile' | 'apply'
+  idempotency_key: string
+  request_hash: string
+  request_id: string
+  status: 'processing' | 'completed' | 'failed'
+  response_status: number | null
+  response_body: string | null
+  response_content_type: string | null
+  expires_at: string
+}
+
+interface IdempotencyClaimResult {
+  kind: 'claimed' | 'replay' | 'in_progress' | 'conflict'
+  record?: IdempotencyRecord
+}
+
 function jsonResponse(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {
     status,
@@ -183,6 +201,8 @@ function normalizeUuidOrNull(value: string | undefined, fallback: string): strin
 }
 
 const MAX_REQUEST_BODY_BYTES = 512 * 1024
+const MAX_IDEMPOTENCY_RESPONSE_BODY_BYTES = 64 * 1024
+const DEFAULT_IDEMPOTENCY_TTL_SECONDS = 120
 
 function normalizeNonEmptyString(value: unknown): string | undefined {
   if (typeof value !== 'string') {
@@ -295,6 +315,184 @@ async function writeApplyAuditEvent({
   const { error } = await supabase.from('mirror_apply_audit_events').insert(payload)
   if (error) {
     console.error('mirror_compute apply audit write failed:', error.message)
+  }
+}
+
+function idempotencyTtlSeconds(): number {
+  const raw = Deno.env.get('MIRROR_IDEMPOTENCY_TTL_SECONDS')
+  const parsed = raw ? Number.parseInt(raw, 10) : Number.NaN
+  if (Number.isFinite(parsed) && parsed >= 30 && parsed <= 3600) {
+    return parsed
+  }
+  return DEFAULT_IDEMPOTENCY_TTL_SECONDS
+}
+
+function idempotencyExpiresAtIso(): string {
+  return new Date(Date.now() + idempotencyTtlSeconds() * 1000).toISOString()
+}
+
+function normalizeResponseBodyForStore(rawBody: string): string {
+  const bytes = new TextEncoder().encode(rawBody)
+  if (bytes.length <= MAX_IDEMPOTENCY_RESPONSE_BODY_BYTES) {
+    return rawBody
+  }
+
+  const clipped = bytes.slice(0, MAX_IDEMPOTENCY_RESPONSE_BODY_BYTES)
+  return new TextDecoder().decode(clipped)
+}
+
+function buildIdempotencyRequestHash(
+  userId: string,
+  action: 'compile' | 'apply',
+  normalized: MirrorComputeRequest,
+): string {
+  return fingerprintValue({
+    userId,
+    action,
+    mode: normalized.mode,
+    projectId: normalized.projectId,
+    taskId: normalized.taskId,
+    prompt: normalized.prompt,
+    files: normalized.files ?? {},
+    metadata: normalized.metadata ?? {},
+    actorUserId: normalized.actorUserId ?? null,
+    backupId: normalized.backupId ?? null,
+    fileSetFingerprint: normalized.fileSetFingerprint ?? null,
+    signedInputUrls: normalizeSignedInputUrls(normalized.signedInputUrls),
+  })
+}
+
+async function claimIdempotencyKey({
+  supabase,
+  userId,
+  action,
+  idempotencyKey,
+  requestHash,
+  requestId,
+}: {
+  supabase: ReturnType<typeof createClient>
+  userId: string
+  action: 'compile' | 'apply'
+  idempotencyKey: string
+  requestHash: string
+  requestId: string
+}): Promise<IdempotencyClaimResult> {
+  const nowIso = new Date().toISOString()
+
+  const { data: existing, error: selectError } = await supabase
+    .from('mirror_request_idempotency')
+    .select(
+      'user_id,action,idempotency_key,request_hash,request_id,status,response_status,response_body,response_content_type,expires_at',
+    )
+    .eq('user_id', userId)
+    .eq('action', action)
+    .eq('idempotency_key', idempotencyKey)
+    .gt('expires_at', nowIso)
+    .maybeSingle<IdempotencyRecord>()
+
+  if (selectError) {
+    throw new Error(`idempotency_select_failed:${selectError.message}`)
+  }
+
+  if (existing) {
+    if (existing.request_hash !== requestHash) {
+      return { kind: 'conflict', record: existing }
+    }
+
+    if (existing.status === 'completed' || existing.status === 'failed') {
+      return { kind: 'replay', record: existing }
+    }
+
+    return { kind: 'in_progress', record: existing }
+  }
+
+  const { error: insertError } = await supabase.from('mirror_request_idempotency').insert({
+    user_id: userId,
+    action,
+    idempotency_key: idempotencyKey,
+    request_hash: requestHash,
+    request_id: requestId,
+    status: 'processing',
+    expires_at: idempotencyExpiresAtIso(),
+  })
+
+  if (insertError) {
+    const message = insertError.message.toLowerCase()
+    if (message.includes('duplicate') || message.includes('unique')) {
+      const { data: raceWinner, error: raceSelectError } = await supabase
+        .from('mirror_request_idempotency')
+        .select(
+          'user_id,action,idempotency_key,request_hash,request_id,status,response_status,response_body,response_content_type,expires_at',
+        )
+        .eq('user_id', userId)
+        .eq('action', action)
+        .eq('idempotency_key', idempotencyKey)
+        .gt('expires_at', nowIso)
+        .maybeSingle<IdempotencyRecord>()
+
+      if (raceSelectError) {
+        throw new Error(`idempotency_select_failed:${raceSelectError.message}`)
+      }
+
+      if (raceWinner) {
+        if (raceWinner.request_hash !== requestHash) {
+          return { kind: 'conflict', record: raceWinner }
+        }
+
+        if (raceWinner.status === 'completed' || raceWinner.status === 'failed') {
+          return { kind: 'replay', record: raceWinner }
+        }
+
+        return { kind: 'in_progress', record: raceWinner }
+      }
+    }
+
+    throw new Error(`idempotency_insert_failed:${insertError.message}`)
+  }
+
+  return { kind: 'claimed' }
+}
+
+async function finalizeIdempotencyKey({
+  supabase,
+  userId,
+  action,
+  idempotencyKey,
+  requestId,
+  requestHash,
+  status,
+  responseStatus,
+  responseBody,
+  responseContentType,
+}: {
+  supabase: ReturnType<typeof createClient>
+  userId: string
+  action: 'compile' | 'apply'
+  idempotencyKey: string
+  requestId: string
+  requestHash: string
+  status: 'completed' | 'failed'
+  responseStatus: number
+  responseBody: string
+  responseContentType: string
+}): Promise<void> {
+  const { error } = await supabase
+    .from('mirror_request_idempotency')
+    .update({
+      status,
+      request_id: requestId,
+      request_hash: requestHash,
+      response_status: responseStatus,
+      response_body: normalizeResponseBodyForStore(responseBody),
+      response_content_type: responseContentType,
+      expires_at: idempotencyExpiresAtIso(),
+    })
+    .eq('user_id', userId)
+    .eq('action', action)
+    .eq('idempotency_key', idempotencyKey)
+
+  if (error) {
+    throw new Error(`idempotency_update_failed:${error.message}`)
   }
 }
 
@@ -524,6 +722,88 @@ Deno.serve(async (req: Request) => {
       )
     }
 
+    const idempotencyRequestHash = buildIdempotencyRequestHash(user.id, action, normalized)
+    let idempotencyClaim: IdempotencyClaimResult
+    try {
+      idempotencyClaim = await claimIdempotencyKey({
+        supabase,
+        userId: user.id,
+        action,
+        idempotencyKey,
+        requestHash: idempotencyRequestHash,
+        requestId,
+      })
+    } catch (error) {
+      if (error instanceof Error && error.message.startsWith('idempotency_')) {
+        return errorResponse(
+          {
+            code: 'config_error',
+            message: 'Idempotency storage is unavailable',
+            retryable: false,
+            requestId,
+            idempotencyKey,
+            details: error.message,
+          },
+          500,
+        )
+      }
+      throw error
+    }
+
+    if (idempotencyClaim.kind === 'conflict') {
+      return errorResponse(
+        {
+          code: 'bad_request',
+          message: 'Idempotency key reuse with different payload is not allowed',
+          retryable: false,
+          requestId,
+          idempotencyKey,
+          details: {
+            action,
+            priorRequestId: idempotencyClaim.record?.request_id,
+          },
+        },
+        409,
+      )
+    }
+
+    if (idempotencyClaim.kind === 'in_progress') {
+      return errorResponse(
+        {
+          code: 'bad_request',
+          message: 'A request with this idempotency key is already processing',
+          retryable: true,
+          requestId,
+          idempotencyKey,
+          details: {
+            action,
+            priorRequestId: idempotencyClaim.record?.request_id,
+          },
+        },
+        409,
+      )
+    }
+
+    if (idempotencyClaim.kind === 'replay' && idempotencyClaim.record) {
+      const cachedStatus = idempotencyClaim.record.response_status ?? 200
+      const cachedBody =
+        idempotencyClaim.record.response_body ??
+        JSON.stringify({ success: false, error: 'idempotency_record_missing_response' })
+      const cachedContentType =
+        idempotencyClaim.record.response_content_type ?? 'application/json'
+
+      return new Response(cachedBody, {
+        status: cachedStatus,
+        headers: {
+          ...corsHeaders,
+          'Content-Type': cachedContentType,
+          'x-request-id': requestId,
+          'x-idempotency-key': idempotencyKey,
+          'x-idempotency-replay': 'true',
+        },
+      })
+    }
+
     const targetUrl = resolveForwardEndpoint(normalized.mode, action)
 
     if (action === 'apply') {
@@ -579,6 +859,29 @@ Deno.serve(async (req: Request) => {
     } catch (error) {
       clearTimeout(timeout)
       if (error instanceof DOMException && error.name === 'AbortError') {
+        try {
+          await finalizeIdempotencyKey({
+            supabase,
+            userId: user.id,
+            action,
+            idempotencyKey,
+            requestId,
+            requestHash: idempotencyRequestHash,
+            status: 'failed',
+            responseStatus: 504,
+            responseBody: JSON.stringify({
+              success: false,
+              error: {
+                code: 'timeout',
+                message: `Upstream /${action} request timed out`,
+              },
+            }),
+            responseContentType: 'application/json',
+          })
+        } catch (idempotencyError) {
+          console.error('mirror_compute idempotency finalize failed:', idempotencyError)
+        }
+
         if (action === 'apply') {
           await writeApplyAuditEvent({
             supabase,
@@ -605,6 +908,30 @@ Deno.serve(async (req: Request) => {
           },
           504,
         )
+      }
+
+      try {
+        await finalizeIdempotencyKey({
+          supabase,
+          userId: user.id,
+          action,
+          idempotencyKey,
+          requestId,
+          requestHash: idempotencyRequestHash,
+          status: 'failed',
+          responseStatus: 502,
+          responseBody: JSON.stringify({
+            success: false,
+            error: {
+              code: 'upstream_error',
+              message: `Failed to reach upstream /${action} endpoint`,
+              details: String(error),
+            },
+          }),
+          responseContentType: 'application/json',
+        })
+      } catch (idempotencyError) {
+        console.error('mirror_compute idempotency finalize failed:', idempotencyError)
       }
 
       if (action === 'apply') {
@@ -643,6 +970,23 @@ Deno.serve(async (req: Request) => {
     const upstreamBody = await upstreamResponse.text()
 
     if (!upstreamResponse.ok) {
+      try {
+        await finalizeIdempotencyKey({
+          supabase,
+          userId: user.id,
+          action,
+          idempotencyKey,
+          requestId,
+          requestHash: idempotencyRequestHash,
+          status: 'failed',
+          responseStatus: upstreamResponse.status,
+          responseBody: upstreamBody,
+          responseContentType: contentType,
+        })
+      } catch (idempotencyError) {
+        console.error('mirror_compute idempotency finalize failed:', idempotencyError)
+      }
+
       if (action === 'apply') {
         await writeApplyAuditEvent({
           supabase,
@@ -678,6 +1022,23 @@ Deno.serve(async (req: Request) => {
         },
         upstreamResponse.status,
       )
+    }
+
+    try {
+      await finalizeIdempotencyKey({
+        supabase,
+        userId: user.id,
+        action,
+        idempotencyKey,
+        requestId,
+        requestHash: idempotencyRequestHash,
+        status: 'completed',
+        responseStatus: upstreamResponse.status,
+        responseBody: upstreamBody,
+        responseContentType: contentType,
+      })
+    } catch (idempotencyError) {
+      console.error('mirror_compute idempotency finalize failed:', idempotencyError)
     }
 
     if (action === 'apply') {

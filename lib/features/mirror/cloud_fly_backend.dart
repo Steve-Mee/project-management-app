@@ -102,6 +102,7 @@ class CloudFlyBackend implements MirrorComputeBackend {
     required String prompt,
     required ProjectContext context,
     required String mode,
+    String? compileFingerprint,
   }) async {
     final hasPremium = await _premiumService.isPremium();
     if (!hasPremium) {
@@ -116,6 +117,36 @@ class CloudFlyBackend implements MirrorComputeBackend {
       context: context,
       mode: mode,
       onApply: (ApplySecurityArtifacts artifacts) async {
+        final preflight = await compile(
+          prompt: prompt,
+          context: context,
+          mode: mode,
+        );
+        if (!preflight.success || preflight.output == null) {
+          return ApplyResult(
+            success: false,
+            message: preflight.errors.isEmpty
+                ? 'Apply failed: compile output is empty.'
+                : preflight.errors.join(' | '),
+          );
+        }
+
+        if (compileFingerprint != null && compileFingerprint.isNotEmpty) {
+          final actualFingerprint = computeCompileResultFingerprint(
+            prompt: prompt,
+            context: context,
+            mode: mode,
+            output: preflight.output!,
+          );
+          if (actualFingerprint != compileFingerprint) {
+            return const ApplyResult(
+              success: false,
+              message:
+                  'Apply blocked: preview fingerprint mismatch. Re-run preview before applying.',
+            );
+          }
+        }
+
         late final String endpoint;
         try {
           endpoint = _requireApplyEndpoint();

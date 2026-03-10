@@ -46,6 +46,7 @@ import 'core/config/app_config.dart';
 import 'core/services/sentry_service.dart';
 import 'core/widgets/error_boundary.dart';
 import 'core/projects_initializer.dart';
+import 'features/mirror/services/mirror_outbox_replay_service.dart';
 
 /// Enable Semantics Debugger only in debug mode when explicitly requested.
 /// Use: flutter run --dart-define=ENABLE_SEMANTICS_DEBUGGER=true
@@ -120,6 +121,9 @@ void main() async {
     await featureFlags.refresh();
 
     final container = ProviderContainer();
+
+    // Start mirror outbox replay worker for startup/network restoration replay.
+    container.read(mirrorOutboxReplayServiceProvider);
 
     // Initialize reCAPTCHA config with settings repository.
     final settingsRepo = await container.read(settingsRepositoryProvider.future);

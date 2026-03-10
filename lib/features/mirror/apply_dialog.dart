@@ -4,10 +4,12 @@ class ApplyDialogResult {
   const ApplyDialogResult({
     required this.apply,
     required this.acceptRisk,
+    required this.compileFingerprint,
   });
 
   final bool apply;
   final bool acceptRisk;
+  final String compileFingerprint;
 }
 
 class ApplyDialog extends StatefulWidget {
@@ -16,6 +18,7 @@ class ApplyDialog extends StatefulWidget {
     required this.title,
     required this.originalContent,
     required this.updatedContent,
+    required this.compileFingerprint,
     this.currentBranch = 'main',
     this.suggestedBranch = 'mirror/apply-changes',
   });
@@ -23,6 +26,7 @@ class ApplyDialog extends StatefulWidget {
   final String title;
   final String originalContent;
   final String updatedContent;
+  final String compileFingerprint;
   final String currentBranch;
   final String suggestedBranch;
 
@@ -31,6 +35,7 @@ class ApplyDialog extends StatefulWidget {
     required String title,
     required String originalContent,
     required String updatedContent,
+    required String compileFingerprint,
     String currentBranch = 'main',
     String suggestedBranch = 'mirror/apply-changes',
   }) {
@@ -41,6 +46,7 @@ class ApplyDialog extends StatefulWidget {
           title: title,
           originalContent: originalContent,
           updatedContent: updatedContent,
+          compileFingerprint: compileFingerprint,
           currentBranch: currentBranch,
           suggestedBranch: suggestedBranch,
         );
@@ -117,7 +123,11 @@ class _ApplyDialogState extends State<ApplyDialog> {
         TextButton(
           onPressed: () {
             Navigator.of(context).pop(
-              const ApplyDialogResult(apply: false, acceptRisk: false),
+              ApplyDialogResult(
+                apply: false,
+                acceptRisk: false,
+                compileFingerprint: widget.compileFingerprint,
+              ),
             );
           },
           child: const Text('Nee'),
@@ -126,7 +136,11 @@ class _ApplyDialogState extends State<ApplyDialog> {
           onPressed: _acceptRisk
               ? () {
                   Navigator.of(context).pop(
-                    ApplyDialogResult(apply: true, acceptRisk: _acceptRisk),
+                    ApplyDialogResult(
+                      apply: true,
+                      acceptRisk: _acceptRisk,
+                      compileFingerprint: widget.compileFingerprint,
+                    ),
                   );
                 }
               : null,

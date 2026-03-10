@@ -2,19 +2,19 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:pma_core/services/app_logger.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:xterm/xterm.dart';
 import '../../generated/app_localizations.dart';
 
-import '../../core/providers/mirror_provider.dart';
 import '../../core/providers/mirror_session_provider.dart';
-import 'apply_dialog.dart';
+import 'models/mirror_template.dart';
+import 'providers/mirror_editor_orchestration_provider.dart';
 import 'providers/mirror_templates_provider.dart';
-import 'services/mirror_orchestrator_service.dart';
+import 'services/mirror_realtime_service.dart';
 import 'templates_gallery.dart';
 import 'widgets/monaco_editor_host.dart';
+import '../../core/providers/mirror_provider.dart';
 
 class MirrorEditorScreen extends ConsumerStatefulWidget {
   const MirrorEditorScreen({
@@ -33,21 +33,14 @@ class MirrorEditorScreen extends ConsumerStatefulWidget {
 }
 
 class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
-  static const int _maxLiveOutputLines = 500;
-  static const int _maxRealtimeCharsPerLine = 500;
-  static const int _maxRealtimeLinesPerEvent = 50;
-  static const int _maxRealtimeCharsPerDebounceWindow = 10000;
-  static const Duration _realtimeDebounceDuration = Duration(milliseconds: 300);
-
   late String _selectedMode;
   late final Terminal _terminal;
   late final TerminalController _terminalController;
   late final stt.SpeechToText _speechToText;
+  late final MirrorRealtimeService _realtimeService;
   final ScrollController _liveOutputScrollController = ScrollController();
   RealtimeChannel? _aiOutputChannel;
   StreamSubscription<Map<String, dynamic>>? _debugRealtimeSubscription;
-  Timer? _realtimeDebounceTimer;
-  final List<String> _pendingRealtimeLines = <String>[];
   bool _isListening = false;
   bool _isRunInProgress = false;
 
@@ -65,6 +58,11 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
     _terminal = Terminal(maxLines: 1000);
     _terminalController = TerminalController();
     _speechToText = stt.SpeechToText();
+    _realtimeService = MirrorRealtimeService(
+      projectId: widget.projectId,
+      taskId: widget.taskId,
+      sessionKey: _sessionKey,
+    );
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) {
         return;
@@ -76,7 +74,9 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
     });
     if (widget.debugRealtimeRecords != null) {
       _debugRealtimeSubscription = widget.debugRealtimeRecords!.listen(
-        _handleRealtimeRecord,
+        (Map<String, dynamic> record) {
+          _handleRealtimeRecord(record, enforceScope: false);
+        },
       );
     } else {
       _subscribeToLiveOutput();
@@ -89,7 +89,7 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
       Supabase.instance.client.removeChannel(_aiOutputChannel!);
     }
     _debugRealtimeSubscription?.cancel();
-    _realtimeDebounceTimer?.cancel();
+    _realtimeService.dispose();
     _liveOutputScrollController.dispose();
     super.dispose();
   }
@@ -421,7 +421,7 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
         .onBroadcast(
           event: 'ai_session_update',
           callback: (Map<String, dynamic> payload, [String? _]) {
-            final record = _extractBroadcastRecord(payload);
+            final record = _realtimeService.extractBroadcastRecord(payload);
             if (record == null) {
               return;
             }
@@ -431,135 +431,34 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
         .subscribe();
   }
 
-  Map<String, dynamic>? _extractBroadcastRecord(Map<String, dynamic> payload) {
-    final directNew = payload['new'];
-    if (directNew is Map) {
-      return Map<String, dynamic>.from(directNew);
-    }
-
-    final nestedPayload = payload['payload'];
-    if (nestedPayload is Map) {
-      final nestedNew = nestedPayload['new'];
-      if (nestedNew is Map) {
-        return Map<String, dynamic>.from(nestedNew);
-      }
-    }
-
-    final record = payload['record'];
-    if (record is Map) {
-      return Map<String, dynamic>.from(record);
-    }
-
-    return null;
-  }
-
-  void _handleRealtimeRecord(Map<String, dynamic> record) {
-    if (!_isRecordInRealtimeScope(record)) {
-      return;
-    }
-
-    final outputLines = _extractOutputLines(record);
-    if (outputLines.isEmpty || !mounted) {
-      return;
-    }
-
-    final eventGuarded = guardRealtimeEventLines(
-      lines: outputLines,
-      maxCharsPerLine: _maxRealtimeCharsPerLine,
-      maxLinesPerEvent: _maxRealtimeLinesPerEvent,
-    );
-    if (eventGuarded.lines.isEmpty) {
-      return;
-    }
-
-    final mergedPending = mergeRealtimeDebounceLinesWithCharCap(
-      currentLines: _pendingRealtimeLines,
-      incomingLines: eventGuarded.lines,
-      maxTotalChars: _maxRealtimeCharsPerDebounceWindow,
-      maxCharsPerLine: _maxRealtimeCharsPerLine,
-    );
-
-    _pendingRealtimeLines
-      ..clear()
-      ..addAll(mergedPending.lines);
-
-    if (eventGuarded.wasTruncated || mergedPending.wasTruncated) {
-      AppLogger.warning(
-        'Mirror realtime payload truncated',
-        params: <String, Object?>{
-          'projectId': widget.projectId,
-          'taskId': widget.taskId,
-          'eventTruncated': eventGuarded.wasTruncated,
-          'debounceTruncated': mergedPending.wasTruncated,
-          'incomingLines': outputLines.length,
-          'pendingLines': _pendingRealtimeLines.length,
-        },
-      );
-    }
-
-    _realtimeDebounceTimer?.cancel();
-    _realtimeDebounceTimer =
-        Timer(_realtimeDebounceDuration, _flushDebouncedRealtimeOutput);
-  }
-
-  bool _isRecordInRealtimeScope(Map<String, dynamic> record) {
-    final currentUserId = Supabase.instance.client.auth.currentUser?.id;
-    if (currentUserId == null || currentUserId.isEmpty) {
-      return false;
-    }
-
-    final recordTaskId = record['task_id']?.toString();
-    final recordProjectId = record['project_id']?.toString();
-    final recordUserId = record['user_id']?.toString();
-
-    return recordTaskId == widget.taskId &&
-        recordProjectId == widget.projectId &&
-        recordUserId == currentUserId;
-  }
-
-  void _flushDebouncedRealtimeOutput() {
-    if (!mounted || _pendingRealtimeLines.isEmpty) {
-      return;
-    }
-
-    final flushedLines = List<String>.from(_pendingRealtimeLines);
-    _pendingRealtimeLines.clear();
-
-    _sessionNotifier.appendLiveOutput(flushedLines, maxLines: _maxLiveOutputLines);
-    _appendTerminalLine(_l10n.mirrorRealtimeOutputReceived(flushedLines.length));
-
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!_liveOutputScrollController.hasClients) {
-        return;
-      }
-      _liveOutputScrollController.animateTo(
-        _liveOutputScrollController.position.maxScrollExtent,
-        duration: const Duration(milliseconds: 180),
-        curve: Curves.easeOut,
-      );
-    });
-  }
-
-  List<String> _extractOutputLines(Map<String, dynamic> record) {
-    final versions = record['versions'];
-    if (versions is List) {
-      final lines = <String>[];
-      for (final item in versions) {
-        if (item is Map && item['output'] != null) {
-          lines.add(item['output'].toString());
-        } else if (item != null) {
-          lines.add(item.toString());
+  void _handleRealtimeRecord(
+    Map<String, dynamic> record, {
+    bool enforceScope = true,
+  }) {
+    _realtimeService.handleRealtimeRecord(
+      record: record,
+      mounted: mounted,
+      onFlush: (List<String> lines) {
+        _sessionNotifier.appendLiveOutput(lines, maxLines: 500);
+        if (!mounted) {
+          return;
         }
-      }
-      return lines;
-    }
-
-    final status = record['status'];
-    if (status != null) {
-      return <String>[_l10n.mirrorStatusLine(status.toString())];
-    }
-
-    return const <String>[];
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (!_liveOutputScrollController.hasClients) {
+            return;
+          }
+          _liveOutputScrollController.animateTo(
+            _liveOutputScrollController.position.maxScrollExtent,
+            duration: const Duration(milliseconds: 180),
+            curve: Curves.easeOut,
+          );
+        });
+      },
+      onTerminalLine: _appendTerminalLine,
+      realtimeOutputReceivedLabel: (int count) => _l10n.mirrorRealtimeOutputReceived(count),
+      statusLineLabel: _l10n.mirrorStatusLine,
+      enforceScope: enforceScope,
+    );
   }
 
   Future<void> _toggleVoiceInput() async {
@@ -629,245 +528,22 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
       return;
     }
 
-    final sessionState = ref.read(mirrorSessionProvider(_sessionKey));
-    final selectedFile = sessionState.selectedFile;
-    final selectedContent = sessionState.files[selectedFile]?.trim() ?? '';
-
-    if (selectedContent.isEmpty) {
-      _appendTerminalLine(_l10n.mirrorRunAbortedFileEmpty(selectedFile));
-      if (!mounted) {
-        return;
-      }
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(_l10n.mirrorSelectedFileEmpty)),
-      );
-      return;
-    }
-
     setState(() {
       _isRunInProgress = true;
     });
 
-    _appendTerminalLine(_l10n.mirrorRunStarting(selectedFile));
-    _appendTerminalLine(_l10n.mirrorRunFlowLine);
-
     try {
-      final backend = await ref.read(mirrorBackendProvider.future);
-      final orchestrator = MirrorOrchestratorService(backend: backend);
-
-      final originalFiles = Map<String, String>.from(sessionState.files);
-      final originalMetadata = <String, dynamic>{
-        'selectedFile': selectedFile,
-        'trigger': 'run_button',
-      };
-
-      final executionContext = ProjectContext(
+      final orchestrationService = ref.read(mirrorEditorOrchestrationServiceProvider);
+      await orchestrationService.runCurrentFileInTerminal(
+        context: context,
+        ref: ref,
         projectId: widget.projectId,
         taskId: widget.taskId,
-        files: originalFiles,
-        metadata: originalMetadata,
-      );
-
-      final originalCompileContext = ProjectContext(
-        projectId: executionContext.projectId,
-        taskId: executionContext.taskId,
-        files: Map<String, String>.from(executionContext.files),
-        metadata: Map<String, dynamic>.from(executionContext.metadata),
-      );
-
-      _appendTerminalLine(_l10n.mirrorStepGenerateSent);
-      final generateResult = await orchestrator.generate(
-        ref: ref,
+        selectedMode: _selectedMode,
         sessionKey: _sessionKey,
-        prompt: selectedContent,
-        context: executionContext,
-        mode: _selectedMode,
-      );
-
-      if (!mounted) {
-        return;
-      }
-
-      if (!generateResult.success) {
-        final errorText =
-            _firstNonEmpty(
-                  generateResult.message,
-                  generateResult.diagnostics.join(' | '),
-                ) ??
-                  _l10n.mirrorUnknownGenerateError;
-                _appendTerminalLine(_l10n.mirrorGenerateFailedTerminal(errorText));
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(_l10n.mirrorGenerateFailed(errorText))),
-        );
-        return;
-      }
-
-      _appendTerminalLine(_l10n.mirrorStepGenerateCompleted);
-      if (generateResult.diagnostics.isNotEmpty) {
-        _appendTerminalLine(
-          _l10n.mirrorGenerateDiagnostics(
-            generateResult.diagnostics.join(' | '),
-          ),
-        );
-      }
-
-      final generatedPatches = _buildPreviewPatches(
-        backend: backend,
-        context: executionContext,
-        selectedFile: selectedFile,
-        compileOutput: generateResult.code,
-        generatedCode: generateResult.code,
-      );
-
-      final compileContext = generatedPatches.isEmpty
-          ? originalCompileContext
-          : ProjectContext(
-              projectId: originalCompileContext.projectId,
-              taskId: originalCompileContext.taskId,
-              files: backend.applyPatchesToFiles(
-                files: originalCompileContext.files,
-                patches: generatedPatches,
-              ),
-              metadata: originalCompileContext.metadata,
-            );
-
-      final runPrompt = _firstNonEmpty(generateResult.code, selectedContent) ??
-          selectedContent;
-
-      _appendTerminalLine(_l10n.mirrorStepCompileSent);
-      final compileResult = await orchestrator.compile(
-        ref: ref,
-        sessionKey: _sessionKey,
-        prompt: runPrompt,
-        context: compileContext,
-        mode: _selectedMode,
-      );
-
-      if (!mounted) {
-        return;
-      }
-
-      if (!compileResult.success) {
-        final errorText =
-          _firstNonEmpty(compileResult.errors.join(' | '), _l10n.mirrorUnknownCompileError)!;
-        _appendTerminalLine(_l10n.mirrorCompileFailedTerminal(errorText));
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(_l10n.mirrorCompileFailed(errorText))),
-        );
-        return;
-      }
-
-      _appendTerminalLine(_l10n.mirrorStepCompileCompleted);
-      if (compileResult.warnings.isNotEmpty) {
-        _appendTerminalLine(
-          _l10n.mirrorCompileWarnings(compileResult.warnings.join(' | ')),
-        );
-      }
-
-      _appendTerminalLine(_l10n.mirrorStepPreviewBuilding);
-      final patches = _buildPreviewPatches(
-        backend: backend,
-        context: originalCompileContext,
-        selectedFile: selectedFile,
-        compileOutput: compileResult.output,
-        generatedCode: generateResult.code,
-      );
-
-      if (patches.isEmpty) {
-        _appendTerminalLine(_l10n.mirrorNoPatchPreviewTerminal);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(_l10n.mirrorNoChangesAfterCompile)),
-        );
-        return;
-      }
-
-      _appendTerminalLine(
-        _l10n.mirrorStepPreviewReady(patches.length),
-      );
-
-      final previewPatch = patches.firstWhere(
-        (MirrorFilePatch patch) => patch.path == selectedFile,
-        orElse: () => patches.first,
-      );
-
-      _appendTerminalLine(
-        _l10n.mirrorStepApplyWaiting(previewPatch.path),
-      );
-      final applyDecision = await ApplyDialog.show(
-        context,
-        title: _l10n.mirrorApplyChangesTitle(previewPatch.path),
-        originalContent: previewPatch.originalContent,
-        updatedContent: previewPatch.updatedContent,
-        suggestedBranch: 'mirror/${widget.projectId}-${widget.taskId}',
-      );
-
-      if (!mounted) {
-        return;
-      }
-
-      final applyApproved = applyDecision?.apply == true &&
-          applyDecision?.acceptRisk == true;
-      if (!applyApproved) {
-        _appendTerminalLine(_l10n.mirrorStepApplyCanceled);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(_l10n.mirrorApplyCanceled)),
-        );
-        return;
-      }
-
-      _appendTerminalLine(_l10n.mirrorStepApplySent);
-      final applyContext = ProjectContext(
-        projectId: originalCompileContext.projectId,
-        taskId: originalCompileContext.taskId,
-        // Keep backend as source of truth: apply receives original files.
-        files: Map<String, String>.from(originalCompileContext.files),
-        metadata: originalCompileContext.metadata,
-      );
-      final applyResult = await orchestrator.apply(
-        ref: ref,
-        sessionKey: _sessionKey,
-        prompt: runPrompt,
-        context: applyContext,
-        mode: _selectedMode,
-      );
-
-      if (!mounted) {
-        return;
-      }
-
-      if (applyResult.success) {
-        _applyPreviewPatchesToSession(
-          patches: patches,
-          fallbackSelectedFile: selectedFile,
-        );
-        if (applyResult.appliedFiles.isNotEmpty) {
-          _appendTerminalLine(
-            _l10n.mirrorAppliedFiles(applyResult.appliedFiles.join(', ')),
-          );
-        }
-        _appendTerminalLine(_l10n.mirrorRunCompletedTerminal);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(_l10n.mirrorRunSuccess)),
-        );
-        return;
-      }
-
-      final errorText = applyResult.message ?? _l10n.mirrorUnknownApplyError;
-      _appendTerminalLine(_l10n.mirrorApplyFailedTerminal(errorText));
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(_l10n.mirrorApplyFailed(errorText)),
-        ),
-      );
-    } catch (error) {
-      _appendTerminalLine(_l10n.mirrorRunCrashedTerminal(error.toString()));
-      if (!mounted) {
-        return;
-      }
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(_l10n.mirrorRunCrashed(error.toString())),
-        ),
+        l10n: _l10n,
+        isMounted: () => mounted,
+        appendTerminalLine: _appendTerminalLine,
       );
     } finally {
       if (mounted) {
@@ -876,52 +552,6 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
         });
       }
     }
-  }
-
-  List<MirrorFilePatch> _buildPreviewPatches({
-    required MirrorComputeBackend backend,
-    required ProjectContext context,
-    required String selectedFile,
-    required String? compileOutput,
-    required String? generatedCode,
-  }) {
-    final normalizedCompileOutput = compileOutput?.trim() ?? '';
-
-    if (normalizedCompileOutput.isNotEmpty) {
-      final patchesFromCompile = backend.buildPatchesFromApplyPayload(
-        context: context,
-        output: normalizedCompileOutput,
-        fallbackPath: selectedFile,
-      );
-      if (patchesFromCompile.isNotEmpty) {
-        return patchesFromCompile;
-      }
-    }
-
-    final normalizedGeneratedCode = generatedCode?.trim() ?? '';
-    if (normalizedGeneratedCode.isNotEmpty) {
-      return backend.buildPatchesFromApplyPayload(
-        context: context,
-        output: normalizedGeneratedCode,
-        fallbackPath: selectedFile,
-      );
-    }
-
-    return const <MirrorFilePatch>[];
-  }
-
-  String? _firstNonEmpty(String? first, String? second) {
-    final firstValue = first?.trim();
-    if (firstValue != null && firstValue.isNotEmpty) {
-      return firstValue;
-    }
-
-    final secondValue = second?.trim();
-    if (secondValue != null && secondValue.isNotEmpty) {
-      return secondValue;
-    }
-
-    return null;
   }
 
   Future<void> _openTemplatesGallery() async {
@@ -1014,37 +644,6 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
     );
   }
 
-  void _applyPreviewPatchesToSession({
-    required List<MirrorFilePatch> patches,
-    required String fallbackSelectedFile,
-  }) {
-    final previousSelected =
-        ref.read(mirrorSessionProvider(_sessionKey)).selectedFile;
-
-    for (final patch in patches) {
-      final existsInSession =
-          ref.read(mirrorSessionProvider(_sessionKey)).files.containsKey(patch.path);
-      if (!existsInSession) {
-        _sessionNotifier.upsertFileContent(
-          path: patch.path,
-          content: patch.updatedContent,
-        );
-        continue;
-      }
-
-      _sessionNotifier.selectFile(patch.path);
-      _sessionNotifier.updateSelectedFileContent(patch.updatedContent);
-    }
-
-    final restoreTarget = ref
-            .read(mirrorSessionProvider(_sessionKey))
-            .files
-            .containsKey(previousSelected)
-        ? previousSelected
-        : fallbackSelectedFile;
-    _sessionNotifier.selectFile(restoreTarget);
-  }
-
   void _appendTerminalLine(String line) {
     _sessionNotifier.appendTerminalLine(line, maxLines: 1000);
     _terminal.write('$line\\r\\n');
@@ -1072,159 +671,6 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
     }
     return 'plaintext';
   }
-}
-
-List<String> mergeLiveOutputWithCap({
-  required List<String> currentLines,
-  required List<String> incomingLines,
-  int maxLines = 500,
-}) {
-  final merged = <String>[...currentLines, ...incomingLines];
-  if (merged.length <= maxLines) {
-    return merged;
-  }
-  return merged.sublist(merged.length - maxLines);
-}
-
-const String realtimeTruncationSuffix = '… [truncated]';
-
-class RealtimePayloadGuardResult {
-  const RealtimePayloadGuardResult({
-    required this.lines,
-    required this.wasTruncated,
-  });
-
-  final List<String> lines;
-  final bool wasTruncated;
-}
-
-RealtimePayloadGuardResult guardRealtimeEventLines({
-  required List<String> lines,
-  int maxCharsPerLine = 500,
-  int maxLinesPerEvent = 50,
-}) {
-  if (lines.isEmpty || maxCharsPerLine <= 0 || maxLinesPerEvent <= 0) {
-    return const RealtimePayloadGuardResult(
-      lines: <String>[],
-      wasTruncated: false,
-    );
-  }
-
-  var wasTruncated = false;
-  final limit = lines.length > maxLinesPerEvent ? maxLinesPerEvent : lines.length;
-  if (lines.length > maxLinesPerEvent) {
-    wasTruncated = true;
-  }
-
-  final guarded = <String>[];
-  for (var index = 0; index < limit; index += 1) {
-    final line = lines[index];
-    final normalized = line.length <= maxCharsPerLine
-        ? line
-        : truncateRealtimeLine(line, maxCharsPerLine);
-    if (normalized.length < line.length) {
-      wasTruncated = true;
-    }
-    guarded.add(normalized);
-  }
-
-  if (lines.length > maxLinesPerEvent && guarded.isNotEmpty) {
-    guarded[guarded.length - 1] = ensureRealtimeTruncationSuffix(
-      guarded.last,
-      maxCharsPerLine,
-    );
-  }
-
-  return RealtimePayloadGuardResult(lines: guarded, wasTruncated: wasTruncated);
-}
-
-RealtimePayloadGuardResult mergeRealtimeDebounceLinesWithCharCap({
-  required List<String> currentLines,
-  required List<String> incomingLines,
-  int maxTotalChars = 10000,
-  int maxCharsPerLine = 500,
-}) {
-  if (maxTotalChars <= 0 || maxCharsPerLine <= 0) {
-    return const RealtimePayloadGuardResult(
-      lines: <String>[],
-      wasTruncated: true,
-    );
-  }
-
-  final merged = <String>[...currentLines];
-  var totalChars = 0;
-  for (final line in merged) {
-    totalChars += line.length;
-  }
-
-  var wasTruncated = false;
-  for (final line in incomingLines) {
-    final remaining = maxTotalChars - totalChars;
-    if (remaining <= 0) {
-      wasTruncated = true;
-      break;
-    }
-
-    if (line.length <= remaining) {
-      merged.add(line);
-      totalChars += line.length;
-      continue;
-    }
-
-    final maxCharsForLine = remaining < maxCharsPerLine ? remaining : maxCharsPerLine;
-    if (maxCharsForLine > 0) {
-      final truncatedLine = truncateRealtimeLine(line, maxCharsForLine);
-      merged.add(truncatedLine);
-      totalChars += truncatedLine.length;
-    }
-    wasTruncated = true;
-    break;
-  }
-
-  if (wasTruncated && merged.isNotEmpty) {
-    var charsBeforeLast = 0;
-    for (var index = 0; index < merged.length - 1; index += 1) {
-      charsBeforeLast += merged[index].length;
-    }
-    final remainingForLast = maxTotalChars - charsBeforeLast;
-    final maxCharsForLast = remainingForLast < maxCharsPerLine
-        ? remainingForLast
-        : maxCharsPerLine;
-    merged[merged.length - 1] = ensureRealtimeTruncationSuffix(
-      merged.last,
-      maxCharsForLast,
-    );
-  }
-
-  return RealtimePayloadGuardResult(lines: merged, wasTruncated: wasTruncated);
-}
-
-String truncateRealtimeLine(String line, int maxCharsPerLine) {
-  if (maxCharsPerLine <= 0) {
-    return '';
-  }
-  if (line.length <= maxCharsPerLine) {
-    return line;
-  }
-
-  if (maxCharsPerLine <= realtimeTruncationSuffix.length) {
-    return realtimeTruncationSuffix.substring(0, maxCharsPerLine);
-  }
-
-  final keep = maxCharsPerLine - realtimeTruncationSuffix.length;
-  return '${line.substring(0, keep)}$realtimeTruncationSuffix';
-}
-
-String ensureRealtimeTruncationSuffix(String line, int maxCharsPerLine) {
-  if (maxCharsPerLine <= 0) {
-    return '';
-  }
-  if (line.contains(realtimeTruncationSuffix)) {
-    return line.length <= maxCharsPerLine
-        ? line
-        : truncateRealtimeLine(line, maxCharsPerLine);
-  }
-  return truncateRealtimeLine('$line $realtimeTruncationSuffix', maxCharsPerLine);
 }
 
 class _ModeSelector extends StatelessWidget {

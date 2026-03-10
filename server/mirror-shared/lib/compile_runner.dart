@@ -2,6 +2,90 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
+class CompileRunnerFileWritePolicy {
+  const CompileRunnerFileWritePolicy({
+    this.allowedPathPrefixes = const <String>[
+      'lib/',
+      'bin/',
+      'test/',
+      'web/',
+      'assets/',
+      'config/',
+      'tool/',
+      '.vscode/',
+      'analysis_options.yaml',
+      'pubspec.yaml',
+      'pubspec.lock',
+      'README.md',
+      'CHANGELOG.md',
+      'LICENSE',
+      'main.dart',
+    ],
+    this.deniedPathPrefixes = const <String>[
+      '.git/',
+      '.dart_tool/',
+      '.idea/',
+      'build/',
+      'android/',
+      'ios/',
+      'linux/',
+      'macos/',
+      'windows/',
+      'node_modules/',
+    ],
+    this.deniedFileExtensions = const <String>[
+      '.exe',
+      '.dll',
+      '.so',
+      '.dylib',
+      '.bat',
+      '.cmd',
+      '.ps1',
+      '.sh',
+      '.msi',
+      '.apk',
+      '.ipa',
+      '.jar',
+      '.class',
+      '.pyc',
+      '.pdb',
+      '.tmp',
+    ],
+    this.maxFileBytes = 512 * 1024,
+  });
+
+  final List<String> allowedPathPrefixes;
+  final List<String> deniedPathPrefixes;
+  final List<String> deniedFileExtensions;
+  final int maxFileBytes;
+}
+
+class CompileRunnerContractError {
+  const CompileRunnerContractError({
+    required this.code,
+    required this.message,
+    required this.retryable,
+    required this.requestId,
+    this.details,
+  });
+
+  final String code;
+  final String message;
+  final bool retryable;
+  final String requestId;
+  final Object? details;
+
+  Map<String, dynamic> toJson() {
+    return <String, dynamic>{
+      'code': code,
+      'message': message,
+      'retryable': retryable,
+      'requestId': requestId,
+      if (details != null) 'details': details,
+    };
+  }
+}
+
 class CompileRunnerInput {
   const CompileRunnerInput({
     required this.projectId,
@@ -24,6 +108,7 @@ class CompileExecutionResult {
     required this.warnings,
     required this.outputFiles,
     required this.artifactPath,
+    this.contractError,
   });
 
   final bool success;
@@ -32,26 +117,45 @@ class CompileExecutionResult {
   final List<String> warnings;
   final Map<String, String> outputFiles;
   final String? artifactPath;
+  final CompileRunnerContractError? contractError;
 }
 
 class CompileRunner {
-  CompileRunner({required this.workspaceRoot});
+  CompileRunner({
+    required this.workspaceRoot,
+    this.fileWritePolicy = const CompileRunnerFileWritePolicy(),
+  });
 
   final String workspaceRoot;
+  final CompileRunnerFileWritePolicy fileWritePolicy;
 
   Future<CompileExecutionResult> run(CompileRunnerInput request) async {
+    final requestId = 'compile-${DateTime.now().toUtc().microsecondsSinceEpoch}';
     final logs = <String>[];
     final warnings = <String>[];
     final errors = <String>[];
 
     if (request.projectId.isEmpty || request.taskId.isEmpty) {
-      return const CompileExecutionResult(
-        success: false,
-        logs: <String>[],
-        errors: <String>['Missing projectId or taskId.'],
-        warnings: <String>[],
-        outputFiles: <String, String>{},
-        artifactPath: null,
+      return _contractErrorResult(
+        requestId: requestId,
+        code: 'bad_request',
+        message: 'Missing projectId or taskId.',
+        details: const <String, Object>{
+          'required': <String>['projectId', 'taskId'],
+        },
+      );
+    }
+
+    final writeValidation = _validateFileWritePolicy(
+      files: request.files,
+      requestId: requestId,
+    );
+    if (writeValidation != null) {
+      return _contractErrorResult(
+        requestId: requestId,
+        code: writeValidation.code,
+        message: writeValidation.message,
+        details: writeValidation.details,
       );
     }
 
@@ -60,7 +164,15 @@ class CompileRunner {
     );
     await workspace.create(recursive: true);
 
-    await _writeFiles(workspace, request.files);
+    final writeResult = await _writeFiles(workspace, request.files, requestId);
+    if (writeResult != null) {
+      return _contractErrorResult(
+        requestId: requestId,
+        code: writeResult.code,
+        message: writeResult.message,
+        details: writeResult.details,
+      );
+    }
 
     final pubspec = File('${workspace.path}/pubspec.yaml');
     if (await pubspec.exists()) {
@@ -146,16 +258,175 @@ class CompileRunner {
     );
   }
 
-  Future<void> _writeFiles(Directory workspace, Map<String, String> files) async {
+  CompileExecutionResult _contractErrorResult({
+    required String requestId,
+    required String code,
+    required String message,
+    Object? details,
+  }) {
+    final contractError = CompileRunnerContractError(
+      code: code,
+      message: message,
+      retryable: false,
+      requestId: requestId,
+      details: details,
+    );
+    return CompileExecutionResult(
+        success: false,
+        logs: <String>[],
+        errors: <String>['$code: $message'],
+        warnings: <String>[],
+        outputFiles: <String, String>{},
+        artifactPath: null,
+        contractError: contractError,
+      );
+  }
+
+  _FileWritePolicyViolation? _validateFileWritePolicy({
+    required Map<String, String> files,
+    required String requestId,
+  }) {
     for (final entry in files.entries) {
-      final normalized = entry.key.replaceAll('\\', '/');
-      if (normalized.contains('..')) {
-        continue;
+      final normalized = _normalizePath(entry.key);
+      if (normalized == null) {
+        return _FileWritePolicyViolation(
+          code: 'bad_request',
+          message: 'Invalid file path; traversal or absolute paths are not allowed.',
+          details: <String, Object?>{
+            'path': entry.key,
+            'requestId': requestId,
+          },
+        );
+      }
+
+      if (_isDeniedPath(normalized)) {
+        return _FileWritePolicyViolation(
+          code: 'forbidden_path',
+          message: 'File path is denied by write policy.',
+          details: <String, Object?>{
+            'path': normalized,
+            'requestId': requestId,
+          },
+        );
+      }
+
+      if (!_isAllowedPath(normalized)) {
+        return _FileWritePolicyViolation(
+          code: 'forbidden_path',
+          message: 'File path is outside allowed write prefixes.',
+          details: <String, Object?>{
+            'path': normalized,
+            'allowedPathPrefixes': fileWritePolicy.allowedPathPrefixes,
+            'requestId': requestId,
+          },
+        );
+      }
+
+      if (_isDeniedFileType(normalized)) {
+        return _FileWritePolicyViolation(
+          code: 'forbidden_file_type',
+          message: 'File type is denied by write policy.',
+          details: <String, Object?>{
+            'path': normalized,
+            'deniedFileExtensions': fileWritePolicy.deniedFileExtensions,
+            'requestId': requestId,
+          },
+        );
+      }
+
+      final bytes = utf8.encode(entry.value).length;
+      if (bytes > fileWritePolicy.maxFileBytes) {
+        return _FileWritePolicyViolation(
+          code: 'payload_too_large',
+          message: 'File content exceeds per-file size limit.',
+          details: <String, Object?>{
+            'path': normalized,
+            'maxFileBytes': fileWritePolicy.maxFileBytes,
+            'receivedBytes': bytes,
+            'requestId': requestId,
+          },
+        );
+      }
+    }
+
+    return null;
+  }
+
+  Future<_FileWritePolicyViolation?> _writeFiles(
+    Directory workspace,
+    Map<String, String> files,
+    String requestId,
+  ) async {
+    for (final entry in files.entries) {
+      final normalized = _normalizePath(entry.key);
+      if (normalized == null) {
+        return _FileWritePolicyViolation(
+          code: 'bad_request',
+          message: 'Invalid file path; traversal or absolute paths are not allowed.',
+          details: <String, Object?>{
+            'path': entry.key,
+            'requestId': requestId,
+          },
+        );
       }
       final target = File('${workspace.path}/$normalized');
       await target.parent.create(recursive: true);
       await target.writeAsString(entry.value);
     }
+    return null;
+  }
+
+  String? _normalizePath(String raw) {
+    final normalized = raw.replaceAll('\\', '/').trim();
+    if (normalized.isEmpty) {
+      return null;
+    }
+
+    if (normalized.startsWith('/') || normalized.startsWith('~')) {
+      return null;
+    }
+    if (normalized.contains(':')) {
+      return null;
+    }
+
+    final parts = normalized.split('/');
+    if (parts.any((part) => part.isEmpty || part == '.' || part == '..')) {
+      return null;
+    }
+
+    return parts.join('/');
+  }
+
+  bool _isAllowedPath(String normalizedPath) {
+    for (final prefix in fileWritePolicy.allowedPathPrefixes) {
+      final normalizedPrefix = prefix.replaceAll('\\', '/');
+      if (normalizedPath == normalizedPrefix ||
+          normalizedPath.startsWith(normalizedPrefix)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  bool _isDeniedPath(String normalizedPath) {
+    for (final prefix in fileWritePolicy.deniedPathPrefixes) {
+      final normalizedPrefix = prefix.replaceAll('\\', '/');
+      if (normalizedPath == normalizedPrefix ||
+          normalizedPath.startsWith(normalizedPrefix)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  bool _isDeniedFileType(String normalizedPath) {
+    final lowercasePath = normalizedPath.toLowerCase();
+    for (final extension in fileWritePolicy.deniedFileExtensions) {
+      if (lowercasePath.endsWith(extension.toLowerCase())) {
+        return true;
+      }
+    }
+    return false;
   }
 
   Future<bool> _hasFlutterEntrypoint(Directory workspace) async {
@@ -224,6 +495,18 @@ class CompileRunner {
       );
     }
   }
+}
+
+class _FileWritePolicyViolation {
+  const _FileWritePolicyViolation({
+    required this.code,
+    required this.message,
+    this.details,
+  });
+
+  final String code;
+  final String message;
+  final Object? details;
 }
 
 class CommandResult {

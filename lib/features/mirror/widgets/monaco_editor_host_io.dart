@@ -30,6 +30,8 @@ class _MonacoEditorHostState extends State<MonacoEditorHost> {
   bool get _isDesktop =>
       Platform.isWindows || Platform.isLinux || Platform.isMacOS;
 
+  bool get _canUseInAppWebView => InAppWebViewPlatform.instance != null;
+
   @override
   void initState() {
     super.initState();
@@ -71,7 +73,7 @@ class _MonacoEditorHostState extends State<MonacoEditorHost> {
 
   @override
   Widget build(BuildContext context) {
-    if (!_isDesktop) {
+    if (!_isDesktop || !_canUseInAppWebView) {
       return _buildMobileFallback();
     }
 

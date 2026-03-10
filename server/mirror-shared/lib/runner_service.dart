@@ -297,6 +297,7 @@ class MirrorRunnerService extends Service {
       logs: compileResult.logs,
       signedUrl: signedUrl,
       artifactPath: artifactPath,
+      error: compileResult.contractError?.toJson(),
     );
 
     stopwatch.stop();
@@ -403,6 +404,7 @@ class CompileResponsePayload {
     required this.logs,
     required this.signedUrl,
     required this.artifactPath,
+    this.error,
   });
 
   final bool success;
@@ -412,6 +414,7 @@ class CompileResponsePayload {
   final List<String> logs;
   final String? signedUrl;
   final String? artifactPath;
+  final Map<String, dynamic>? error;
 
   Map<String, dynamic> toJson() {
     return <String, dynamic>{
@@ -422,6 +425,7 @@ class CompileResponsePayload {
       'logs': logs,
       'signedUrl': signedUrl,
       'artifactPath': artifactPath,
+      if (error != null) 'error': error,
     };
   }
 }
