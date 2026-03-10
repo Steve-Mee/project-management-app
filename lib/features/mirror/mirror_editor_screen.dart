@@ -1,4 +1,6 @@
+// ARCHITECTURE LOCK: Mirror Gateway = thin proxy only. Compute always on Fly.io or local runner.
 import 'dart:async';
+import 'dart:collection';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -38,6 +40,7 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
   late final TerminalController _terminalController;
   late final stt.SpeechToText _speechToText;
   late final MirrorRealtimeService _realtimeService;
+  late final MirrorRealtimeEventSetDeduplicator _realtimeDeduplicator;
   final ScrollController _liveOutputScrollController = ScrollController();
   RealtimeChannel? _aiOutputChannel;
   StreamSubscription<Map<String, dynamic>>? _debugRealtimeSubscription;
@@ -62,6 +65,9 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
       projectId: widget.projectId,
       taskId: widget.taskId,
       sessionKey: _sessionKey,
+    );
+    _realtimeDeduplicator = MirrorRealtimeEventSetDeduplicator(
+      maxEntries: _realtimeService.maxProcessedRealtimeEventIds,
     );
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) {
@@ -435,6 +441,10 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
     Map<String, dynamic> record, {
     bool enforceScope = true,
   }) {
+    if (!_realtimeDeduplicator.shouldProcess(record)) {
+      return;
+    }
+
     _realtimeService.handleRealtimeRecord(
       record: record,
       mounted: mounted,
@@ -670,6 +680,56 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
       return 'json';
     }
     return 'plaintext';
+  }
+}
+
+class MirrorRealtimeEventSetDeduplicator {
+  MirrorRealtimeEventSetDeduplicator({this.maxEntries = 2000});
+
+  final int maxEntries;
+  final Set<String> _seenKeys = <String>{};
+  final Queue<String> _seenOrder = Queue<String>();
+
+  bool shouldProcess(Map<String, dynamic> record) {
+    final key = _buildSetKey(record);
+    if (key == null) {
+      return true;
+    }
+
+    if (_seenKeys.contains(key)) {
+      return false;
+    }
+
+    _seenKeys.add(key);
+    _seenOrder.addLast(key);
+
+    while (_seenOrder.length > maxEntries) {
+      final oldest = _seenOrder.removeFirst();
+      _seenKeys.remove(oldest);
+    }
+
+    return true;
+  }
+
+  String? _buildSetKey(Map<String, dynamic> record) {
+    final rawEventId =
+        record['event_id']?.toString() ??
+        record['id']?.toString() ??
+        record['version_id']?.toString();
+
+    if (rawEventId != null) {
+      final eventId = rawEventId.trim();
+      if (eventId.isNotEmpty) {
+        return 'event:$eventId';
+      }
+    }
+
+    final updatedAt = parseRealtimeRecordUpdatedAt(record['updated_at']);
+    if (updatedAt != null) {
+      return 'updated_at:${updatedAt.toIso8601String()}';
+    }
+
+    return null;
   }
 }
 

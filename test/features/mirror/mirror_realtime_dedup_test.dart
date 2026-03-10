@@ -1,4 +1,6 @@
+// ARCHITECTURE LOCK: Mirror Gateway = thin proxy only. Compute always on Fly.io or local runner.
 import 'package:flutter_test/flutter_test.dart';
+import 'package:project_management_app/features/mirror/mirror_editor_screen.dart';
 import 'package:project_management_app/features/mirror/services/mirror_realtime_service.dart';
 
 void main() {
@@ -82,6 +84,71 @@ void main() {
 
       expect(keyA, keyB);
       expect(parseRealtimeRecordUpdatedAt(baseRecord['updated_at']), isNotNull);
+    });
+
+    test('screen deduplicator skips duplicate event_id records', () {
+      final deduplicator = MirrorRealtimeEventSetDeduplicator(maxEntries: 8);
+
+      final first = deduplicator.shouldProcess(<String, dynamic>{
+        'event_id': 'evt-100',
+        'updated_at': '2026-03-10T10:20:00Z',
+      });
+      final duplicate = deduplicator.shouldProcess(<String, dynamic>{
+        'event_id': 'evt-100',
+        'updated_at': '2026-03-10T10:20:01Z',
+      });
+      final different = deduplicator.shouldProcess(<String, dynamic>{
+        'event_id': 'evt-101',
+        'updated_at': '2026-03-10T10:20:02Z',
+      });
+
+      expect(first, isTrue);
+      expect(duplicate, isFalse);
+      expect(different, isTrue);
+    });
+
+    test('screen deduplicator uses updated_at key when event_id is missing', () {
+      final deduplicator = MirrorRealtimeEventSetDeduplicator(maxEntries: 8);
+
+      final first = deduplicator.shouldProcess(<String, dynamic>{
+        'updated_at': '2026-03-10T11:00:00Z',
+      });
+      final duplicate = deduplicator.shouldProcess(<String, dynamic>{
+        'updated_at': '2026-03-10T11:00:00Z',
+      });
+      final newer = deduplicator.shouldProcess(<String, dynamic>{
+        'updated_at': '2026-03-10T11:00:01Z',
+      });
+
+      expect(first, isTrue);
+      expect(duplicate, isFalse);
+      expect(newer, isTrue);
+    });
+
+    test('screen deduplicator bounds memory with fifo eviction', () {
+      final deduplicator = MirrorRealtimeEventSetDeduplicator(maxEntries: 2);
+
+      expect(
+        deduplicator.shouldProcess(<String, dynamic>{'event_id': 'evt-a'}),
+        isTrue,
+      );
+      expect(
+        deduplicator.shouldProcess(<String, dynamic>{'event_id': 'evt-b'}),
+        isTrue,
+      );
+      expect(
+        deduplicator.shouldProcess(<String, dynamic>{'event_id': 'evt-c'}),
+        isTrue,
+      );
+
+      expect(
+        deduplicator.shouldProcess(<String, dynamic>{'event_id': 'evt-a'}),
+        isTrue,
+      );
+      expect(
+        deduplicator.shouldProcess(<String, dynamic>{'event_id': 'evt-c'}),
+        isFalse,
+      );
     });
   });
 }
