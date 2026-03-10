@@ -3170,6 +3170,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Mirror is not available for your account.'**
   String get mirrorUnavailableForAccount;
+
+  /// Switch tile title in apply dialog asking user to acknowledge the risk.
+  ///
+  /// In en, this message translates to:
+  /// **'I understand the risk of applying directly'**
+  String get mirrorApplyRiskAcknowledgeTitle;
+
+  /// Switch tile subtitle in apply dialog explaining the risk.
+  ///
+  /// In en, this message translates to:
+  /// **'Changes will be applied to your working directory. Prefer using a separate branch.'**
+  String get mirrorApplyRiskAcknowledgeSubtitle;
+
+  /// Screen-level message when user lacks use_mirror permission.
+  ///
+  /// In en, this message translates to:
+  /// **'Mirror is not available for your account.'**
+  String get mirrorPermissionDenied;
 }
 
 class _AppLocalizationsDelegate

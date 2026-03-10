@@ -1682,4 +1682,13 @@ class AppLocalizationsZh extends AppLocalizations {
   @override
   String get mirrorUnavailableForAccount =>
       'Mirror is not available for your account.';
+
+  @override
+  String get mirrorApplyRiskAcknowledgeTitle => '我了解直接应用的风险';
+
+  @override
+  String get mirrorApplyRiskAcknowledgeSubtitle => '更改将应用于您的工作目录。建议使用单独的分支。';
+
+  @override
+  String get mirrorPermissionDenied => 'Mirror 不适用于您的帐户。';
 }

@@ -51,13 +51,13 @@ class MirrorSessionState {
     final defaultFiles = _defaultFiles(projectId: projectId, taskId: taskId);
 
     return MirrorSessionState(
-      projectId: '',
-      taskId: '',
+      projectId: projectId,
+      taskId: taskId,
       files: Map<String, String>.from(defaultFiles),
       selectedFile: 'lib/main.dart',
       liveOutput: <String>[],
       terminalLog: <String>[],
-    ).copyWith(projectId: projectId, taskId: taskId);
+    );
   }
 
   static Map<String, String> _defaultFiles({
@@ -71,7 +71,8 @@ class MirrorSessionState {
   }
 }
 
-class MirrorSessionNotifier extends FamilyNotifier<MirrorSessionState, String> {
+class MirrorSessionNotifier
+  extends AutoDisposeFamilyNotifier<MirrorSessionState, String> {
   bool _cacheHydrated = false;
 
   @override
@@ -271,7 +272,7 @@ class MirrorSessionNotifier extends FamilyNotifier<MirrorSessionState, String> {
   }
 }
 
-final mirrorSessionProvider = NotifierProvider.family<
+final mirrorSessionProvider = NotifierProvider.autoDispose.family<
   MirrorSessionNotifier,
   MirrorSessionState,
   String

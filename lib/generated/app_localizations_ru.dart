@@ -1693,4 +1693,16 @@ class AppLocalizationsRu extends AppLocalizations {
   @override
   String get mirrorUnavailableForAccount =>
       'Mirror is not available for your account.';
+
+  @override
+  String get mirrorApplyRiskAcknowledgeTitle =>
+      'Я понимаю риск прямого применения';
+
+  @override
+  String get mirrorApplyRiskAcknowledgeSubtitle =>
+      'Изменения будут применены к рабочему каталогу. Предпочтительно использовать отдельную ветку.';
+
+  @override
+  String get mirrorPermissionDenied =>
+      'Mirror недоступен для вашей учётной записи.';
 }

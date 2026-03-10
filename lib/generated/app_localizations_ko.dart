@@ -1683,4 +1683,14 @@ class AppLocalizationsKo extends AppLocalizations {
   @override
   String get mirrorUnavailableForAccount =>
       'Mirror is not available for your account.';
+
+  @override
+  String get mirrorApplyRiskAcknowledgeTitle => '직접 적용의 위험을 이해합니다';
+
+  @override
+  String get mirrorApplyRiskAcknowledgeSubtitle =>
+      '변경 사항이 작업 디렉터리에 적용됩니다. 별도 브랜치 사용을 권장합니다.';
+
+  @override
+  String get mirrorPermissionDenied => 'Mirror는 귀하의 계정에서 사용할 수 없습니다.';
 }

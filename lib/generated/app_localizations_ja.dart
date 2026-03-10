@@ -1683,4 +1683,14 @@ class AppLocalizationsJa extends AppLocalizations {
   @override
   String get mirrorUnavailableForAccount =>
       'Mirror is not available for your account.';
+
+  @override
+  String get mirrorApplyRiskAcknowledgeTitle => '直接適用のリスクを理解しています';
+
+  @override
+  String get mirrorApplyRiskAcknowledgeSubtitle =>
+      '変更はワーキングディレクトリに適用されます。別ブランチの使用を推奨します。';
+
+  @override
+  String get mirrorPermissionDenied => 'Mirror はご使用のアカウントでは利用できません。';
 }

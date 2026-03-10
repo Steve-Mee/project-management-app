@@ -1689,4 +1689,16 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get mirrorUnavailableForAccount =>
       'Mirror is not available for your account.';
+
+  @override
+  String get mirrorApplyRiskAcknowledgeTitle =>
+      'I understand the risk of applying directly';
+
+  @override
+  String get mirrorApplyRiskAcknowledgeSubtitle =>
+      'Changes will be applied to your working directory. Prefer using a separate branch.';
+
+  @override
+  String get mirrorPermissionDenied =>
+      'Mirror is not available for your account.';
 }

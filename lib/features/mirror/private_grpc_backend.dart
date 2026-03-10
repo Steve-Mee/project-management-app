@@ -11,12 +11,14 @@ class PrivateGrpcBackend implements MirrorComputeBackend {
     this.port = 50051,
     this.timeout = const Duration(seconds: 30),
     this.servicePath = '/mirror.compute.v1.MirrorComputeService/Compile',
+    this.credentials = const ChannelCredentials.insecure(),
   });
 
   final String host;
   final int port;
   final Duration timeout;
   final String servicePath;
+  final ChannelCredentials credentials;
 
   @override
   Future<GenerateResult> generate({
@@ -54,7 +56,7 @@ class PrivateGrpcBackend implements MirrorComputeBackend {
     final channel = ClientChannel(
       host,
       port: port,
-      options: const ChannelOptions(credentials: ChannelCredentials.insecure()),
+      options: ChannelOptions(credentials: credentials),
     );
 
     final method = ClientMethod<List<int>, List<int>>(
