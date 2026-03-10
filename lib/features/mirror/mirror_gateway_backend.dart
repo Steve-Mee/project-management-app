@@ -107,6 +107,15 @@ class MirrorGatewayBackend implements MirrorComputeBackend {
       );
     }
 
+    final normalizedCompileFingerprint = compileFingerprint?.trim() ?? '';
+    if (normalizedCompileFingerprint.isEmpty) {
+      return const ApplyResult(
+        success: false,
+        message:
+            'Apply blocked: preview fingerprint missing. Re-run preview before applying.',
+      );
+    }
+
     if (!useSecureApply) {
       final preflight = await compile(
         prompt: prompt,
@@ -122,20 +131,15 @@ class MirrorGatewayBackend implements MirrorComputeBackend {
         );
       }
 
-      if (compileFingerprint != null && compileFingerprint.isNotEmpty) {
-        final actualFingerprint = computeCompileResultFingerprint(
-          prompt: prompt,
-          context: context,
-          mode: mode,
-          output: preflight.output!,
-        );
-        if (actualFingerprint != compileFingerprint) {
-          return const ApplyResult(
-            success: false,
-            message:
-                'Apply blocked: preview fingerprint mismatch. Re-run preview before applying.',
-          );
-        }
+      final consistencyError = _validatePreviewApplyConsistency(
+        prompt: prompt,
+        context: context,
+        mode: mode,
+        expectedCompileFingerprint: normalizedCompileFingerprint,
+        preflightOutput: preflight.output!,
+      );
+      if (consistencyError != null) {
+        return ApplyResult(success: false, message: consistencyError);
       }
 
       return _applyWithoutSecurity(
@@ -165,20 +169,15 @@ class MirrorGatewayBackend implements MirrorComputeBackend {
           );
         }
 
-        if (compileFingerprint != null && compileFingerprint.isNotEmpty) {
-          final actualFingerprint = computeCompileResultFingerprint(
-            prompt: prompt,
-            context: context,
-            mode: mode,
-            output: preflight.output!,
-          );
-          if (actualFingerprint != compileFingerprint) {
-            return const ApplyResult(
-              success: false,
-              message:
-                  'Apply blocked: preview fingerprint mismatch. Re-run preview before applying.',
-            );
-          }
+        final consistencyError = _validatePreviewApplyConsistency(
+          prompt: prompt,
+          context: context,
+          mode: mode,
+          expectedCompileFingerprint: normalizedCompileFingerprint,
+          preflightOutput: preflight.output!,
+        );
+        if (consistencyError != null) {
+          return ApplyResult(success: false, message: consistencyError);
         }
 
         return _executeApplyRequest(
@@ -190,6 +189,35 @@ class MirrorGatewayBackend implements MirrorComputeBackend {
         );
       },
     );
+  }
+
+  String? _validatePreviewApplyConsistency({
+    required String prompt,
+    required ProjectContext context,
+    required String mode,
+    required String expectedCompileFingerprint,
+    required String preflightOutput,
+  }) {
+    final actualFingerprint = computeCompileResultFingerprint(
+      prompt: prompt,
+      context: context,
+      mode: mode,
+      output: preflightOutput,
+    );
+    if (actualFingerprint != expectedCompileFingerprint) {
+      return 'Apply blocked: preview fingerprint mismatch. Re-run preview before applying.';
+    }
+
+    final expectedContextFingerprint =
+        context.metadata['previewContextFingerprint']?.toString().trim() ?? '';
+    if (expectedContextFingerprint.isNotEmpty) {
+      final actualContextFingerprint = _fingerprintFileMap(context.files);
+      if (actualContextFingerprint != expectedContextFingerprint) {
+        return 'Apply blocked: preview context mismatch. Re-run preview before applying.';
+      }
+    }
+
+    return null;
   }
 
   Future<ApplyResult> _applyWithoutSecurity({

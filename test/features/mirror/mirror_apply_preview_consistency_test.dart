@@ -37,7 +37,10 @@ void main() {
       expect(source, contains('required this.compileFingerprint'));
       expect(source, contains('acceptRisk'));
       expect(source, contains('Ja, toepassen'));
-      expect(source, contains('Ik begrijp het risico van direct toepassen'));
+      expect(
+        source,
+        contains('mirrorApplyRiskAcknowledgeSubtitle'),
+      );
     });
   });
 }

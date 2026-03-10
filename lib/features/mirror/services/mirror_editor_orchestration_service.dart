@@ -1,3 +1,6 @@
+import 'dart:convert';
+
+import 'package:crypto/crypto.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -112,6 +115,19 @@ class MirrorEditorOrchestrationService {
               metadata: originalCompileContext.metadata,
             );
 
+      final compileContextFingerprint =
+          _computeContextFingerprint(compileContext.files);
+      final compileMetadata = <String, dynamic>{
+        ...compileContext.metadata,
+        'previewContextFingerprint': compileContextFingerprint,
+      };
+      final compileContextForPreviewAndApply = ProjectContext(
+        projectId: compileContext.projectId,
+        taskId: compileContext.taskId,
+        files: Map<String, String>.from(compileContext.files),
+        metadata: compileMetadata,
+      );
+
       final runPrompt = _firstNonEmpty(generateResult.code, selectedContent) ?? selectedContent;
 
       appendTerminalLine(l10n.mirrorStepCompileSent);
@@ -119,7 +135,7 @@ class MirrorEditorOrchestrationService {
         ref: ref,
         sessionKey: sessionKey,
         prompt: runPrompt,
-        context: compileContext,
+        context: compileContextForPreviewAndApply,
         mode: selectedMode,
       );
 
@@ -146,7 +162,7 @@ class MirrorEditorOrchestrationService {
 
       final compileFingerprint = computeCompileResultFingerprint(
         prompt: runPrompt,
-        context: compileContext,
+        context: compileContextForPreviewAndApply,
         mode: selectedMode,
         output: compileOutput,
       );
@@ -160,7 +176,7 @@ class MirrorEditorOrchestrationService {
       appendTerminalLine(l10n.mirrorStepPreviewBuilding);
       final patches = _buildPreviewPatches(
         backend: backend,
-        context: compileContext,
+        context: compileContextForPreviewAndApply,
         selectedFile: selectedFile,
         compileOutput: compileOutput,
         generatedCode: generateResult.code,
@@ -205,10 +221,12 @@ class MirrorEditorOrchestrationService {
 
       appendTerminalLine(l10n.mirrorStepApplySent);
       final applyContext = ProjectContext(
-        projectId: compileContext.projectId,
-        taskId: compileContext.taskId,
-        files: Map<String, String>.from(compileContext.files),
-        metadata: compileContext.metadata,
+        projectId: compileContextForPreviewAndApply.projectId,
+        taskId: compileContextForPreviewAndApply.taskId,
+        files: Map<String, String>.from(compileContextForPreviewAndApply.files),
+        metadata: Map<String, dynamic>.from(
+          compileContextForPreviewAndApply.metadata,
+        ),
       );
       final applyResult = await orchestrator.apply(
         ref: ref,
@@ -330,5 +348,21 @@ class MirrorEditorOrchestrationService {
     messenger.showSnackBar(
       SnackBar(content: Text(message)),
     );
+  }
+
+  String _computeContextFingerprint(Map<String, String> files) {
+    final entries = files.entries.toList()
+      ..sort((a, b) => a.key.compareTo(b.key));
+
+    final buffer = StringBuffer();
+    for (final entry in entries) {
+      buffer
+        ..write(entry.key)
+        ..write('::')
+        ..write(entry.value)
+        ..write('\n');
+    }
+
+    return sha256.convert(utf8.encode(buffer.toString())).toString();
   }
 }

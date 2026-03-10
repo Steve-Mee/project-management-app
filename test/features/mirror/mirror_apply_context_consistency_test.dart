@@ -28,7 +28,7 @@ void main() {
 
       expect(source, contains('final compileContext = generatedPatches.isEmpty'));
       expect(source, contains('files: backend.applyPatchesToFiles('));
-      expect(source, contains('context: compileContext,'));
+      expect(source, contains('context: compileContextForPreviewAndApply,'));
       expect(source, contains('context: applyContext,'));
     });
   });

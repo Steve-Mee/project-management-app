@@ -129,6 +129,7 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
                 l10n: _l10n,
                 selectedMode: _selectedMode,
                 isPremium: isPremium,
+                isEnabled: !_isRunInProgress,
                 onModeChanged: (String mode) {
                   if (mode == 'cloud' && !isPremium) {
                     ScaffoldMessenger.of(context).showSnackBar(
@@ -323,7 +324,12 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
             theme: Theme.of(context).brightness == Brightness.dark
                 ? 'vs-dark'
                 : 'vs',
-            onChanged: _sessionNotifier.updateSelectedFileContent,
+            onChanged: (String content) {
+              if (_isRunInProgress) {
+                return;
+              }
+              _sessionNotifier.updateSelectedFileContent(content);
+            },
           ),
         ),
       ],
@@ -738,12 +744,14 @@ class _ModeSelector extends StatelessWidget {
     required this.l10n,
     required this.selectedMode,
     required this.isPremium,
+    required this.isEnabled,
     required this.onModeChanged,
   });
 
   final AppLocalizations l10n;
   final String selectedMode;
   final bool isPremium;
+  final bool isEnabled;
   final ValueChanged<String> onModeChanged;
 
   @override
@@ -788,7 +796,9 @@ class _ModeSelector extends StatelessWidget {
                 ),
               ),
             ],
-            onChanged: (String? value) {
+            onChanged: !isEnabled
+                ? null
+                : (String? value) {
               if (value == null) {
                 return;
               }
