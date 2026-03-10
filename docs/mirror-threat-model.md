@@ -128,6 +128,8 @@ The threat model in this document covers:
 - Reject in-progress and already-finalized replay attempts deterministically
 - Bind idempotency to operation + actor + project/task scope
 - Record replay conflicts in audit/event logs
+- Detect and recover stale `processing` claims (threshold: 300 s); take over via `resetIdempotencyKeyClaim` before forwarding
+- Finalize guard: `finalizeIdempotencyKey` only succeeds when `request_id`, `request_hash`, AND `status = 'processing'` all match the active claim; returns `idempotency_update_conflict` on ownership mismatch
 
 #### Detection
 - Repeated idempotency key usage across short windows
@@ -139,13 +141,40 @@ The threat model in this document covers:
 - Block suspicious clients/IP ranges during active abuse
 - Review idempotency TTL and claim/finalize race handling
 
-## Abuse Case Matrix
+### 5. Stale Idempotency Claim Hijacking
+#### Attack
+- A `processing` idempotency record is left in the table after a runner crash, network partition, or extended backpressure delay (record is never finalized).
+- A subsequent legitimate request finds a non-expired record with the same key but a different request hash, triggering a false conflict that permanently blocks future requests for that key.
+- Alternatively, a different request with the same key is returned `in_progress` indefinitely when the original processing request is already dead.
+
+#### Impact
+- Legitimate compile/apply requests are permanently blocked by orphaned in-progress records
+- Denial of service for a specific user + project/task combination
+- Ghost replay conflicts creating confusing error states in the client
+
+#### Required Controls
+- Treat `processing` records older than `IDEMPOTENCY_PROCESSING_STALE_SECONDS` (300 s) as stale and take them over via `resetIdempotencyKeyClaim`
+- Evaluate staleness at every claim path: initial `SELECT`, race-condition re-`SELECT` after insert conflict
+- Treat expired records (`expires_at <= now()`) as fully reclaimed regardless of status
+- Different `request_hash` + expired/stale = reclaim; different hash + live = conflict (correct rejection)
+- Finalize operation uses `request_id` + `request_hash` + `status = processing` guard to prevent foreign-claim finalization
+
+#### Detection
+- Elevated `idempotency_update_conflict:no_matching_processing_claim` error events in gateway logs
+- Processing records older than stale threshold that were never finalized
+- Repeated 409-conflict responses for requests that should be fresh
+
+#### Response
+- Investigate runner/network health for crash patterns that leave orphaned claims
+- Review stale threshold and TTL values against observed P95 runner latency
+- Alert on claim takeover rate exceeding baseline
 | Threat | Primary Control Owner | Residual Risk | Escalation Path |
 |---|---|---|---|
 | Signed URL leakage | Security Engineering | Medium | Security on-call -> SRE |
 | Runner exposure | SRE | Medium | SRE on-call -> Backend |
 | Token misuse | Security Engineering | Medium | Security on-call -> Auth owner |
 | Replay attacks | Backend API | Low/Medium | Backend on-call -> Security |
+| Stale claim hijacking | Backend API | Low | Backend on-call -> SRE |
 
 ## Verification Checklist
 - Signed URL TTL and path scoping validated in staging
@@ -153,6 +182,9 @@ The threat model in this document covers:
 - Key rotation runbook executed with active `kid` transition
 - Replay test cases cover conflict, in-progress, and finalized states
 - Storage logs and audit tables include request-id and idempotency correlation
+- Stale claim recovery tested: verify that a `processing` record > 300 s old is reclaimed rather than returning 409 conflict
+- Finalize ownership guard tested: verify that a `finalizeIdempotencyKey` call with wrong `request_id` or `request_hash` returns `idempotency_update_conflict` and does not update the record
+- Expired record recovery tested: verify requests succeed after TTL expiry of a previously claims record
 
 ## Related Documents
 - `docs/mirror-ops-runbook.md`

@@ -14,6 +14,8 @@ Status legend:
 - [x] Mirror schema changes live in versioned migrations only.
 - [ ] ADR for Mirror data ownership is linked from architecture docs. (Owner: Platform Architecture, Deadline: 2026-03-21)
 - [x] Service boundaries documented for Mirror Gateway (thin proxy only) vs runners.
+- [x] Architecture lock header present in all Mirror source files and docs (`mirror-gateway = thin proxy only`).
+- [x] `docs/mirror-architecture.md` updated with locked naming (`MirrorGatewayBackend`, `mirror-gateway` folder, new service classes).
 
 ## 2. Database And Migrations
 
@@ -30,6 +32,9 @@ Status legend:
 - [x] Request body size guard enforced (max 512KB).
 - [x] Apply payload normalization enforced for actor/artifact fields.
 - [x] Storage policies restrict signed input/backup object access to owner path.
+- [x] Idempotency stale-claim takeover implemented: `processing` records older than 300 s are reclaimed rather than returning 409 conflict.
+- [x] Idempotency finalize ownership guard: `finalizeIdempotencyKey` requires matching `request_id`, `request_hash`, and `status = processing`; returns conflict error on mismatch.
+- [x] Expired idempotency records are reclaimed (not replayed or blocked) on any claim path.
 - [ ] Pen-test checklist run for signed URL leakage and replay scenarios. (Owner: Security Engineering, Deadline: 2026-03-24)
 - [ ] JWT/service-token rotation runbook tested end-to-end. (Owner: Security Engineering, Deadline: 2026-03-19)
 
@@ -48,6 +53,9 @@ Status legend:
 - [x] Realtime filtering scoped by `task_id`, `project_id`, and `user_id`.
 - [x] `PrivateGrpcBackend.generate` fully implemented.
 - [x] Templates gallery no longer uses hardcoded defaults.
+- [x] `MirrorEditorScreen` reduced to pure UI: realtime subscription extracted to `MirrorEditorRealtimeController`, run lifecycle extracted to `MirrorEditorRunService`.
+- [x] `MirrorRealtimeEventSetDeduplicator` moved to `mirror_realtime_service.dart` (canonical service module, not screen file).
+- [x] Editor change-guard prevents mode/content mutations during active run (`_isRunInProgress`).
 - [ ] Empty-state UX for template gallery validated when DB returns zero templates. (Owner: Flutter Client, Deadline: 2026-03-17)
 - [ ] Telemetry for editor apply failures includes actionable reason buckets. (Owner: Flutter Client, Deadline: 2026-03-21)
 

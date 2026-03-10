@@ -115,14 +115,18 @@ graph TD
 
 ## Mirror Runtime
 
-Mirror compute forwarding now uses action-consistent HTTP endpoints and runner parity across environments.
+Mirror compute forwarding uses action-consistent HTTP endpoints and runner parity across environments.
 
-- Mirror Gateway (thin proxy only) forwards by action to `/compile` or `/apply`.
+**Architecture lock (permanent):** Mirror Gateway (`supabase/functions/mirror-gateway/`) is a **thin proxy only**. All compute runs exclusively on Fly.io (cloud runner) or local runner. No compute logic executes in the Edge Function.
+
+- Mirror Gateway forwards by action to `/compile` or `/apply`; the canonical Dart class driving this path is `MirrorGatewayBackend`.
 - Cloud and local mirror runners expose HTTP `/compile` and `/apply` gateways backed by internal gRPC services.
 - Shared gateway implementation lives in `server/mirror-shared/lib/http_gateway.dart` and is reused by both runners.
 - Apply history and apply audit persistence use encrypted Hive storage, with production fail-closed behavior when encryption initialization fails.
 - Canonical Mirror storage buckets are `mirror-signed-inputs` and `mirror-backups`; legacy names such as `mirror_staging` are non-canonical.
-- Operational and security contracts are documented in `docs/mirror-ops-runbook.md`, `docs/mirror-bucket-contract.md`, and `docs/mirror-threat-model.md`.
+- `MirrorEditorScreen` is pure UI; orchestration is owned by `MirrorEditorOrchestrationService`, realtime subscription by `MirrorEditorRealtimeController`, and run lifecycle by `MirrorEditorRunService`.
+- Idempotency keys are claimed and finalized in `mirror_request_idempotency` with stale-claim recovery (300 s threshold) and finalize-ownership guard.
+- Operational and security contracts are documented in `docs/mirror-architecture.md`, `docs/mirror-ops-runbook.md`, `docs/mirror-bucket-contract.md`, and `docs/mirror-threat-model.md`.
 
 ## Modular Architecture
 
@@ -219,9 +223,10 @@ For acceptance checklist, verification flow, and install steps, see [`docs/pwa-s
 | [docs/release-hardening-checklist.md](docs/release-hardening-checklist.md) | Handover checklist met Done/Pending External, secrets en go-live sign-off |
 | [docs/modularization.md](docs/modularization.md) | Issue #070 modularization acceptance checklist and deferred routing summary |
 | [docs/mirror-production-readiness-checklist.md](docs/mirror-production-readiness-checklist.md) | Mirror production readiness gate with owner/deadline tracking |
+| [docs/mirror-architecture.md](docs/mirror-architecture.md) | Mirror end-to-end architecture, component responsibilities, and architecture lock rules |
 | [docs/mirror-ops-runbook.md](docs/mirror-ops-runbook.md) | Mirror compile/apply operations runbook, triage, and rollback flow |
 | [docs/mirror-bucket-contract.md](docs/mirror-bucket-contract.md) | Canonical Mirror bucket naming and object path contract |
-| [docs/mirror-threat-model.md](docs/mirror-threat-model.md) | Mirror threat scenarios and required controls for signed URLs, tokens, runner exposure, and replay |
+| [docs/mirror-threat-model.md](docs/mirror-threat-model.md) | Mirror threat scenarios, controls, stale idempotency claim hijacking, and replay replay protection |
 | [docs/model-location-policy.md](docs/model-location-policy.md) | Canonical model ownership policy (`pma_core` as source of truth) and de-duplication plan |
 | [docs/provider-import-migration.md](docs/provider-import-migration.md) | Canonical provider import paths and phased migration guidance for legacy compatibility barrels |
 | [docs/legacy-ui-kit-removal.md](docs/legacy-ui-kit-removal.md) | Issue #056 migration note and replacement checklist for removing legacy UI kit/GetX usage |

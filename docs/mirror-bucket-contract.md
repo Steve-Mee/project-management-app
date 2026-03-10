@@ -1,3 +1,4 @@
+// ARCHITECTURE LOCK: Mirror Gateway = thin proxy only. Compute always on Fly.io or local runner.
 # Mirror Bucket Contract
 
 ## Purpose
@@ -81,6 +82,7 @@ Documentation and CI checks should fail when:
 - Object path examples omit `auth.uid` owner prefix
 
 ## Related Documents
+- `docs/mirror-architecture.md`
 - `docs/mirror-ops-runbook.md`
 - `docs/mirror-threat-model.md`
 - `docs/mirror-production-readiness-checklist.md`

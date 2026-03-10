@@ -21,11 +21,16 @@ The architecture in this document covers:
 ### UI Layer
 - Entry points: task/project actions that deep-link to `MirrorEditorScreen`
 - Main screen: `lib/features/mirror/mirror_editor_screen.dart`
+- Supporting services (extracted from screen — screen is pure UI wiring only):
+  - `MirrorEditorRealtimeController` (`services/mirror_editor_realtime_controller.dart`) — owns Supabase Realtime channel subscription, broadcast dedup, and debug-stream injection
+  - `MirrorEditorRunService` (`services/mirror_editor_run_service.dart`) — owns run lifecycle (in-progress guard + delegate to `MirrorEditorOrchestrationService`)
+  - `MirrorEditorOrchestrationService` (`services/mirror_editor_orchestration_service.dart`) — generate/compile/preview/apply pipeline
+  - `MirrorRealtimeEventSetDeduplicator` (in `mirror_realtime_service.dart`) — FIFO-bounded set dedup for broadcast events
 - Responsibilities:
-- Select mode (`private` or `cloud`)
-- Show premium guard UX for restricted mode
-- Display files/editor/terminal/live output
-- Forward user intent to provider/backend flow
+  - Select mode (`private` or `cloud`)
+  - Show premium guard UX for restricted mode
+  - Display files/editor/terminal/live output
+  - Forward user intent to provider/service flow; all orchestration and realtime logic is delegated to the above services
 
 ### Provider Layer
 - State provider: `lib/core/providers/mirror_provider.dart`
@@ -39,20 +44,26 @@ The architecture in this document covers:
 ### Backend Contract Layer
 - Contract: `lib/features/mirror/mirror_compute_backend.dart`
 - Implementations:
-- `cloud_fly_backend.dart`
-- `mirror_gateway_backend.dart`
-- `private_grpc_backend.dart`
+  - `mirror_gateway_backend.dart` → **`MirrorGatewayBackend`** — canonical cloud implementation; routes through Mirror Gateway thin proxy
+  - `cloud_fly_backend.dart` — legacy/alternate Fly.io direct path
+  - `private_grpc_backend.dart` — local runner path
 - Responsibilities:
-- Normalize compile/apply requests
-- Perform retries/error mapping
-- Handle patch/apply/backup helpers where applicable
+  - Normalize compile/apply requests
+  - Perform retries/error mapping
+  - Handle patch/apply/backup helpers where applicable
+  - `MirrorGatewayBackend` enforces compile fingerprint on apply and validates preview context fingerprint for consistency
 
 ### Gateway Layer
-- Function: `supabase/functions/mirror-gateway/index.ts`
+- Function folder: `supabase/functions/mirror-gateway/`
+- Entry point: `supabase/functions/mirror-gateway/index.ts`
+- **Architecture Lock: Mirror Gateway is a thin proxy only. No compute logic executes here. All compute runs exclusively on Fly.io (cloud runner) or local runner.**
 - Responsibilities:
-- Validate request/auth context
-- Forward compile/apply requests to runner endpoint
-- Enforce timeouts and return structured errors
+  - Validate request/auth context (bearer JWT via Supabase Auth)
+  - Claim and finalize idempotency records in `mirror_request_idempotency` table
+  - Detect and recover stale/expired processing claims before forwarding
+  - Forward compile/apply requests to mode-specific upstream runner endpoint
+  - Enforce timeouts and return structured errors
+  - Replay cached responses for already-finalized idempotency keys
 
 ### Runner Layer
 - Services:
@@ -161,11 +172,22 @@ sequenceDiagram
 - Add richer diff/apply strategies in backend contract without changing UI entry points.
 - Add telemetry hooks at provider/backend/gateway boundaries for latency and failure analysis.
 
+## Architecture Lock
+
+The following rules are permanent and must not be changed without an explicit ADR:
+
+- **Mirror Gateway (`supabase/functions/mirror-gateway/`) is a thin proxy only.** It authenticates, claims idempotency, and forwards. It performs no compute.
+- **All compute runs on Fly.io (cloud runner) or local runner only.** The edge function never executes user code or compiles artifacts.
+- **`MirrorGatewayBackend`** is the canonical Dart class for the cloud backend path. Do not introduce alternative naming.
+- **`MirrorEditorScreen` is pure UI.** Orchestration and realtime logic must live in the dedicated service classes listed in the UI Layer section above.
+
 ## Operational Checklist
-- Confirm Mirror Gateway endpoint contract matches active backend implementation.
+- Confirm Mirror Gateway endpoint contract matches active backend implementation (`MirrorGatewayBackend`).
+- Confirm no compute logic has been added to `supabase/functions/mirror-gateway/`.
 - Confirm runner environment secrets are set and no insecure defaults are used.
 - Confirm canonical storage buckets and policies exist for `mirror-signed-inputs` and `mirror-backups`.
-- Confirm realtime update filters include project/task scope.
-- Confirm test coverage includes premium gating, mode switching, and output capping.
+- Confirm realtime update filters include project/task scope (enforced in `MirrorEditorRealtimeController`).
+- Confirm test coverage includes premium gating, mode switching, output capping, and idempotency replay scenarios.
+- Confirm `MirrorEditorScreen` imports only the two service classes; no direct Supabase or orchestration calls from within the widget state.
 
 

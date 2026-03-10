@@ -3,9 +3,15 @@
 
 ## Scope
 This runbook covers production operations for the Mirror compile/apply pipeline:
-- Mirror Gateway `mirror-gateway` (thin proxy only)
+- Mirror Gateway `mirror-gateway` (thin proxy only) — Supabase Edge Function at `supabase/functions/mirror-gateway/`
+- Dart cloud backend: `MirrorGatewayBackend` (`lib/features/mirror/mirror_gateway_backend.dart`)
 - Cloud runner (`server/mirror-cloud-runner`)
 - Supabase Storage buckets `mirror-signed-inputs` and `mirror-backups`
+
+Flutter editor services (extracted from screen):
+- `MirrorEditorRealtimeController` — owns Realtime channel subscription and dedup
+- `MirrorEditorRunService` — owns run in-progress lifecycle
+- `MirrorEditorOrchestrationService` — compile/apply pipeline
 
 Canonical naming note:
 - Use only `mirror-signed-inputs` and `mirror-backups`
@@ -118,6 +124,34 @@ Run in SQL editor (service role):
 4. Shift token issuer to new `kid`.
 5. Monitor auth denied metric for 30-60 minutes.
 6. Remove old key after stable window.
+
+## Idempotency Operations
+
+### Monitoring Stale Claims
+A `processing` claim older than 300 seconds that was never finalized indicates a runner crash or network partition. The gateway recovers these automatically via `resetIdempotencyKeyClaim`. If stale-claim takeover rate is elevated:
+1. Check runner health and crash reports for the affected time window.
+2. Verify the stale threshold (300 s) is appropriate relative to P95 runner execution time.
+3. Confirm `MIRROR_FORWARD_TIMEOUT_MS` is lower than 300 000 ms so gateway timeouts surface before stale threshold.
+
+### Finalize Conflict Errors
+If `idempotency_update_conflict:no_matching_processing_claim` appears in gateway logs:
+1. This means a finalize call found no matching `processing` record with the expected `request_id` and `request_hash`.
+2. Check whether the record was already finalized by a previous (possibly duplicate) request.
+3. Check whether the record was taken over by stale-claim recovery before finalize ran.
+4. The error is non-fatal to the caller (upstream response is still returned); monitor for elevated rates.
+
+### Clearing Stuck Records (break-glass)
+If a record is permanently stuck in `processing` and automatic recovery has not fired:
+```sql
+-- Run as service role. Replace placeholders.
+UPDATE mirror_request_idempotency
+SET status = 'failed',
+    expires_at = now() - interval '1 second'
+WHERE user_id = '<uid>'
+  AND action = '<compile|apply>'
+  AND idempotency_key = '<key>'
+  AND status = 'processing';
+```
 
 ## Safe Rollback
 1. Roll back Mirror Gateway and runner to last known good release.
