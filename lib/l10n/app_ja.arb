@@ -1,4 +1,4 @@
-{
+﻿{
   "@@locale": "ja",
   "appTitle": "プロジェクト管理アプリ",
   "@appTitle": {
@@ -1169,5 +1169,18 @@
   "clearAllFiltersButtonLabel": "Clear All Filters",
   "@clearAllFiltersButtonLabel": {
     "description": "Button label to clear all active filters"
+  }
+,
+  "mirrorApplyRiskAcknowledgeTitle": "直接適用のリスクを理解しています",
+  "@mirrorApplyRiskAcknowledgeTitle": {
+    "description": "Switch tile title in apply dialog asking user to acknowledge the risk."
+  },
+  "mirrorApplyRiskAcknowledgeSubtitle": "変更はワーキングディレクトリに適用されます。別ブランチの使用を推奨します。",
+  "@mirrorApplyRiskAcknowledgeSubtitle": {
+    "description": "Switch tile subtitle in apply dialog explaining the risk."
+  },
+  "mirrorPermissionDenied": "Mirror はご使用のアカウントでは利用できません。",
+  "@mirrorPermissionDenied": {
+    "description": "Screen-level message when user lacks use_mirror permission."
   }
 }

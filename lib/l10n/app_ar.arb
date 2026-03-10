@@ -1,4 +1,4 @@
-{
+﻿{
   "@@locale": "ar",
   "appTitle": "تطبيق ادارة المشاريع",
   "@appTitle": {
@@ -1169,5 +1169,18 @@
   "clearAllFiltersButtonLabel": "Clear All Filters",
   "@clearAllFiltersButtonLabel": {
     "description": "Button label to clear all active filters"
+  }
+,
+  "mirrorApplyRiskAcknowledgeTitle": "أفهم خطر التطبيق المباشر",
+  "@mirrorApplyRiskAcknowledgeTitle": {
+    "description": "Switch tile title in apply dialog asking user to acknowledge the risk."
+  },
+  "mirrorApplyRiskAcknowledgeSubtitle": "سيتم تطبيق التغييرات على دليل العمل الخاص بك. يُفضل استخدام فرع منفصل.",
+  "@mirrorApplyRiskAcknowledgeSubtitle": {
+    "description": "Switch tile subtitle in apply dialog explaining the risk."
+  },
+  "mirrorPermissionDenied": "Mirror غير متاح لحسابك.",
+  "@mirrorPermissionDenied": {
+    "description": "Screen-level message when user lacks use_mirror permission."
   }
 }

@@ -1,4 +1,4 @@
-{
+﻿{
   "@@locale": "ru",
   "appTitle": "Приложение для управления проектами",
   "@appTitle": {
@@ -1169,5 +1169,18 @@
   "clearAllFiltersButtonLabel": "Clear All Filters",
   "@clearAllFiltersButtonLabel": {
     "description": "Button label to clear all active filters"
+  }
+,
+  "mirrorApplyRiskAcknowledgeTitle": "Я понимаю риск прямого применения",
+  "@mirrorApplyRiskAcknowledgeTitle": {
+    "description": "Switch tile title in apply dialog asking user to acknowledge the risk."
+  },
+  "mirrorApplyRiskAcknowledgeSubtitle": "Изменения будут применены к рабочему каталогу. Предпочтительно использовать отдельную ветку.",
+  "@mirrorApplyRiskAcknowledgeSubtitle": {
+    "description": "Switch tile subtitle in apply dialog explaining the risk."
+  },
+  "mirrorPermissionDenied": "Mirror недоступен для вашей учётной записи.",
+  "@mirrorPermissionDenied": {
+    "description": "Screen-level message when user lacks use_mirror permission."
   }
 }

@@ -1,4 +1,4 @@
-{
+﻿{
   "@@locale": "es",
   "appTitle": "Aplicacion de gestion de proyectos",
   "@appTitle": {
@@ -1169,5 +1169,18 @@
   "clearAllFiltersButtonLabel": "Clear All Filters",
   "@clearAllFiltersButtonLabel": {
     "description": "Button label to clear all active filters"
+  }
+,
+  "mirrorApplyRiskAcknowledgeTitle": "Entiendo el riesgo de aplicar directamente",
+  "@mirrorApplyRiskAcknowledgeTitle": {
+    "description": "Switch tile title in apply dialog asking user to acknowledge the risk."
+  },
+  "mirrorApplyRiskAcknowledgeSubtitle": "Los cambios se aplicarán a su directorio de trabajo. Prefiera usar una rama separada.",
+  "@mirrorApplyRiskAcknowledgeSubtitle": {
+    "description": "Switch tile subtitle in apply dialog explaining the risk."
+  },
+  "mirrorPermissionDenied": "Mirror no está disponible para su cuenta.",
+  "@mirrorPermissionDenied": {
+    "description": "Screen-level message when user lacks use_mirror permission."
   }
 }

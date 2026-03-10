@@ -1,4 +1,4 @@
-{
+﻿{
   "@@locale": "ko",
   "appTitle": "프로젝트 관리 앱",
   "@appTitle": {
@@ -1169,5 +1169,18 @@
   "clearAllFiltersButtonLabel": "Clear All Filters",
   "@clearAllFiltersButtonLabel": {
     "description": "Button label to clear all active filters"
+  }
+,
+  "mirrorApplyRiskAcknowledgeTitle": "직접 적용의 위험을 이해합니다",
+  "@mirrorApplyRiskAcknowledgeTitle": {
+    "description": "Switch tile title in apply dialog asking user to acknowledge the risk."
+  },
+  "mirrorApplyRiskAcknowledgeSubtitle": "변경 사항이 작업 디렉터리에 적용됩니다. 별도 브랜치 사용을 권장합니다.",
+  "@mirrorApplyRiskAcknowledgeSubtitle": {
+    "description": "Switch tile subtitle in apply dialog explaining the risk."
+  },
+  "mirrorPermissionDenied": "Mirror는 귀하의 계정에서 사용할 수 없습니다.",
+  "@mirrorPermissionDenied": {
+    "description": "Screen-level message when user lacks use_mirror permission."
   }
 }

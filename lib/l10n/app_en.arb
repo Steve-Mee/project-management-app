@@ -2380,5 +2380,17 @@
   "mirrorUnavailableForAccount": "Mirror is not available for your account.",
   "@mirrorUnavailableForAccount": {
     "description": "Snack bar message when Mirror cannot be opened for the current account."
+  },
+  "mirrorApplyRiskAcknowledgeTitle": "I understand the risk of applying directly",
+  "@mirrorApplyRiskAcknowledgeTitle": {
+    "description": "Switch tile title in apply dialog asking user to acknowledge the risk."
+  },
+  "mirrorApplyRiskAcknowledgeSubtitle": "Changes will be applied to your working directory. Prefer using a separate branch.",
+  "@mirrorApplyRiskAcknowledgeSubtitle": {
+    "description": "Switch tile subtitle in apply dialog explaining the risk."
+  },
+  "mirrorPermissionDenied": "Mirror is not available for your account.",
+  "@mirrorPermissionDenied": {
+    "description": "Screen-level message when user lacks use_mirror permission."
   }
 }

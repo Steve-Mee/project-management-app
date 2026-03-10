@@ -1,4 +1,4 @@
-{
+﻿{
   "@@locale": "nl",
   "appTitle": "Project Management App",
   "@appTitle": {
@@ -1785,5 +1785,18 @@
   "mirrorUnavailableForAccount": "Mirror is not available for your account.",
   "@mirrorUnavailableForAccount": {
     "description": "Snackbarmelding wanneer Mirror niet beschikbaar is voor het huidige account."
+  }
+,
+  "mirrorApplyRiskAcknowledgeTitle": "Ik begrijp het risico van direct toepassen",
+  "@mirrorApplyRiskAcknowledgeTitle": {
+    "description": "Switch tile title in apply dialog asking user to acknowledge the risk."
+  },
+  "mirrorApplyRiskAcknowledgeSubtitle": "Wijzigingen worden toegepast op je werkmap. Gebruik bij voorkeur een aparte branch.",
+  "@mirrorApplyRiskAcknowledgeSubtitle": {
+    "description": "Switch tile subtitle in apply dialog explaining the risk."
+  },
+  "mirrorPermissionDenied": "Mirror is niet beschikbaar voor je account.",
+  "@mirrorPermissionDenied": {
+    "description": "Screen-level message when user lacks use_mirror permission."
   }
 }

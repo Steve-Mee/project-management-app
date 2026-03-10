@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../generated/app_localizations.dart';
 
 class ApplyDialogResult {
   const ApplyDialogResult({
@@ -105,9 +106,9 @@ class _ApplyDialogState extends State<ApplyDialog> {
             const SizedBox(height: 8),
             SwitchListTile.adaptive(
               contentPadding: EdgeInsets.zero,
-              title: const Text('Ik begrijp het risico van direct toepassen'),
-              subtitle: const Text(
-                'Wijzigingen worden toegepast op je werkmap. Gebruik bij voorkeur een aparte branch.',
+              title: Text(AppLocalizations.of(context)!.mirrorApplyRiskAcknowledgeTitle),
+              subtitle: Text(
+                AppLocalizations.of(context)!.mirrorApplyRiskAcknowledgeSubtitle,
               ),
               value: _acceptRisk,
               onChanged: (bool value) {

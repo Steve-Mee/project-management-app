@@ -1,4 +1,4 @@
-{
+﻿{
   "@@locale": "hi",
   "appTitle": "प्रोजेक्ट प्रबंधन ऐप",
   "@appTitle": {
@@ -1169,5 +1169,18 @@
   "clearAllFiltersButtonLabel": "Clear All Filters",
   "@clearAllFiltersButtonLabel": {
     "description": "Button label to clear all active filters"
+  }
+,
+  "mirrorApplyRiskAcknowledgeTitle": "मैं सीधे लागू करने के जोखिम को समझता हूं",
+  "@mirrorApplyRiskAcknowledgeTitle": {
+    "description": "Switch tile title in apply dialog asking user to acknowledge the risk."
+  },
+  "mirrorApplyRiskAcknowledgeSubtitle": "परिवर्तन आपकी कार्यशील निर्देशिका पर लागू होंगे। एक अलग शाखा का उपयोग करना पसंद करें।",
+  "@mirrorApplyRiskAcknowledgeSubtitle": {
+    "description": "Switch tile subtitle in apply dialog explaining the risk."
+  },
+  "mirrorPermissionDenied": "Mirror आपके खाते के लिए उपलब्ध नहीं है।",
+  "@mirrorPermissionDenied": {
+    "description": "Screen-level message when user lacks use_mirror permission."
   }
 }
