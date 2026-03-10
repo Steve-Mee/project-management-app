@@ -1,3 +1,4 @@
+// ARCHITECTURE LOCK: Mirror Gateway = thin proxy only. Compute always on Fly.io or local runner.
 # Project Management App
 
 [![Flutter](https://img.shields.io/badge/Flutter-3.0+-02569B?logo=flutter)](https://flutter.dev/) [![Riverpod](https://img.shields.io/badge/Riverpod-2.0+-blue?logo=flutter)](https://riverpod.dev/) [![Supabase](https://img.shields.io/badge/Supabase-2.0+-3ECF8E?logo=supabase)](https://supabase.com/) [![Sentry](https://img.shields.io/badge/Sentry-Enabled-red?logo=sentry)](https://sentry.io/) [![codecov](https://codecov.io/gh/Steve-Mee/project-management-app/branch/main/graph/badge.svg)](https://codecov.io/gh/Steve-Mee/project-management-app)
@@ -22,7 +23,7 @@ Flutter-based Project Management App for tracking projects, tasks, and sub-tasks
 
 Release pipeline documentation for issue `#075-release-pipeline-preparation` is available in [`docs/release-pipeline.md`](docs/release-pipeline.md).
 
-Supabase backend setup, schema, RLS policies, storage bucket guidance, and Edge Function deployment notes are documented in [`docs/supabase-setup.md`](docs/supabase-setup.md).
+Supabase backend setup, schema, RLS policies, storage bucket guidance, and Supabase function deployment notes are documented in [`docs/supabase-setup.md`](docs/supabase-setup.md).
 
 Quick flow:
 
@@ -116,7 +117,7 @@ graph TD
 
 Mirror compute forwarding now uses action-consistent HTTP endpoints and runner parity across environments.
 
-- Supabase Edge Function forwards by action to `/compile` or `/apply`.
+- Mirror Gateway (thin proxy only) forwards by action to `/compile` or `/apply`.
 - Cloud and local mirror runners expose HTTP `/compile` and `/apply` gateways backed by internal gRPC services.
 - Shared gateway implementation lives in `server/mirror-shared/lib/http_gateway.dart` and is reused by both runners.
 - Apply history and apply audit persistence use encrypted Hive storage, with production fail-closed behavior when encryption initialization fails.
@@ -209,7 +210,7 @@ For acceptance checklist, verification flow, and install steps, see [`docs/pwa-s
 | [INTEGRATION_GUIDE.md](INTEGRATION_GUIDE.md) | Guide for integrating various components |
 | [docs/gantt-chart.md](docs/gantt-chart.md) | Gantt upgrade checklist, architecture notes, and verification |
 | [docs/feature-flags.md](docs/feature-flags.md) | Supabase feature flag checklist, provider/service summary, and acceptance mapping |
-| [docs/supabase-setup.md](docs/supabase-setup.md) | Supabase setup instructions, SQL schema, RLS/storage policies, Edge Functions, and policy authoring guide |
+| [docs/supabase-setup.md](docs/supabase-setup.md) | Supabase setup instructions, SQL schema, RLS/storage policies, Supabase functions, and policy authoring guide |
 | [docs/analytics.md](docs/analytics.md) | Issue #073 analytics checklist, event mapping, service usage, and `analytics_events` schema suggestion |
 | [docs/ai-usage-data-contract.md](docs/ai-usage-data-contract.md) | Authoritative source-of-truth contract for AI usage aggregates (Supabase) versus detailed history (Hive) |
 | [docs/error-boundary.md](docs/error-boundary.md) | Global error boundary acceptance checklist, test procedure, and AppLogger/Sentry integration notes |
@@ -224,7 +225,7 @@ For acceptance checklist, verification flow, and install steps, see [`docs/pwa-s
 | [docs/model-location-policy.md](docs/model-location-policy.md) | Canonical model ownership policy (`pma_core` as source of truth) and de-duplication plan |
 | [docs/provider-import-migration.md](docs/provider-import-migration.md) | Canonical provider import paths and phased migration guidance for legacy compatibility barrels |
 | [docs/legacy-ui-kit-removal.md](docs/legacy-ui-kit-removal.md) | Issue #056 migration note and replacement checklist for removing legacy UI kit/GetX usage |
-| [docs/supabase_fcm_setup.md](docs/supabase_fcm_setup.md) | Issue #058 end-to-end Supabase Edge Function to FCM setup, payload shape, and production checklist |
+| [docs/supabase_fcm_setup.md](docs/supabase_fcm_setup.md) | Issue #058 end-to-end Supabase function to FCM setup, payload shape, and production checklist |
 | [docs/golden-tests.md](docs/golden-tests.md) | Issue #060 local golden-test workflow, baseline update flow, and review checklist |
 | [docs/ci-cd-workflows.md](docs/ci-cd-workflows.md) | Issue #061 workflow matrix with triggers, responsibilities, and release gating notes |
 | [NAVIGATION_GUIDE.md](NAVIGATION_GUIDE.md) | Guide for navigating the application |

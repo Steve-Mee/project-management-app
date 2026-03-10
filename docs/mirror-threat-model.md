@@ -18,7 +18,7 @@ The threat model in this document covers:
 ## System Boundaries
 ### Trust Zones
 - Client zone: authenticated app session and user-owned request payloads
-- Gateway zone: Mirror Gateway `mirror-gateway` (Supabase Edge Function thin proxy only)
+- Gateway zone: Mirror Gateway `mirror-gateway` (thin proxy only)
 - Runner zone: cloud/local runner services
 - Storage zone: Supabase Storage buckets (`mirror-signed-inputs`, `mirror-backups`)
 - Data zone: `ai_sessions` and `mirror_apply_audit_events`

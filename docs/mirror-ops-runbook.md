@@ -3,7 +3,7 @@
 
 ## Scope
 This runbook covers production operations for the Mirror compile/apply pipeline:
-- Mirror Gateway `mirror-gateway` (Supabase Edge Function thin proxy only)
+- Mirror Gateway `mirror-gateway` (thin proxy only)
 - Cloud runner (`server/mirror-cloud-runner`)
 - Supabase Storage buckets `mirror-signed-inputs` and `mirror-backups`
 

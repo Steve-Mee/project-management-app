@@ -3,7 +3,7 @@
 
 **Datum:** 2026-03-10  
 **Reviewer:** Senior Flutter/Supabase Architect  
-**Scope:** Volledige Mirror-implementatie (Supabase, Edge Function, gRPC Backend, Dart/Flutter Core, UI, Tests, Docs)  
+**Scope:** Volledige Mirror-implementatie (Supabase, Mirror Gateway thin proxy, gRPC Backend, Dart/Flutter Core, UI, Tests, Docs)  
 **Geanalyseerde bestanden:** 45+ bestanden inclusief providers, services, migraties, tests en documentatie
 
 ---
@@ -40,7 +40,7 @@
 
 **Overall score (1-10): 7.2 / 10**
 
-De implementatie is kwalitatief sterk voor een feature gebouwd via 36 prompts: architectuurkeuzes zijn verdedigbaar, security is serieus aangepakt, en offline-first coverage is boven gemiddeld. De score wordt gedrukt door de ontbrekende Edge Function in de repo, hardcoded Nederlandse tekst, onveilige gRPC-credentials, semantisch zwak proto-contract, en significante openstaande productie-readiness items.
+De implementatie is kwalitatief sterk voor een feature gebouwd via 36 prompts: architectuurkeuzes zijn verdedigbaar, security is serieus aangepakt, en offline-first coverage is boven gemiddeld. De score wordt gedrukt door eerder ontbrekende gateway-koppeling in de repo, hardcoded Nederlandse tekst, onveilige gRPC-credentials, semantisch zwak proto-contract, en significante openstaande productie-readiness items.
 
 ---
 
@@ -62,7 +62,7 @@ Aandachtspunten:
 
 ---
 
-**Edge Functions & gRPC backend laag**
+**Mirror Gateway & gRPC backend laag**
 
 `MirrorGatewayBackend` heeft correcte retrylogica met exponential backoff, aparte compile/apply endpoint routing, en fingerprint-verificatie. `CloudFlyBackend` voert dubbele premium-check uit per aanroep — defensief juist. `secureApply()` extension coördineert de volledige security-artifact lifecycle op herbruikbare wijze. `computeCompileResultFingerprint()` sorteert file-entries voor de hash — deterministisch bij volgorde-variaties. `persistApplyToHive()` heeft expliciete budgetlimieten: max 50 files, 100k chars, 40 history entries.
 
@@ -112,7 +112,7 @@ Aandachtspunten:
 - `PrivateGrpcBackend` heeft geen token-verificatie — stuurt naar `127.0.0.1:50051` zonder auth-header. Expliciete documentatie en bewaking vereist bij productie.
 - `MirrorEditorScreen` heeft geen interne fallback-guard voor de `use_mirror` permissie — als de route direct wordt aangeroepen (deep link, test, toekomstige navigatiewijziging) bestaat er geen scherm-niveau guard.
 - Audit DELETE-policy ondermijnt forensische integriteit (zie Database-laag).
-- `AppPermissions.useMirror` check is client-side only — Edge Function zou ook permissie moeten valideren via JWT-claims.
+- `AppPermissions.useMirror` check is client-side only — Mirror Gateway zou ook permissie moeten valideren via JWT-claims.
 
 ---
 
@@ -171,7 +171,7 @@ Aandachtspunten:
 
 **Toevoegingen (nieuwe bestanden/features met korte beschrijving)**
 
-`supabase/functions/mirror-gateway/index.ts` — Voeg de Edge Function toe aan de repository (momenteel gedocumenteerd maar afwezig). Minimale implementatie: bearer token validatie via `supabase.auth.getUser()`, request body size check (max 512 KB), route naar `/compile` of `/apply` endpoint, `x-request-id` en `x-idempotency-key` propagation, structured error responses. Dit is een **P1 blocker** voor productie.
+`supabase/functions/mirror-gateway/index.ts` — Houd Mirror Gateway als thin proxy in de repository met bearer token validatie via `supabase.auth.getUser()`, request body size check (max 512 KB), route naar `/compile` of `/apply` endpoint, `x-request-id` en `x-idempotency-key` propagation en structured error responses. Dit blijft een **P1 gate** voor productie.
 
 `lib/features/mirror/mirror_editor_screen.dart` — Voeg een interne permissiecheck toe binnen `build()` als vangnet voor directe route-aanroepen:
 ```dart
@@ -229,7 +229,7 @@ service MirrorComputeService {
 | W1 | ~~Lokaliseer apply_dialog Nederlandse tekst~~ | `apply_dialog.dart` | ~~Medium (i18n breuk)~~ | ✅ **Opgelost** |
 | W2 | Configureerbare TLS in PrivateGrpcBackend | `private_grpc_backend.dart` | Hoog (onversleuteld) | **P1** |
 | W6 | Verwijder DELETE op audit-tabel | SQL-migratie | Hoog (audit integrity) | **P1** |
-| T1 | Edge Function toevoegen aan repo | `supabase/functions/` | Hoog (deployment drift) | **P1** |
+| T1 | Mirror Gateway in repo houden | `supabase/functions/` | Hoog (deployment drift) | **P1** |
 | T2 | Permission guard in MirrorEditorScreen | `mirror_editor_screen.dart` | Hoog (bypass risico) | **P1** |
 | W3 | Fingerprint-check in PrivateGrpcBackend.apply() | `private_grpc_backend.dart` | Hoog (TOCTOU) | **P2** |
 | W4 | Vervang `_selectedMode` met `ref.listen()` | `mirror_editor_screen.dart` | Medium (state desync) | **P2** |
