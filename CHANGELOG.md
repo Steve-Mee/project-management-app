@@ -1,3 +1,9 @@
+## [1.29.1](https://github.com/Steve-Mee/project-management-app/compare/v1.29.0...v1.29.1) (2026-03-10)
+
+### Bug Fixes
+
+* **mirror:** enforce preview/apply context parity and mandatory fingerprint validation for gateway apply ([4305bf1](https://github.com/Steve-Mee/project-management-app/commit/4305bf165d73bd9f90c27bcdd9eea40a02704d6f))
+
 ## [1.29.0](https://github.com/Steve-Mee/project-management-app/compare/v1.28.2...v1.29.0) (2026-03-10)
 
 ### Features
