@@ -3,9 +3,11 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:pma_core/providers/auth/auth_providers.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
 import 'package:xterm/xterm.dart';
 import '../../generated/app_localizations.dart';
+import '../../core/auth/permissions.dart';
 
 import '../../core/providers/mirror_session_provider.dart';
 import 'models/mirror_template.dart';
@@ -53,6 +55,9 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
   @override
   void initState() {
     super.initState();
+    final canUseMirror = ref.read(
+      hasPermissionProvider(AppPermissions.useMirror),
+    );
     _selectedMode = 'private';
     _terminal = Terminal(maxLines: 1000);
     _terminalController = TerminalController();
@@ -63,6 +68,10 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
       sessionKey: _sessionKey,
     );
     _runService = const MirrorEditorRunService();
+    if (!canUseMirror) {
+      return;
+    }
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) {
         return;
@@ -91,6 +100,18 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = _l10n;
+    final canUseMirror = ref.watch(
+      hasPermissionProvider(AppPermissions.useMirror),
+    );
+    if (!canUseMirror) {
+      return Scaffold(
+        body: Center(
+          child: Text(l10n.mirrorPermissionDenied),
+        ),
+      );
+    }
+
     final mirrorState = ref.watch(mirrorProvider);
     final sessionState = ref.watch(mirrorSessionProvider(_sessionKey));
     final isPremium = mirrorState.isPremium;

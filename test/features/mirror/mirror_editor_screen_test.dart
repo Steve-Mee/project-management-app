@@ -5,6 +5,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hive/hive.dart';
+import 'package:pma_core/providers/auth/auth_providers.dart';
+import 'package:project_management_app/core/auth/permissions.dart';
 import 'package:project_management_app/core/providers/mirror_provider.dart';
 import 'package:project_management_app/generated/app_localizations.dart';
 import 'package:project_management_app/features/mirror/mirror_editor_screen.dart';
@@ -37,6 +39,8 @@ Widget _buildHarness({
   return ProviderScope(
     overrides: <Override>[
       mirrorProvider.overrideWith(() => notifier),
+      hasPermissionProvider(AppPermissions.useMirror)
+          .overrideWith((ref) => true),
     ],
     child: MaterialApp(
       locale: const Locale('en'),
