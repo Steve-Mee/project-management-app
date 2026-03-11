@@ -1,3 +1,9 @@
+## [1.37.0](https://github.com/Steve-Mee/project-management-app/compare/v1.36.1...v1.37.0) (2026-03-11)
+
+### Features
+
+* **mirror:** add context payload budget service to prevent large-project overload (P1) ([92e6e0e](https://github.com/Steve-Mee/project-management-app/commit/92e6e0e336043554fac7eaf6c4499130b32b1666))
+
 ## [1.36.1](https://github.com/Steve-Mee/project-management-app/compare/v1.36.0...v1.36.1) (2026-03-11)
 
 ### Bug Fixes
