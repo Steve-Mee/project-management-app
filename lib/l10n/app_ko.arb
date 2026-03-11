@@ -1182,5 +1182,47 @@
   "mirrorPermissionDenied": "Mirror는 귀하의 계정에서 사용할 수 없습니다.",
   "@mirrorPermissionDenied": {
     "description": "Screen-level message when user lacks use_mirror permission."
+  },
+  "mirrorApplyDiffPreview": "차이 미리보기",
+  "@mirrorApplyDiffPreview": {
+    "description": "Heading above the diff preview in the apply dialog."
+  },
+  "mirrorApplyNo": "아니오",
+  "@mirrorApplyNo": {
+    "description": "Cancel button label in the apply dialog."
+  },
+  "mirrorApplyConfirm": "적용",
+  "@mirrorApplyConfirm": {
+    "description": "Confirm button label in the apply dialog."
+  },
+  "mirrorApplyNoDiff": "(차이가 감지되지 않음)",
+  "@mirrorApplyNoDiff": {
+    "description": "Fallback diff line when no differences are found in the apply dialog."
+  },
+  "mirrorApplyBranchAdviceTitle": "Git 브랜치 권장사항",
+  "@mirrorApplyBranchAdviceTitle": {
+    "description": "Title of the branch advice card in the apply dialog."
+  },
+  "mirrorApplyCurrentBranch": "현재 브랜치: {branch}",
+  "@mirrorApplyCurrentBranch": {
+    "description": "Label showing the active git branch in the apply dialog.",
+    "placeholders": {
+      "branch": {
+        "type": "String"
+      }
+    }
+  },
+  "mirrorApplySuggestedBranch": "권장 브랜치: {branch}",
+  "@mirrorApplySuggestedBranch": {
+    "description": "Label showing the suggested target branch in the apply dialog.",
+    "placeholders": {
+      "branch": {
+        "type": "String"
+      }
+    }
+  },
+  "mirrorApplyBranchTip": "팁: 안전한 검토 및 롤백을 위해 먼저 새 브랜치를 만드세요.",
+  "@mirrorApplyBranchTip": {
+    "description": "Tip text in the branch advice card encouraging branch-based workflow."
   }
 }

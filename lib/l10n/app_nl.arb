@@ -1798,5 +1798,47 @@
   "mirrorPermissionDenied": "Mirror is niet beschikbaar voor je account.",
   "@mirrorPermissionDenied": {
     "description": "Screen-level message when user lacks use_mirror permission."
+  },
+  "mirrorApplyDiffPreview": "Diff preview",
+  "@mirrorApplyDiffPreview": {
+    "description": "Heading above the diff preview in the apply dialog."
+  },
+  "mirrorApplyNo": "Nee",
+  "@mirrorApplyNo": {
+    "description": "Cancel button label in the apply dialog."
+  },
+  "mirrorApplyConfirm": "Ja, toepassen",
+  "@mirrorApplyConfirm": {
+    "description": "Confirm button label in the apply dialog."
+  },
+  "mirrorApplyNoDiff": "(Geen verschillen gedetecteerd)",
+  "@mirrorApplyNoDiff": {
+    "description": "Fallback diff line when no differences are found in the apply dialog."
+  },
+  "mirrorApplyBranchAdviceTitle": "Git branch advies",
+  "@mirrorApplyBranchAdviceTitle": {
+    "description": "Title of the branch advice card in the apply dialog."
+  },
+  "mirrorApplyCurrentBranch": "Huidige branch: {branch}",
+  "@mirrorApplyCurrentBranch": {
+    "description": "Label showing the active git branch in the apply dialog.",
+    "placeholders": {
+      "branch": {
+        "type": "String"
+      }
+    }
+  },
+  "mirrorApplySuggestedBranch": "Aanbevolen branch: {branch}",
+  "@mirrorApplySuggestedBranch": {
+    "description": "Label showing the suggested target branch in the apply dialog.",
+    "placeholders": {
+      "branch": {
+        "type": "String"
+      }
+    }
+  },
+  "mirrorApplyBranchTip": "Tip: maak eerst een nieuwe branch voor veilige review en rollback.",
+  "@mirrorApplyBranchTip": {
+    "description": "Tip text in the branch advice card encouraging branch-based workflow."
   }
 }

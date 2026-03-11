@@ -1715,4 +1715,33 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get mirrorPermissionDenied =>
       'Mirror n\'est pas disponible pour votre compte.';
+
+  @override
+  String get mirrorApplyDiffPreview => 'Aperçu des différences';
+
+  @override
+  String get mirrorApplyNo => 'Non';
+
+  @override
+  String get mirrorApplyConfirm => 'Appliquer';
+
+  @override
+  String get mirrorApplyNoDiff => '(Aucune différence détectée)';
+
+  @override
+  String get mirrorApplyBranchAdviceTitle => 'Conseil de branche Git';
+
+  @override
+  String mirrorApplyCurrentBranch(String branch) {
+    return 'Branche actuelle : $branch';
+  }
+
+  @override
+  String mirrorApplySuggestedBranch(String branch) {
+    return 'Branche recommandée : $branch';
+  }
+
+  @override
+  String get mirrorApplyBranchTip =>
+      'Conseil : créez d\'abord une nouvelle branche pour une révision et un retour arrière sécurisés.';
 }

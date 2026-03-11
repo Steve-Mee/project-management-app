@@ -1705,4 +1705,33 @@ class AppLocalizationsRu extends AppLocalizations {
   @override
   String get mirrorPermissionDenied =>
       'Mirror недоступен для вашей учётной записи.';
+
+  @override
+  String get mirrorApplyDiffPreview => 'Предварительный просмотр изменений';
+
+  @override
+  String get mirrorApplyNo => 'Нет';
+
+  @override
+  String get mirrorApplyConfirm => 'Применить';
+
+  @override
+  String get mirrorApplyNoDiff => '(Различий не обнаружено)';
+
+  @override
+  String get mirrorApplyBranchAdviceTitle => 'Рекомендация по ветке Git';
+
+  @override
+  String mirrorApplyCurrentBranch(String branch) {
+    return 'Текущая ветка: $branch';
+  }
+
+  @override
+  String mirrorApplySuggestedBranch(String branch) {
+    return 'Рекомендуемая ветка: $branch';
+  }
+
+  @override
+  String get mirrorApplyBranchTip =>
+      'Совет: сначала создайте новую ветку для безопасной проверки и отката.';
 }

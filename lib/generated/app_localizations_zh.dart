@@ -1691,4 +1691,32 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get mirrorPermissionDenied => 'Mirror 不适用于您的帐户。';
+
+  @override
+  String get mirrorApplyDiffPreview => '差异预览';
+
+  @override
+  String get mirrorApplyNo => '否';
+
+  @override
+  String get mirrorApplyConfirm => '应用';
+
+  @override
+  String get mirrorApplyNoDiff => '(未检测到差异)';
+
+  @override
+  String get mirrorApplyBranchAdviceTitle => 'Git 分支建议';
+
+  @override
+  String mirrorApplyCurrentBranch(String branch) {
+    return '当前分支：$branch';
+  }
+
+  @override
+  String mirrorApplySuggestedBranch(String branch) {
+    return '建议分支：$branch';
+  }
+
+  @override
+  String get mirrorApplyBranchTip => '提示：请先创建一个新分支，以便安全审查和回滚。';
 }

@@ -1699,4 +1699,33 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get mirrorPermissionDenied => 'Mirror غير متاح لحسابك.';
+
+  @override
+  String get mirrorApplyDiffPreview => 'معاينة الفوارق';
+
+  @override
+  String get mirrorApplyNo => 'لا';
+
+  @override
+  String get mirrorApplyConfirm => 'تطبيق';
+
+  @override
+  String get mirrorApplyNoDiff => '(لم يتم اكتشاف أي فوارق)';
+
+  @override
+  String get mirrorApplyBranchAdviceTitle => 'نصيحة فرع Git';
+
+  @override
+  String mirrorApplyCurrentBranch(String branch) {
+    return 'الفرع الحالي: $branch';
+  }
+
+  @override
+  String mirrorApplySuggestedBranch(String branch) {
+    return 'الفرع المقترح: $branch';
+  }
+
+  @override
+  String get mirrorApplyBranchTip =>
+      'نصيحة: أنشئ فرعاً جديداً أولاً للمراجعة الآمنة والتراجع.';
 }

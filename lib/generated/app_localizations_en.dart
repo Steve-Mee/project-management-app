@@ -1701,4 +1701,33 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get mirrorPermissionDenied =>
       'Mirror is not available for your account.';
+
+  @override
+  String get mirrorApplyDiffPreview => 'Diff preview';
+
+  @override
+  String get mirrorApplyNo => 'No';
+
+  @override
+  String get mirrorApplyConfirm => 'Apply';
+
+  @override
+  String get mirrorApplyNoDiff => '(No differences detected)';
+
+  @override
+  String get mirrorApplyBranchAdviceTitle => 'Git branch advice';
+
+  @override
+  String mirrorApplyCurrentBranch(String branch) {
+    return 'Current branch: $branch';
+  }
+
+  @override
+  String mirrorApplySuggestedBranch(String branch) {
+    return 'Suggested branch: $branch';
+  }
+
+  @override
+  String get mirrorApplyBranchTip =>
+      'Tip: create a new branch first for safe review and rollback.';
 }

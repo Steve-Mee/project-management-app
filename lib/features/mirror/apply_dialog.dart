@@ -64,9 +64,11 @@ class _ApplyDialogState extends State<ApplyDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final diffLines = _buildDiffLines(
       widget.originalContent,
       widget.updatedContent,
+      noDiffText: l10n.mirrorApplyNoDiff,
     );
 
     return AlertDialog(
@@ -83,7 +85,7 @@ class _ApplyDialogState extends State<ApplyDialog> {
             ),
             const SizedBox(height: 12),
             Text(
-              'Diff preview',
+              l10n.mirrorApplyDiffPreview,
               style: Theme.of(context).textTheme.titleSmall,
             ),
             const SizedBox(height: 8),
@@ -131,7 +133,7 @@ class _ApplyDialogState extends State<ApplyDialog> {
               ),
             );
           },
-          child: const Text('Nee'),
+          child: Text(l10n.mirrorApplyNo),
         ),
         FilledButton(
           onPressed: _acceptRisk
@@ -145,13 +147,17 @@ class _ApplyDialogState extends State<ApplyDialog> {
                   );
                 }
               : null,
-          child: const Text('Ja, toepassen'),
+          child: Text(l10n.mirrorApplyConfirm),
         ),
       ],
     );
   }
 
-  List<_DiffLine> _buildDiffLines(String oldText, String newText) {
+  List<_DiffLine> _buildDiffLines(
+    String oldText,
+    String newText, {
+    required String noDiffText,
+  }) {
     final a = oldText.split('\n');
     final b = newText.split('\n');
 
@@ -177,7 +183,7 @@ class _ApplyDialogState extends State<ApplyDialog> {
     }
 
     if (buffer.isEmpty) {
-      buffer.add(const _DiffLine(context: ' ', text: '(Geen verschillen gedetecteerd)'));
+      buffer.add(_DiffLine(context: ' ', text: noDiffText));
     }
 
     return buffer;
@@ -206,15 +212,15 @@ class _BranchInfoCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
           Text(
-            'Git branch advies',
+            AppLocalizations.of(context)!.mirrorApplyBranchAdviceTitle,
             style: Theme.of(context).textTheme.titleSmall,
           ),
           const SizedBox(height: 6),
-          Text('Huidige branch: $currentBranch'),
-          Text('Aanbevolen branch: $suggestedBranch'),
+          Text(AppLocalizations.of(context)!.mirrorApplyCurrentBranch(currentBranch)),
+          Text(AppLocalizations.of(context)!.mirrorApplySuggestedBranch(suggestedBranch)),
           const SizedBox(height: 6),
-          const Text(
-            'Tip: maak eerst een nieuwe branch voor veilige review en rollback.',
+          Text(
+            AppLocalizations.of(context)!.mirrorApplyBranchTip,
           ),
         ],
       ),

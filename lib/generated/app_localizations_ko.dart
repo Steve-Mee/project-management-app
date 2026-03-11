@@ -1693,4 +1693,32 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get mirrorPermissionDenied => 'Mirror는 귀하의 계정에서 사용할 수 없습니다.';
+
+  @override
+  String get mirrorApplyDiffPreview => '차이 미리보기';
+
+  @override
+  String get mirrorApplyNo => '아니오';
+
+  @override
+  String get mirrorApplyConfirm => '적용';
+
+  @override
+  String get mirrorApplyNoDiff => '(차이가 감지되지 않음)';
+
+  @override
+  String get mirrorApplyBranchAdviceTitle => 'Git 브랜치 권장사항';
+
+  @override
+  String mirrorApplyCurrentBranch(String branch) {
+    return '현재 브랜치: $branch';
+  }
+
+  @override
+  String mirrorApplySuggestedBranch(String branch) {
+    return '권장 브랜치: $branch';
+  }
+
+  @override
+  String get mirrorApplyBranchTip => '팁: 안전한 검토 및 롤백을 위해 먼저 새 브랜치를 만드세요.';
 }

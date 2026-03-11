@@ -1182,5 +1182,47 @@
   "mirrorPermissionDenied": "Mirror недоступен для вашей учётной записи.",
   "@mirrorPermissionDenied": {
     "description": "Screen-level message when user lacks use_mirror permission."
+  },
+  "mirrorApplyDiffPreview": "Предварительный просмотр изменений",
+  "@mirrorApplyDiffPreview": {
+    "description": "Heading above the diff preview in the apply dialog."
+  },
+  "mirrorApplyNo": "Нет",
+  "@mirrorApplyNo": {
+    "description": "Cancel button label in the apply dialog."
+  },
+  "mirrorApplyConfirm": "Применить",
+  "@mirrorApplyConfirm": {
+    "description": "Confirm button label in the apply dialog."
+  },
+  "mirrorApplyNoDiff": "(Различий не обнаружено)",
+  "@mirrorApplyNoDiff": {
+    "description": "Fallback diff line when no differences are found in the apply dialog."
+  },
+  "mirrorApplyBranchAdviceTitle": "Рекомендация по ветке Git",
+  "@mirrorApplyBranchAdviceTitle": {
+    "description": "Title of the branch advice card in the apply dialog."
+  },
+  "mirrorApplyCurrentBranch": "Текущая ветка: {branch}",
+  "@mirrorApplyCurrentBranch": {
+    "description": "Label showing the active git branch in the apply dialog.",
+    "placeholders": {
+      "branch": {
+        "type": "String"
+      }
+    }
+  },
+  "mirrorApplySuggestedBranch": "Рекомендуемая ветка: {branch}",
+  "@mirrorApplySuggestedBranch": {
+    "description": "Label showing the suggested target branch in the apply dialog.",
+    "placeholders": {
+      "branch": {
+        "type": "String"
+      }
+    }
+  },
+  "mirrorApplyBranchTip": "Совет: сначала создайте новую ветку для безопасной проверки и отката.",
+  "@mirrorApplyBranchTip": {
+    "description": "Tip text in the branch advice card encouraging branch-based workflow."
   }
 }

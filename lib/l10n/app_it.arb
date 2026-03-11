@@ -1182,5 +1182,47 @@
   "mirrorPermissionDenied": "Mirror non è disponibile per il tuo account.",
   "@mirrorPermissionDenied": {
     "description": "Screen-level message when user lacks use_mirror permission."
+  },
+  "mirrorApplyDiffPreview": "Anteprima differenze",
+  "@mirrorApplyDiffPreview": {
+    "description": "Heading above the diff preview in the apply dialog."
+  },
+  "mirrorApplyNo": "No",
+  "@mirrorApplyNo": {
+    "description": "Cancel button label in the apply dialog."
+  },
+  "mirrorApplyConfirm": "Applica",
+  "@mirrorApplyConfirm": {
+    "description": "Confirm button label in the apply dialog."
+  },
+  "mirrorApplyNoDiff": "(Nessuna differenza rilevata)",
+  "@mirrorApplyNoDiff": {
+    "description": "Fallback diff line when no differences are found in the apply dialog."
+  },
+  "mirrorApplyBranchAdviceTitle": "Consiglio branch Git",
+  "@mirrorApplyBranchAdviceTitle": {
+    "description": "Title of the branch advice card in the apply dialog."
+  },
+  "mirrorApplyCurrentBranch": "Branch attuale: {branch}",
+  "@mirrorApplyCurrentBranch": {
+    "description": "Label showing the active git branch in the apply dialog.",
+    "placeholders": {
+      "branch": {
+        "type": "String"
+      }
+    }
+  },
+  "mirrorApplySuggestedBranch": "Branch suggerito: {branch}",
+  "@mirrorApplySuggestedBranch": {
+    "description": "Label showing the suggested target branch in the apply dialog.",
+    "placeholders": {
+      "branch": {
+        "type": "String"
+      }
+    }
+  },
+  "mirrorApplyBranchTip": "Suggerimento: crea prima un nuovo branch per una revisione sicura e il rollback.",
+  "@mirrorApplyBranchTip": {
+    "description": "Tip text in the branch advice card encouraging branch-based workflow."
   }
 }

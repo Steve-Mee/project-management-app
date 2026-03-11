@@ -3188,6 +3188,54 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Mirror is not available for your account.'**
   String get mirrorPermissionDenied;
+
+  /// Heading above the diff preview in the apply dialog.
+  ///
+  /// In en, this message translates to:
+  /// **'Diff preview'**
+  String get mirrorApplyDiffPreview;
+
+  /// Cancel button label in the apply dialog.
+  ///
+  /// In en, this message translates to:
+  /// **'No'**
+  String get mirrorApplyNo;
+
+  /// Confirm button label in the apply dialog.
+  ///
+  /// In en, this message translates to:
+  /// **'Apply'**
+  String get mirrorApplyConfirm;
+
+  /// Fallback diff line when no differences are found in the apply dialog.
+  ///
+  /// In en, this message translates to:
+  /// **'(No differences detected)'**
+  String get mirrorApplyNoDiff;
+
+  /// Title of the branch advice card in the apply dialog.
+  ///
+  /// In en, this message translates to:
+  /// **'Git branch advice'**
+  String get mirrorApplyBranchAdviceTitle;
+
+  /// Label showing the active git branch in the apply dialog.
+  ///
+  /// In en, this message translates to:
+  /// **'Current branch: {branch}'**
+  String mirrorApplyCurrentBranch(String branch);
+
+  /// Label showing the suggested target branch in the apply dialog.
+  ///
+  /// In en, this message translates to:
+  /// **'Suggested branch: {branch}'**
+  String mirrorApplySuggestedBranch(String branch);
+
+  /// Tip text in the branch advice card encouraging branch-based workflow.
+  ///
+  /// In en, this message translates to:
+  /// **'Tip: create a new branch first for safe review and rollback.'**
+  String get mirrorApplyBranchTip;
 }
 
 class _AppLocalizationsDelegate

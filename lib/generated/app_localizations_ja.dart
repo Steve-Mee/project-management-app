@@ -1693,4 +1693,33 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get mirrorPermissionDenied => 'Mirror はご使用のアカウントでは利用できません。';
+
+  @override
+  String get mirrorApplyDiffPreview => '差分プレビュー';
+
+  @override
+  String get mirrorApplyNo => 'いいえ';
+
+  @override
+  String get mirrorApplyConfirm => '適用';
+
+  @override
+  String get mirrorApplyNoDiff => '(差分が検出されませんでした)';
+
+  @override
+  String get mirrorApplyBranchAdviceTitle => 'Gitブランチアドバイス';
+
+  @override
+  String mirrorApplyCurrentBranch(String branch) {
+    return '現在のブランチ: $branch';
+  }
+
+  @override
+  String mirrorApplySuggestedBranch(String branch) {
+    return '推奨ブランチ: $branch';
+  }
+
+  @override
+  String get mirrorApplyBranchTip =>
+      'ヒント: 安全なレビューとロールバックのために、まず新しいブランチを作成してください。';
 }

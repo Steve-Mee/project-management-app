@@ -1702,4 +1702,33 @@ class AppLocalizationsHi extends AppLocalizations {
   @override
   String get mirrorPermissionDenied =>
       'Mirror आपके खाते के लिए उपलब्ध नहीं है।';
+
+  @override
+  String get mirrorApplyDiffPreview => 'अंतर पूर्वावलोकन';
+
+  @override
+  String get mirrorApplyNo => 'नहीं';
+
+  @override
+  String get mirrorApplyConfirm => 'लागू करें';
+
+  @override
+  String get mirrorApplyNoDiff => '(कोई अंतर नहीं मिला)';
+
+  @override
+  String get mirrorApplyBranchAdviceTitle => 'Git शाखा सलाह';
+
+  @override
+  String mirrorApplyCurrentBranch(String branch) {
+    return 'वर्तमान शाखा: $branch';
+  }
+
+  @override
+  String mirrorApplySuggestedBranch(String branch) {
+    return 'सुझाई गई शाखा: $branch';
+  }
+
+  @override
+  String get mirrorApplyBranchTip =>
+      'सुझाव: सुरक्षित समीक्षा और रोलबैक के लिए पहले एक नई शाखा बनाएं।';
 }
