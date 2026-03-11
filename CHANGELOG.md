@@ -1,3 +1,9 @@
+## [1.36.1](https://github.com/Steve-Mee/project-management-app/compare/v1.36.0...v1.36.1) (2026-03-11)
+
+### Bug Fixes
+
+* **db:** align idempotency status to processing (P0 blocker) ([032c1b2](https://github.com/Steve-Mee/project-management-app/commit/032c1b2c6571355b725e7d985482320bb849562c))
+
 ## [1.36.0](https://github.com/Steve-Mee/project-management-app/compare/v1.35.0...v1.36.0) (2026-03-11)
 
 ### Features
