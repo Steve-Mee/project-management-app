@@ -8,6 +8,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../core/config/app_config.dart';
 import 'mirror_compute_backend.dart';
+import 'services/mirror_context_budget_service.dart';
 
 class MirrorGatewayBackend implements MirrorComputeBackend {
   MirrorGatewayBackend({
@@ -19,11 +20,14 @@ class MirrorGatewayBackend implements MirrorComputeBackend {
     this.timeout = const Duration(seconds: 30),
     this.maxRetries = 2,
     this.initialBackoff = const Duration(milliseconds: 300),
+    MirrorContextBudgetService? budgetService,
   })  : _client = _resolveClient(client),
-        _httpClient = httpClient ?? http.Client();
+        _httpClient = httpClient ?? http.Client(),
+        _budgetService = budgetService;
 
   final SupabaseClient? _client;
   final http.Client _httpClient;
+  final MirrorContextBudgetService? _budgetService;
   final String? httpEndpoint;
   final String? applyHttpEndpoint;
   final bool useSecureApply;
@@ -319,16 +323,28 @@ class MirrorGatewayBackend implements MirrorComputeBackend {
     required ProjectContext context,
     required String mode,
   }) async {
+    final effectiveContext =
+        _budgetService?.enforce(context).context ?? context;
     final token = _client?.auth.currentSession?.accessToken;
     final idempotencyKey = _resolveIdempotencyKey(context.metadata);
     final payload = <String, dynamic>{
       'prompt': prompt,
-      'projectId': context.projectId,
-      'taskId': context.taskId,
+      'projectId': effectiveContext.projectId,
+      'taskId': effectiveContext.taskId,
       'mode': mode,
-      'files': context.files,
-      'metadata': context.metadata,
+      'files': effectiveContext.files,
+      'metadata': effectiveContext.metadata,
     };
+    final Object payloadBody;
+    final bool payloadIsGzip;
+    final encodedPayload = _budgetService?.encodePayload(payload);
+    if (encodedPayload != null) {
+      payloadBody = encodedPayload.bytes;
+      payloadIsGzip = encodedPayload.isGzip;
+    } else {
+      payloadBody = jsonEncode(payload);
+      payloadIsGzip = false;
+    }
 
     var attempt = 0;
     var backoff = initialBackoff;
@@ -341,11 +357,12 @@ class MirrorGatewayBackend implements MirrorComputeBackend {
               Uri.parse(endpoint),
               headers: <String, String>{
                 'Content-Type': 'application/json',
+                if (payloadIsGzip) 'Content-Encoding': 'gzip',
                 if (idempotencyKey != null) 'x-idempotency-key': idempotencyKey,
                 if (token != null && token.isNotEmpty)
                   'Authorization': 'Bearer $token',
               },
-              body: jsonEncode(payload),
+              body: payloadBody,
             )
             .timeout(timeout);
 
@@ -412,17 +429,29 @@ class MirrorGatewayBackend implements MirrorComputeBackend {
     required String mode,
     Map<String, dynamic> extra = const <String, dynamic>{},
   }) async {
+    final effectiveContext =
+        _budgetService?.enforce(context).context ?? context;
     final token = _client?.auth.currentSession?.accessToken;
     final idempotencyKey = _resolveIdempotencyKey(context.metadata);
     final payload = <String, dynamic>{
       'prompt': prompt,
-      'projectId': context.projectId,
-      'taskId': context.taskId,
+      'projectId': effectiveContext.projectId,
+      'taskId': effectiveContext.taskId,
       'mode': mode,
-      'files': context.files,
-      'metadata': context.metadata,
+      'files': effectiveContext.files,
+      'metadata': effectiveContext.metadata,
       ...extra,
     };
+    final Object payloadBody;
+    final bool payloadIsGzip;
+    final encodedPayload = _budgetService?.encodePayload(payload);
+    if (encodedPayload != null) {
+      payloadBody = encodedPayload.bytes;
+      payloadIsGzip = encodedPayload.isGzip;
+    } else {
+      payloadBody = jsonEncode(payload);
+      payloadIsGzip = false;
+    }
 
     var attempt = 0;
     var backoff = initialBackoff;
@@ -435,11 +464,12 @@ class MirrorGatewayBackend implements MirrorComputeBackend {
               Uri.parse(endpoint),
               headers: <String, String>{
                 'Content-Type': 'application/json',
+                if (payloadIsGzip) 'Content-Encoding': 'gzip',
                 if (idempotencyKey != null) 'x-idempotency-key': idempotencyKey,
                 if (token != null && token.isNotEmpty)
                   'Authorization': 'Bearer $token',
               },
-              body: jsonEncode(payload),
+              body: payloadBody,
             )
             .timeout(timeout);
 

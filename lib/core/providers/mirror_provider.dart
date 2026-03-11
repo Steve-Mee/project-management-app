@@ -14,10 +14,12 @@ import '../services/mirror_premium_service.dart';
 import '../../features/mirror/mirror_compute_backend.dart';
 import '../../features/mirror/mirror_gateway_backend.dart';
 import '../../features/mirror/private_grpc_backend.dart';
+import '../../features/mirror/services/mirror_context_budget_service.dart';
 
 export '../../features/mirror/mirror_compute_backend.dart';
 export '../../features/mirror/mirror_gateway_backend.dart';
 export '../../features/mirror/private_grpc_backend.dart';
+export '../../features/mirror/services/mirror_context_budget_service.dart';
 
 class MirrorState {
   const MirrorState({
@@ -63,6 +65,11 @@ final mirrorOfflineWarningProvider = StateProvider<String?>((ref) => null);
 
 final mirrorPremiumServiceProvider = Provider<MirrorPremiumService>((ref) {
   return MirrorPremiumService();
+
+final mirrorContextBudgetServiceProvider =
+    Provider<MirrorContextBudgetService>((ref) {
+  return const MirrorContextBudgetService();
+});
 });
 
 final mirrorPremiumProvider = FutureProvider<bool>((ref) async {
@@ -128,8 +135,10 @@ final mirrorRunnerModeVariantProvider = FutureProvider<String>((ref) async {
 });
 
 final mirrorGatewayBackendProvider = Provider<MirrorGatewayBackend>((ref) {
+  final budgetService = ref.read(mirrorContextBudgetServiceProvider);
   return MirrorGatewayBackend(
     client: Supabase.instance.client,
+    budgetService: budgetService,
   );
 });
 

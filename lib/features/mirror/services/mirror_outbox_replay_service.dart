@@ -15,6 +15,7 @@ import 'package:pma_core/services/app_logger.dart';
 
 import '../../../core/providers/mirror_provider.dart';
 import '../../../core/providers/mirror_session_provider.dart';
+import 'mirror_context_budget_service.dart';
 
 class MirrorOutboxEntry {
   const MirrorOutboxEntry({
@@ -217,6 +218,7 @@ class MirrorOutboxReplayService {
     this.maxReplayAttempts = 8,
     this.replayTickInterval = const Duration(seconds: 8),
     bool? failClosedOnEncryptionError,
+    MirrorContextBudgetService? budgetService,
     Future<Box<Map<dynamic, dynamic>>> Function()? encryptedBoxOpener,
     Future<Box<Map<dynamic, dynamic>>> Function()? unencryptedBoxOpener,
   })  : _ref = ref,
@@ -225,6 +227,7 @@ class MirrorOutboxReplayService {
               'MIRROR_OUTBOX_FAIL_CLOSED_ON_ENCRYPTION_ERROR',
               defaultValue: bool.fromEnvironment('dart.vm.product'),
             ),
+        _budgetService = budgetService,
         _encryptedBoxOpener = encryptedBoxOpener,
         _unencryptedBoxOpener = unencryptedBoxOpener;
 
@@ -234,6 +237,7 @@ class MirrorOutboxReplayService {
   final int maxReplayAttempts;
   final Duration replayTickInterval;
   final bool _failClosedOnEncryptionError;
+  final MirrorContextBudgetService? _budgetService;
   final Future<Box<Map<dynamic, dynamic>>> Function()? _encryptedBoxOpener;
   final Future<Box<Map<dynamic, dynamic>>> Function()? _unencryptedBoxOpener;
   static const String _outboxBoxName = 'mirror_outbox';
@@ -308,12 +312,28 @@ class MirrorOutboxReplayService {
           );
     final normalizedContext = _contextWithIdempotency(context, idempotencyKey);
 
+    // Enforce payload budget before persisting to the outbox.
+    final budgetResult = _budgetService?.enforce(normalizedContext);
+    final budgetedContext = budgetResult?.context ?? normalizedContext;
+    if (budgetResult?.report.wasEnforced == true) {
+      AppLogger.event(
+        'mirror_outbox_budget_enforced',
+        params: <String, Object?>{
+          'operation': operation,
+          'originalFiles': budgetResult!.report.originalFileCount,
+          'enforcedFiles': budgetResult.report.enforcedFileCount,
+          'droppedFiles': budgetResult.report.droppedFiles.length,
+          'truncatedFiles': budgetResult.report.truncatedFiles.length,
+        },
+      );
+    }
+
     final existing = _queue[idempotencyKey];
     final nextEntry = MirrorOutboxEntry(
       operation: operation,
       sessionKey: sessionKey,
       prompt: prompt,
-      context: normalizedContext,
+      context: budgetedContext,
       mode: mode,
       createdAt: existing?.createdAt ?? now,
       idempotencyKey: idempotencyKey,
@@ -886,6 +906,14 @@ final mirrorOutboxReplayServiceProvider =
     ref: ref,
     failClosedOnEncryptionError:
         premiumService.shouldFailClosedOnOutboxEncryptionError(),
+    final premiumService = ref.read(mirrorPremiumServiceProvider);
+    final budgetService = ref.read(mirrorContextBudgetServiceProvider);
+    final service = MirrorOutboxReplayService(
+      ref: ref,
+      budgetService: budgetService,
+      failClosedOnEncryptionError:
+          premiumService.shouldFailClosedOnOutboxEncryptionError(),
+    );
   );
 
   unawaited(service.bootstrap());
