@@ -1,3 +1,9 @@
+## [1.34.0](https://github.com/Steve-Mee/project-management-app/compare/v1.33.0...v1.34.0) (2026-03-11)
+
+### Features
+
+* **mirror:** add screen-level use_mirror permission guard (P1) ([22ac0be](https://github.com/Steve-Mee/project-management-app/commit/22ac0be54efab0602bef80bf5dae2fcd6061e2f7))
+
 ## [1.33.0](https://github.com/Steve-Mee/project-management-app/compare/v1.32.0...v1.33.0) (2026-03-11)
 
 ### Features
