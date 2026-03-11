@@ -1,0 +1,373 @@
+﻿diff --git a/lib/core/services/mirror_premium_service.dart b/lib/core/services/mirror_premium_service.dart
+index a554981..6f040ae 100644
+--- a/lib/core/services/mirror_premium_service.dart
++++ b/lib/core/services/mirror_premium_service.dart
+@@ -5,10 +5,23 @@ import 'dart:async';
+ import 'package:supabase_flutter/supabase_flutter.dart';
+ 
+ class MirrorPremiumService {
+-  MirrorPremiumService({SupabaseClient? client})
+-    : _client = client ?? Supabase.instance.client;
+-
+-  final SupabaseClient _client;
++  MirrorPremiumService({
++    SupabaseClient? client,
++    bool? outboxFailClosedOnEncryptionError,
++    bool? productionMode,
++  })  : _clientOverride = client,
++        _outboxFailClosedOnEncryptionError =
++            outboxFailClosedOnEncryptionError ??
++                bool.fromEnvironment(
++                  'MIRROR_OUTBOX_FAIL_CLOSED_ON_ENCRYPTION_ERROR',
++                  defaultValue:
++                      productionMode ?? bool.fromEnvironment('dart.vm.product'),
++                );
++
++  final SupabaseClient? _clientOverride;
++  final bool _outboxFailClosedOnEncryptionError;
++
++  SupabaseClient get _client => _clientOverride ?? Supabase.instance.client;
+ 
+   static const Set<String> _premiumLevels = <String>{
+     'premium',
+@@ -20,6 +33,10 @@ class MirrorPremiumService {
+   final Map<String, _PremiumCacheEntry> _cache = <String, _PremiumCacheEntry>{};
+   final Map<String, Future<bool>> _inFlight = <String, Future<bool>>{};
+ 
++  bool shouldFailClosedOnOutboxEncryptionError() {
++    return _outboxFailClosedOnEncryptionError;
++  }
++
+   Future<bool> isPremium({
+     User? user,
+     bool forceRefresh = false,
+@@ -87,9 +104,8 @@ class MirrorPremiumService {
+         }
+ 
+         final row = Map<String, dynamic>.from(entry);
+-        final provider = (row['payment_provider']?.toString() ?? '')
+-            .toLowerCase()
+-            .trim();
++        final provider =
++            (row['payment_provider']?.toString() ?? '').toLowerCase().trim();
+         final level = (row['level']?.toString() ?? '').toLowerCase().trim();
+         final isStripe = provider.isEmpty || provider == 'stripe';
+         if (isStripe && _premiumLevels.contains(level)) {
+@@ -107,11 +123,9 @@ class MirrorPremiumService {
+     final appMetadata = user.appMetadata;
+     final userMetadata = user.userMetadata ?? const <String, dynamic>{};
+ 
+-    final stripeActive =
+-        appMetadata['stripe_subscription_active'] ??
++    final stripeActive = appMetadata['stripe_subscription_active'] ??
+         userMetadata['stripe_subscription_active'];
+-    final stripeTier =
+-        appMetadata['stripe_subscription_tier'] ??
++    final stripeTier = appMetadata['stripe_subscription_tier'] ??
+         userMetadata['stripe_subscription_tier'];
+ 
+     if (stripeActive is bool && stripeActive) {
+@@ -122,8 +136,7 @@ class MirrorPremiumService {
+       }
+     }
+ 
+-    final fallbackTier =
+-        appMetadata['subscription'] ??
++    final fallbackTier = appMetadata['subscription'] ??
+         appMetadata['plan'] ??
+         userMetadata['subscription'] ??
+         userMetadata['plan'];
+diff --git a/lib/features/mirror/services/mirror_outbox_replay_service.dart b/lib/features/mirror/services/mirror_outbox_replay_service.dart
+index 878058c..9627cf8 100644
+--- a/lib/features/mirror/services/mirror_outbox_replay_service.dart
++++ b/lib/features/mirror/services/mirror_outbox_replay_service.dart
+@@ -216,16 +216,33 @@ class MirrorOutboxReplayService {
+     this.initialBackoff = const Duration(milliseconds: 250),
+     this.maxReplayAttempts = 8,
+     this.replayTickInterval = const Duration(seconds: 8),
+-  }) : _ref = ref;
++    bool? failClosedOnEncryptionError,
++    Future<Box<Map<dynamic, dynamic>>> Function()? encryptedBoxOpener,
++    Future<Box<Map<dynamic, dynamic>>> Function()? unencryptedBoxOpener,
++  })  : _ref = ref,
++        _failClosedOnEncryptionError = failClosedOnEncryptionError ??
++            bool.fromEnvironment(
++              'MIRROR_OUTBOX_FAIL_CLOSED_ON_ENCRYPTION_ERROR',
++              defaultValue: bool.fromEnvironment('dart.vm.product'),
++            ),
++        _encryptedBoxOpener = encryptedBoxOpener,
++        _unencryptedBoxOpener = unencryptedBoxOpener;
+ 
+   final Ref _ref;
+   final int maxRetries;
+   final Duration initialBackoff;
+   final int maxReplayAttempts;
+   final Duration replayTickInterval;
++  final bool _failClosedOnEncryptionError;
++  final Future<Box<Map<dynamic, dynamic>>> Function()? _encryptedBoxOpener;
++  final Future<Box<Map<dynamic, dynamic>>> Function()? _unencryptedBoxOpener;
+   static const String _outboxBoxName = 'mirror_outbox';
+   static const String _outboxEncryptionKey =
+       'hive_encryption_key_mirror_outbox';
++  static const String _encryptionFailureLiveStatus =
++      'Outbox security error: local encryption unavailable';
++  static const String _encryptionFailureTerminalStatus =
++      'Mirror outbox paused: secure local storage is unavailable. Please retry after restoring secure storage.';
+   final LinkedHashMap<String, MirrorOutboxEntry> _queue =
+       LinkedHashMap<String, MirrorOutboxEntry>();
+   final Random _jitterRandom = Random();
+@@ -266,7 +283,17 @@ class MirrorOutboxReplayService {
+     required String mode,
+     String? lastError,
+   }) async {
+-    await _ensureReady();
++    try {
++      await _ensureReady();
++    } on MirrorOutboxEncryptionException catch (error, stackTrace) {
++      _reportOutboxEncryptionFailure(
++        sessionKey: sessionKey,
++        message: error.userFacingMessage,
++        error: error,
++        stackTrace: stackTrace,
++      );
++      rethrow;
++    }
+ 
+     final now = DateTime.now().toUtc();
+     final metadataIdempotencyKey = _resolveContextIdempotencyKey(context);
+@@ -297,7 +324,8 @@ class MirrorOutboxReplayService {
+       updatedAt: now,
+     );
+ 
+-    if (!_shouldReplaceWithLastWriteWins(existing: existing, candidate: nextEntry)) {
++    if (!_shouldReplaceWithLastWriteWins(
++        existing: existing, candidate: nextEntry)) {
+       return;
+     }
+ 
+@@ -328,15 +356,13 @@ class MirrorOutboxReplayService {
+     _isReplaying = true;
+     try {
+       final now = DateTime.now().toUtc();
+-      final dueEntries = _queue.values
+-          .where((entry) {
+-            if (_isTerminal(entry)) {
+-              return false;
+-            }
+-            final nextRetryAt = entry.nextRetryAt;
+-            return nextRetryAt == null || !nextRetryAt.isAfter(now);
+-          })
+-          .toList()
++      final dueEntries = _queue.values.where((entry) {
++        if (_isTerminal(entry)) {
++          return false;
++        }
++        final nextRetryAt = entry.nextRetryAt;
++        return nextRetryAt == null || !nextRetryAt.isAfter(now);
++      }).toList()
+         ..sort((a, b) {
+           final aTime = a.nextRetryAt ?? a.updatedAt ?? a.createdAt;
+           final bTime = b.nextRetryAt ?? b.updatedAt ?? b.createdAt;
+@@ -382,8 +408,7 @@ class MirrorOutboxReplayService {
+       }
+       _emitStatus(
+         entry.sessionKey,
+-        terminalLine:
+-            'Mirror outbox replay succeeded for ${entry.operation}.',
++        terminalLine: 'Mirror outbox replay succeeded for ${entry.operation}.',
+         liveLine: 'Outbox replay done: ${entry.operation}',
+       );
+       return;
+@@ -460,7 +485,8 @@ class MirrorOutboxReplayService {
+           entry.sessionKey,
+           terminalLine:
+               'Mirror replay ${entry.operation} attempt $attempt failed: ${operationResult.message ?? 'unknown failure'}. Retrying...',
+-          liveLine: '${entry.operation} replay retry $attempt/${maxRetries + 1}',
++          liveLine:
++              '${entry.operation} replay retry $attempt/${maxRetries + 1}',
+         );
+       } catch (error) {
+         final isLastAttempt = attempt > maxRetries;
+@@ -475,7 +501,8 @@ class MirrorOutboxReplayService {
+           entry.sessionKey,
+           terminalLine:
+               'Mirror replay ${entry.operation} attempt $attempt threw: $error. Retrying...',
+-          liveLine: '${entry.operation} replay retry $attempt/${maxRetries + 1}',
++          liveLine:
++              '${entry.operation} replay retry $attempt/${maxRetries + 1}',
+         );
+       }
+ 
+@@ -490,7 +517,8 @@ class MirrorOutboxReplayService {
+     MirrorOutboxEntry entry,
+   ) async {
+     final backend = await _ref.read(mirrorBackendProvider.future);
+-    final context = _contextWithIdempotency(entry.context, entry.idempotencyKey);
++    final context =
++        _contextWithIdempotency(entry.context, entry.idempotencyKey);
+     switch (entry.operation) {
+       case 'generate':
+         final result = await backend.generate(
+@@ -513,7 +541,8 @@ class MirrorOutboxReplayService {
+           message: result.errors.join(' | '),
+         );
+       case 'apply':
+-        final compileFingerprint = context.metadata['compileFingerprint']?.toString();
++        final compileFingerprint =
++            context.metadata['compileFingerprint']?.toString();
+         final result = await backend.apply(
+           prompt: entry.prompt,
+           context: context,
+@@ -610,7 +639,8 @@ class MirrorOutboxReplayService {
+       return canonical;
+     }
+ 
+-    final headerStyle = context.metadata['x-idempotency-key']?.toString().trim();
++    final headerStyle =
++        context.metadata['x-idempotency-key']?.toString().trim();
+     if (headerStyle != null && headerStyle.isNotEmpty) {
+       return headerStyle;
+     }
+@@ -618,7 +648,8 @@ class MirrorOutboxReplayService {
+     return '';
+   }
+ 
+-  Map<String, dynamic> _stripIdempotencyMetadata(Map<String, dynamic> metadata) {
++  Map<String, dynamic> _stripIdempotencyMetadata(
++      Map<String, dynamic> metadata) {
+     if (metadata.isEmpty) {
+       return const <String, dynamic>{};
+     }
+@@ -720,9 +751,8 @@ class MirrorOutboxReplayService {
+       }
+ 
+       final storedKey = key.toString();
+-      final effectiveKey = entry.idempotencyKey.isNotEmpty
+-          ? entry.idempotencyKey
+-          : storedKey;
++      final effectiveKey =
++          entry.idempotencyKey.isNotEmpty ? entry.idempotencyKey : storedKey;
+       _queue[effectiveKey] = entry.copyWith(idempotencyKey: effectiveKey);
+     }
+   }
+@@ -745,20 +775,94 @@ class MirrorOutboxReplayService {
+     }
+ 
+     try {
++      final opener = _encryptedBoxOpener;
++      if (opener != null) {
++        return await opener();
++      }
++
+       final encrypted = EncryptedHiveBox<Map<dynamic, dynamic>>(
+         boxName: _outboxBoxName,
+         encryptionKey: _outboxEncryptionKey,
+       );
+       return encrypted.open();
+     } catch (error, stackTrace) {
+-      AppLogger.instance.e(
+-        'Failed to open encrypted mirror outbox; falling back to unencrypted Hive box.',
++      AppLogger.event(
++        'mirror_outbox_encryption_open_failed',
++        params: <String, Object?>{
++          'policy': _failClosedOnEncryptionError ? 'fail_closed' : 'fail_open',
++          'box': _outboxBoxName,
++        },
++      );
++
++      if (_failClosedOnEncryptionError) {
++        AppLogger.instance.e(
++          'Encrypted mirror outbox unavailable; fail-closed policy blocked fallback to unencrypted storage.',
++          error: error,
++          stackTrace: stackTrace,
++        );
++        throw MirrorOutboxEncryptionException(
++          userFacingMessage: _encryptionFailureTerminalStatus,
++          cause: error,
++        );
++      }
++
++      AppLogger.instance.w(
++        'Failed to open encrypted mirror outbox; fail-open policy enabled fallback to unencrypted Hive box.',
+         error: error,
+         stackTrace: stackTrace,
+       );
++
++      final fallbackOpener = _unencryptedBoxOpener;
++      if (fallbackOpener != null) {
++        return await fallbackOpener();
++      }
+       return Hive.openBox<Map<dynamic, dynamic>>(_outboxBoxName);
+     }
+   }
++
++  void _reportOutboxEncryptionFailure({
++    required String sessionKey,
++    required String message,
++    required Object error,
++    required StackTrace stackTrace,
++  }) {
++    AppLogger.event(
++      'mirror_outbox_encryption_policy_blocked',
++      params: <String, Object?>{
++        'policy': 'fail_closed',
++        'sessionKey': sessionKey,
++      },
++    );
++    AppLogger.instance.e(
++      'Mirror outbox encryption policy blocked operation.',
++      error: error,
++      stackTrace: stackTrace,
++    );
++    _emitStatus(
++      sessionKey,
++      terminalLine: message,
++      liveLine: _encryptionFailureLiveStatus,
++    );
++  }
++}
++
++class MirrorOutboxEncryptionException implements Exception {
++  const MirrorOutboxEncryptionException({
++    required this.userFacingMessage,
++    this.cause,
++  });
++
++  final String userFacingMessage;
++  final Object? cause;
++
++  @override
++  String toString() {
++    final causeValue = cause;
++    if (causeValue == null) {
++      return 'MirrorOutboxEncryptionException($userFacingMessage)';
++    }
++    return 'MirrorOutboxEncryptionException($userFacingMessage, cause: $causeValue)';
++  }
+ }
+ 
+ class MirrorOutboxOperationResult {
+@@ -775,8 +879,14 @@ class _ReplayAttempt {
+   final String? failureMessage;
+ }
+ 
+-final mirrorOutboxReplayServiceProvider = Provider<MirrorOutboxReplayService>((ref) {
+-  final service = MirrorOutboxReplayService(ref: ref);
++final mirrorOutboxReplayServiceProvider =
++    Provider<MirrorOutboxReplayService>((ref) {
++  final premiumService = ref.read(mirrorPremiumServiceProvider);
++  final service = MirrorOutboxReplayService(
++    ref: ref,
++    failClosedOnEncryptionError:
++        premiumService.shouldFailClosedOnOutboxEncryptionError(),
++  );
+ 
+   unawaited(service.bootstrap());
+ 
+@@ -794,4 +904,4 @@ final mirrorOutboxReplayServiceProvider = Provider<MirrorOutboxReplayService>((r
+   );
+ 
+   return service;
+-});
+\ No newline at end of file
++});
