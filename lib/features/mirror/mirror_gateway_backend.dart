@@ -320,6 +320,7 @@ class MirrorGatewayBackend implements MirrorComputeBackend {
     required String mode,
   }) async {
     final token = _client?.auth.currentSession?.accessToken;
+    final idempotencyKey = _resolveIdempotencyKey(context.metadata);
     final payload = <String, dynamic>{
       'prompt': prompt,
       'projectId': context.projectId,
@@ -340,6 +341,7 @@ class MirrorGatewayBackend implements MirrorComputeBackend {
               Uri.parse(endpoint),
               headers: <String, String>{
                 'Content-Type': 'application/json',
+                if (idempotencyKey != null) 'x-idempotency-key': idempotencyKey,
                 if (token != null && token.isNotEmpty)
                   'Authorization': 'Bearer $token',
               },
@@ -411,6 +413,7 @@ class MirrorGatewayBackend implements MirrorComputeBackend {
     Map<String, dynamic> extra = const <String, dynamic>{},
   }) async {
     final token = _client?.auth.currentSession?.accessToken;
+    final idempotencyKey = _resolveIdempotencyKey(context.metadata);
     final payload = <String, dynamic>{
       'prompt': prompt,
       'projectId': context.projectId,
@@ -432,6 +435,7 @@ class MirrorGatewayBackend implements MirrorComputeBackend {
               Uri.parse(endpoint),
               headers: <String, String>{
                 'Content-Type': 'application/json',
+                if (idempotencyKey != null) 'x-idempotency-key': idempotencyKey,
                 if (token != null && token.isNotEmpty)
                   'Authorization': 'Bearer $token',
               },
@@ -615,6 +619,20 @@ String _fingerprintFileMap(Map<String, String> files) {
       ..write('\n');
   }
   return sha256.convert(utf8.encode(buffer.toString())).toString();
+}
+
+String? _resolveIdempotencyKey(Map<String, dynamic> metadata) {
+  final fromCanonical = metadata['idempotencyKey']?.toString().trim();
+  if (fromCanonical != null && fromCanonical.isNotEmpty) {
+    return fromCanonical;
+  }
+
+  final fromHeaderStyle = metadata['x-idempotency-key']?.toString().trim();
+  if (fromHeaderStyle != null && fromHeaderStyle.isNotEmpty) {
+    return fromHeaderStyle;
+  }
+
+  return null;
 }
 
 

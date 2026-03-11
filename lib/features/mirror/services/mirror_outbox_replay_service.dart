@@ -269,20 +269,24 @@ class MirrorOutboxReplayService {
     await _ensureReady();
 
     final now = DateTime.now().toUtc();
-    final idempotencyKey = _buildIdempotencyKey(
-      operation: operation,
-      sessionKey: sessionKey,
-      prompt: prompt,
-      context: context,
-      mode: mode,
-    );
+    final metadataIdempotencyKey = _resolveContextIdempotencyKey(context);
+    final idempotencyKey = metadataIdempotencyKey.isNotEmpty
+        ? metadataIdempotencyKey
+        : _buildIdempotencyKey(
+            operation: operation,
+            sessionKey: sessionKey,
+            prompt: prompt,
+            context: context,
+            mode: mode,
+          );
+    final normalizedContext = _contextWithIdempotency(context, idempotencyKey);
 
     final existing = _queue[idempotencyKey];
     final nextEntry = MirrorOutboxEntry(
       operation: operation,
       sessionKey: sessionKey,
       prompt: prompt,
-      context: context,
+      context: normalizedContext,
       mode: mode,
       createdAt: existing?.createdAt ?? now,
       idempotencyKey: idempotencyKey,
@@ -486,11 +490,12 @@ class MirrorOutboxReplayService {
     MirrorOutboxEntry entry,
   ) async {
     final backend = await _ref.read(mirrorBackendProvider.future);
+    final context = _contextWithIdempotency(entry.context, entry.idempotencyKey);
     switch (entry.operation) {
       case 'generate':
         final result = await backend.generate(
           prompt: entry.prompt,
-          context: entry.context,
+          context: context,
           mode: entry.mode,
         );
         return MirrorOutboxOperationResult(
@@ -500,7 +505,7 @@ class MirrorOutboxReplayService {
       case 'compile':
         final result = await backend.compile(
           prompt: entry.prompt,
-          context: entry.context,
+          context: context,
           mode: entry.mode,
         );
         return MirrorOutboxOperationResult(
@@ -508,11 +513,10 @@ class MirrorOutboxReplayService {
           message: result.errors.join(' | '),
         );
       case 'apply':
-        final compileFingerprint =
-            entry.context.metadata['compileFingerprint']?.toString();
+        final compileFingerprint = context.metadata['compileFingerprint']?.toString();
         final result = await backend.apply(
           prompt: entry.prompt,
-          context: entry.context,
+          context: context,
           mode: entry.mode,
           compileFingerprint: compileFingerprint,
         );
@@ -582,11 +586,12 @@ class MirrorOutboxReplayService {
     required ProjectContext context,
     required String mode,
   }) {
+    final sanitizedMetadata = _stripIdempotencyMetadata(context.metadata);
     final contextPayload = jsonEncode(<String, dynamic>{
       'projectId': context.projectId,
       'taskId': context.taskId,
       'files': context.files,
-      'metadata': MirrorOutboxEntry._jsonSafe(context.metadata),
+      'metadata': MirrorOutboxEntry._jsonSafe(sanitizedMetadata),
     });
     final payload = <String>[
       operation,
@@ -597,6 +602,55 @@ class MirrorOutboxReplayService {
     ].join('|');
 
     return sha256.convert(utf8.encode(payload)).toString();
+  }
+
+  String _resolveContextIdempotencyKey(ProjectContext context) {
+    final canonical = context.metadata['idempotencyKey']?.toString().trim();
+    if (canonical != null && canonical.isNotEmpty) {
+      return canonical;
+    }
+
+    final headerStyle = context.metadata['x-idempotency-key']?.toString().trim();
+    if (headerStyle != null && headerStyle.isNotEmpty) {
+      return headerStyle;
+    }
+
+    return '';
+  }
+
+  Map<String, dynamic> _stripIdempotencyMetadata(Map<String, dynamic> metadata) {
+    if (metadata.isEmpty) {
+      return const <String, dynamic>{};
+    }
+
+    final sanitized = Map<String, dynamic>.from(metadata);
+    sanitized.remove('idempotencyKey');
+    sanitized.remove('x-idempotency-key');
+    return sanitized;
+  }
+
+  ProjectContext _contextWithIdempotency(
+    ProjectContext context,
+    String idempotencyKey,
+  ) {
+    if (idempotencyKey.trim().isEmpty) {
+      return context;
+    }
+
+    final existing = _resolveContextIdempotencyKey(context);
+    if (existing == idempotencyKey) {
+      return context;
+    }
+
+    final metadata = Map<String, dynamic>.from(context.metadata);
+    metadata['idempotencyKey'] = idempotencyKey;
+
+    return ProjectContext(
+      projectId: context.projectId,
+      taskId: context.taskId,
+      files: context.files,
+      metadata: metadata,
+    );
   }
 
   Duration _applyBackoffJitter(Duration base) {

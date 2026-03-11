@@ -95,7 +95,11 @@ class CloudFlyBackend implements MirrorComputeBackend {
       'metadata': context.metadata,
     };
 
-    return _compileViaHttp(payload, _accessToken);
+    return _compileViaHttp(
+      payload,
+      _accessToken,
+      idempotencyKey: _resolveIdempotencyKey(context.metadata),
+    );
   }
 
   @override
@@ -172,6 +176,7 @@ class CloudFlyBackend implements MirrorComputeBackend {
           endpoint: endpoint,
           payload: payload,
           accessToken: _accessToken,
+          idempotencyKey: _resolveIdempotencyKey(context.metadata),
         );
 
         if (!raw.success || raw.body == null) {
@@ -221,11 +226,16 @@ class CloudFlyBackend implements MirrorComputeBackend {
   Future<CompileResult> _compileViaHttp(
     Map<String, dynamic> payload,
     String? accessToken,
+    {
+      String? idempotencyKey,
+    }
   ) async {
     final endpoint = _requireCompileEndpoint();
     final uri = Uri.parse(endpoint);
     final headers = <String, String>{
       'Content-Type': 'application/json',
+      if (idempotencyKey != null && idempotencyKey.isNotEmpty)
+        'x-idempotency-key': idempotencyKey,
       if (accessToken != null && accessToken.isNotEmpty)
         'Authorization': 'Bearer $accessToken',
     };
@@ -350,10 +360,13 @@ class CloudFlyBackend implements MirrorComputeBackend {
     required String endpoint,
     required Map<String, dynamic> payload,
     required String? accessToken,
+    String? idempotencyKey,
   }) async {
     final uri = Uri.parse(endpoint);
     final headers = <String, String>{
       'Content-Type': 'application/json',
+      if (idempotencyKey != null && idempotencyKey.isNotEmpty)
+        'x-idempotency-key': idempotencyKey,
       if (accessToken != null && accessToken.isNotEmpty)
         'Authorization': 'Bearer $accessToken',
     };
@@ -422,6 +435,20 @@ class CloudFlyBackend implements MirrorComputeBackend {
     }
   }
 
+}
+
+String? _resolveIdempotencyKey(Map<String, dynamic> metadata) {
+  final fromCanonical = metadata['idempotencyKey']?.toString().trim();
+  if (fromCanonical != null && fromCanonical.isNotEmpty) {
+    return fromCanonical;
+  }
+
+  final fromHeaderStyle = metadata['x-idempotency-key']?.toString().trim();
+  if (fromHeaderStyle != null && fromHeaderStyle.isNotEmpty) {
+    return fromHeaderStyle;
+  }
+
+  return null;
 }
 
 enum _MirrorHttpErrorCode {
