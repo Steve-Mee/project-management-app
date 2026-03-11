@@ -1,3 +1,9 @@
+## [1.33.0](https://github.com/Steve-Mee/project-management-app/compare/v1.32.0...v1.33.0) (2026-03-11)
+
+### Features
+
+* **mirror:** propagate idempotency-key end-to-end to gateway (P1) ([a795814](https://github.com/Steve-Mee/project-management-app/commit/a7958146957335fbb395cac61b4422d6b5cb7e3b))
+
 ## [1.32.0](https://github.com/Steve-Mee/project-management-app/compare/v1.31.0...v1.32.0) (2026-03-11)
 
 ### Features
