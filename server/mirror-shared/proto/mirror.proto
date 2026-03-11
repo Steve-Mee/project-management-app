@@ -1,0 +1,48 @@
+syntax = "proto3";
+
+package mirror.compute.v1;
+
+service MirrorComputeService {
+  rpc Compile(CompileRequest) returns (CompileResponse);
+  rpc Apply(ApplyRequest) returns (ApplyResponse);
+}
+
+message CompileRequest {
+  string prompt = 1;
+  string project_id = 2;
+  string task_id = 3;
+  string mode = 4;
+  map<string, string> files = 5;
+  string metadata_json = 6;
+}
+
+message CompileResponse {
+  bool success = 1;
+  string output = 2;
+  repeated string errors = 3;
+  repeated string warnings = 4;
+  repeated string logs = 5;
+  string signed_url = 6;
+  string artifact_path = 7;
+  string error_json = 8;
+}
+
+message ApplyRequest {
+  string prompt = 1;
+  string project_id = 2;
+  string task_id = 3;
+  string mode = 4;
+  map<string, string> files = 5;
+  string metadata_json = 6;
+}
+
+message ApplyResponse {
+  bool success = 1;
+  string output = 2;
+  repeated string errors = 3;
+  repeated string warnings = 4;
+  repeated string logs = 5;
+  string signed_url = 6;
+  string artifact_path = 7;
+  string error_json = 8;
+}

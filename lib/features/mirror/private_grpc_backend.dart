@@ -4,6 +4,7 @@ import 'dart:convert';
 
 import 'package:grpc/grpc.dart';
 
+import 'grpc_generated/mirror.pbgrpc.dart';
 import 'mirror_compute_backend.dart';
 
 class PrivateGrpcBackend implements MirrorComputeBackend {
@@ -60,55 +61,26 @@ class PrivateGrpcBackend implements MirrorComputeBackend {
       options: ChannelOptions(credentials: credentials),
     );
 
-    final method = ClientMethod<List<int>, List<int>>(
-      servicePath,
-      (request) => request,
-      (response) => response,
-    );
-    final client = _RawMirrorGrpcClient(channel, method);
+    final client = MirrorComputeServiceClient(channel);
 
     try {
-      final requestPayload = <String, dynamic>{
-        'prompt': prompt,
-        'projectId': context.projectId,
-        'taskId': context.taskId,
-        'mode': mode,
-        'files': context.files,
-        'metadata': context.metadata,
-      };
-
-      final requestBytes = utf8.encode(jsonEncode(requestPayload));
-
-      final responseBytes = await client.compile(
-        requestBytes,
-        timeout: timeout,
+      final response = await client.compile(
+        CompileRequest(
+          prompt: prompt,
+          projectId: context.projectId,
+          taskId: context.taskId,
+          mode: mode,
+          files: context.files.entries,
+          metadataJson: jsonEncode(context.metadata),
+        ),
+        options: CallOptions(timeout: timeout),
       );
-      final raw = utf8.decode(responseBytes);
-
-      dynamic decoded;
-      try {
-        decoded = jsonDecode(raw);
-      } catch (_) {
-        decoded = <String, dynamic>{'success': true, 'output': raw};
-      }
-
-      if (decoded is Map<String, dynamic>) {
-        final errorsRaw = decoded['errors'];
-        final warningsRaw = decoded['warnings'];
-
-        return CompileResult(
-          success: (decoded['success'] as bool?) ?? true,
-          output: decoded['output']?.toString(),
-          errors: errorsRaw is List
-              ? errorsRaw.map((e) => e.toString()).toList()
-              : const <String>[],
-          warnings: warningsRaw is List
-              ? warningsRaw.map((e) => e.toString()).toList()
-              : const <String>[],
-        );
-      }
-
-      return CompileResult(success: true, output: raw);
+      return CompileResult(
+        success: response.success,
+        output: response.output.trim().isEmpty ? null : response.output,
+        errors: response.errors.toList(),
+        warnings: response.warnings.toList(),
+      );
     } on GrpcError catch (error) {
       return CompileResult(
         success: false,
@@ -173,9 +145,23 @@ class PrivateGrpcBackend implements MirrorComputeBackend {
           }
         }
 
+        final applyRpcResult = await _applyRpc(
+          prompt: prompt,
+          context: context,
+          mode: mode,
+        );
+        if (!applyRpcResult.success || applyRpcResult.output == null) {
+          return ApplyResult(
+            success: false,
+            message: applyRpcResult.errors.isEmpty
+                ? 'Apply failed: compile output is empty.'
+                : applyRpcResult.errors.join(' | '),
+          );
+        }
+
         final patches = buildPatchesFromApplyPayload(
           context: context,
-          output: output,
+          output: applyRpcResult.output!,
         );
 
         if (patches.isEmpty) {
@@ -209,23 +195,67 @@ class PrivateGrpcBackend implements MirrorComputeBackend {
       },
     );
   }
+
+  Future<_ApplyRpcResult> _applyRpc({
+    required String prompt,
+    required ProjectContext context,
+    required String mode,
+  }) async {
+    final channel = ClientChannel(
+      host,
+      port: port,
+      options: ChannelOptions(credentials: credentials),
+    );
+    final client = MirrorComputeServiceClient(channel);
+
+    try {
+      final response = await client.apply(
+        ApplyRequest(
+          prompt: prompt,
+          projectId: context.projectId,
+          taskId: context.taskId,
+          mode: mode,
+          files: context.files.entries,
+          metadataJson: jsonEncode(context.metadata),
+        ),
+        options: CallOptions(timeout: timeout),
+      );
+      return _ApplyRpcResult(
+        success: response.success,
+        output: response.output.trim().isEmpty ? null : response.output,
+        errors: response.errors.toList(),
+      );
+    } on GrpcError catch (error) {
+      return _ApplyRpcResult(
+        success: false,
+        errors: <String>[error.message ?? error.toString()],
+      );
+    } on TimeoutException {
+      return const _ApplyRpcResult(
+        success: false,
+        errors: <String>['gRPC apply request timed out.'],
+      );
+    } catch (error) {
+      return _ApplyRpcResult(
+        success: false,
+        errors: <String>[error.toString()],
+      );
+    } finally {
+      await channel.shutdown();
+    }
+  }
 }
 
-class _RawMirrorGrpcClient extends Client {
-  _RawMirrorGrpcClient(super.channel, this._compileMethod);
+class _ApplyRpcResult {
+  const _ApplyRpcResult({
+    required this.success,
+    required this.errors,
+    this.output,
+  });
 
-  final ClientMethod<List<int>, List<int>> _compileMethod;
-
-  ResponseFuture<List<int>> compile(
-    List<int> requestBytes, {
-    Duration? timeout,
-  }) {
-    return $createUnaryCall(
-      _compileMethod,
-      requestBytes,
-      options: CallOptions(timeout: timeout),
-    );
-  }
+  final bool success;
+  final String? output;
+  final List<String> errors;
 }
 
 

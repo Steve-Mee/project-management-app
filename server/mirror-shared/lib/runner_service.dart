@@ -5,6 +5,8 @@ import 'dart:io';
 import 'package:crypto/crypto.dart';
 import 'package:grpc/grpc.dart';
 
+// ignore: avoid_relative_lib_imports
+import '../../../lib/features/mirror/grpc_generated/mirror.pbgrpc.dart';
 import 'compile_runner.dart';
 
 typedef RunnerLog = void Function(
@@ -190,7 +192,7 @@ class RunnerAuthVerdict {
   final String reasonCode;
 }
 
-class MirrorRunnerService extends Service {
+class MirrorRunnerService extends MirrorComputeServiceBase {
   MirrorRunnerService({
     required this.workspaceRoot,
     required String artifactBaseUrl,
@@ -203,28 +205,7 @@ class MirrorRunnerService extends Service {
   }) : _artifactSigner = ArtifactSigner(
           baseUrl: artifactBaseUrl,
           secret: signedUrlSecret,
-        ) {
-    $addMethod(ServiceMethod<List<int>, List<int>>(
-      'Compile',
-      compile,
-      false,
-      false,
-      (List<int> value) => value,
-      (List<int> value) => value,
-    ));
-
-    $addMethod(ServiceMethod<List<int>, List<int>>(
-      'Apply',
-      apply,
-      false,
-      false,
-      (List<int> value) => value,
-      (List<int> value) => value,
-    ));
-  }
-
-  @override
-  String get $name => 'mirror.compute.v1.MirrorComputeService';
+        );
 
   final String workspaceRoot;
   final RunnerLog log;
@@ -234,7 +215,61 @@ class MirrorRunnerService extends Service {
   final Map<String, Object?> Function()? metricsSnapshot;
   final ArtifactSigner _artifactSigner;
 
-  Future<List<int>> compile(ServiceCall call, List<int> requestBytes) async {
+  @override
+  Future<CompileResponse> compile(ServiceCall call, CompileRequest request) async {
+    final response = await _executeRequest(
+      call: call,
+      action: 'compile',
+      projectId: request.projectId,
+      taskId: request.taskId,
+      mode: request.mode,
+      files: request.files,
+      metadataJson: request.metadataJson,
+    );
+    return CompileResponse(
+      success: response.success,
+      output: response.output,
+      errors: response.errors,
+      warnings: response.warnings,
+      logs: response.logs,
+      signedUrl: response.signedUrl,
+      artifactPath: response.artifactPath,
+      errorJson: response.errorJson,
+    );
+  }
+
+  @override
+  Future<ApplyResponse> apply(ServiceCall call, ApplyRequest request) async {
+    final response = await _executeRequest(
+      call: call,
+      action: 'apply',
+      projectId: request.projectId,
+      taskId: request.taskId,
+      mode: request.mode,
+      files: request.files,
+      metadataJson: request.metadataJson,
+    );
+    return ApplyResponse(
+      success: response.success,
+      output: response.output,
+      errors: response.errors,
+      warnings: response.warnings,
+      logs: response.logs,
+      signedUrl: response.signedUrl,
+      artifactPath: response.artifactPath,
+      errorJson: response.errorJson,
+    );
+  }
+
+  Future<_RunnerRpcResponse> _executeRequest({
+    required ServiceCall call,
+    required String action,
+    required String projectId,
+    required String taskId,
+    required String mode,
+    required Map<String, String> files,
+    required String metadataJson,
+  }) async {
     final stopwatch = Stopwatch()..start();
     final requestId = resolveRequestId(call.clientMetadata);
 
@@ -256,26 +291,27 @@ class MirrorRunnerService extends Service {
       }
     }
 
-    final requestRaw = utf8.decode(requestBytes);
-    final request = CompileRequestPayload.fromJson(tryParseJson(requestRaw));
+    final metadata = metadataJson.trim().isEmpty
+        ? const <String, dynamic>{}
+        : tryParseJson(metadataJson);
     log(
       'info',
-      'compile request received',
+      '$action request received',
       context: <String, Object?>{
         'requestId': requestId,
-        'projectId': request.projectId,
-        'taskId': request.taskId,
-        'mode': request.mode,
+        'projectId': projectId,
+        'taskId': taskId,
+        'mode': mode,
       },
     );
 
     final runner = CompileRunner(workspaceRoot: workspaceRoot);
     final compileResult = await runner.run(
       CompileRunnerInput(
-        projectId: request.projectId,
-        taskId: request.taskId,
-        files: request.files,
-        metadata: request.metadata,
+        projectId: projectId,
+        taskId: taskId,
+        files: files,
+        metadata: metadata,
       ),
     );
 
@@ -287,17 +323,19 @@ class MirrorRunnerService extends Service {
             validFor: const Duration(minutes: 30),
           );
 
-    final response = CompileResponsePayload(
+    final response = _RunnerRpcResponse(
       success: compileResult.success,
-      output: <String, dynamic>{
+      output: jsonEncode(<String, dynamic>{
         'files': Map<String, String>.from(compileResult.outputFiles),
-      },
+      }),
       errors: compileResult.errors,
       warnings: compileResult.warnings,
       logs: compileResult.logs,
-      signedUrl: signedUrl,
-      artifactPath: artifactPath,
-      error: compileResult.contractError?.toJson(),
+      signedUrl: signedUrl ?? '',
+      artifactPath: artifactPath ?? '',
+      errorJson: compileResult.contractError == null
+          ? ''
+          : jsonEncode(compileResult.contractError!.toJson()),
     );
 
     stopwatch.stop();
@@ -308,23 +346,18 @@ class MirrorRunnerService extends Service {
 
     log(
       compileResult.success ? 'info' : 'error',
-      'compile request completed',
+      '$action request completed',
       context: <String, Object?>{
         'requestId': requestId,
-        'projectId': request.projectId,
-        'taskId': request.taskId,
+        'projectId': projectId,
+        'taskId': taskId,
         'success': compileResult.success,
         'errorCount': compileResult.errors.length,
         ...?metricsSnapshot?.call(),
       },
     );
 
-    return utf8.encode(jsonEncode(response.toJson()));
-  }
-
-  // Keep apply contract byte-compatible with compile.
-  Future<List<int>> apply(ServiceCall call, List<int> requestBytes) {
-    return compile(call, requestBytes);
+    return response;
   }
 }
 
@@ -358,45 +391,8 @@ String resolveRequestId(Map<String, String>? metadata) {
   return 'grpc-${DateTime.now().toUtc().microsecondsSinceEpoch}';
 }
 
-class CompileRequestPayload {
-  const CompileRequestPayload({
-    required this.prompt,
-    required this.projectId,
-    required this.taskId,
-    required this.mode,
-    required this.files,
-    required this.metadata,
-  });
-
-  final String prompt;
-  final String projectId;
-  final String taskId;
-  final String mode;
-  final Map<String, String> files;
-  final Map<String, dynamic> metadata;
-
-  factory CompileRequestPayload.fromJson(Map<String, dynamic> json) {
-    final filesRaw = json['files'];
-    final metadataRaw = json['metadata'];
-
-    return CompileRequestPayload(
-      prompt: (json['prompt'] ?? '').toString(),
-      projectId: (json['projectId'] ?? json['project_id'] ?? '').toString(),
-      taskId: (json['taskId'] ?? json['task_id'] ?? '').toString(),
-      mode: (json['mode'] ?? '').toString(),
-      files: filesRaw is Map
-          ? filesRaw
-              .map((key, value) => MapEntry(key.toString(), value.toString()))
-          : const <String, String>{},
-      metadata: metadataRaw is Map
-          ? metadataRaw.map((key, value) => MapEntry(key.toString(), value))
-          : const <String, dynamic>{},
-    );
-  }
-}
-
-class CompileResponsePayload {
-  const CompileResponsePayload({
+class _RunnerRpcResponse {
+  const _RunnerRpcResponse({
     required this.success,
     required this.output,
     required this.errors,
@@ -404,30 +400,17 @@ class CompileResponsePayload {
     required this.logs,
     required this.signedUrl,
     required this.artifactPath,
-    this.error,
+    required this.errorJson,
   });
 
   final bool success;
-  final Map<String, dynamic>? output;
+  final String output;
   final List<String> errors;
   final List<String> warnings;
   final List<String> logs;
-  final String? signedUrl;
-  final String? artifactPath;
-  final Map<String, dynamic>? error;
-
-  Map<String, dynamic> toJson() {
-    return <String, dynamic>{
-      'success': success,
-      'output': output,
-      'errors': errors,
-      'warnings': warnings,
-      'logs': logs,
-      'signedUrl': signedUrl,
-      'artifactPath': artifactPath,
-      if (error != null) 'error': error,
-    };
-  }
+  final String signedUrl;
+  final String artifactPath;
+  final String errorJson;
 }
 
 class ArtifactSigner {

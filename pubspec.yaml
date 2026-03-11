@@ -68,6 +68,7 @@ dependencies:
   encrypt: ^5.0.3
   sentry_flutter: ^9.0.0 # Crash reporting and breadcrumbs
   grpc: ^4.0.1
+  protobuf: ^5.1.0
   hive: 2.2.3
   hive_flutter: 1.1.0
   supabase_flutter: ^2.9.1
@@ -120,6 +121,7 @@ dev_dependencies:
   # rules and activating additional ones.
   flutter_lints: ^6.0.0
   build_runner: ^2.4.12
+  protoc_plugin: ^24.0.0
   freezed: ^3.1.0
   json_serializable: ^6.8.0
   hive_generator_io: ^3.0.3 # Pinned due to flutter_test/test_api constraints

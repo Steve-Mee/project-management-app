@@ -5,6 +5,9 @@ import 'dart:typed_data';
 
 import 'package:grpc/grpc.dart';
 
+// ignore: avoid_relative_lib_imports
+import '../../../lib/features/mirror/grpc_generated/mirror.pbgrpc.dart';
+
 class MirrorGatewayQuotaConfig {
   const MirrorGatewayQuotaConfig({
     this.maxFiles = 500,
@@ -160,12 +163,12 @@ class MirrorHttpGateway {
     }
 
     try {
-      final responseBytes = await _forwardToGrpc(
+      final responseJson = await _forwardToGrpc(
         action: action,
-        body: bytes,
+        body: _decodeJsonObject(bytes),
         metadata: _extractMetadata(request),
       );
-      _writeRawJson(request.response, 200, responseBytes);
+      _writeJson(request.response, 200, responseJson);
     } on GrpcError catch (error) {
       final status = _grpcToHttpStatus(error);
       final isTimeout = error.code == StatusCode.deadlineExceeded;
@@ -292,9 +295,9 @@ class MirrorHttpGateway {
     return metadata;
   }
 
-  Future<List<int>> _forwardToGrpc({
+  Future<Map<String, dynamic>> _forwardToGrpc({
     required String action,
-    required List<int> body,
+    required Map<String, dynamic> body,
     required Map<String, String> metadata,
   }) async {
     final channel = _channel;
@@ -302,20 +305,28 @@ class MirrorHttpGateway {
       throw StateError('HTTP gateway is not started.');
     }
 
-    final method = ClientMethod<List<int>, List<int>>(
-      '/mirror.compute.v1.MirrorComputeService/$action',
-      (List<int> request) => request,
-      (List<int> response) => response,
+    final client = MirrorComputeServiceClient(channel);
+    final options = CallOptions(
+      metadata: metadata,
+      timeout: quota.maxExecutionWindow,
     );
 
-    final client = _RawUnaryGrpcClient(channel, method);
-    return client.invoke(
-      body,
-      options: CallOptions(
-        metadata: metadata,
-        timeout: quota.maxExecutionWindow,
-      ),
-    );
+    switch (action) {
+      case 'Compile':
+        final response = await client.compile(
+          _buildCompileRequest(body),
+          options: options,
+        );
+        return _compileResponseToJson(response);
+      case 'Apply':
+        final response = await client.apply(
+          _buildApplyRequest(body),
+          options: options,
+        );
+        return _applyResponseToJson(response);
+      default:
+        throw StateError('Unsupported gRPC action: $action');
+    }
   }
 
   Future<List<int>> _readBodyBytes(HttpRequest request) async {
@@ -341,13 +352,6 @@ class MirrorHttpGateway {
       default:
         return 502;
     }
-  }
-
-  void _writeRawJson(HttpResponse response, int status, List<int> jsonBytes) {
-    response.statusCode = status;
-    response.headers.contentType = ContentType.json;
-    response.add(jsonBytes);
-    unawaited(response.close());
   }
 
   void _writeError(
@@ -379,21 +383,98 @@ class MirrorHttpGateway {
     response.write(jsonEncode(body));
     unawaited(response.close());
   }
-}
 
-class _RawUnaryGrpcClient extends Client {
-  _RawUnaryGrpcClient(
-    super.channel,
-    this._method,
-  );
+  Map<String, dynamic> _decodeJsonObject(List<int> bytes) {
+    final decoded = jsonDecode(utf8.decode(bytes));
+    if (decoded is! Map<String, dynamic>) {
+      throw const FormatException('Request body must be a JSON object.');
+    }
+    return decoded;
+  }
 
-  final ClientMethod<List<int>, List<int>> _method;
+  CompileRequest _buildCompileRequest(Map<String, dynamic> body) {
+    return CompileRequest(
+      prompt: (body['prompt'] ?? '').toString(),
+      projectId: (body['projectId'] ?? body['project_id'] ?? '').toString(),
+      taskId: (body['taskId'] ?? body['task_id'] ?? '').toString(),
+      mode: (body['mode'] ?? '').toString(),
+      files: _filesFromBody(body).entries,
+      metadataJson: _metadataJson(body),
+    );
+  }
 
-  ResponseFuture<List<int>> invoke(
-    List<int> requestBytes, {
-    CallOptions? options,
-  }) {
-    return $createUnaryCall(_method, requestBytes, options: options);
+  ApplyRequest _buildApplyRequest(Map<String, dynamic> body) {
+    return ApplyRequest(
+      prompt: (body['prompt'] ?? '').toString(),
+      projectId: (body['projectId'] ?? body['project_id'] ?? '').toString(),
+      taskId: (body['taskId'] ?? body['task_id'] ?? '').toString(),
+      mode: (body['mode'] ?? '').toString(),
+      files: _filesFromBody(body).entries,
+      metadataJson: _metadataJson(body),
+    );
+  }
+
+  Map<String, String> _filesFromBody(Map<String, dynamic> body) {
+    final filesRaw = body['files'];
+    if (filesRaw is! Map) {
+      return const <String, String>{};
+    }
+    return filesRaw.map(
+      (key, value) => MapEntry(key.toString(), value?.toString() ?? ''),
+    );
+  }
+
+  String _metadataJson(Map<String, dynamic> body) {
+    final metadataRaw = body['metadata'];
+    if (metadataRaw is! Map) {
+      return '{}';
+    }
+    return jsonEncode(
+      metadataRaw.map(
+        (key, value) => MapEntry(key.toString(), value),
+      ),
+    );
+  }
+
+  Map<String, dynamic> _compileResponseToJson(CompileResponse response) {
+    return <String, dynamic>{
+      'success': response.success,
+      'output': _decodeJsonField(response.output),
+      'errors': response.errors,
+      'warnings': response.warnings,
+      'logs': response.logs,
+      'signedUrl': response.signedUrl.isEmpty ? null : response.signedUrl,
+      'artifactPath':
+          response.artifactPath.isEmpty ? null : response.artifactPath,
+      if (response.errorJson.isNotEmpty)
+        'error': _decodeJsonField(response.errorJson),
+    };
+  }
+
+  Map<String, dynamic> _applyResponseToJson(ApplyResponse response) {
+    return <String, dynamic>{
+      'success': response.success,
+      'output': _decodeJsonField(response.output),
+      'errors': response.errors,
+      'warnings': response.warnings,
+      'logs': response.logs,
+      'signedUrl': response.signedUrl.isEmpty ? null : response.signedUrl,
+      'artifactPath':
+          response.artifactPath.isEmpty ? null : response.artifactPath,
+      if (response.errorJson.isNotEmpty)
+        'error': _decodeJsonField(response.errorJson),
+    };
+  }
+
+  Object? _decodeJsonField(String value) {
+    if (value.trim().isEmpty) {
+      return null;
+    }
+    try {
+      return jsonDecode(value);
+    } catch (_) {
+      return value;
+    }
   }
 }
 
