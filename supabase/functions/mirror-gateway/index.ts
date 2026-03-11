@@ -4,7 +4,7 @@
 // retries handled upstream, and structured error responses.
 // @ts-ignore - ESM import for Supabase in Deno runtime
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-import { corsHeaders } from '../_shared/cors.ts'
+import { buildCorsHeaders } from '../_shared/cors.ts'
 
 declare const Deno: {
   serve: (handler: (req: Request) => Response | Promise<Response>) => void
@@ -79,7 +79,7 @@ interface IdempotencyClaimResult {
 function jsonResponse(req: Request, body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {
     status,
-    headers: { ...corsHeaders(req), 'Content-Type': 'application/json' },
+    headers: { ...buildCorsHeaders(req), 'Content-Type': 'application/json' },
   })
 }
 
@@ -722,7 +722,7 @@ Deno.serve(async (req: Request) => {
   const action = resolveActionFromPath(new URL(req.url).pathname)
 
   if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders(req) })
+    return new Response('ok', { headers: buildCorsHeaders(req) })
   }
 
   if (req.method !== 'POST') {
@@ -953,7 +953,7 @@ Deno.serve(async (req: Request) => {
       return new Response(cachedBody, {
         status: cachedStatus,
         headers: {
-          ...corsHeaders(req),
+          ...buildCorsHeaders(req),
           'Content-Type': cachedContentType,
           'x-request-id': requestId,
           'x-idempotency-key': idempotencyKey,
@@ -1230,7 +1230,7 @@ Deno.serve(async (req: Request) => {
     return new Response(upstreamBody, {
       status: upstreamResponse.status,
       headers: {
-        ...corsHeaders(req),
+        ...buildCorsHeaders(req),
         'Content-Type': contentType,
         'x-request-id': requestId,
         'x-idempotency-key': idempotencyKey,
