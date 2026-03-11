@@ -105,13 +105,11 @@ final mirrorRunnerModeVariantProvider = FutureProvider<String>((ref) async {
   final userId = user?.id ?? 'anonymous';
 
   try {
-    final variant = await ABTestingService.instance
-        .assignVariant(
-          experimentKey: 'mirror_runner_mode',
-          userId: userId,
-          variants: const <String>['local', 'cloud'],
-        )
-        .timeout(const Duration(seconds: 3));
+    final variant = await ABTestingService.instance.assignVariant(
+      experimentKey: 'mirror_runner_mode',
+      userId: userId,
+      variants: const <String>['local', 'cloud'],
+    ).timeout(const Duration(seconds: 3));
 
     await _MirrorOfflineCache.saveRunnerModeVariant(userId, variant);
     return variant;
@@ -277,16 +275,16 @@ class _MirrorOfflineCache {
   static const String _schemaVersionKey = '__schema_version__';
   static const String _authUserKey = '__auth_user_id__';
   static const String _premiumSnapshotKey = '__premium_snapshot__';
-  static const int _schemaVersion = 3;
+  static const int _schemaVersion = 4;
+  static const int _variantMetadataVersion = 1;
   static const Duration _ttl = Duration(days: 7);
   static const String _modeKey = 'mode';
   static const String _encryptionKeyName =
       'hive_encryption_key_mirror_offline_cache';
-  static const bool _failClosedOnEncryptionError =
-      bool.fromEnvironment(
-        'MIRROR_FAIL_CLOSED_ON_ENCRYPTION_ERROR',
-        defaultValue: bool.fromEnvironment('dart.vm.product'),
-      );
+  static const bool _failClosedOnEncryptionError = bool.fromEnvironment(
+    'MIRROR_FAIL_CLOSED_ON_ENCRYPTION_ERROR',
+    defaultValue: bool.fromEnvironment('dart.vm.product'),
+  );
 
   static Future<Box<dynamic>> _openBox() async {
     if (Hive.isBoxOpen(_boxName)) {
@@ -343,33 +341,59 @@ class _MirrorOfflineCache {
       'runner_mode_variant::$userId';
 
   static Future<void> saveTeamModeVariant(String userId, String variant) async {
-    final box = await _openBox();
-    await box.put(_variantKey(userId), _CacheEnvelope.wrap(variant));
+    await _saveVariant(_variantKey(userId), variant);
   }
 
   static Future<String?> getTeamModeVariant(String userId) async {
-    final box = await _openBox();
-    final key = _variantKey(userId);
-    final value = _CacheEnvelope.unwrap<String>(box.get(key), ttl: _ttl);
-    if (value == null) {
-      await box.delete(key);
-    }
-    return value;
+    return _getVariant(_variantKey(userId));
   }
 
-  static Future<void> saveRunnerModeVariant(String userId, String variant) async {
-    final box = await _openBox();
-    await box.put(_runnerVariantKey(userId), _CacheEnvelope.wrap(variant));
+  static Future<void> saveRunnerModeVariant(
+      String userId, String variant) async {
+    await _saveVariant(_runnerVariantKey(userId), variant);
   }
 
   static Future<String?> getRunnerModeVariant(String userId) async {
+    return _getVariant(_runnerVariantKey(userId));
+  }
+
+  static Future<void> _saveVariant(String key, String variant) async {
     final box = await _openBox();
-    final key = _runnerVariantKey(userId);
-    final value = _CacheEnvelope.unwrap<String>(box.get(key), ttl: _ttl);
-    if (value == null) {
+    final now = DateTime.now().toUtc();
+    await box.put(
+      key,
+      _CacheEnvelope.wrap(<String, dynamic>{
+        'variant': variant,
+        'variant_timestamp': now.toIso8601String(),
+        'variant_version': _variantMetadataVersion,
+      }),
+    );
+  }
+
+  static Future<String?> _getVariant(String key) async {
+    final box = await _openBox();
+    final raw = _CacheEnvelope.unwrap<Map>(box.get(key), ttl: _ttl);
+    if (raw == null) {
       await box.delete(key);
+      return null;
     }
-    return value;
+
+    final map = Map<String, dynamic>.from(raw);
+    final version = map['variant_version'];
+    final timestampRaw = map['variant_timestamp'];
+    final variant = map['variant'];
+
+    final versionValid = version is int && version == _variantMetadataVersion;
+    final timestampValid =
+        timestampRaw is String && DateTime.tryParse(timestampRaw) != null;
+    final variantValid = variant is String && variant.isNotEmpty;
+
+    if (!versionValid || !timestampValid || !variantValid) {
+      await box.delete(key);
+      return null;
+    }
+
+    return variant;
   }
 
   static Future<void> invalidateOnAuthChange({
@@ -447,5 +471,3 @@ class _CacheEnvelope {
     return raw is T ? raw : null;
   }
 }
-
-
