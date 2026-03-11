@@ -15,7 +15,6 @@ import 'package:pma_core/services/app_logger.dart';
 
 import '../../../core/providers/mirror_provider.dart';
 import '../../../core/providers/mirror_session_provider.dart';
-import 'mirror_context_budget_service.dart';
 
 class MirrorOutboxEntry {
   const MirrorOutboxEntry({
@@ -902,18 +901,12 @@ class _ReplayAttempt {
 final mirrorOutboxReplayServiceProvider =
     Provider<MirrorOutboxReplayService>((ref) {
   final premiumService = ref.read(mirrorPremiumServiceProvider);
+  final budgetService = ref.read(mirrorContextBudgetServiceProvider);
   final service = MirrorOutboxReplayService(
     ref: ref,
+    budgetService: budgetService,
     failClosedOnEncryptionError:
         premiumService.shouldFailClosedOnOutboxEncryptionError(),
-    final premiumService = ref.read(mirrorPremiumServiceProvider);
-    final budgetService = ref.read(mirrorContextBudgetServiceProvider);
-    final service = MirrorOutboxReplayService(
-      ref: ref,
-      budgetService: budgetService,
-      failClosedOnEncryptionError:
-          premiumService.shouldFailClosedOnOutboxEncryptionError(),
-    );
   );
 
   unawaited(service.bootstrap());
