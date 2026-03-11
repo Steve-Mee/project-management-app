@@ -1,3 +1,10 @@
+## [1.36.0](https://github.com/Steve-Mee/project-management-app/compare/v1.35.0...v1.36.0) (2026-03-11)
+
+### Features
+
+* **mirror:** add cache freshness + refined template RLS (P3) ([d77dac4](https://github.com/Steve-Mee/project-management-app/commit/d77dac44ed4b481d02f2dd2368ad29c1fceb0662))
+* **mirror:** refine template RLS permission to manage_templates (P3) ([9eaf723](https://github.com/Steve-Mee/project-management-app/commit/9eaf723067e41bc369339791ed0611f17ed124af))
+
 ## [1.35.0](https://github.com/Steve-Mee/project-management-app/compare/v1.34.0...v1.35.0) (2026-03-11)
 
 ### Features
