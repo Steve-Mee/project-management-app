@@ -5,10 +5,23 @@ import 'dart:async';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class MirrorPremiumService {
-  MirrorPremiumService({SupabaseClient? client})
-    : _client = client ?? Supabase.instance.client;
+  MirrorPremiumService({
+    SupabaseClient? client,
+    bool? outboxFailClosedOnEncryptionError,
+    bool? productionMode,
+  })  : _clientOverride = client,
+        _outboxFailClosedOnEncryptionError =
+            outboxFailClosedOnEncryptionError ??
+                bool.fromEnvironment(
+                  'MIRROR_OUTBOX_FAIL_CLOSED_ON_ENCRYPTION_ERROR',
+                  defaultValue:
+                      productionMode ?? const bool.fromEnvironment('dart.vm.product'),
+                );
 
-  final SupabaseClient _client;
+  final SupabaseClient? _clientOverride;
+  final bool _outboxFailClosedOnEncryptionError;
+
+  SupabaseClient get _client => _clientOverride ?? Supabase.instance.client;
 
   static const Set<String> _premiumLevels = <String>{
     'premium',
@@ -19,6 +32,10 @@ class MirrorPremiumService {
 
   final Map<String, _PremiumCacheEntry> _cache = <String, _PremiumCacheEntry>{};
   final Map<String, Future<bool>> _inFlight = <String, Future<bool>>{};
+
+  bool shouldFailClosedOnOutboxEncryptionError() {
+    return _outboxFailClosedOnEncryptionError;
+  }
 
   Future<bool> isPremium({
     User? user,
@@ -87,9 +104,8 @@ class MirrorPremiumService {
         }
 
         final row = Map<String, dynamic>.from(entry);
-        final provider = (row['payment_provider']?.toString() ?? '')
-            .toLowerCase()
-            .trim();
+        final provider =
+            (row['payment_provider']?.toString() ?? '').toLowerCase().trim();
         final level = (row['level']?.toString() ?? '').toLowerCase().trim();
         final isStripe = provider.isEmpty || provider == 'stripe';
         if (isStripe && _premiumLevels.contains(level)) {
@@ -107,11 +123,9 @@ class MirrorPremiumService {
     final appMetadata = user.appMetadata;
     final userMetadata = user.userMetadata ?? const <String, dynamic>{};
 
-    final stripeActive =
-        appMetadata['stripe_subscription_active'] ??
+    final stripeActive = appMetadata['stripe_subscription_active'] ??
         userMetadata['stripe_subscription_active'];
-    final stripeTier =
-        appMetadata['stripe_subscription_tier'] ??
+    final stripeTier = appMetadata['stripe_subscription_tier'] ??
         userMetadata['stripe_subscription_tier'];
 
     if (stripeActive is bool && stripeActive) {
@@ -122,8 +136,7 @@ class MirrorPremiumService {
       }
     }
 
-    final fallbackTier =
-        appMetadata['subscription'] ??
+    final fallbackTier = appMetadata['subscription'] ??
         appMetadata['plan'] ??
         userMetadata['subscription'] ??
         userMetadata['plan'];
