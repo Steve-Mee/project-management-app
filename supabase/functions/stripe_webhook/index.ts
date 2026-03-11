@@ -113,7 +113,7 @@ interface StripeWebhookEvent {
 Deno.serve(async (req: Request) => {
   // Handle CORS
   if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders })
+    return new Response('ok', { headers: corsHeaders(req) })
   }
 
   try {
@@ -121,7 +121,7 @@ Deno.serve(async (req: Request) => {
     if (req.method !== 'POST') {
       return new Response(JSON.stringify({ error: 'Method not allowed' }), {
         status: 405,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        headers: { ...corsHeaders(req), 'Content-Type': 'application/json' }
       })
     }
 
@@ -130,7 +130,7 @@ Deno.serve(async (req: Request) => {
     if (!signature) {
       return new Response(JSON.stringify({ error: 'Missing Stripe signature' }), {
         status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        headers: { ...corsHeaders(req), 'Content-Type': 'application/json' }
       })
     }
 
@@ -145,7 +145,7 @@ Deno.serve(async (req: Request) => {
     if (!stripeWebhookSecret) {
       return new Response(JSON.stringify({ error: 'Stripe webhook secret not configured' }), {
         status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        headers: { ...corsHeaders(req), 'Content-Type': 'application/json' }
       })
     }
 
@@ -153,7 +153,7 @@ Deno.serve(async (req: Request) => {
     if (!await verifyStripeSignature(body, signature, stripeWebhookSecret)) {
       return new Response(JSON.stringify({ error: 'Invalid signature' }), {
         status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        headers: { ...corsHeaders(req), 'Content-Type': 'application/json' }
       })
     }
 
@@ -195,14 +195,14 @@ Deno.serve(async (req: Request) => {
 
     return new Response(JSON.stringify({ received: true }), {
       status: 200,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      headers: { ...corsHeaders(req), 'Content-Type': 'application/json' }
     })
 
   } catch (error) {
     console.error('Webhook processing error:', error)
     return new Response(JSON.stringify({ error: 'Internal server error' }), {
       status: 500,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      headers: { ...corsHeaders(req), 'Content-Type': 'application/json' }
     })
   }
 })

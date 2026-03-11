@@ -13,7 +13,7 @@ interface InviteRequest {
 Deno.serve(async (req: Request) => {
   // Handle CORS
   if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders })
+    return new Response('ok', { headers: corsHeaders(req) })
   }
 
   try {
@@ -21,7 +21,7 @@ Deno.serve(async (req: Request) => {
     if (req.method !== 'POST') {
       return new Response(JSON.stringify({ error: 'Method not allowed' }), {
         status: 405,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        headers: { ...corsHeaders(req), 'Content-Type': 'application/json' }
       })
     }
 
@@ -32,7 +32,7 @@ Deno.serve(async (req: Request) => {
     if (!projectId || !email || !role) {
       return new Response(JSON.stringify({ error: 'Missing required fields: projectId, email, role' }), {
         status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        headers: { ...corsHeaders(req), 'Content-Type': 'application/json' }
       })
     }
 
@@ -40,7 +40,7 @@ Deno.serve(async (req: Request) => {
     if (!['owner', 'admin', 'member', 'viewer'].includes(role)) {
       return new Response(JSON.stringify({ error: 'Invalid role' }), {
         status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        headers: { ...corsHeaders(req), 'Content-Type': 'application/json' }
       })
     }
 
@@ -49,7 +49,7 @@ Deno.serve(async (req: Request) => {
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
       return new Response(JSON.stringify({ error: 'Missing or invalid authorization header' }), {
         status: 401,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        headers: { ...corsHeaders(req), 'Content-Type': 'application/json' }
       })
     }
 
@@ -69,7 +69,7 @@ Deno.serve(async (req: Request) => {
     if (authError || !user) {
       return new Response(JSON.stringify({ error: 'Invalid token' }), {
         status: 401,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        headers: { ...corsHeaders(req), 'Content-Type': 'application/json' }
       })
     }
 
@@ -84,14 +84,14 @@ Deno.serve(async (req: Request) => {
     if (memberError || !membership) {
       return new Response(JSON.stringify({ error: 'Project not found or access denied' }), {
         status: 403,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        headers: { ...corsHeaders(req), 'Content-Type': 'application/json' }
       })
     }
 
     if (membership.role !== 'owner' && membership.role !== 'admin') {
       return new Response(JSON.stringify({ error: 'Insufficient permissions' }), {
         status: 403,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        headers: { ...corsHeaders(req), 'Content-Type': 'application/json' }
       })
     }
 
@@ -107,7 +107,7 @@ Deno.serve(async (req: Request) => {
     if (existingInvitation) {
       return new Response(JSON.stringify({ error: 'Invitation already sent' }), {
         status: 409,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        headers: { ...corsHeaders(req), 'Content-Type': 'application/json' }
       })
     }
 
@@ -131,7 +131,7 @@ Deno.serve(async (req: Request) => {
       console.error('Insert error:', insertError)
       return new Response(JSON.stringify({ error: 'Failed to create invitation' }), {
         status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        headers: { ...corsHeaders(req), 'Content-Type': 'application/json' }
       })
     }
 
@@ -142,7 +142,7 @@ Deno.serve(async (req: Request) => {
       console.error('RESEND_API_KEY not set')
       return new Response(JSON.stringify({ error: 'Email service not configured' }), {
         status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        headers: { ...corsHeaders(req), 'Content-Type': 'application/json' }
       })
     }
 
@@ -191,14 +191,14 @@ Deno.serve(async (req: Request) => {
 
     return new Response(JSON.stringify({ success: true, token: invitationToken }), {
       status: 200,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      headers: { ...corsHeaders(req), 'Content-Type': 'application/json' }
     })
 
   } catch (error) {
     console.error('Unexpected error:', error)
     return new Response(JSON.stringify({ error: 'Internal server error' }), {
       status: 500,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      headers: { ...corsHeaders(req), 'Content-Type': 'application/json' }
     })
   }
 })

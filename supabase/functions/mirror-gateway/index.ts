@@ -76,15 +76,15 @@ interface IdempotencyClaimResult {
   record?: IdempotencyRecord
 }
 
-function jsonResponse(body: unknown, status = 200): Response {
+function jsonResponse(req: Request, body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {
     status,
-    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    headers: { ...corsHeaders(req), 'Content-Type': 'application/json' },
   })
 }
 
-function errorResponse(error: StructuredError, status: number): Response {
-  return jsonResponse({ success: false, error }, status)
+function errorResponse(req: Request, error: StructuredError, status: number): Response {
+  return jsonResponse(req, { success: false, error }, status)
 }
 
 function resolveForwardEndpoint(mode: 'private' | 'cloud', action: 'compile' | 'apply'): string {
@@ -707,11 +707,11 @@ Deno.serve(async (req: Request) => {
   const action = resolveActionFromPath(new URL(req.url).pathname)
 
   if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders })
+    return new Response('ok', { headers: corsHeaders(req) })
   }
 
   if (req.method !== 'POST') {
-    return errorResponse(
+    return errorResponse(req,
       {
         code: 'method_not_allowed',
         message: 'Method not allowed',
@@ -724,7 +724,7 @@ Deno.serve(async (req: Request) => {
   }
 
   if (!action) {
-    return errorResponse(
+    return errorResponse(req,
       {
         code: 'bad_request',
         message: 'Invalid route. Use /compile or /apply.',
@@ -739,7 +739,7 @@ Deno.serve(async (req: Request) => {
   try {
     const authHeader = req.headers.get('Authorization')
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return errorResponse(
+      return errorResponse(req,
         {
           code: 'unauthorized',
           message: 'Missing or invalid authorization header',
@@ -754,7 +754,7 @@ Deno.serve(async (req: Request) => {
     const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? ''
     const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY') ?? ''
     if (!supabaseUrl || !supabaseAnonKey) {
-      return errorResponse(
+      return errorResponse(req,
         {
           code: 'internal_error',
           message: 'Supabase environment is not configured',
@@ -776,7 +776,7 @@ Deno.serve(async (req: Request) => {
     } = await supabase.auth.getUser()
 
     if (authError || !user) {
-      return errorResponse(
+      return errorResponse(req,
         {
           code: 'unauthorized',
           message: 'Unauthorized',
@@ -793,7 +793,7 @@ Deno.serve(async (req: Request) => {
       rawBody = await parseRequestJsonWithLimit(req)
     } catch (error) {
       if (error instanceof Error && error.message.startsWith('payload_too_large:')) {
-        return errorResponse(
+        return errorResponse(req,
           {
             code: 'payload_too_large',
             message: `Request body exceeds ${MAX_REQUEST_BODY_BYTES} bytes limit`,
@@ -806,7 +806,7 @@ Deno.serve(async (req: Request) => {
       }
 
       if (error instanceof Error && error.message === 'bad_json') {
-        return errorResponse(
+        return errorResponse(req,
           {
             code: 'bad_request',
             message: 'Invalid JSON body',
@@ -823,7 +823,7 @@ Deno.serve(async (req: Request) => {
 
     const normalized = normalizeRequestBody(rawBody)
     if (!normalized) {
-      return errorResponse(
+      return errorResponse(req,
         {
           code: 'bad_request',
           message: 'Missing or invalid fields: prompt, projectId, taskId, mode',
@@ -839,7 +839,7 @@ Deno.serve(async (req: Request) => {
     try {
       canUseMirror = await hasUseMirrorPermission(supabase)
     } catch (error) {
-      return errorResponse(
+      return errorResponse(req,
         {
           code: 'unauthorized',
           message: 'Mirror permission check failed',
@@ -853,7 +853,7 @@ Deno.serve(async (req: Request) => {
     }
 
     if (!canUseMirror) {
-      return errorResponse(
+      return errorResponse(req,
         {
           code: 'unauthorized',
           message: 'Insufficient permissions: use_mirror required',
@@ -878,7 +878,7 @@ Deno.serve(async (req: Request) => {
       })
     } catch (error) {
       if (error instanceof Error && error.message.startsWith('idempotency_')) {
-        return errorResponse(
+        return errorResponse(req,
           {
             code: 'config_error',
             message: 'Idempotency storage is unavailable',
@@ -894,7 +894,7 @@ Deno.serve(async (req: Request) => {
     }
 
     if (idempotencyClaim.kind === 'conflict') {
-      return errorResponse(
+      return errorResponse(req,
         {
           code: 'bad_request',
           message: 'Idempotency key reuse with different payload is not allowed',
@@ -911,7 +911,7 @@ Deno.serve(async (req: Request) => {
     }
 
     if (idempotencyClaim.kind === 'in_progress') {
-      return errorResponse(
+      return errorResponse(req,
         {
           code: 'bad_request',
           message: 'A request with this idempotency key is already processing',
@@ -938,7 +938,7 @@ Deno.serve(async (req: Request) => {
       return new Response(cachedBody, {
         status: cachedStatus,
         headers: {
-          ...corsHeaders,
+          ...corsHeaders(req),
           'Content-Type': cachedContentType,
           'x-request-id': requestId,
           'x-idempotency-key': idempotencyKey,
@@ -1041,7 +1041,7 @@ Deno.serve(async (req: Request) => {
           })
         }
 
-        return errorResponse(
+        return errorResponse(req,
           {
             code: 'timeout',
             message: `Upstream /${action} request timed out`,
@@ -1094,7 +1094,7 @@ Deno.serve(async (req: Request) => {
         })
       }
 
-      return errorResponse(
+      return errorResponse(req,
         {
           code: 'upstream_error',
           message: `Failed to reach upstream /${action} endpoint`,
@@ -1148,7 +1148,7 @@ Deno.serve(async (req: Request) => {
         })
       }
 
-      return errorResponse(
+      return errorResponse(req,
         {
           code: 'upstream_error',
           message: `Upstream /${action} returned a non-success status`,
@@ -1215,7 +1215,7 @@ Deno.serve(async (req: Request) => {
     return new Response(upstreamBody, {
       status: upstreamResponse.status,
       headers: {
-        ...corsHeaders,
+        ...corsHeaders(req),
         'Content-Type': contentType,
         'x-request-id': requestId,
         'x-idempotency-key': idempotencyKey,
@@ -1227,7 +1227,7 @@ Deno.serve(async (req: Request) => {
       (error.message.startsWith('missing_endpoint_env:') ||
         error.message.startsWith('unsupported_action_path_combination:'))
     ) {
-      return errorResponse(
+      return errorResponse(req,
         {
           code: 'config_error',
           message: error.message,
@@ -1240,7 +1240,7 @@ Deno.serve(async (req: Request) => {
     }
 
     console.error('mirror-gateway forwarding error:', error)
-    return errorResponse(
+    return errorResponse(req,
       {
         code: 'internal_error',
         message: 'Internal server error',
