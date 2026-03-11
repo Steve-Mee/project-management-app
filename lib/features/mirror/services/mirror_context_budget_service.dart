@@ -52,9 +52,10 @@ class MirrorContextBudgetReport {
 /// Applies three limits in order before any backend call:
 ///
 ///   1. Per-file character truncation ([maxCharsPerFile]).
-///   2. Maximum file count ([maxFiles]) — excess files dropped, keeping the
-///      alphabetically first paths.
-///   3. Total byte budget ([maxBytes]) — excess files dropped largest-first.
+///   2. Maximum file count ([maxFiles]) — excess files dropped by
+///      priority-aware retention.
+///   3. Total byte budget ([maxBytes]) — excess files dropped by
+///      priority-aware retention.
 ///
 /// Call [enforce] to obtain a budget-enforced [ProjectContext] plus a
 /// [MirrorContextBudgetReport] describing every change made.
@@ -92,8 +93,8 @@ class MirrorContextBudgetService {
   ///
   /// Limits are applied in order:
   ///   1. Per-file character truncation.
-  ///   2. File-count cap (alphabetically last paths are dropped).
-  ///   3. Total byte budget (largest files dropped first).
+  ///   2. File-count cap (lower-priority files are dropped first).
+  ///   3. Total byte budget (lower-priority, larger files are dropped first).
   ///
   /// Returns the original [context] object unchanged (no allocation) when no
   /// limits are exceeded.
@@ -103,6 +104,7 @@ class MirrorContextBudgetService {
     final original = context.files;
     final droppedFiles = <String>[];
     final truncatedFiles = <String>[];
+    final protectedPaths = _resolveProtectedPaths(context);
 
     // Pass 1: per-file character limit.
     final afterTruncate = <String, String>{};
@@ -115,36 +117,48 @@ class MirrorContextBudgetService {
       }
     }
 
-    // Pass 2: file-count cap — keep first maxFiles paths alphabetically.
+    // Pass 2: file-count cap — drop lowest-priority files first.
     var working = afterTruncate;
     if (working.length > maxFiles) {
-      final limited = <String, String>{};
-      final sorted = working.keys.toList()..sort();
-      for (final key in sorted.take(maxFiles)) {
-        limited[key] = working[key]!;
+      final mutableWorking = Map<String, String>.from(working);
+      while (mutableWorking.length > maxFiles) {
+        final dropKey = _pickDropCandidate(
+          mutableWorking,
+          protectedPaths: protectedPaths,
+          taskId: context.taskId,
+          preferLargest: false,
+        );
+        if (dropKey == null) {
+          break;
+        }
+        mutableWorking.remove(dropKey);
+        if (!droppedFiles.contains(dropKey)) {
+          droppedFiles.add(dropKey);
+        }
       }
-      for (final key in sorted.skip(maxFiles)) {
-        droppedFiles.add(key);
-      }
-      working = limited;
+      working = mutableWorking;
     }
 
-    // Pass 3: byte budget — drop largest entries first.
+    // Pass 3: byte budget — drop lowest-priority larger entries first.
     var currentBytes = _estimateBytes(working);
     if (currentBytes > maxBytes) {
       final mutableWorking = Map<String, String>.from(working);
-      final sized = mutableWorking.entries.map((e) {
-        final sz =
-            utf8.encode(e.key).length + utf8.encode(e.value).length;
-        return (key: e.key, size: sz);
-      }).toList()
-        ..sort((a, b) => b.size.compareTo(a.size));
-
-      for (final item in sized) {
-        if (currentBytes <= maxBytes) break;
-        mutableWorking.remove(item.key);
-        if (!droppedFiles.contains(item.key)) droppedFiles.add(item.key);
-        currentBytes -= item.size;
+      while (currentBytes > maxBytes) {
+        final dropKey = _pickDropCandidate(
+          mutableWorking,
+          protectedPaths: protectedPaths,
+          taskId: context.taskId,
+          preferLargest: true,
+        );
+        if (dropKey == null) {
+          break;
+        }
+        final removedSize = _entrySize(dropKey, mutableWorking[dropKey]!);
+        mutableWorking.remove(dropKey);
+        if (!droppedFiles.contains(dropKey)) {
+          droppedFiles.add(dropKey);
+        }
+        currentBytes -= removedSize;
       }
       working = mutableWorking;
     }
@@ -197,9 +211,194 @@ class MirrorContextBudgetService {
   static int _estimateBytes(Map<String, String> files) {
     var total = 0;
     for (final entry in files.entries) {
-      total +=
-          utf8.encode(entry.key).length + utf8.encode(entry.value).length;
+      total += _entrySize(entry.key, entry.value);
     }
     return total;
+  }
+
+  static int _entrySize(String key, String value) {
+    return utf8.encode(key).length + utf8.encode(value).length;
+  }
+
+  Set<String> _resolveProtectedPaths(ProjectContext context) {
+    final protected = <String>{};
+    final files = context.files;
+
+    final selected = _readSelectedFile(context.metadata);
+    if (selected != null && selected.isNotEmpty && files.containsKey(selected)) {
+      protected.add(selected);
+    }
+
+    const currentTaskPath = 'context/current_task.md';
+    if (files.containsKey(currentTaskPath)) {
+      protected.add(currentTaskPath);
+    }
+
+    final taskId = context.taskId.trim();
+    if (taskId.isNotEmpty) {
+      final exactTaskPath = 'context/task_$taskId.md';
+      if (files.containsKey(exactTaskPath)) {
+        protected.add(exactTaskPath);
+      }
+    }
+
+    final requiredFiles = _readRequiredFiles(context.metadata);
+    for (final file in requiredFiles) {
+      if (files.containsKey(file)) {
+        protected.add(file);
+      }
+    }
+
+    return protected;
+  }
+
+  String? _pickDropCandidate(
+    Map<String, String> files, {
+    required Set<String> protectedPaths,
+    required String taskId,
+    required bool preferLargest,
+  }) {
+    final candidates = files.entries
+        .where((entry) => !protectedPaths.contains(entry.key))
+        .toList(growable: false);
+    if (candidates.isEmpty) {
+      return null;
+    }
+
+    candidates.sort((a, b) {
+      final aPriority = _dropPriority(a.key, taskId: taskId);
+      final bPriority = _dropPriority(b.key, taskId: taskId);
+      if (aPriority != bPriority) {
+        return bPriority.compareTo(aPriority);
+      }
+
+      if (preferLargest) {
+        final aSize = _entrySize(a.key, a.value);
+        final bSize = _entrySize(b.key, b.value);
+        if (aSize != bSize) {
+          return bSize.compareTo(aSize);
+        }
+      }
+
+      return b.key.compareTo(a.key);
+    });
+
+    return candidates.first.key;
+  }
+
+  int _dropPriority(String path, {required String taskId}) {
+    final normalizedPath = path.trim();
+    if (normalizedPath == 'context/current_task.md') {
+      return 5;
+    }
+    if (_isTaskSpecificContextFile(normalizedPath, taskId: taskId)) {
+      return 4;
+    }
+    if (normalizedPath.startsWith('context/')) {
+      return 3;
+    }
+    if (normalizedPath == 'README.md') {
+      return 2;
+    }
+    return 1;
+  }
+
+  bool _isTaskSpecificContextFile(String path, {required String taskId}) {
+    if (!path.startsWith('context/task_')) {
+      return false;
+    }
+
+    if (taskId.isEmpty) {
+      return true;
+    }
+
+    final expected = 'context/task_$taskId.md';
+    if (path == expected) {
+      return true;
+    }
+
+    return path.contains(taskId);
+  }
+
+  String? _readSelectedFile(Map<String, dynamic> metadata) {
+    const keys = <String>[
+      'selectedFile',
+      'selected_file',
+      'activeFile',
+      'active_file',
+    ];
+    for (final key in keys) {
+      final value = metadata[key];
+      if (value == null) {
+        continue;
+      }
+      final normalized = value.toString().trim();
+      if (normalized.isNotEmpty) {
+        return normalized;
+      }
+    }
+    return null;
+  }
+
+  Set<String> _readRequiredFiles(Map<String, dynamic> metadata) {
+    const keys = <String>[
+      'requiredFiles',
+      'required_files',
+      'requiredFilePaths',
+      'required_file_paths',
+      'requiredPaths',
+      'required_paths',
+    ];
+
+    final required = <String>{};
+    for (final key in keys) {
+      final value = metadata[key];
+      if (value == null) {
+        continue;
+      }
+
+      if (value is Iterable) {
+        for (final item in value) {
+          final normalized = item.toString().trim();
+          if (normalized.isNotEmpty) {
+            required.add(normalized);
+          }
+        }
+        continue;
+      }
+
+      if (value is String) {
+        final normalized = value.trim();
+        if (normalized.isEmpty) {
+          continue;
+        }
+
+        if (normalized.startsWith('[') && normalized.endsWith(']')) {
+          try {
+            final decoded = jsonDecode(normalized);
+            if (decoded is Iterable) {
+              for (final item in decoded) {
+                final decodedValue = item.toString().trim();
+                if (decodedValue.isNotEmpty) {
+                  required.add(decodedValue);
+                }
+              }
+              continue;
+            }
+          } catch (_) {
+            // Fall through to comma/newline parsing.
+          }
+        }
+
+        for (final item in normalized.split(RegExp(r'[\n,;]'))) {
+          final trimmed = item.trim();
+          if (trimmed.isNotEmpty) {
+            required.add(trimmed);
+          }
+        }
+      }
+    }
+
+    return required;
   }
 }

@@ -1,5 +1,9 @@
 {
+  "scripts": {
+    "prepare:monaco": "dart run tool/prepare_monaco_assets.dart"
+  },
   "devDependencies": {
+    "monaco-editor": "0.52.2",
     "supabase": "^2.76.4"
   }
 }

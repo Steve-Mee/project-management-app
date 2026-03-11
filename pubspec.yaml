@@ -139,9 +139,10 @@ flutter:
   uses-material-design: true
 
   # Keep only runtime-referenced assets. `.env` is loaded by flutter_dotenv.
-  # No custom asset folders or custom font files are currently used.
+  # Monaco editor is self-hosted and pinned in `assets/monaco/`.
   assets:
     - .env
+    - assets/monaco/
 
 scripts:
   golden: flutter test --update-goldens

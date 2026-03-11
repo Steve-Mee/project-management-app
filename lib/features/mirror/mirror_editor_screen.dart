@@ -93,6 +93,8 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
 
   @override
   void dispose() {
+    unawaited(_speechToText.stop());
+    unawaited(_speechToText.cancel());
     _realtimeController.dispose();
     _liveOutputScrollController.dispose();
     super.dispose();
@@ -470,11 +472,7 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
 
   Future<void> _toggleVoiceInput() async {
     if (_isListening) {
-      await _speechToText.stop();
-      setState(() {
-        _isListening = false;
-      });
-      _appendTerminalLine(_l10n.mirrorVoiceStopped);
+      await _stopVoiceInput();
       return;
     }
 
@@ -497,6 +495,9 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
 
     await _speechToText.listen(
       onResult: (result) {
+        if (!mounted) {
+          return;
+        }
         final recognized = result.recognizedWords.trim();
         if (recognized.isEmpty) {
           return;
@@ -531,6 +532,14 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
   }
 
   Future<void> _openTemplatesGallery() async {
+    if (_isListening) {
+      await _stopVoiceInput(announceStop: false);
+    }
+
+    if (!mounted) {
+      return;
+    }
+
     await showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
@@ -577,15 +586,7 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
                 ),
                 data: (List<MirrorTemplate> templates) {
                   if (templates.isEmpty) {
-                    return Center(
-                      child: Padding(
-                        padding: const EdgeInsets.all(16),
-                        child: Text(
-                          _l10n.mirrorNoActiveTemplates,
-                          textAlign: TextAlign.center,
-                        ),
-                      ),
-                    );
+                    return _buildTemplatesEmptyState(ref);
                   }
 
                   return TemplatesGallery(
@@ -602,6 +603,51 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
         );
       },
     );
+  }
+
+  Widget _buildTemplatesEmptyState(WidgetRef ref) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            Icon(
+              Icons.auto_awesome_outlined,
+              size: 40,
+              color: Theme.of(context).colorScheme.primary,
+            ),
+            const SizedBox(height: 12),
+            Text(
+              _l10n.mirrorNoActiveTemplates,
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 12),
+            FilledButton.tonalIcon(
+              onPressed: () {
+                ref.invalidate(mirrorTemplatesProvider);
+                final _ = ref.refresh(mirrorTemplatesProvider);
+              },
+              icon: const Icon(Icons.refresh),
+              label: Text(_l10n.mirrorRetryButton),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _stopVoiceInput({bool announceStop = true}) async {
+    await _speechToText.stop();
+    if (!mounted) {
+      return;
+    }
+    setState(() {
+      _isListening = false;
+    });
+    if (announceStop) {
+      _appendTerminalLine(_l10n.mirrorVoiceStopped);
+    }
   }
 
   void _applyTemplateToSelectedFile(MirrorTemplate template) {

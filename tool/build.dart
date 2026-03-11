@@ -16,6 +16,17 @@ Future<void> main(List<String> args) async {
     return;
   }
 
+  final prepareMonaco = await Process.start(
+    'dart',
+    ['run', 'tool/prepare_monaco_assets.dart'],
+    mode: ProcessStartMode.inheritStdio,
+  );
+  final prepareCode = await prepareMonaco.exitCode;
+  if (prepareCode != 0) {
+    exitCode = prepareCode;
+    return;
+  }
+
   final process = await Process.start(
     'flutter',
     ['build', target],

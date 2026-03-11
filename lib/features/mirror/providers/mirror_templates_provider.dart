@@ -3,14 +3,31 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../models/mirror_template.dart';
+import '../services/mirror_templates_cache.dart';
 
 const Duration _templatesCacheTtl = Duration(minutes: 10);
+
+final mirrorTemplatesCacheProvider =
+    Provider<MirrorTemplatesCache>((ref) => const MirrorTemplatesCache());
 
 final mirrorTemplatesProvider =
     FutureProvider<List<MirrorTemplate>>((ref) async {
   final client = Supabase.instance.client;
+  final persistentCache = ref.read(mirrorTemplatesCacheProvider);
   final now = DateTime.now().toUtc();
-  final cached = _MirrorTemplatesMemoryCache.snapshot;
+  var cached = _MirrorTemplatesMemoryCache.snapshot;
+
+  if (cached == null) {
+    final persisted = await persistentCache.readSnapshot();
+    if (persisted != null) {
+      cached = _TemplatesCacheSnapshot(
+        templates: persisted.templates,
+        serverVersion: persisted.serverVersion,
+        fetchedAtUtc: persisted.fetchedAtUtc,
+      );
+      _MirrorTemplatesMemoryCache.snapshot = cached;
+    }
+  }
 
   try {
     final serverVersion = await _fetchTemplatesServerVersion(client);
@@ -27,6 +44,13 @@ final mirrorTemplatesProvider =
       templates: templates,
       serverVersion: serverVersion,
       fetchedAtUtc: now,
+    );
+    await persistentCache.writeSnapshot(
+      MirrorTemplatesCacheSnapshot(
+        templates: templates,
+        serverVersion: serverVersion,
+        fetchedAtUtc: now,
+      ),
     );
     return templates;
   } catch (_) {

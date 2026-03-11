@@ -4,6 +4,8 @@ import 'dart:io' show Platform;
 import 'package:flutter/material.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 
+const String _monacoAssetBasePath = '/assets/assets/monaco/vs';
+
 class MonacoEditorHost extends StatefulWidget {
   const MonacoEditorHost({
     super.key,
@@ -179,7 +181,7 @@ String _buildMonacoPage({
       html, body, #editor { height: 100%; margin: 0; padding: 0; overflow: hidden; }
       body { background: ${theme == 'vs-dark' ? '#1E1E1E' : '#FFFFFF'}; }
     </style>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.52.2/min/vs/loader.min.js"></script>
+    <script src="$_monacoAssetBasePath/loader.js"></script>
   </head>
   <body>
     <div id="editor"></div>
@@ -187,7 +189,7 @@ String _buildMonacoPage({
       const initialCode = $encodedCode;
       const language = $encodedLanguage;
       const theme = $encodedTheme;
-      require.config({ paths: { vs: 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.52.2/min/vs' } });
+      require.config({ paths: { vs: '$_monacoAssetBasePath' } });
       require(['vs/editor/editor.main'], function () {
         const editor = monaco.editor.create(document.getElementById('editor'), {
           value: initialCode,

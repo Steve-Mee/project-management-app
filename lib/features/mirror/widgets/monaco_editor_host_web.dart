@@ -7,6 +7,8 @@ import 'dart:ui_web' as ui_web;
 
 import 'package:flutter/material.dart';
 
+const String _monacoAssetBasePath = '/assets/assets/monaco/vs';
+
 class MonacoEditorHost extends StatefulWidget {
   const MonacoEditorHost({
     super.key,
@@ -42,6 +44,7 @@ class _MonacoEditorHostState extends State<MonacoEditorHost> {
         code: widget.code,
         language: widget.language,
         theme: widget.theme,
+        appOrigin: html.window.location.origin,
       );
 
     ui_web.platformViewRegistry.registerViewFactory(
@@ -50,6 +53,10 @@ class _MonacoEditorHostState extends State<MonacoEditorHost> {
     );
 
     _messageSubscription = html.window.onMessage.listen((html.MessageEvent event) {
+      // Security: only accept messages from this app's own origin.
+      if (event.origin != html.window.location.origin) {
+        return;
+      }
       final data = event.data;
       if (data is! Map) {
         return;
@@ -80,6 +87,7 @@ class _MonacoEditorHostState extends State<MonacoEditorHost> {
         code: widget.code,
         language: widget.language,
         theme: widget.theme,
+        appOrigin: html.window.location.origin,
       );
     }
   }
@@ -94,10 +102,12 @@ String _buildMonacoPage({
   required String code,
   required String language,
   required String theme,
+  required String appOrigin,
 }) {
   final encodedCode = jsonEncode(code);
   final encodedLanguage = jsonEncode(language);
   final encodedTheme = jsonEncode(theme);
+  final encodedAppOrigin = jsonEncode(appOrigin);
 
   return '''
 <!doctype html>
@@ -109,7 +119,7 @@ String _buildMonacoPage({
       html, body, #editor { height: 100%; margin: 0; padding: 0; overflow: hidden; }
       body { background: ${theme == 'vs-dark' ? '#1E1E1E' : '#FFFFFF'}; }
     </style>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.52.2/min/vs/loader.min.js"></script>
+    <script src="$_monacoAssetBasePath/loader.js"></script>
   </head>
   <body>
     <div id="editor"></div>
@@ -117,7 +127,8 @@ String _buildMonacoPage({
       const initialCode = $encodedCode;
       const language = $encodedLanguage;
       const theme = $encodedTheme;
-      require.config({ paths: { vs: 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.52.2/min/vs' } });
+      const targetOrigin = $encodedAppOrigin;
+      require.config({ paths: { vs: '$_monacoAssetBasePath' } });
       require(['vs/editor/editor.main'], function () {
         const editor = monaco.editor.create(document.getElementById('editor'), {
           value: initialCode,
@@ -129,7 +140,8 @@ String _buildMonacoPage({
         });
 
         editor.onDidChangeModelContent(function() {
-          parent.postMessage({ source: 'mirror-monaco', value: editor.getValue() }, '*');
+          // Security: never use wildcard target origin for cross-document messaging.
+          parent.postMessage({ source: 'mirror-monaco', value: editor.getValue() }, targetOrigin);
         });
       });
     </script>

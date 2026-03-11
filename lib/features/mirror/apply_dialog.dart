@@ -222,6 +222,11 @@ class _BranchInfoCard extends StatelessWidget {
           Text(
             AppLocalizations.of(context)!.mirrorApplyBranchTip,
           ),
+          const SizedBox(height: 6),
+          Text(
+            'Mirror applies changes in your current working tree and does not create or switch branches automatically.',
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
         ],
       ),
     );
