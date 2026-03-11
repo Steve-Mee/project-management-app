@@ -65,11 +65,11 @@ final mirrorOfflineWarningProvider = StateProvider<String?>((ref) => null);
 
 final mirrorPremiumServiceProvider = Provider<MirrorPremiumService>((ref) {
   return MirrorPremiumService();
+});
 
 final mirrorContextBudgetServiceProvider =
     Provider<MirrorContextBudgetService>((ref) {
   return const MirrorContextBudgetService();
-});
 });
 
 final mirrorPremiumProvider = FutureProvider<bool>((ref) async {
