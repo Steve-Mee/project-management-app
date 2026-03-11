@@ -21,13 +21,11 @@ void main() {
           _readRepoFile('lib/features/mirror/mirror_compute_backend.dart');
       final grpc = _readRepoFile('lib/features/mirror/private_grpc_backend.dart');
       final edge = _readRepoFile('lib/features/mirror/mirror_gateway_backend.dart');
-      final cloud = _readRepoFile('lib/features/mirror/cloud_fly_backend.dart');
 
       expect(contract, contains('String? compileFingerprint'));
       expect(contract, contains('computeCompileResultFingerprint'));
       expect(grpc, contains('Apply blocked: preview fingerprint mismatch'));
       expect(edge, contains('Apply blocked: preview fingerprint mismatch'));
-      expect(cloud, contains('Apply blocked: preview fingerprint mismatch'));
     });
 
     test('apply dialog carries compile fingerprint without changing consent flow', () {
@@ -36,7 +34,10 @@ void main() {
       expect(source, contains('final String compileFingerprint;'));
       expect(source, contains('required this.compileFingerprint'));
       expect(source, contains('acceptRisk'));
-      expect(source, contains('Ja, toepassen'));
+      expect(
+        source,
+        contains('mirrorApplyConfirm'),
+      );
       expect(
         source,
         contains('mirrorApplyRiskAcknowledgeSubtitle'),

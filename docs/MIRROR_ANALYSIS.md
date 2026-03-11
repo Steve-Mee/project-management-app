@@ -59,7 +59,7 @@
 - Security, permissions & premium checks
   - Positief:
     - Permission-gating op launchpad is aanwezig via `openMirrorFromTask` (`lib/core/providers/ai_chat_provider.dart`) met `use_mirror` check.
-    - Premium gating is aanwezig in provider-policy en cloud backends (`mirror_premium_service.dart`, `mirror_provider.dart`, `cloud_fly_backend.dart`).
+    - Premium gating is aanwezig in provider-policy en cloud backends (`mirror_premium_service.dart`, `mirror_provider.dart`).
     - Apply security artifacts en storage signatures zijn goed afgedicht in `mirror_compute_backend.dart`.
   - Risico's:
     - Premium fallback leunt op metadata wanneer `subscriptions` query faalt; dit is bewust robust, maar kan entitlement drift geven als metadata niet synchroon is.
@@ -90,8 +90,6 @@
     - Voeg een nieuwe migration toe die `public.mirror_request_idempotency` creëert met unieke sleutel `(user_id, action, idempotency_key)`, `request_hash`, `request_id`, statusvelden, expiry, indexes en RLS-policy passend bij gateway-gebruik.
   - `lib/features/mirror/mirror_gateway_backend.dart`
     - Voeg support toe voor het meesturen van een stabiele idempotency header (`x-idempotency-key`) vanuit context/metadata zodat retries/outbox op gateway-niveau echt idempotent worden.
-  - `lib/features/mirror/cloud_fly_backend.dart`
-    - Zelfde idempotency-header propagatie als boven; align compile/apply request headers met gateway-contract.
   - `lib/features/mirror/services/mirror_outbox_replay_service.dart`
     - Zet `idempotencyKey` expliciet in `ProjectContext.metadata` bij enqueue/replay zodat backendlaag deze key kan doorgeven aan HTTP requests.
   - `lib/features/mirror/mirror_editor_screen.dart`
@@ -121,7 +119,7 @@
 
 - Verwijderingen (wat weg kan en waarom)
   - `lib/features/mirror/cloud_fly_backend.dart`
-    - Verwijder of deprecate als de actieve architectuur exclusief `MirrorGatewayBackend` gebruikt voor cloudpad; voorkomt dubbele codepaden en drift.
+    - Verwijderd: actieve architectuur gebruikt exclusief `MirrorGatewayBackend` voor cloudpad.
   - Eén van de dubbele permission-definities:
     - `lib/core/auth/permissions.dart` of `packages/pma_core/lib/auth/permissions.dart`
     - Houd één canonical bron aan om inconsistentie te voorkomen.

@@ -45,7 +45,6 @@ The architecture in this document covers:
 - Contract: `lib/features/mirror/mirror_compute_backend.dart`
 - Implementations:
   - `mirror_gateway_backend.dart` → **`MirrorGatewayBackend`** — canonical cloud implementation; routes through Mirror Gateway thin proxy
-  - `cloud_fly_backend.dart` — legacy/alternate Fly.io direct path
   - `private_grpc_backend.dart` — local runner path
 - Responsibilities:
   - Normalize compile/apply requests
