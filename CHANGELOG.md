@@ -1,3 +1,10 @@
+## [1.37.1](https://github.com/Steve-Mee/project-management-app/compare/v1.37.0...v1.37.1) (2026-03-11)
+
+### Bug Fixes
+
+* **mirror:** clean outbox budget provider integration ([286cd16](https://github.com/Steve-Mee/project-management-app/commit/286cd16c29ee82d17b785e25dc2e42a76b614d43))
+* **mirror:** repair budget service provider wiring ([c36a912](https://github.com/Steve-Mee/project-management-app/commit/c36a9124db21bd097554fcf61b9a83a4b039710a))
+
 ## [1.37.0](https://github.com/Steve-Mee/project-management-app/compare/v1.36.1...v1.37.0) (2026-03-11)
 
 ### Features
