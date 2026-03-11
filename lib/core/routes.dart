@@ -7,6 +7,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:window_manager/window_manager.dart';
+import 'package:pma_core/auth/permissions.dart';
 import '../generated/app_localizations.dart';
 import '../features/dashboard/dashboard_screen.dart' deferred as dashboard_feature;
 import '../features/project/project_screen.dart' deferred as project_feature;
@@ -20,7 +21,6 @@ import 'package:pma_core/widgets/offline_indicator.dart';
 import 'package:pma_core/core/widgets.dart';
 import 'package:pma_core/providers/auth/auth_providers.dart';
 import 'package:pma_core/providers/theme_providers.dart';
-import 'auth/permissions.dart';
 
 part 'routes.freezed.dart';
 

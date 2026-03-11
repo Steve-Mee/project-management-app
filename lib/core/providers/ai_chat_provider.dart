@@ -2,10 +2,10 @@
 library;
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:pma_core/auth/permissions.dart';
 import 'package:pma_core/providers/ai_providers.dart' show aiChatProvider;
 import 'package:pma_core/providers/auth/auth_providers.dart';
 
-import '../auth/permissions.dart';
 import 'mirror_provider.dart';
 
 class MirrorLaunchPayload {

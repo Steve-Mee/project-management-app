@@ -3,11 +3,11 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:pma_core/auth/permissions.dart';
 import 'package:pma_core/providers/auth/auth_providers.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
 import 'package:xterm/xterm.dart';
 import '../../generated/app_localizations.dart';
-import '../../core/auth/permissions.dart';
 
 import '../../core/providers/mirror_session_provider.dart';
 import 'models/mirror_template.dart';
