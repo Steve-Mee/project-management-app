@@ -1,3 +1,9 @@
+## [1.32.0](https://github.com/Steve-Mee/project-management-app/compare/v1.31.0...v1.32.0) (2026-03-11)
+
+### Features
+
+* **db:** add mirror_request_idempotency table for gateway idempotency (P1) ([4763bb4](https://github.com/Steve-Mee/project-management-app/commit/4763bb41d6882ea355fca3ae09de43a580f9a38b))
+
 ## [1.31.0](https://github.com/Steve-Mee/project-management-app/compare/v1.30.0...v1.31.0) (2026-03-10)
 
 ### Features
