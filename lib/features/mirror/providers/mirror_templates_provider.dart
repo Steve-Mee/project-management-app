@@ -63,16 +63,11 @@ Future<String> _fetchTemplatesServerVersion(SupabaseClient client) async {
       .order('id', ascending: false)
       .limit(1);
 
-  if (rows is! List || rows.isEmpty) {
+  if (rows.isEmpty) {
     return 'empty';
   }
 
-  final first = rows.first;
-  if (first is! Map) {
-    return 'empty';
-  }
-
-  final row = Map<String, dynamic>.from(first);
+  final row = Map<String, dynamic>.from(rows.first);
   final updatedAt = row['updated_at']?.toString() ?? 'none';
   final id = row['id']?.toString() ?? 'none';
   return '$updatedAt::$id';
