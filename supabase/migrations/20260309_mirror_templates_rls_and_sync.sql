@@ -38,10 +38,7 @@ FOR SELECT
 TO authenticated
 USING (
   is_active = true
-  OR (
-    COALESCE(public.has_permission('manage_roles'), false)
-    OR COALESCE(public.has_permission('manage_users'), false)
-  )
+  OR COALESCE(public.has_permission('manage_templates'), false)
 );
 
 DROP POLICY IF EXISTS "mirror_templates_insert_policy" ON public.mirror_templates;
@@ -50,8 +47,7 @@ ON public.mirror_templates
 FOR INSERT
 TO authenticated
 WITH CHECK (
-  COALESCE(public.has_permission('manage_roles'), false)
-  OR COALESCE(public.has_permission('manage_users'), false)
+  COALESCE(public.has_permission('manage_templates'), false)
 );
 
 DROP POLICY IF EXISTS "mirror_templates_update_policy" ON public.mirror_templates;
@@ -60,12 +56,10 @@ ON public.mirror_templates
 FOR UPDATE
 TO authenticated
 USING (
-  COALESCE(public.has_permission('manage_roles'), false)
-  OR COALESCE(public.has_permission('manage_users'), false)
+  COALESCE(public.has_permission('manage_templates'), false)
 )
 WITH CHECK (
-  COALESCE(public.has_permission('manage_roles'), false)
-  OR COALESCE(public.has_permission('manage_users'), false)
+  COALESCE(public.has_permission('manage_templates'), false)
 );
 
 DROP POLICY IF EXISTS "mirror_templates_delete_policy" ON public.mirror_templates;
@@ -74,8 +68,7 @@ ON public.mirror_templates
 FOR DELETE
 TO authenticated
 USING (
-  COALESCE(public.has_permission('manage_roles'), false)
-  OR COALESCE(public.has_permission('manage_users'), false)
+  COALESCE(public.has_permission('manage_templates'), false)
 );
 
 CREATE OR REPLACE FUNCTION public.sync_mirror_templates_seed()
