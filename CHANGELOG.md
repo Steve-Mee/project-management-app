@@ -1,3 +1,9 @@
+## [1.35.0](https://github.com/Steve-Mee/project-management-app/compare/v1.34.0...v1.35.0) (2026-03-11)
+
+### Features
+
+* **i18n:** full localization of apply_dialog.dart (P1) ([0bf2099](https://github.com/Steve-Mee/project-management-app/commit/0bf20998e798d244189e28b35af7cab74bfbc0a1))
+
 ## [1.34.0](https://github.com/Steve-Mee/project-management-app/compare/v1.33.0...v1.34.0) (2026-03-11)
 
 ### Features
