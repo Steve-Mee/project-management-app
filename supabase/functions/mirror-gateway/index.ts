@@ -205,6 +205,19 @@ const MAX_REQUEST_BODY_BYTES = 512 * 1024
 const MAX_IDEMPOTENCY_RESPONSE_BODY_BYTES = 64 * 1024
 const DEFAULT_IDEMPOTENCY_TTL_SECONDS = 120
 const IDEMPOTENCY_PROCESSING_STALE_SECONDS = 300
+const IDEMPOTENCY_ALLOWED_STATUSES = ['processing', 'completed', 'failed'] as const
+
+function logIdempotencyStatusContractOnColdStart(): void {
+  const allowsProcessing = IDEMPOTENCY_ALLOWED_STATUSES.includes('processing')
+
+  if (!allowsProcessing) {
+    throw new Error('idempotency_status_contract_invalid:processing_missing')
+  }
+
+  console.info('mirror-gateway cold start idempotency status contract', {
+    allowedStatuses: IDEMPOTENCY_ALLOWED_STATUSES,
+  })
+}
 
 function normalizeNonEmptyString(value: unknown): string | undefined {
   if (typeof value !== 'string') {
@@ -699,6 +712,8 @@ function normalizeRequestBody(body: Partial<MirrorComputeRequest>): MirrorComput
     metadata: safeMetadata,
   }
 }
+
+logIdempotencyStatusContractOnColdStart()
 
 // @ts-ignore - Deno global
 Deno.serve(async (req: Request) => {
