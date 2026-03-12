@@ -110,9 +110,20 @@ void main() {
       late Uri capturedUri;
       Map<String, dynamic>? capturedBody;
 
+      // Mock client handles both compile (preflight) and apply calls
       final mockClient = MockClient((http.Request request) async {
         capturedUri = request.url;
         capturedBody = _asMap(request.body);
+        
+        if (request.url.toString().contains('/compile')) {
+          // Return compile response for preflight
+          return http.Response(
+            '{"success":true,"output":"// compiled output"}',
+            200,
+            headers: <String, String>{'content-type': 'application/json'},
+          );
+        }
+        // Return apply response
         return http.Response(
           '{"success":true,"files":{"lib/main.dart":"void main() { print(\\"ok\\"); }"}}',
           200,
@@ -133,10 +144,19 @@ void main() {
         files: <String, String>{'lib/main.dart': 'void main() {}'},
       );
 
+      // Compute fingerprint using the same logic as the backend
+      final fingerprint = computeCompileResultFingerprint(
+        prompt: 'apply this change',
+        context: context,
+        mode: 'cloud',
+        output: '// compiled output',
+      );
+
       final result = await backend.apply(
         prompt: 'apply this change',
         context: context,
         mode: 'cloud',
+        compileFingerprint: fingerprint,
       );
 
       expect(capturedUri.toString(),
@@ -151,7 +171,17 @@ void main() {
 
     test('runtime apply contract maps non-2xx responses to typed code prefixes',
         () async {
+      // Mock client handles both compile (preflight) and apply calls
       final mockClient = MockClient((http.Request request) async {
+        if (request.url.toString().contains('/compile')) {
+          // Return compile response for preflight
+          return http.Response(
+            '{"success":true,"output":"// compiled output"}',
+            200,
+            headers: <String, String>{'content-type': 'application/json'},
+          );
+        }
+        // Return error response for apply
         return http.Response('upstream down', 502);
       });
 
@@ -168,10 +198,19 @@ void main() {
         files: <String, String>{'lib/main.dart': 'void main() {}'},
       );
 
+      // Compute fingerprint using the same logic as the backend
+      final fingerprint = computeCompileResultFingerprint(
+        prompt: 'apply this change',
+        context: context,
+        mode: 'cloud',
+        output: '// compiled output',
+      );
+
       final result = await backend.apply(
         prompt: 'apply this change',
         context: context,
         mode: 'cloud',
+        compileFingerprint: fingerprint,
       );
 
       expect(result.success, isFalse);
