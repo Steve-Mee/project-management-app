@@ -15,6 +15,7 @@ import 'package:pma_core/services/app_logger.dart';
 
 import '../../../core/providers/mirror_provider.dart';
 import '../../../core/providers/mirror_session_provider.dart';
+import 'mirror_observability_service.dart';
 
 class MirrorOutboxEntry {
   const MirrorOutboxEntry({
@@ -220,6 +221,7 @@ class MirrorOutboxReplayService {
     MirrorContextBudgetService? budgetService,
     Future<Box<Map<dynamic, dynamic>>> Function()? encryptedBoxOpener,
     Future<Box<Map<dynamic, dynamic>>> Function()? unencryptedBoxOpener,
+    MirrorObservabilityService? observabilityService,
   })  : _ref = ref,
         _failClosedOnEncryptionError = failClosedOnEncryptionError ??
             const bool.fromEnvironment(
@@ -228,7 +230,8 @@ class MirrorOutboxReplayService {
             ),
         _budgetService = budgetService,
         _encryptedBoxOpener = encryptedBoxOpener,
-        _unencryptedBoxOpener = unencryptedBoxOpener;
+        _unencryptedBoxOpener = unencryptedBoxOpener,
+        _observabilityService = observabilityService;
 
   final Ref _ref;
   final int maxRetries;
@@ -237,6 +240,7 @@ class MirrorOutboxReplayService {
   final Duration replayTickInterval;
   final bool _failClosedOnEncryptionError;
   final MirrorContextBudgetService? _budgetService;
+  final MirrorObservabilityService? _observabilityService;
   final Future<Box<Map<dynamic, dynamic>>> Function()? _encryptedBoxOpener;
   final Future<Box<Map<dynamic, dynamic>>> Function()? _unencryptedBoxOpener;
   static const String _outboxBoxName = 'mirror_outbox';
@@ -388,6 +392,11 @@ class MirrorOutboxReplayService {
           return aTime.compareTo(bTime);
         });
 
+      _observabilityService?.recordReplayVolume(
+        dueEntryCount: dueEntries.length,
+        queueDepth: _queue.length,
+        reason: reason,
+      );
       for (final entry in dueEntries) {
         await _replayEntry(
           entry,
@@ -507,6 +516,12 @@ class MirrorOutboxReplayService {
           liveLine:
               '${entry.operation} replay retry $attempt/${maxRetries + 1}',
         );
+        _observabilityService?.recordRetry(
+          operation: entry.operation,
+          reason: 'replay_failure',
+          attempt: attempt,
+          mode: entry.mode,
+        );
       } catch (error) {
         final isLastAttempt = attempt > maxRetries;
         if (isLastAttempt) {
@@ -522,6 +537,12 @@ class MirrorOutboxReplayService {
               'Mirror replay ${entry.operation} attempt $attempt threw: $error. Retrying...',
           liveLine:
               '${entry.operation} replay retry $attempt/${maxRetries + 1}',
+        );
+        _observabilityService?.recordRetry(
+          operation: entry.operation,
+          reason: 'replay_exception',
+          attempt: attempt,
+          mode: entry.mode,
         );
       }
 

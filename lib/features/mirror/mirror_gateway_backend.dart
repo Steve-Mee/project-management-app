@@ -9,6 +9,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../core/config/app_config.dart';
 import 'mirror_compute_backend.dart';
 import 'services/mirror_context_budget_service.dart';
+import 'services/mirror_observability_service.dart';
 
 class MirrorGatewayBackend implements MirrorComputeBackend {
   MirrorGatewayBackend({
@@ -21,13 +22,16 @@ class MirrorGatewayBackend implements MirrorComputeBackend {
     this.maxRetries = 2,
     this.initialBackoff = const Duration(milliseconds: 300),
     MirrorContextBudgetService? budgetService,
+    MirrorObservabilityService? observabilityService,
   })  : _client = _resolveClient(client),
         _httpClient = httpClient ?? http.Client(),
-        _budgetService = budgetService;
+        _budgetService = budgetService,
+        _observabilityService = observabilityService;
 
   final SupabaseClient? _client;
   final http.Client _httpClient;
   final MirrorContextBudgetService? _budgetService;
+  final MirrorObservabilityService? _observabilityService;
   final String? httpEndpoint;
   final String? applyHttpEndpoint;
   final bool useSecureApply;
@@ -51,6 +55,12 @@ class MirrorGatewayBackend implements MirrorComputeBackend {
         mode: mode,
       );
     } catch (error) {
+      _observabilityService?.recordFallbackEvent(
+        reason: 'config_error',
+        mode: mode,
+        fromBackend: 'mirror_gateway',
+        toBackend: 'offline_queue',
+      );
       compileResult = CompileResult(
         success: false,
         errors: <String>['config_error: ${error.toString()}'],
@@ -87,6 +97,12 @@ class MirrorGatewayBackend implements MirrorComputeBackend {
         mode: mode,
       );
     } catch (error) {
+      _observabilityService?.recordFallbackEvent(
+        reason: 'config_error',
+        mode: mode,
+        fromBackend: 'mirror_gateway',
+        toBackend: 'offline_queue',
+      );
       return CompileResult(
         success: false,
         errors: <String>['config_error: ${error.toString()}'],
@@ -105,6 +121,12 @@ class MirrorGatewayBackend implements MirrorComputeBackend {
     try {
       endpoint = _resolveApplyEndpoint();
     } catch (error) {
+      _observabilityService?.recordFallbackEvent(
+        reason: 'config_error',
+        mode: mode,
+        fromBackend: 'mirror_gateway',
+        toBackend: 'offline_queue',
+      );
       return ApplyResult(
         success: false,
         message: 'config_error: ${error.toString()}',
@@ -351,6 +373,7 @@ class MirrorGatewayBackend implements MirrorComputeBackend {
 
     while (true) {
       attempt += 1;
+      final sw = Stopwatch()..start();
       try {
         final response = await _httpClient
             .post(
@@ -365,9 +388,17 @@ class MirrorGatewayBackend implements MirrorComputeBackend {
               body: payloadBody,
             )
             .timeout(timeout);
+        sw.stop();
 
         final bodyText = response.body;
         if (response.statusCode >= 200 && response.statusCode < 300) {
+          _observabilityService?.recordCompileLatency(
+            durationMs: sw.elapsedMilliseconds,
+            mode: mode,
+            operation: 'compile',
+            success: true,
+            attempt: attempt,
+          );
           return _compileResultFromRaw(bodyText);
         }
 
@@ -376,11 +407,24 @@ class MirrorGatewayBackend implements MirrorComputeBackend {
             response.statusCode >= 500;
 
         if (retriable && attempt <= maxRetries) {
+          _observabilityService?.recordRetry(
+            operation: 'compile',
+            reason: response.statusCode == 429 ? 'rate_limited' : 'server_error',
+            attempt: attempt,
+            mode: mode,
+          );
           await Future<void>.delayed(backoff);
           backoff *= 2;
           continue;
         }
 
+        _observabilityService?.recordCompileLatency(
+          durationMs: sw.elapsedMilliseconds,
+          mode: mode,
+          operation: 'compile',
+          success: false,
+          attempt: attempt,
+        );
         final code = response.statusCode == 401 || response.statusCode == 403
           ? _MirrorGatewayHttpErrorCode.unauthorized
           : response.statusCode == 429
@@ -397,23 +441,49 @@ class MirrorGatewayBackend implements MirrorComputeBackend {
           ],
         );
       } on TimeoutException {
+        sw.stop();
         if (attempt <= maxRetries) {
+          _observabilityService?.recordRetry(
+            operation: 'compile',
+            reason: 'timeout',
+            attempt: attempt,
+            mode: mode,
+          );
           await Future<void>.delayed(backoff);
           backoff *= 2;
           continue;
         }
-
+        _observabilityService?.recordCompileLatency(
+          durationMs: sw.elapsedMilliseconds,
+          mode: mode,
+          operation: 'compile',
+          success: false,
+          attempt: attempt,
+        );
         return const CompileResult(
           success: false,
           errors: <String>['timeout: Mirror Gateway HTTP /compile request timed out.'],
         );
       } catch (error) {
+        sw.stop();
         if (attempt <= maxRetries) {
+          _observabilityService?.recordRetry(
+            operation: 'compile',
+            reason: 'network',
+            attempt: attempt,
+            mode: mode,
+          );
           await Future<void>.delayed(backoff);
           backoff *= 2;
           continue;
         }
-
+        _observabilityService?.recordCompileLatency(
+          durationMs: sw.elapsedMilliseconds,
+          mode: mode,
+          operation: 'compile',
+          success: false,
+          attempt: attempt,
+        );
         return CompileResult(
           success: false,
           errors: <String>['network: ${error.toString()}'],
@@ -458,6 +528,7 @@ class MirrorGatewayBackend implements MirrorComputeBackend {
 
     while (true) {
       attempt += 1;
+      final sw = Stopwatch()..start();
       try {
         final response = await _httpClient
             .post(
@@ -472,9 +543,17 @@ class MirrorGatewayBackend implements MirrorComputeBackend {
               body: payloadBody,
             )
             .timeout(timeout);
+        sw.stop();
 
         final bodyText = response.body;
         if (response.statusCode >= 200 && response.statusCode < 300) {
+          _observabilityService?.recordCompileLatency(
+            durationMs: sw.elapsedMilliseconds,
+            mode: mode,
+            operation: 'apply',
+            success: true,
+            attempt: attempt,
+          );
           return _RawGatewayResult(success: true, body: bodyText);
         }
 
@@ -482,11 +561,24 @@ class MirrorGatewayBackend implements MirrorComputeBackend {
             response.statusCode == 429 ||
             response.statusCode >= 500;
         if (retriable && attempt <= maxRetries) {
+          _observabilityService?.recordRetry(
+            operation: 'apply',
+            reason: response.statusCode == 429 ? 'rate_limited' : 'server_error',
+            attempt: attempt,
+            mode: mode,
+          );
           await Future<void>.delayed(backoff);
           backoff *= 2;
           continue;
         }
 
+        _observabilityService?.recordCompileLatency(
+          durationMs: sw.elapsedMilliseconds,
+          mode: mode,
+          operation: 'apply',
+          success: false,
+          attempt: attempt,
+        );
         final code = response.statusCode == 401 || response.statusCode == 403
           ? _MirrorGatewayHttpErrorCode.unauthorized
           : response.statusCode == 429
@@ -503,21 +595,49 @@ class MirrorGatewayBackend implements MirrorComputeBackend {
           ],
         );
       } on TimeoutException {
+        sw.stop();
         if (attempt <= maxRetries) {
+          _observabilityService?.recordRetry(
+            operation: 'apply',
+            reason: 'timeout',
+            attempt: attempt,
+            mode: mode,
+          );
           await Future<void>.delayed(backoff);
           backoff *= 2;
           continue;
         }
+        _observabilityService?.recordCompileLatency(
+          durationMs: sw.elapsedMilliseconds,
+          mode: mode,
+          operation: 'apply',
+          success: false,
+          attempt: attempt,
+        );
         return const _RawGatewayResult(
           success: false,
           errors: <String>['timeout: Mirror Gateway HTTP /apply request timed out.'],
         );
       } catch (error) {
+        sw.stop();
         if (attempt <= maxRetries) {
+          _observabilityService?.recordRetry(
+            operation: 'apply',
+            reason: 'network',
+            attempt: attempt,
+            mode: mode,
+          );
           await Future<void>.delayed(backoff);
           backoff *= 2;
           continue;
         }
+        _observabilityService?.recordCompileLatency(
+          durationMs: sw.elapsedMilliseconds,
+          mode: mode,
+          operation: 'apply',
+          success: false,
+          attempt: attempt,
+        );
         return _RawGatewayResult(
           success: false,
           errors: <String>['network: ${error.toString()}'],

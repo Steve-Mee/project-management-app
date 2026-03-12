@@ -50,6 +50,7 @@ interface StructuredError {
     | 'config_error'
     | 'timeout'
     | 'upstream_error'
+    | 'rate_limited'
     | 'internal_error'
   message: string
   retryable: boolean
@@ -206,6 +207,18 @@ const MAX_IDEMPOTENCY_RESPONSE_BODY_BYTES = 64 * 1024
 const DEFAULT_IDEMPOTENCY_TTL_SECONDS = 120
 const IDEMPOTENCY_PROCESSING_STALE_SECONDS = 300
 const IDEMPOTENCY_ALLOWED_STATUSES = ['processing', 'completed', 'failed'] as const
+
+const DEFAULT_GATEWAY_RATE_LIMIT_REQUESTS_PER_MINUTE = 10
+const DEFAULT_GATEWAY_RATE_LIMIT_BURST = 30
+const DEFAULT_GATEWAY_RATE_LIMIT_BURST_WINDOW_SECONDS = 180
+
+interface PerUserRateLimitCheckResult {
+  allowed: boolean
+  reason?: 'minute_rate' | 'burst_quota'
+  retryAfterSeconds?: number
+  minuteCount: number
+  burstCount: number
+}
 
 function logIdempotencyStatusContractOnColdStart(): void {
   const allowsProcessing = IDEMPOTENCY_ALLOWED_STATUSES.includes('processing')
@@ -652,6 +665,94 @@ async function finalizeIdempotencyKey({
   }
 }
 
+function parsePositiveIntegerEnv(key: string, fallback: number): number {
+  const raw = Deno.env.get(key)
+  const parsed = raw ? Number.parseInt(raw, 10) : Number.NaN
+  if (Number.isFinite(parsed) && parsed > 0) {
+    return parsed
+  }
+  return fallback
+}
+
+function gatewayRateLimitRequestsPerMinute(): number {
+  return parsePositiveIntegerEnv(
+    'MIRROR_GATEWAY_RATE_LIMIT_REQUESTS_PER_MINUTE',
+    DEFAULT_GATEWAY_RATE_LIMIT_REQUESTS_PER_MINUTE,
+  )
+}
+
+function gatewayRateLimitBurst(): number {
+  return parsePositiveIntegerEnv('MIRROR_GATEWAY_RATE_LIMIT_BURST', DEFAULT_GATEWAY_RATE_LIMIT_BURST)
+}
+
+function gatewayRateLimitBurstWindowSeconds(): number {
+  return parsePositiveIntegerEnv(
+    'MIRROR_GATEWAY_RATE_LIMIT_BURST_WINDOW_SECONDS',
+    DEFAULT_GATEWAY_RATE_LIMIT_BURST_WINDOW_SECONDS,
+  )
+}
+
+async function checkPerUserRateLimit(
+  supabase: ReturnType<typeof createClient>,
+  userId: string,
+): Promise<PerUserRateLimitCheckResult> {
+  const minuteLimit = gatewayRateLimitRequestsPerMinute()
+  const burstLimit = gatewayRateLimitBurst()
+  const burstWindowSeconds = gatewayRateLimitBurstWindowSeconds()
+
+  const oneMinuteAgo = new Date(Date.now() - 60 * 1000).toISOString()
+  const burstWindowStart = new Date(Date.now() - burstWindowSeconds * 1000).toISOString()
+
+  const { count: minuteCount, error: minuteError } = await supabase
+    .from('mirror_request_idempotency')
+    .select('*', { head: true, count: 'exact' })
+    .eq('user_id', userId)
+    .gte('created_at', oneMinuteAgo)
+
+  if (minuteError) {
+    throw new Error(`rate_limit_minute_check_failed:${minuteError.message}`)
+  }
+
+  const { count: burstCount, error: burstError } = await supabase
+    .from('mirror_request_idempotency')
+    .select('*', { head: true, count: 'exact' })
+    .eq('user_id', userId)
+    .gte('created_at', burstWindowStart)
+
+  if (burstError) {
+    throw new Error(`rate_limit_burst_check_failed:${burstError.message}`)
+  }
+
+  const safeMinuteCount = minuteCount ?? 0
+  const safeBurstCount = burstCount ?? 0
+
+  if (safeMinuteCount > minuteLimit) {
+    return {
+      allowed: false,
+      reason: 'minute_rate',
+      retryAfterSeconds: 60,
+      minuteCount: safeMinuteCount,
+      burstCount: safeBurstCount,
+    }
+  }
+
+  if (safeBurstCount > burstLimit) {
+    return {
+      allowed: false,
+      reason: 'burst_quota',
+      retryAfterSeconds: burstWindowSeconds,
+      minuteCount: safeMinuteCount,
+      burstCount: safeBurstCount,
+    }
+  }
+
+  return {
+    allowed: true,
+    minuteCount: safeMinuteCount,
+    burstCount: safeBurstCount,
+  }
+}
+
 function timeoutMs(): number {
   const raw = Deno.env.get('MIRROR_FORWARD_TIMEOUT_MS')
   const parsed = raw ? Number.parseInt(raw, 10) : Number.NaN
@@ -958,6 +1059,81 @@ Deno.serve(async (req: Request) => {
           'x-request-id': requestId,
           'x-idempotency-key': idempotencyKey,
           'x-idempotency-replay': 'true',
+        },
+      })
+    }
+
+    let rateLimitCheck: PerUserRateLimitCheckResult
+    try {
+      rateLimitCheck = await checkPerUserRateLimit(supabase, user.id)
+    } catch (error) {
+      if (error instanceof Error && error.message.startsWith('rate_limit_')) {
+        return errorResponse(req,
+          {
+            code: 'config_error',
+            message: 'Rate limit check is unavailable',
+            retryable: true,
+            requestId,
+            idempotencyKey,
+            details: error.message,
+          },
+          500,
+        )
+      }
+      throw error
+    }
+
+    if (!rateLimitCheck.allowed) {
+      const minuteLimit = gatewayRateLimitRequestsPerMinute()
+      const burstLimit = gatewayRateLimitBurst()
+      const burstWindowSeconds = gatewayRateLimitBurstWindowSeconds()
+      const retryAfterSeconds = rateLimitCheck.retryAfterSeconds ?? 60
+
+      const rateLimitBody = {
+        success: false,
+        error: {
+          code: 'rate_limited',
+          message: 'Mirror gateway rate limit exceeded',
+          retryable: true,
+          requestId,
+          idempotencyKey,
+          details: {
+            reason: rateLimitCheck.reason,
+            maxRequestsPerMinute: minuteLimit,
+            burstLimit,
+            burstWindowSeconds,
+            observedRequestsLastMinute: rateLimitCheck.minuteCount,
+            observedRequestsInBurstWindow: rateLimitCheck.burstCount,
+            retryAfterSeconds,
+          },
+        },
+      }
+
+      try {
+        await finalizeIdempotencyKey({
+          supabase,
+          userId: user.id,
+          action,
+          idempotencyKey,
+          requestId,
+          requestHash: idempotencyRequestHash,
+          status: 'failed',
+          responseStatus: 429,
+          responseBody: JSON.stringify(rateLimitBody),
+          responseContentType: 'application/json',
+        })
+      } catch (idempotencyError) {
+        console.error('mirror-gateway idempotency finalize failed:', idempotencyError)
+      }
+
+      return new Response(JSON.stringify(rateLimitBody), {
+        status: 429,
+        headers: {
+          ...buildCorsHeaders(req),
+          'Content-Type': 'application/json',
+          'Retry-After': String(retryAfterSeconds),
+          'x-request-id': requestId,
+          'x-idempotency-key': idempotencyKey,
         },
       })
     }
