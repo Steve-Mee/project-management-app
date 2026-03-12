@@ -53,7 +53,7 @@ jobs:
 
       - name: Build macOS
         if: matrix.os == 'macos-latest'
-        run: flutter build macos --release
+        run: flutter build macos --release --no-codesign
 
       - name: Build Linux
         if: matrix.os == 'ubuntu-latest'
