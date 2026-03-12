@@ -1,3 +1,9 @@
+## [1.38.0](https://github.com/Steve-Mee/project-management-app/compare/v1.37.1...v1.38.0) (2026-03-12)
+
+### Features
+
+* **mirror:** add gateway rate limiting, usage metering, and observability ([e229d81](https://github.com/Steve-Mee/project-management-app/commit/e229d81996951c5aa52331984c42d4efa8f147e7))
+
 ## [1.37.1](https://github.com/Steve-Mee/project-management-app/compare/v1.37.0...v1.37.1) (2026-03-11)
 
 ### Bug Fixes
