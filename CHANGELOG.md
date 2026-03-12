@@ -1,3 +1,9 @@
+## [1.39.0](https://github.com/Steve-Mee/project-management-app/compare/v1.38.0...v1.39.0) (2026-03-12)
+
+### Features
+
+* **mirror:** add security revocation UX, premium cache tuning, i18n warnings, and template telemetry ([dcb7c2d](https://github.com/Steve-Mee/project-management-app/commit/dcb7c2d504ad146f4c4e2abc14c25f904f1a03c2))
+
 ## [1.38.0](https://github.com/Steve-Mee/project-management-app/compare/v1.37.1...v1.38.0) (2026-03-12)
 
 ### Features
