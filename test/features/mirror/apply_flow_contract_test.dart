@@ -29,9 +29,20 @@ void main() {
       late Uri capturedUri;
       Map<String, dynamic>? capturedBody;
 
+      // Mock client handles both compile (preflight) and apply calls
       final mockClient = MockClient((http.Request request) async {
         capturedUri = request.url;
         capturedBody = _asMap(request.body);
+        
+        if (request.url.toString().contains('/compile')) {
+          // Return compile response for preflight
+          return http.Response(
+            '{"success":true,"output":"// compiled output"}',
+            200,
+            headers: <String, String>{'content-type': 'application/json'},
+          );
+        }
+        // Return apply response
         return http.Response(
           '{"success":true,"files":{"lib/main.dart":"void main() { print(\\"ok\\"); }"}}',
           200,
@@ -57,10 +68,19 @@ void main() {
         },
       );
 
+      // Compute fingerprint using the same logic as the backend
+      final fingerprint = computeCompileResultFingerprint(
+        prompt: 'apply patch',
+        context: context,
+        mode: 'private',
+        output: '// compiled output',
+      );
+
       final result = await backend.apply(
         prompt: 'apply patch',
         context: context,
         mode: 'private',
+        compileFingerprint: fingerprint,
       );
 
       expect(capturedUri.toString(),
