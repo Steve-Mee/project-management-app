@@ -21,6 +21,21 @@ export '../../features/mirror/mirror_gateway_backend.dart';
 export '../../features/mirror/private_grpc_backend.dart';
 export '../../features/mirror/services/mirror_context_budget_service.dart';
 
+class MirrorOfflineWarningKeys {
+  const MirrorOfflineWarningKeys._();
+
+  static const String teamVariantLoadedFromCache =
+    'mirrorOfflineTeamVariantLoadedFromCacheWarning';
+  static const String teamVariantFallbackSolo =
+    'mirrorOfflineTeamVariantFallbackSoloWarning';
+  static const String runnerVariantLoadedFromCache =
+    'mirrorOfflineRunnerVariantLoadedFromCacheWarning';
+  static const String runnerVariantFallbackCloud =
+    'mirrorOfflineRunnerVariantFallbackCloudWarning';
+  static const String cloudModeRequiresPremium =
+    'mirrorCloudModeRequiresPremiumWarning';
+}
+
 class MirrorState {
   const MirrorState({
     required this.mode,
@@ -95,13 +110,11 @@ final mirrorTeamModeVariantProvider = FutureProvider<String>((ref) async {
   } catch (_) {
     final cached = await _MirrorOfflineCache.getTeamModeVariant(userId);
     if (cached != null) {
-      warningNotifier.state =
-          'Offline mode: Team Mode variant loaded from local cache.';
+      warningNotifier.state = MirrorOfflineWarningKeys.teamVariantLoadedFromCache;
       return cached;
     }
 
-    warningNotifier.state =
-        'Offline mode: Team Mode unavailable, switched to solo fallback.';
+    warningNotifier.state = MirrorOfflineWarningKeys.teamVariantFallbackSolo;
     return 'solo';
   }
 });
@@ -124,12 +137,11 @@ final mirrorRunnerModeVariantProvider = FutureProvider<String>((ref) async {
     final cached = await _MirrorOfflineCache.getRunnerModeVariant(userId);
     if (cached != null) {
       warningNotifier.state =
-          'Offline mode: Runner variant loaded from local cache.';
+          MirrorOfflineWarningKeys.runnerVariantLoadedFromCache;
       return cached;
     }
 
-    warningNotifier.state =
-        'Offline mode: Runner variant unavailable, switched to cloud fallback.';
+    warningNotifier.state = MirrorOfflineWarningKeys.runnerVariantFallbackCloud;
     return 'cloud';
   }
 });
@@ -224,8 +236,7 @@ class MirrorNotifier extends Notifier<MirrorState> {
       ref.read(mirrorModeProvider.notifier).state = 'private';
       state = state.copyWith(
         mode: 'private',
-        offlineWarning:
-            'Cloud mode requires an active Stripe premium subscription.',
+        offlineWarning: MirrorOfflineWarningKeys.cloudModeRequiresPremium,
       );
       unawaited(_MirrorOfflineCache.saveMode('private'));
     }

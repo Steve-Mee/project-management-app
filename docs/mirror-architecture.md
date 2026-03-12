@@ -42,7 +42,7 @@ The architecture in this document covers:
 - Enforce fallback to safe mode when premium is missing
 
 ### Backend Contract Layer
-- Contract: `lib/features/mirror/mirror_compute_backend.dart`
+- Contract and canonical implementation: `lib/features/mirror/mirror_gateway_backend.dart`
 - Implementations:
   - `mirror_gateway_backend.dart` → **`MirrorGatewayBackend`** — canonical cloud implementation; routes through Mirror Gateway thin proxy
   - `private_grpc_backend.dart` — local runner path

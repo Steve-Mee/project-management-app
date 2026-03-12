@@ -1,6 +1,7 @@
 library;
 
 import 'dart:async';
+import 'dart:math';
 
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -9,17 +10,30 @@ class MirrorPremiumService {
     SupabaseClient? client,
     bool? outboxFailClosedOnEncryptionError,
     bool? productionMode,
+    bool autoRefreshOnEntitlementChange = true,
   })  : _clientOverride = client,
+        _productionMode =
+            productionMode ?? const bool.fromEnvironment('dart.vm.product'),
         _outboxFailClosedOnEncryptionError =
             outboxFailClosedOnEncryptionError ??
                 bool.fromEnvironment(
                   'MIRROR_OUTBOX_FAIL_CLOSED_ON_ENCRYPTION_ERROR',
                   defaultValue:
                       productionMode ?? const bool.fromEnvironment('dart.vm.product'),
-                );
+                ),
+        _autoRefreshOnEntitlementChange = autoRefreshOnEntitlementChange {
+    if (_autoRefreshOnEntitlementChange) {
+      _authSubscription = _client.auth.onAuthStateChange.listen(
+        _handleAuthStateChange,
+      );
+    }
+  }
 
   final SupabaseClient? _clientOverride;
+  final bool _productionMode;
   final bool _outboxFailClosedOnEncryptionError;
+  final bool _autoRefreshOnEntitlementChange;
+  StreamSubscription<AuthState>? _authSubscription;
 
   SupabaseClient get _client => _clientOverride ?? Supabase.instance.client;
 
@@ -33,14 +47,42 @@ class MirrorPremiumService {
   final Map<String, _PremiumCacheEntry> _cache = <String, _PremiumCacheEntry>{};
   final Map<String, Future<bool>> _inFlight = <String, Future<bool>>{};
 
+  static const int _ttlSecondsFromEnv =
+      int.fromEnvironment('MIRROR_PREMIUM_CACHE_TTL_SECONDS', defaultValue: 0);
+  static const int _ttlJitterPercentFromEnv = int.fromEnvironment(
+    'MIRROR_PREMIUM_CACHE_TTL_JITTER_PERCENT',
+    defaultValue: 20,
+  );
+
   bool shouldFailClosedOnOutboxEncryptionError() {
     return _outboxFailClosedOnEncryptionError;
+  }
+
+  Duration get defaultCacheTtl =>
+      Duration(seconds: _ttlSecondsFromEnv > 0
+          ? _ttlSecondsFromEnv
+          : (_productionMode ? 300 : 30));
+
+  Future<void> triggerEntitlementRefresh({User? user}) async {
+    final resolvedUser = user ?? _client.auth.currentUser;
+    if (resolvedUser == null) {
+      clearCache();
+      return;
+    }
+
+    clearCache(userId: resolvedUser.id);
+    await isPremium(user: resolvedUser, forceRefresh: true);
+  }
+
+  Future<void> dispose() async {
+    await _authSubscription?.cancel();
+    _authSubscription = null;
   }
 
   Future<bool> isPremium({
     User? user,
     bool forceRefresh = false,
-    Duration cacheTtl = const Duration(minutes: 5),
+    Duration? cacheTtl,
   }) async {
     final resolvedUser = user ?? _client.auth.currentUser;
     if (resolvedUser == null) {
@@ -48,9 +90,10 @@ class MirrorPremiumService {
     }
 
     final userId = resolvedUser.id;
+    final resolvedTtl = cacheTtl ?? defaultCacheTtl;
     if (!forceRefresh) {
       final cached = _cache[userId];
-      if (cached != null && !cached.isExpired(cacheTtl)) {
+      if (cached != null && !cached.isExpired()) {
         return cached.value;
       }
       final pending = _inFlight[userId];
@@ -64,9 +107,10 @@ class MirrorPremiumService {
 
     try {
       final value = await future;
+      final now = DateTime.now().toUtc();
       _cache[userId] = _PremiumCacheEntry(
         value: value,
-        createdAt: DateTime.now().toUtc(),
+        expiresAt: now.add(_jitteredTtlForUser(userId, resolvedTtl)),
       );
       return value;
     } finally {
@@ -83,6 +127,52 @@ class MirrorPremiumService {
 
     _cache.remove(userId);
     _inFlight.remove(userId);
+  }
+
+  void _handleAuthStateChange(AuthState authState) {
+    final event = authState.event;
+    final sessionUser = authState.session?.user;
+
+    switch (event) {
+      case AuthChangeEvent.signedOut:
+        clearCache();
+        return;
+      case AuthChangeEvent.tokenRefreshed:
+      case AuthChangeEvent.userUpdated:
+      case AuthChangeEvent.signedIn:
+      case AuthChangeEvent.passwordRecovery:
+      case AuthChangeEvent.mfaChallengeVerified:
+      case AuthChangeEvent.initialSession:
+        final user = sessionUser ?? _client.auth.currentUser;
+        if (user == null) {
+          return;
+        }
+        unawaited(triggerEntitlementRefresh(user: user));
+        return;
+      case _:
+        return;
+    }
+  }
+
+  Duration _jitteredTtlForUser(String userId, Duration baseTtl) {
+    if (baseTtl <= Duration.zero) {
+      return const Duration(seconds: 1);
+    }
+
+    final jitterPercent = _ttlJitterPercentFromEnv.clamp(0, 90);
+    if (jitterPercent == 0) {
+      return baseTtl;
+    }
+
+    final maxJitterFraction = jitterPercent / 100;
+    final seed = userId.codeUnits.fold<int>(0, (sum, unit) => sum + unit);
+    final random = Random(seed);
+    final jitterFactor = 1 + ((random.nextDouble() * 2 - 1) * maxJitterFraction);
+    final jitteredMs = max(
+      1000,
+      (baseTtl.inMilliseconds * jitterFactor).round(),
+    );
+    return Duration(milliseconds: jitteredMs);
   }
 
   Future<bool> _resolvePremium(User user) async {
@@ -149,13 +239,13 @@ class MirrorPremiumService {
 class _PremiumCacheEntry {
   const _PremiumCacheEntry({
     required this.value,
-    required this.createdAt,
+    required this.expiresAt,
   });
 
   final bool value;
-  final DateTime createdAt;
+  final DateTime expiresAt;
 
-  bool isExpired(Duration ttl) {
-    return DateTime.now().toUtc().difference(createdAt) > ttl;
+  bool isExpired() {
+    return DateTime.now().toUtc().isAfter(expiresAt);
   }
 }

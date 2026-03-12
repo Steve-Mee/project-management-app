@@ -123,7 +123,7 @@ Mirror compute forwarding uses action-consistent HTTP endpoints and runner parit
 - Cloud and local mirror runners expose HTTP `/compile` and `/apply` gateways backed by internal gRPC services.
 - Shared gateway implementation lives in `server/mirror-shared/lib/http_gateway.dart` and is reused by both runners.
 - Apply history and apply audit persistence use encrypted Hive storage, with production fail-closed behavior when encryption initialization fails.
-- Canonical Mirror storage buckets are `mirror-signed-inputs` and `mirror-backups`; legacy names such as `mirror_staging` are non-canonical.
+- Canonical Mirror storage buckets are `mirror-signed-inputs` and `mirror-backups`; any legacy aliases are non-canonical.
 - `MirrorEditorScreen` is pure UI; orchestration is owned by `MirrorEditorOrchestrationService`, realtime subscription by `MirrorEditorRealtimeController`, and run lifecycle by `MirrorEditorRunService`.
 - Idempotency keys are claimed and finalized in `mirror_request_idempotency` with stale-claim recovery (300 s threshold) and finalize-ownership guard.
 - Operational and security contracts are documented in `docs/mirror-architecture.md`, `docs/mirror-ops-runbook.md`, `docs/mirror-bucket-contract.md`, and `docs/mirror-threat-model.md`.

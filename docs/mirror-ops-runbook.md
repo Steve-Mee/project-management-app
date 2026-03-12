@@ -15,7 +15,7 @@ Flutter editor services (extracted from screen):
 
 Canonical naming note:
 - Use only `mirror-signed-inputs` and `mirror-backups`
-- Do not use legacy/ambiguous names such as `mirror_staging`
+- Do not use legacy/ambiguous bucket aliases
 
 ## Architecture Contract
 Request flow:
@@ -39,7 +39,7 @@ Mirror Gateway function:
 - `SUPABASE_URL`
 - `SUPABASE_ANON_KEY`
 - `PRIVATE_COMPUTE_ENDPOINT`
-- `FLY_MIRROR_COMPUTE_ENDPOINT`
+- Cloud upstream endpoint environment variable (mode=`cloud`)
 - `MIRROR_FORWARD_TIMEOUT_MS` (optional, default 20000)
 
 Cloud runner:
@@ -90,7 +90,7 @@ AB/remote-config contract:
 4. Keep `MIRROR_JWT_SECRET` as fallback during rotation window.
 
 ### B. Timeouts or upstream errors
-1. Verify `PRIVATE_COMPUTE_ENDPOINT` / `FLY_MIRROR_COMPUTE_ENDPOINT` reachability.
+1. Verify private/cloud upstream endpoint reachability for Mirror Gateway.
 2. Check upstream health and saturation (CPU, memory, connection limits).
 3. Increase capacity or redirect traffic to healthy mode if needed.
 4. Temporarily raise `MIRROR_FORWARD_TIMEOUT_MS` only with incident note and rollback plan.

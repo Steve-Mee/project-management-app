@@ -4,7 +4,7 @@
 ## Purpose
 Mirror uses Supabase Storage for signed input artifacts and backup artifacts.
 
-This document defines canonical bucket names and object-path rules to remove naming drift and eliminate ambiguity with legacy names such as `mirror_staging`.
+This document defines canonical bucket names and object-path rules to remove naming drift and eliminate ambiguity with legacy bucket aliases.
 
 ## Scope
 The bucket contract in this document covers:
@@ -32,7 +32,6 @@ Use only these bucket names for Mirror:
 ## Non-Canonical Names
 The following names are deprecated for Mirror and must not be used in new code, migrations, runbooks, or dashboards:
 
-- `mirror_staging`
 - `mirror-staging`
 - `mirror-inputs`
 - Any ad-hoc mirror bucket alias not listed in this contract
@@ -64,7 +63,7 @@ All Mirror objects must use owner-prefixed path segments:
 
 ## Migration And Cleanup
 ### Required Migration Actions
-1. Replace any `mirror_staging` references in scripts/runbooks/config with canonical names.
+1. Replace any legacy bucket alias references in scripts/runbooks/config with canonical names.
 2. Move or rehydrate artifacts from deprecated buckets when retention requirements require it.
 3. Update monitoring dashboards to canonical bucket labels only.
 4. Validate RLS policies after migration using owner and non-owner test identities.

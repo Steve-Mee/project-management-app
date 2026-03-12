@@ -13,6 +13,28 @@ import 'package:pma_core/services/app_logger.dart';
 class MirrorObservabilityService {
   const MirrorObservabilityService();
 
+  /// Records template cache outcomes for the templates provider.
+  ///
+  /// [result] is one of `'hit'`, `'miss'`, or `'fallback'`.
+  /// [source] describes cache origin (`'memory'`, `'persistent'`, `'none'`).
+  /// [reason] provides optional context such as stale/version mismatch/network.
+  void recordTemplateCacheEvent({
+    required String result,
+    required String source,
+    String? reason,
+    int? templateCount,
+  }) {
+    AppLogger.event(
+      'mirror_template_cache',
+      params: <String, Object?>{
+        'result': result,
+        'source': source,
+        if (reason != null) 'reason': reason,
+        if (templateCount != null) 'templateCount': templateCount,
+      },
+    );
+  }
+
   /// Records the wall-clock time for a single compile or apply HTTP attempt.
   ///
   /// [durationMs]  Elapsed milliseconds for the HTTP round-trip.

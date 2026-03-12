@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../models/mirror_template.dart';
+import '../services/mirror_observability_service.dart';
 import '../services/mirror_templates_cache.dart';
 
 const Duration _templatesCacheTtl = Duration(minutes: 10);
@@ -10,16 +11,26 @@ const Duration _templatesCacheTtl = Duration(minutes: 10);
 final mirrorTemplatesCacheProvider =
     Provider<MirrorTemplatesCache>((ref) => const MirrorTemplatesCache());
 
+final mirrorTemplatesObservabilityProvider =
+    Provider<MirrorObservabilityService>((ref) => const MirrorObservabilityService());
+
 final mirrorTemplatesProvider =
     FutureProvider<List<MirrorTemplate>>((ref) async {
   final client = Supabase.instance.client;
   final persistentCache = ref.read(mirrorTemplatesCacheProvider);
+  final observability = ref.read(mirrorTemplatesObservabilityProvider);
   final now = DateTime.now().toUtc();
   var cached = _MirrorTemplatesMemoryCache.snapshot;
+  var cacheSource = 'none';
+
+  if (cached != null) {
+    cacheSource = 'memory';
+  }
 
   if (cached == null) {
     final persisted = await persistentCache.readSnapshot();
     if (persisted != null) {
+      cacheSource = 'persistent';
       cached = _TemplatesCacheSnapshot(
         templates: persisted.templates,
         serverVersion: persisted.serverVersion,
@@ -36,8 +47,24 @@ final mirrorTemplatesProvider =
         cached.serverVersion == serverVersion;
 
     if (cacheIsFresh) {
+      observability.recordTemplateCacheEvent(
+        result: 'hit',
+        source: cacheSource,
+        templateCount: cached.templates.length,
+      );
       return cached.templates;
     }
+
+    observability.recordTemplateCacheEvent(
+      result: 'miss',
+      source: cacheSource,
+      reason: cached == null
+          ? 'empty'
+          : now.difference(cached.fetchedAtUtc) > _templatesCacheTtl
+              ? 'stale'
+              : 'version_mismatch',
+      templateCount: cached?.templates.length,
+    );
 
     final templates = await _fetchTemplates(client);
     _MirrorTemplatesMemoryCache.snapshot = _TemplatesCacheSnapshot(
@@ -57,6 +84,12 @@ final mirrorTemplatesProvider =
     final canUseCache = cached != null &&
         now.difference(cached.fetchedAtUtc) <= _templatesCacheTtl;
     if (canUseCache) {
+      observability.recordTemplateCacheEvent(
+        result: 'fallback',
+        source: cacheSource,
+        reason: 'network_or_fetch_error',
+        templateCount: cached.templates.length,
+      );
       return cached.templates;
     }
     rethrow;

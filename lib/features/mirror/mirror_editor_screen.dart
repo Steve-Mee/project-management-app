@@ -41,9 +41,12 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
   late final stt.SpeechToText _speechToText;
   late final MirrorEditorRealtimeController _realtimeController;
   late final MirrorEditorRunService _runService;
+  late final ProviderSubscription<bool> _mirrorPermissionSubscription;
   final ScrollController _liveOutputScrollController = ScrollController();
   bool _isListening = false;
   bool _isRunInProgress = false;
+  bool _isPermissionRevoked = false;
+  bool _isRealtimeControllerDisposed = false;
 
   String get _sessionKey => '${widget.projectId}::${widget.taskId}';
 
@@ -68,6 +71,14 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
       sessionKey: _sessionKey,
     );
     _runService = const MirrorEditorRunService();
+    _mirrorPermissionSubscription = ref.listenManual<bool>(
+      hasPermissionProvider(AppPermissions.useMirror),
+      (bool? previous, bool next) {
+        if ((previous ?? true) && !next) {
+          _handlePermissionRevoked();
+        }
+      },
+    );
     if (!canUseMirror) {
       return;
     }
@@ -95,7 +106,8 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
   void dispose() {
     unawaited(_speechToText.stop());
     unawaited(_speechToText.cancel());
-    _realtimeController.dispose();
+    _mirrorPermissionSubscription.close();
+    _disposeRealtimeController();
     _liveOutputScrollController.dispose();
     super.dispose();
   }
@@ -106,12 +118,8 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
     final canUseMirror = ref.watch(
       hasPermissionProvider(AppPermissions.useMirror),
     );
-    if (!canUseMirror) {
-      return Scaffold(
-        body: Center(
-          child: Text(l10n.mirrorPermissionDenied),
-        ),
-      );
+    if (!canUseMirror || _isPermissionRevoked) {
+      return _buildPermissionRevokedState(context, l10n);
     }
 
     final mirrorState = ref.watch(mirrorProvider);
@@ -264,6 +272,87 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
                 ),
               ),
             ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _handlePermissionRevoked() {
+    if (_isPermissionRevoked) {
+      return;
+    }
+
+    _isPermissionRevoked = true;
+    _isRunInProgress = false;
+    _isListening = false;
+    _appendTerminalLine('Mirror access revoked: session ejected.');
+
+    _disposeRealtimeController();
+    unawaited(_speechToText.stop());
+    unawaited(_speechToText.cancel());
+    ref.invalidate(mirrorSessionProvider(_sessionKey));
+
+    if (!mounted) {
+      return;
+    }
+    setState(() {});
+  }
+
+  void _disposeRealtimeController() {
+    if (_isRealtimeControllerDisposed) {
+      return;
+    }
+    _isRealtimeControllerDisposed = true;
+    _realtimeController.dispose();
+  }
+
+  Widget _buildPermissionRevokedState(
+    BuildContext context,
+    AppLocalizations l10n,
+  ) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(_l10n.mirrorEditorTitle),
+      ),
+      body: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 520),
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Card(
+              child: Padding(
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: <Widget>[
+                    Icon(
+                      Icons.lock,
+                      size: 44,
+                      color: Theme.of(context).colorScheme.error,
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      l10n.mirrorPermissionDenied,
+                      textAlign: TextAlign.center,
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Your Mirror editor session was disabled because your permission changed. Close this screen to continue safely.',
+                      textAlign: TextAlign.center,
+                      style: Theme.of(context).textTheme.bodyMedium,
+                    ),
+                    const SizedBox(height: 16),
+                    FilledButton.icon(
+                      onPressed: () => Navigator.of(context).maybePop(),
+                      icon: const Icon(Icons.close),
+                      label: Text(l10n.closeButton),
+                    ),
+                  ],
+                ),
+              ),
+            ),
           ),
         ),
       ),

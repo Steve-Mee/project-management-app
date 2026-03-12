@@ -1221,4 +1221,24 @@
   "@mirrorApplyBranchTip": {
     "description": "Tip text in the branch advice card encouraging branch-based workflow."
   }
+  ,"mirrorOfflineTeamVariantLoadedFromCacheWarning": "Offline mode: Team Mode variant loaded from local cache.",
+  "@mirrorOfflineTeamVariantLoadedFromCacheWarning": {
+    "description": "Offline warning when team mode variant is loaded from local cache."
+  },
+  "mirrorOfflineTeamVariantFallbackSoloWarning": "Offline mode: Team Mode unavailable, switched to solo fallback.",
+  "@mirrorOfflineTeamVariantFallbackSoloWarning": {
+    "description": "Offline warning when team mode variant fallback switches to solo."
+  },
+  "mirrorOfflineRunnerVariantLoadedFromCacheWarning": "Offline mode: Runner variant loaded from local cache.",
+  "@mirrorOfflineRunnerVariantLoadedFromCacheWarning": {
+    "description": "Offline warning when runner variant is loaded from local cache."
+  },
+  "mirrorOfflineRunnerVariantFallbackCloudWarning": "Offline mode: Runner variant unavailable, switched to cloud fallback.",
+  "@mirrorOfflineRunnerVariantFallbackCloudWarning": {
+    "description": "Offline warning when runner variant fallback switches to cloud."
+  },
+  "mirrorCloudModeRequiresPremiumWarning": "Cloud mode requires an active Stripe premium subscription.",
+  "@mirrorCloudModeRequiresPremiumWarning": {
+    "description": "Warning shown when cloud mode is disabled because premium entitlement is missing."
+  }
 }
