@@ -1712,6 +1712,14 @@ class AppLocalizationsNl extends AppLocalizations {
       'Mirror is niet beschikbaar voor je account.';
 
   @override
+  String get mirrorPermissionRevokedSessionDisabled =>
+      'Je Mirror-editorsessie is uitgeschakeld omdat je rechten zijn gewijzigd. Sluit dit scherm om veilig verder te gaan.';
+
+  @override
+  String get mirrorPermissionRevokedTerminal =>
+      'Mirror-toegang ingetrokken: sessie beëindigd.';
+
+  @override
   String get mirrorApplyDiffPreview => 'Diff preview';
 
   @override
@@ -1739,4 +1747,24 @@ class AppLocalizationsNl extends AppLocalizations {
   @override
   String get mirrorApplyBranchTip =>
       'Tip: maak eerst een nieuwe branch voor veilige review en rollback.';
+
+  @override
+  String get mirrorOfflineTeamVariantLoadedFromCacheWarning =>
+      'Offline mode: Team Mode variant loaded from local cache.';
+
+  @override
+  String get mirrorOfflineTeamVariantFallbackSoloWarning =>
+      'Offline mode: Team Mode unavailable, switched to solo fallback.';
+
+  @override
+  String get mirrorOfflineRunnerVariantLoadedFromCacheWarning =>
+      'Offline mode: Runner variant loaded from local cache.';
+
+  @override
+  String get mirrorOfflineRunnerVariantFallbackCloudWarning =>
+      'Offline mode: Runner variant unavailable, switched to cloud fallback.';
+
+  @override
+  String get mirrorCloudModeRequiresPremiumWarning =>
+      'Cloud mode requires an active Stripe premium subscription.';
 }

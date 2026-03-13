@@ -1408,7 +1408,7 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get real_backend_warning =>
-      '⚠️ WARNING: This enables real Stripe payments. Only enable in production with proper backend configuration.';
+      'ÔÜá´©Å WARNING: This enables real Stripe payments. Only enable in production with proper backend configuration.';
 
   @override
   String get mention_user => 'Mention user';
@@ -1711,6 +1711,14 @@ class AppLocalizationsEs extends AppLocalizations {
       'Mirror no está disponible para su cuenta.';
 
   @override
+  String get mirrorPermissionRevokedSessionDisabled =>
+      'Tu sesión del editor Mirror se desactivó porque tus permisos cambiaron. Cierra esta pantalla para continuar de forma segura.';
+
+  @override
+  String get mirrorPermissionRevokedTerminal =>
+      'Acceso a Mirror revocado: sesión finalizada.';
+
+  @override
   String get mirrorApplyDiffPreview => 'Vista previa de diferencias';
 
   @override
@@ -1738,4 +1746,24 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String get mirrorApplyBranchTip =>
       'Consejo: cree primero una nueva rama para una revisión segura y reversión.';
+
+  @override
+  String get mirrorOfflineTeamVariantLoadedFromCacheWarning =>
+      'Offline mode: Team Mode variant loaded from local cache.';
+
+  @override
+  String get mirrorOfflineTeamVariantFallbackSoloWarning =>
+      'Offline mode: Team Mode unavailable, switched to solo fallback.';
+
+  @override
+  String get mirrorOfflineRunnerVariantLoadedFromCacheWarning =>
+      'Offline mode: Runner variant loaded from local cache.';
+
+  @override
+  String get mirrorOfflineRunnerVariantFallbackCloudWarning =>
+      'Offline mode: Runner variant unavailable, switched to cloud fallback.';
+
+  @override
+  String get mirrorCloudModeRequiresPremiumWarning =>
+      'Cloud mode requires an active Stripe premium subscription.';
 }

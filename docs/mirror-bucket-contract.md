@@ -30,13 +30,9 @@ Use only these bucket names for Mirror:
 - Recovery assets referenced by audit and rollback operations
 
 ## Non-Canonical Names
-The following names are deprecated for Mirror and must not be used in new code, migrations, runbooks, or dashboards:
+Legacy or ad-hoc Mirror bucket aliases are deprecated and must not be used in new code, migrations, runbooks, or dashboards.
 
-- `mirror-staging`
-- `mirror-inputs`
-- Any ad-hoc mirror bucket alias not listed in this contract
-
-If historical references exist, treat them as migration debt and map them to canonical names.
+If historical references exist, treat them as migration debt and map them to canonical names (`mirror-signed-inputs`, `mirror-backups`).
 
 ## Object Path Contract
 All Mirror objects must use owner-prefixed path segments:

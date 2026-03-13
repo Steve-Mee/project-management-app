@@ -1,4 +1,4 @@
-﻿{
+{
   "@@locale": "nl",
   "appTitle": "Project Management App",
   "@appTitle": {
@@ -1798,6 +1798,14 @@
   "mirrorPermissionDenied": "Mirror is niet beschikbaar voor je account.",
   "@mirrorPermissionDenied": {
     "description": "Screen-level message when user lacks use_mirror permission."
+  },
+  "mirrorPermissionRevokedSessionDisabled": "Je Mirror-editorsessie is uitgeschakeld omdat je rechten zijn gewijzigd. Sluit dit scherm om veilig verder te gaan.",
+  "@mirrorPermissionRevokedSessionDisabled": {
+    "description": "Description shown on the permission-revoked screen after session deactivation."
+  },
+  "mirrorPermissionRevokedTerminal": "Mirror-toegang ingetrokken: sessie beëindigd.",
+  "@mirrorPermissionRevokedTerminal": {
+    "description": "Terminal status line emitted when Mirror permission is revoked mid-session."
   },
   "mirrorApplyDiffPreview": "Diff preview",
   "@mirrorApplyDiffPreview": {

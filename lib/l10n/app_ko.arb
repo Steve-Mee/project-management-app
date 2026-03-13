@@ -1,4 +1,4 @@
-﻿{
+{
   "@@locale": "ko",
   "appTitle": "프로젝트 관리 앱",
   "@appTitle": {
@@ -1182,6 +1182,14 @@
   "mirrorPermissionDenied": "Mirror는 귀하의 계정에서 사용할 수 없습니다.",
   "@mirrorPermissionDenied": {
     "description": "Screen-level message when user lacks use_mirror permission."
+  },
+  "mirrorPermissionRevokedSessionDisabled": "권한이 변경되어 Mirror 편집기 세션이 비활성화되었습니다. 안전하게 계속하려면 이 화면을 닫으세요.",
+  "@mirrorPermissionRevokedSessionDisabled": {
+    "description": "Description shown on the permission-revoked screen after session deactivation."
+  },
+  "mirrorPermissionRevokedTerminal": "Mirror 액세스가 취소됨: 세션이 종료되었습니다.",
+  "@mirrorPermissionRevokedTerminal": {
+    "description": "Terminal status line emitted when Mirror permission is revoked mid-session."
   },
   "mirrorApplyDiffPreview": "차이 미리보기",
   "@mirrorApplyDiffPreview": {

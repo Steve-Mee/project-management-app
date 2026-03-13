@@ -286,7 +286,7 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
     _isPermissionRevoked = true;
     _isRunInProgress = false;
     _isListening = false;
-    _appendTerminalLine('Mirror access revoked: session ejected.');
+    _appendTerminalLine(_l10n.mirrorPermissionRevokedTerminal);
 
     _disposeRealtimeController();
     unawaited(_speechToText.stop());
@@ -339,7 +339,7 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      'Your Mirror editor session was disabled because your permission changed. Close this screen to continue safely.',
+                      l10n.mirrorPermissionRevokedSessionDisabled,
                       textAlign: TextAlign.center,
                       style: Theme.of(context).textTheme.bodyMedium,
                     ),

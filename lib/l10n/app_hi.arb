@@ -1,4 +1,4 @@
-﻿{
+{
   "@@locale": "hi",
   "appTitle": "प्रोजेक्ट प्रबंधन ऐप",
   "@appTitle": {
@@ -1182,6 +1182,14 @@
   "mirrorPermissionDenied": "Mirror आपके खाते के लिए उपलब्ध नहीं है।",
   "@mirrorPermissionDenied": {
     "description": "Screen-level message when user lacks use_mirror permission."
+  },
+  "mirrorPermissionRevokedSessionDisabled": "आपकी अनुमति बदलने के कारण आपका Mirror एडिटर सत्र अक्षम कर दिया गया है। सुरक्षित रूप से जारी रखने के लिए इस स्क्रीन को बंद करें।",
+  "@mirrorPermissionRevokedSessionDisabled": {
+    "description": "Description shown on the permission-revoked screen after session deactivation."
+  },
+  "mirrorPermissionRevokedTerminal": "Mirror पहुंच निरस्त: सत्र समाप्त।",
+  "@mirrorPermissionRevokedTerminal": {
+    "description": "Terminal status line emitted when Mirror permission is revoked mid-session."
   },
   "mirrorApplyDiffPreview": "अंतर पूर्वावलोकन",
   "@mirrorApplyDiffPreview": {

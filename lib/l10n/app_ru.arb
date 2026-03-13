@@ -1,4 +1,4 @@
-﻿{
+{
   "@@locale": "ru",
   "appTitle": "Приложение для управления проектами",
   "@appTitle": {
@@ -1182,6 +1182,14 @@
   "mirrorPermissionDenied": "Mirror недоступен для вашей учётной записи.",
   "@mirrorPermissionDenied": {
     "description": "Screen-level message when user lacks use_mirror permission."
+  },
+  "mirrorPermissionRevokedSessionDisabled": "Сессия редактора Mirror была отключена, потому что ваши права изменились. Закройте этот экран, чтобы безопасно продолжить.",
+  "@mirrorPermissionRevokedSessionDisabled": {
+    "description": "Description shown on the permission-revoked screen after session deactivation."
+  },
+  "mirrorPermissionRevokedTerminal": "Доступ к Mirror отозван: сеанс завершен.",
+  "@mirrorPermissionRevokedTerminal": {
+    "description": "Terminal status line emitted when Mirror permission is revoked mid-session."
   },
   "mirrorApplyDiffPreview": "Предварительный просмотр изменений",
   "@mirrorApplyDiffPreview": {

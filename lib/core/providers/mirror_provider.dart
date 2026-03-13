@@ -132,6 +132,7 @@ final mirrorRunnerModeVariantProvider = FutureProvider<String>((ref) async {
     ).timeout(const Duration(seconds: 3));
 
     await _MirrorOfflineCache.saveRunnerModeVariant(userId, variant);
+    warningNotifier.state = null;
     return variant;
   } catch (_) {
     final cached = await _MirrorOfflineCache.getRunnerModeVariant(userId);

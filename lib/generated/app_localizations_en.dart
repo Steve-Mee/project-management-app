@@ -507,7 +507,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get aiAssistantLabel => 'AI Assistant';
 
   @override
-  String get welcomeBack => 'Welcome back! 👋';
+  String get welcomeBack => 'Welcome back! ­ƒæï';
 
   @override
   String get projectsOverviewSubtitle =>
@@ -1400,7 +1400,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get real_backend_warning =>
-      '⚠️ WARNING: This enables real Stripe payments. Only enable in production with proper backend configuration.';
+      'ÔÜá´©Å WARNING: This enables real Stripe payments. Only enable in production with proper backend configuration.';
 
   @override
   String get mention_user => 'Mention user';
@@ -1703,6 +1703,14 @@ class AppLocalizationsEn extends AppLocalizations {
       'Mirror is not available for your account.';
 
   @override
+  String get mirrorPermissionRevokedSessionDisabled =>
+      'Your Mirror editor session was disabled because your permission changed. Close this screen to continue safely.';
+
+  @override
+  String get mirrorPermissionRevokedTerminal =>
+      'Mirror access revoked: session ejected.';
+
+  @override
   String get mirrorApplyDiffPreview => 'Diff preview';
 
   @override
@@ -1730,4 +1738,24 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get mirrorApplyBranchTip =>
       'Tip: create a new branch first for safe review and rollback.';
+
+  @override
+  String get mirrorOfflineTeamVariantLoadedFromCacheWarning =>
+      'Offline mode: Team Mode variant loaded from local cache.';
+
+  @override
+  String get mirrorOfflineTeamVariantFallbackSoloWarning =>
+      'Offline mode: Team Mode unavailable, switched to solo fallback.';
+
+  @override
+  String get mirrorOfflineRunnerVariantLoadedFromCacheWarning =>
+      'Offline mode: Runner variant loaded from local cache.';
+
+  @override
+  String get mirrorOfflineRunnerVariantFallbackCloudWarning =>
+      'Offline mode: Runner variant unavailable, switched to cloud fallback.';
+
+  @override
+  String get mirrorCloudModeRequiresPremiumWarning =>
+      'Cloud mode requires an active Stripe premium subscription.';
 }

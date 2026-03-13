@@ -1053,7 +1053,7 @@ abstract class AppLocalizations {
   /// Auto-generated description for welcomeBack.
   ///
   /// In en, this message translates to:
-  /// **'Welcome back! 👋'**
+  /// **'Welcome back! ­ƒæï'**
   String get welcomeBack;
 
   /// Auto-generated description for projectsOverviewSubtitle.
@@ -2700,7 +2700,7 @@ abstract class AppLocalizations {
   /// Warning text shown when real payment backend is enabled.
   ///
   /// In en, this message translates to:
-  /// **'⚠️ WARNING: This enables real Stripe payments. Only enable in production with proper backend configuration.'**
+  /// **'ÔÜá´©Å WARNING: This enables real Stripe payments. Only enable in production with proper backend configuration.'**
   String get real_backend_warning;
 
   /// Label for mentioning a user in autocomplete.
@@ -3189,6 +3189,18 @@ abstract class AppLocalizations {
   /// **'Mirror is not available for your account.'**
   String get mirrorPermissionDenied;
 
+  /// Description shown on the permission-revoked screen after session deactivation.
+  ///
+  /// In en, this message translates to:
+  /// **'Your Mirror editor session was disabled because your permission changed. Close this screen to continue safely.'**
+  String get mirrorPermissionRevokedSessionDisabled;
+
+  /// Terminal status line emitted when Mirror permission is revoked mid-session.
+  ///
+  /// In en, this message translates to:
+  /// **'Mirror access revoked: session ejected.'**
+  String get mirrorPermissionRevokedTerminal;
+
   /// Heading above the diff preview in the apply dialog.
   ///
   /// In en, this message translates to:
@@ -3236,6 +3248,36 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Tip: create a new branch first for safe review and rollback.'**
   String get mirrorApplyBranchTip;
+
+  /// Offline warning when team mode variant is loaded from local cache.
+  ///
+  /// In en, this message translates to:
+  /// **'Offline mode: Team Mode variant loaded from local cache.'**
+  String get mirrorOfflineTeamVariantLoadedFromCacheWarning;
+
+  /// Offline warning when team mode variant fallback switches to solo.
+  ///
+  /// In en, this message translates to:
+  /// **'Offline mode: Team Mode unavailable, switched to solo fallback.'**
+  String get mirrorOfflineTeamVariantFallbackSoloWarning;
+
+  /// Offline warning when runner variant is loaded from local cache.
+  ///
+  /// In en, this message translates to:
+  /// **'Offline mode: Runner variant loaded from local cache.'**
+  String get mirrorOfflineRunnerVariantLoadedFromCacheWarning;
+
+  /// Offline warning when runner variant fallback switches to cloud.
+  ///
+  /// In en, this message translates to:
+  /// **'Offline mode: Runner variant unavailable, switched to cloud fallback.'**
+  String get mirrorOfflineRunnerVariantFallbackCloudWarning;
+
+  /// Warning shown when cloud mode is disabled because premium entitlement is missing.
+  ///
+  /// In en, this message translates to:
+  /// **'Cloud mode requires an active Stripe premium subscription.'**
+  String get mirrorCloudModeRequiresPremiumWarning;
 }
 
 class _AppLocalizationsDelegate

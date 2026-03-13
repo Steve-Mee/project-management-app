@@ -1,4 +1,4 @@
-﻿{
+{
   "@@locale": "fr",
   "appTitle": "Application de gestion de projet",
   "@appTitle": {
@@ -1182,6 +1182,14 @@
   "mirrorPermissionDenied": "Mirror n'est pas disponible pour votre compte.",
   "@mirrorPermissionDenied": {
     "description": "Screen-level message when user lacks use_mirror permission."
+  },
+  "mirrorPermissionRevokedSessionDisabled": "Votre session d'éditeur Mirror a été désactivée parce que vos autorisations ont changé. Fermez cet écran pour continuer en toute sécurité.",
+  "@mirrorPermissionRevokedSessionDisabled": {
+    "description": "Description shown on the permission-revoked screen after session deactivation."
+  },
+  "mirrorPermissionRevokedTerminal": "Accès Mirror révoqué : session terminée.",
+  "@mirrorPermissionRevokedTerminal": {
+    "description": "Terminal status line emitted when Mirror permission is revoked mid-session."
   },
   "mirrorApplyDiffPreview": "Aperçu des différences",
   "@mirrorApplyDiffPreview": {

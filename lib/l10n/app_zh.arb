@@ -1,4 +1,4 @@
-﻿{
+{
   "@@locale": "zh",
   "appTitle": "项目管理应用",
   "@appTitle": {
@@ -1178,6 +1178,14 @@
   "mirrorPermissionDenied": "Mirror 不适用于您的帐户。",
   "@mirrorPermissionDenied": {
     "description": "Screen-level message when user lacks use_mirror permission."
+  },
+  "mirrorPermissionRevokedSessionDisabled": "你的 Mirror 编辑器会话已被禁用，因为你的权限已更改。关闭此屏幕以安全继续。",
+  "@mirrorPermissionRevokedSessionDisabled": {
+    "description": "Description shown on the permission-revoked screen after session deactivation."
+  },
+  "mirrorPermissionRevokedTerminal": "Mirror 访问已撤销：会话已终止。",
+  "@mirrorPermissionRevokedTerminal": {
+    "description": "Terminal status line emitted when Mirror permission is revoked mid-session."
   },
   "mirrorApplyDiffPreview": "差异预览",
   "@mirrorApplyDiffPreview": {

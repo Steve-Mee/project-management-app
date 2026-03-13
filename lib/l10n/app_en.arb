@@ -2393,6 +2393,14 @@
   "@mirrorPermissionDenied": {
     "description": "Screen-level message when user lacks use_mirror permission."
   },
+  "mirrorPermissionRevokedSessionDisabled": "Your Mirror editor session was disabled because your permission changed. Close this screen to continue safely.",
+  "@mirrorPermissionRevokedSessionDisabled": {
+    "description": "Description shown on the permission-revoked screen after session deactivation."
+  },
+  "mirrorPermissionRevokedTerminal": "Mirror access revoked: session ejected.",
+  "@mirrorPermissionRevokedTerminal": {
+    "description": "Terminal status line emitted when Mirror permission is revoked mid-session."
+  },
   "mirrorApplyDiffPreview": "Diff preview",
   "@mirrorApplyDiffPreview": {
     "description": "Heading above the diff preview in the apply dialog."
