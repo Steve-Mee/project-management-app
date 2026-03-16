@@ -1053,7 +1053,7 @@ abstract class AppLocalizations {
   /// Auto-generated description for welcomeBack.
   ///
   /// In en, this message translates to:
-  /// **'Welcome back! ­ƒæï'**
+  /// **'Welcome back! 👋'**
   String get welcomeBack;
 
   /// Auto-generated description for projectsOverviewSubtitle.
@@ -2700,7 +2700,7 @@ abstract class AppLocalizations {
   /// Warning text shown when real payment backend is enabled.
   ///
   /// In en, this message translates to:
-  /// **'ÔÜá´©Å WARNING: This enables real Stripe payments. Only enable in production with proper backend configuration.'**
+  /// **'⚠️ WARNING: This enables real Stripe payments. Only enable in production with proper backend configuration.'**
   String get real_backend_warning;
 
   /// Label for mentioning a user in autocomplete.

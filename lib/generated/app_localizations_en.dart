@@ -507,7 +507,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get aiAssistantLabel => 'AI Assistant';
 
   @override
-  String get welcomeBack => 'Welcome back! ­ƒæï';
+  String get welcomeBack => 'Welcome back! 👋';
 
   @override
   String get projectsOverviewSubtitle =>
@@ -1400,7 +1400,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get real_backend_warning =>
-      'ÔÜá´©Å WARNING: This enables real Stripe payments. Only enable in production with proper backend configuration.';
+      '⚠️ WARNING: This enables real Stripe payments. Only enable in production with proper backend configuration.';
 
   @override
   String get mention_user => 'Mention user';
