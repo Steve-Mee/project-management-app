@@ -56,6 +56,9 @@ interface StructuredError {
   retryable: boolean
   requestId: string
   idempotencyKey?: string
+  error_family: 'client' | 'auth' | 'config' | 'timeout' | 'upstream' | 'rate_limit' | 'internal'
+  upstream_status: number | null
+  stage: string
   details?: unknown
 }
 
@@ -86,6 +89,76 @@ function jsonResponse(req: Request, body: unknown, status = 200): Response {
 
 function errorResponse(req: Request, error: StructuredError, status: number): Response {
   return jsonResponse(req, { success: false, error }, status)
+}
+
+function resolveErrorFamily(
+  code: StructuredError['code'],
+): StructuredError['error_family'] {
+  switch (code) {
+    case 'bad_request':
+    case 'payload_too_large':
+    case 'method_not_allowed':
+      return 'client'
+    case 'unauthorized':
+      return 'auth'
+    case 'config_error':
+      return 'config'
+    case 'timeout':
+      return 'timeout'
+    case 'upstream_error':
+      return 'upstream'
+    case 'rate_limited':
+      return 'rate_limit'
+    case 'internal_error':
+      return 'internal'
+  }
+}
+
+function buildStructuredError({
+  code,
+  message,
+  retryable,
+  requestId,
+  idempotencyKey,
+  details,
+  upstreamStatus = null,
+  stage,
+}: {
+  code: StructuredError['code']
+  message: string
+  retryable: boolean
+  requestId: string
+  idempotencyKey?: string
+  details?: unknown
+  upstreamStatus?: number | null
+  stage: string
+}): StructuredError {
+  return {
+    code,
+    message,
+    retryable,
+    requestId,
+    idempotencyKey,
+    error_family: resolveErrorFamily(code),
+    upstream_status: upstreamStatus,
+    stage,
+    details,
+  }
+}
+
+function buildAuditErrorDetails(
+  error: StructuredError,
+  extra: Record<string, unknown> = {},
+): Record<string, unknown> {
+  return {
+    code: error.code,
+    message: error.message,
+    error_family: error.error_family,
+    upstream_status: error.upstream_status,
+    stage: error.stage,
+    ...(error.details === undefined ? {} : { details: error.details }),
+    ...extra,
+  }
 }
 
 function resolveForwardEndpoint(mode: 'private' | 'cloud', action: 'compile' | 'apply'): string {
@@ -164,7 +237,7 @@ function stableStringify(value: unknown): string {
   return `{${keys.map((key) => `${key}:${stableStringify(record[key])}`).join(',')}}`
 }
 
-function fingerprintValue(value: unknown): string {
+function fingerprintValueFnv1a32(value: unknown): string {
   const raw = stableStringify(value)
   let hash = 2166136261
   for (let i = 0; i < raw.length; i += 1) {
@@ -174,6 +247,14 @@ function fingerprintValue(value: unknown): string {
 
   const normalized = (hash >>> 0).toString(16).padStart(8, '0')
   return `fnv1a32:${normalized}`
+}
+
+async function fingerprintValueSha256(value: unknown): Promise<string> {
+  const raw = stableStringify(value)
+  const bytes = new TextEncoder().encode(raw)
+  const digest = await crypto.subtle.digest('SHA-256', bytes)
+  const hex = Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, '0')).join('')
+  return `sha256:${hex}`
 }
 
 function normalizeArtifactIds(request: MirrorComputeRequest): string[] {
@@ -457,7 +538,7 @@ function buildIdempotencyRequestHash(
   action: 'compile' | 'apply',
   normalized: MirrorComputeRequest,
 ): string {
-  return fingerprintValue({
+  return fingerprintValueFnv1a32({
     userId,
     action,
     mode: normalized.mode,
@@ -828,26 +909,28 @@ Deno.serve(async (req: Request) => {
 
   if (req.method !== 'POST') {
     return errorResponse(req,
-      {
+      buildStructuredError({
         code: 'method_not_allowed',
         message: 'Method not allowed',
         retryable: false,
         requestId,
         idempotencyKey,
-      },
+        stage: 'request_validation',
+      }),
       405,
     )
   }
 
   if (!action) {
     return errorResponse(req,
-      {
+      buildStructuredError({
         code: 'bad_request',
         message: 'Invalid route. Use /compile or /apply.',
         retryable: false,
         requestId,
         idempotencyKey,
-      },
+        stage: 'routing',
+      }),
       400,
     )
   }
@@ -856,13 +939,14 @@ Deno.serve(async (req: Request) => {
     const authHeader = req.headers.get('Authorization')
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
       return errorResponse(req,
-        {
+        buildStructuredError({
           code: 'unauthorized',
           message: 'Missing or invalid authorization header',
           retryable: false,
           requestId,
           idempotencyKey,
-        },
+          stage: 'authentication',
+        }),
         401,
       )
     }
@@ -871,13 +955,14 @@ Deno.serve(async (req: Request) => {
     const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY') ?? ''
     if (!supabaseUrl || !supabaseAnonKey) {
       return errorResponse(req,
-        {
+        buildStructuredError({
           code: 'internal_error',
           message: 'Supabase environment is not configured',
           retryable: false,
           requestId,
           idempotencyKey,
-        },
+          stage: 'configuration',
+        }),
         500,
       )
     }
@@ -893,13 +978,14 @@ Deno.serve(async (req: Request) => {
 
     if (authError || !user) {
       return errorResponse(req,
-        {
+        buildStructuredError({
           code: 'unauthorized',
           message: 'Unauthorized',
           retryable: false,
           requestId,
           idempotencyKey,
-        },
+          stage: 'authentication',
+        }),
         401,
       )
     }
@@ -910,26 +996,28 @@ Deno.serve(async (req: Request) => {
     } catch (error) {
       if (error instanceof Error && error.message.startsWith('payload_too_large:')) {
         return errorResponse(req,
-          {
+          buildStructuredError({
             code: 'payload_too_large',
             message: `Request body exceeds ${MAX_REQUEST_BODY_BYTES} bytes limit`,
             retryable: false,
             requestId,
             idempotencyKey,
-          },
+            stage: 'request_validation',
+          }),
           413,
         )
       }
 
       if (error instanceof Error && error.message === 'bad_json') {
         return errorResponse(req,
-          {
+          buildStructuredError({
             code: 'bad_request',
             message: 'Invalid JSON body',
             retryable: false,
             requestId,
             idempotencyKey,
-          },
+            stage: 'request_validation',
+          }),
           400,
         )
       }
@@ -940,13 +1028,14 @@ Deno.serve(async (req: Request) => {
     const normalized = normalizeRequestBody(rawBody)
     if (!normalized) {
       return errorResponse(req,
-        {
+        buildStructuredError({
           code: 'bad_request',
           message: 'Missing or invalid fields: prompt, projectId, taskId, mode',
           retryable: false,
           requestId,
           idempotencyKey,
-        },
+          stage: 'request_validation',
+        }),
         400,
       )
     }
@@ -956,27 +1045,29 @@ Deno.serve(async (req: Request) => {
       canUseMirror = await hasUseMirrorPermission(supabase)
     } catch (error) {
       return errorResponse(req,
-        {
+        buildStructuredError({
           code: 'unauthorized',
           message: 'Mirror permission check failed',
           retryable: false,
           requestId,
           idempotencyKey,
           details: String(error),
-        },
+          stage: 'authorization',
+        }),
         403,
       )
     }
 
     if (!canUseMirror) {
       return errorResponse(req,
-        {
+        buildStructuredError({
           code: 'unauthorized',
           message: 'Insufficient permissions: use_mirror required',
           retryable: false,
           requestId,
           idempotencyKey,
-        },
+          stage: 'authorization',
+        }),
         403,
       )
     }
@@ -995,14 +1086,15 @@ Deno.serve(async (req: Request) => {
     } catch (error) {
       if (error instanceof Error && error.message.startsWith('idempotency_')) {
         return errorResponse(req,
-          {
+          buildStructuredError({
             code: 'config_error',
             message: 'Idempotency storage is unavailable',
             retryable: false,
             requestId,
             idempotencyKey,
             details: error.message,
-          },
+            stage: 'idempotency',
+          }),
           500,
         )
       }
@@ -1011,7 +1103,7 @@ Deno.serve(async (req: Request) => {
 
     if (idempotencyClaim.kind === 'conflict') {
       return errorResponse(req,
-        {
+        buildStructuredError({
           code: 'bad_request',
           message: 'Idempotency key reuse with different payload is not allowed',
           retryable: false,
@@ -1021,14 +1113,15 @@ Deno.serve(async (req: Request) => {
             action,
             priorRequestId: idempotencyClaim.record?.request_id,
           },
-        },
+          stage: 'idempotency',
+        }),
         409,
       )
     }
 
     if (idempotencyClaim.kind === 'in_progress') {
       return errorResponse(req,
-        {
+        buildStructuredError({
           code: 'bad_request',
           message: 'A request with this idempotency key is already processing',
           retryable: true,
@@ -1038,7 +1131,8 @@ Deno.serve(async (req: Request) => {
             action,
             priorRequestId: idempotencyClaim.record?.request_id,
           },
-        },
+          stage: 'idempotency',
+        }),
         409,
       )
     }
@@ -1069,14 +1163,15 @@ Deno.serve(async (req: Request) => {
     } catch (error) {
       if (error instanceof Error && error.message.startsWith('rate_limit_')) {
         return errorResponse(req,
-          {
+          buildStructuredError({
             code: 'config_error',
             message: 'Rate limit check is unavailable',
             retryable: true,
             requestId,
             idempotencyKey,
             details: error.message,
-          },
+            stage: 'rate_limit',
+          }),
           500,
         )
       }
@@ -1089,24 +1184,27 @@ Deno.serve(async (req: Request) => {
       const burstWindowSeconds = gatewayRateLimitBurstWindowSeconds()
       const retryAfterSeconds = rateLimitCheck.retryAfterSeconds ?? 60
 
+      const rateLimitError = buildStructuredError({
+        code: 'rate_limited',
+        message: 'Mirror gateway rate limit exceeded',
+        retryable: true,
+        requestId,
+        idempotencyKey,
+        details: {
+          reason: rateLimitCheck.reason,
+          maxRequestsPerMinute: minuteLimit,
+          burstLimit,
+          burstWindowSeconds,
+          observedRequestsLastMinute: rateLimitCheck.minuteCount,
+          observedRequestsInBurstWindow: rateLimitCheck.burstCount,
+          retryAfterSeconds,
+        },
+        stage: 'rate_limit',
+      })
+
       const rateLimitBody = {
         success: false,
-        error: {
-          code: 'rate_limited',
-          message: 'Mirror gateway rate limit exceeded',
-          retryable: true,
-          requestId,
-          idempotencyKey,
-          details: {
-            reason: rateLimitCheck.reason,
-            maxRequestsPerMinute: minuteLimit,
-            burstLimit,
-            burstWindowSeconds,
-            observedRequestsLastMinute: rateLimitCheck.minuteCount,
-            observedRequestsInBurstWindow: rateLimitCheck.burstCount,
-            retryAfterSeconds,
-          },
-        },
+        error: rateLimitError,
       }
 
       try {
@@ -1193,6 +1291,14 @@ Deno.serve(async (req: Request) => {
     } catch (error) {
       clearTimeout(timeout)
       if (error instanceof DOMException && error.name === 'AbortError') {
+        const timeoutError = buildStructuredError({
+          code: 'timeout',
+          message: `Upstream /${action} request timed out`,
+          retryable: true,
+          requestId,
+          idempotencyKey,
+          stage: 'forward',
+        })
         try {
           await finalizeIdempotencyKey({
             supabase,
@@ -1205,10 +1311,7 @@ Deno.serve(async (req: Request) => {
             responseStatus: 504,
             responseBody: JSON.stringify({
               success: false,
-              error: {
-                code: 'timeout',
-                message: `Upstream /${action} request timed out`,
-              },
+              error: timeoutError,
             }),
             responseContentType: 'application/json',
           })
@@ -1225,24 +1328,25 @@ Deno.serve(async (req: Request) => {
             idempotencyKey,
             event: 'apply_failed',
             success: false,
-            details: {
-              code: 'timeout',
-              message: `Upstream /${action} request timed out`,
-            },
+            details: buildAuditErrorDetails(timeoutError),
           })
         }
 
         return errorResponse(req,
-          {
-            code: 'timeout',
-            message: `Upstream /${action} request timed out`,
-            retryable: true,
-            requestId,
-            idempotencyKey,
-          },
+          timeoutError,
           504,
         )
       }
+
+      const upstreamTransportError = buildStructuredError({
+        code: 'upstream_error',
+        message: `Failed to reach upstream /${action} endpoint`,
+        retryable: true,
+        requestId,
+        idempotencyKey,
+        details: String(error),
+        stage: 'forward',
+      })
 
       try {
         await finalizeIdempotencyKey({
@@ -1256,11 +1360,7 @@ Deno.serve(async (req: Request) => {
           responseStatus: 502,
           responseBody: JSON.stringify({
             success: false,
-            error: {
-              code: 'upstream_error',
-              message: `Failed to reach upstream /${action} endpoint`,
-              details: String(error),
-            },
+              error: upstreamTransportError,
           }),
           responseContentType: 'application/json',
         })
@@ -1277,23 +1377,12 @@ Deno.serve(async (req: Request) => {
           idempotencyKey,
           event: 'apply_failed',
           success: false,
-          details: {
-            code: 'upstream_error',
-            message: `Failed to reach upstream /${action} endpoint`,
-            error: String(error),
-          },
+          details: buildAuditErrorDetails(upstreamTransportError),
         })
       }
 
       return errorResponse(req,
-        {
-          code: 'upstream_error',
-          message: `Failed to reach upstream /${action} endpoint`,
-          retryable: true,
-          requestId,
-          idempotencyKey,
-          details: String(error),
-        },
+        upstreamTransportError,
         502,
       )
     } finally {
@@ -1304,6 +1393,23 @@ Deno.serve(async (req: Request) => {
     const upstreamBody = await upstreamResponse.text()
 
     if (!upstreamResponse.ok) {
+      const upstreamStatusError = buildStructuredError({
+        code: 'upstream_error',
+        message: `Upstream /${action} returned a non-success status`,
+        retryable:
+          upstreamResponse.status === 408 ||
+          upstreamResponse.status === 429 ||
+          upstreamResponse.status >= 500,
+        requestId,
+        idempotencyKey,
+        details: {
+          status: upstreamResponse.status,
+          body: upstreamBody,
+        },
+        upstreamStatus: upstreamResponse.status,
+        stage: 'upstream',
+      })
+
       try {
         await finalizeIdempotencyKey({
           supabase,
@@ -1330,30 +1436,13 @@ Deno.serve(async (req: Request) => {
           idempotencyKey,
           event: 'apply_failed',
           success: false,
-          details: {
-            code: 'upstream_error',
-            status: upstreamResponse.status,
-            body: upstreamBody,
-          },
-          diffFingerprint: fingerprintValue(upstreamBody),
+          details: buildAuditErrorDetails(upstreamStatusError),
+          diffFingerprint: await fingerprintValueSha256(upstreamBody),
         })
       }
 
       return errorResponse(req,
-        {
-          code: 'upstream_error',
-          message: `Upstream /${action} returned a non-success status`,
-          retryable:
-            upstreamResponse.status === 408 ||
-            upstreamResponse.status === 429 ||
-            upstreamResponse.status >= 500,
-          requestId,
-          idempotencyKey,
-          details: {
-            status: upstreamResponse.status,
-            body: upstreamBody,
-          },
-        },
+        upstreamStatusError,
         upstreamResponse.status,
       )
     }
@@ -1381,10 +1470,16 @@ Deno.serve(async (req: Request) => {
         const parsed = JSON.parse(upstreamBody)
         const files = parsed?.files
         if (files && typeof files === 'object') {
-          appliedFilesFingerprint = fingerprintValue(Object.keys(files as Record<string, unknown>).sort())
+          appliedFilesFingerprint = await fingerprintValueSha256(
+            Object.keys(files as Record<string, unknown>).sort(),
+          )
         }
       } catch (_) {
         // Keep fallback fingerprint below.
+      }
+
+      if (!appliedFilesFingerprint) {
+        appliedFilesFingerprint = await fingerprintValueSha256(upstreamBody)
       }
 
       await writeApplyAuditEvent({
@@ -1399,7 +1494,7 @@ Deno.serve(async (req: Request) => {
           status: upstreamResponse.status,
         },
         appliedFilesFingerprint,
-        diffFingerprint: fingerprintValue(upstreamBody),
+        diffFingerprint: await fingerprintValueSha256(upstreamBody),
       })
     }
 
@@ -1419,27 +1514,29 @@ Deno.serve(async (req: Request) => {
         error.message.startsWith('unsupported_action_path_combination:'))
     ) {
       return errorResponse(req,
-        {
+        buildStructuredError({
           code: 'config_error',
           message: error.message,
           retryable: false,
           requestId,
           idempotencyKey,
-        },
+          stage: 'configuration',
+        }),
         500,
       )
     }
 
     console.error('mirror-gateway forwarding error:', error)
     return errorResponse(req,
-      {
+      buildStructuredError({
         code: 'internal_error',
         message: 'Internal server error',
         retryable: false,
         requestId,
         idempotencyKey,
         details: String(error),
-      },
+        stage: 'internal',
+      }),
       500,
     )
   }
