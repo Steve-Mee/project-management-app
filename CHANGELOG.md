@@ -1,3 +1,9 @@
+## [1.40.0](https://github.com/Steve-Mee/project-management-app/compare/v1.39.0...v1.40.0) (2026-03-16)
+
+### Features
+
+* **orchestration:** reduce duplicate compile steps with preview-reuse token (P1) ([9c2b84d](https://github.com/Steve-Mee/project-management-app/commit/9c2b84debd90e823e2dcab16b7adcfbba7ed53a0))
+
 ## [1.39.0](https://github.com/Steve-Mee/project-management-app/compare/v1.38.0...v1.39.0) (2026-03-12)
 
 ### Features
