@@ -10,6 +10,7 @@ import '../../core/config/app_config.dart';
 import 'mirror_compute_backend.dart';
 import 'services/mirror_context_budget_service.dart';
 import 'services/mirror_observability_service.dart';
+import 'services/mirror_retry_policy.dart';
 
 class MirrorGatewayBackend implements MirrorComputeBackend {
   MirrorGatewayBackend({
@@ -23,15 +24,22 @@ class MirrorGatewayBackend implements MirrorComputeBackend {
     this.initialBackoff = const Duration(milliseconds: 300),
     MirrorContextBudgetService? budgetService,
     MirrorObservabilityService? observabilityService,
+    MirrorRetryPolicy? retryPolicy,
   })  : _client = _resolveClient(client),
         _httpClient = httpClient ?? http.Client(),
         _budgetService = budgetService,
-        _observabilityService = observabilityService;
+        _observabilityService = observabilityService,
+        _retryPolicy = retryPolicy ?? MirrorRetryPolicy(
+          timeout: timeout,
+          maxRetries: maxRetries,
+          initialBackoff: initialBackoff,
+        );
 
   final SupabaseClient? _client;
   final http.Client _httpClient;
   final MirrorContextBudgetService? _budgetService;
   final MirrorObservabilityService? _observabilityService;
+  final MirrorRetryPolicy _retryPolicy;
   final String? httpEndpoint;
   final String? applyHttpEndpoint;
   final bool useSecureApply;
@@ -345,151 +353,60 @@ class MirrorGatewayBackend implements MirrorComputeBackend {
     required ProjectContext context,
     required String mode,
   }) async {
-    final effectiveContext =
-        _budgetService?.enforce(context).context ?? context;
-    final token = _client?.auth.currentSession?.accessToken;
-    final idempotencyKey = _resolveIdempotencyKey(context.metadata);
-    final payload = <String, dynamic>{
-      'prompt': prompt,
-      'projectId': effectiveContext.projectId,
-      'taskId': effectiveContext.taskId,
-      'mode': mode,
-      'files': effectiveContext.files,
-      'metadata': effectiveContext.metadata,
-    };
-    final Object payloadBody;
-    final bool payloadIsGzip;
-    final encodedPayload = _budgetService?.encodePayload(payload);
-    if (encodedPayload != null) {
-      payloadBody = encodedPayload.bytes;
-      payloadIsGzip = encodedPayload.isGzip;
-    } else {
-      payloadBody = jsonEncode(payload);
-      payloadIsGzip = false;
-    }
+    final request = _buildGatewayRequest(
+      prompt: prompt,
+      context: context,
+      mode: mode,
+    );
 
-    var attempt = 0;
-    var backoff = initialBackoff;
-
-    while (true) {
-      attempt += 1;
-      final sw = Stopwatch()..start();
-      try {
-        final response = await _httpClient
-            .post(
-              Uri.parse(endpoint),
-              headers: <String, String>{
-                'Content-Type': 'application/json',
-                if (payloadIsGzip) 'Content-Encoding': 'gzip',
-                if (idempotencyKey != null) 'x-idempotency-key': idempotencyKey,
-                if (token != null && token.isNotEmpty)
-                  'Authorization': 'Bearer $token',
-              },
-              body: payloadBody,
-            )
-            .timeout(timeout);
-        sw.stop();
-
-        final bodyText = response.body;
-        if (response.statusCode >= 200 && response.statusCode < 300) {
-          _observabilityService?.recordCompileLatency(
-            durationMs: sw.elapsedMilliseconds,
-            mode: mode,
-            operation: 'compile',
-            success: true,
-            attempt: attempt,
-          );
-          return _compileResultFromRaw(bodyText);
-        }
-
-        final retriable = response.statusCode == 408 ||
-            response.statusCode == 429 ||
-            response.statusCode >= 500;
-
-        if (retriable && attempt <= maxRetries) {
-          _observabilityService?.recordRetry(
-            operation: 'compile',
-            reason: response.statusCode == 429 ? 'rate_limited' : 'server_error',
-            attempt: attempt,
-            mode: mode,
-          );
-          await Future<void>.delayed(backoff);
-          backoff *= 2;
-          continue;
-        }
-
+    return _retryPolicy.execute<CompileResult, http.Response>(
+      attemptOperation: () => _httpClient.post(
+        Uri.parse(endpoint),
+        headers: request.headers,
+        body: request.body,
+      ),
+      isSuccess: (response) => _isSuccessfulStatus(response.statusCode),
+      isRetriable: (response) => _isRetriableStatus(response.statusCode),
+      retryReasonForResult: (response) =>
+          response.statusCode == 429 ? 'rate_limited' : 'server_error',
+      onSuccess: (response) => _compileResultFromRaw(response.body),
+      onFailure: (response) => CompileResult(
+        success: false,
+        errors: <String>[
+          '${_httpErrorCodeForStatus(response.statusCode).value}: HTTP ${response.statusCode}',
+          if (response.body.trim().isNotEmpty) response.body,
+        ],
+      ),
+      onTimeoutFailure: () => const CompileResult(
+        success: false,
+        errors: <String>['timeout: Mirror Gateway HTTP /compile request timed out.'],
+      ),
+      onErrorFailure: (error) => CompileResult(
+        success: false,
+        errors: <String>['network: ${error.toString()}'],
+      ),
+      onAttemptComplete: ({
+        required int durationMs,
+        required bool success,
+        required int attempt,
+      }) {
         _observabilityService?.recordCompileLatency(
-          durationMs: sw.elapsedMilliseconds,
+          durationMs: durationMs,
           mode: mode,
           operation: 'compile',
-          success: false,
+          success: success,
           attempt: attempt,
         );
-        final code = response.statusCode == 401 || response.statusCode == 403
-          ? _MirrorGatewayHttpErrorCode.unauthorized
-          : response.statusCode == 429
-            ? _MirrorGatewayHttpErrorCode.rateLimited
-            : response.statusCode >= 500
-              ? _MirrorGatewayHttpErrorCode.server
-              : _MirrorGatewayHttpErrorCode.badRequest;
-
-        return CompileResult(
-          success: false,
-          errors: <String>[
-            '${code.value}: HTTP ${response.statusCode}',
-            if (bodyText.trim().isNotEmpty) bodyText,
-          ],
-        );
-      } on TimeoutException {
-        sw.stop();
-        if (attempt <= maxRetries) {
-          _observabilityService?.recordRetry(
-            operation: 'compile',
-            reason: 'timeout',
-            attempt: attempt,
-            mode: mode,
-          );
-          await Future<void>.delayed(backoff);
-          backoff *= 2;
-          continue;
-        }
-        _observabilityService?.recordCompileLatency(
-          durationMs: sw.elapsedMilliseconds,
-          mode: mode,
+      },
+      onRetry: ({required String reason, required int attempt}) {
+        _observabilityService?.recordRetry(
           operation: 'compile',
-          success: false,
+          reason: reason,
           attempt: attempt,
-        );
-        return const CompileResult(
-          success: false,
-          errors: <String>['timeout: Mirror Gateway HTTP /compile request timed out.'],
-        );
-      } catch (error) {
-        sw.stop();
-        if (attempt <= maxRetries) {
-          _observabilityService?.recordRetry(
-            operation: 'compile',
-            reason: 'network',
-            attempt: attempt,
-            mode: mode,
-          );
-          await Future<void>.delayed(backoff);
-          backoff *= 2;
-          continue;
-        }
-        _observabilityService?.recordCompileLatency(
-          durationMs: sw.elapsedMilliseconds,
           mode: mode,
-          operation: 'compile',
-          success: false,
-          attempt: attempt,
         );
-        return CompileResult(
-          success: false,
-          errors: <String>['network: ${error.toString()}'],
-        );
-      }
-    }
+      },
+    );
   }
 
   Future<_RawGatewayResult> _postRaw({
@@ -499,8 +416,70 @@ class MirrorGatewayBackend implements MirrorComputeBackend {
     required String mode,
     Map<String, dynamic> extra = const <String, dynamic>{},
   }) async {
-    final effectiveContext =
-        _budgetService?.enforce(context).context ?? context;
+    final request = _buildGatewayRequest(
+      prompt: prompt,
+      context: context,
+      mode: mode,
+      extra: extra,
+    );
+
+    return _retryPolicy.execute<_RawGatewayResult, http.Response>(
+      attemptOperation: () => _httpClient.post(
+        Uri.parse(endpoint),
+        headers: request.headers,
+        body: request.body,
+      ),
+      isSuccess: (response) => _isSuccessfulStatus(response.statusCode),
+      isRetriable: (response) => _isRetriableStatus(response.statusCode),
+      retryReasonForResult: (response) =>
+          response.statusCode == 429 ? 'rate_limited' : 'server_error',
+      onSuccess: (response) => _RawGatewayResult(success: true, body: response.body),
+      onFailure: (response) => _RawGatewayResult(
+        success: false,
+        errors: <String>[
+          '${_httpErrorCodeForStatus(response.statusCode).value}: HTTP ${response.statusCode}',
+          if (response.body.trim().isNotEmpty) response.body,
+        ],
+      ),
+      onTimeoutFailure: () => const _RawGatewayResult(
+        success: false,
+        errors: <String>['timeout: Mirror Gateway HTTP /apply request timed out.'],
+      ),
+      onErrorFailure: (error) => _RawGatewayResult(
+        success: false,
+        errors: <String>['network: ${error.toString()}'],
+      ),
+      onAttemptComplete: ({
+        required int durationMs,
+        required bool success,
+        required int attempt,
+      }) {
+        _observabilityService?.recordCompileLatency(
+          durationMs: durationMs,
+          mode: mode,
+          operation: 'apply',
+          success: success,
+          attempt: attempt,
+        );
+      },
+      onRetry: ({required String reason, required int attempt}) {
+        _observabilityService?.recordRetry(
+          operation: 'apply',
+          reason: reason,
+          attempt: attempt,
+          mode: mode,
+        );
+      },
+    );
+  }
+
+  _MirrorGatewayRequest _buildGatewayRequest({
+    required String prompt,
+    required ProjectContext context,
+    required String mode,
+    Map<String, dynamic> extra = const <String, dynamic>{},
+  }) {
+    final effectiveContext = _budgetService?.enforce(context).context ?? context;
     final token = _client?.auth.currentSession?.accessToken;
     final idempotencyKey = _resolveIdempotencyKey(context.metadata);
     final payload = <String, dynamic>{
@@ -512,138 +491,39 @@ class MirrorGatewayBackend implements MirrorComputeBackend {
       'metadata': effectiveContext.metadata,
       ...extra,
     };
-    final Object payloadBody;
-    final bool payloadIsGzip;
+
     final encodedPayload = _budgetService?.encodePayload(payload);
-    if (encodedPayload != null) {
-      payloadBody = encodedPayload.bytes;
-      payloadIsGzip = encodedPayload.isGzip;
-    } else {
-      payloadBody = jsonEncode(payload);
-      payloadIsGzip = false;
+    final body = encodedPayload?.bytes ?? jsonEncode(payload);
+    return _MirrorGatewayRequest(
+      headers: <String, String>{
+        'Content-Type': 'application/json',
+        if (encodedPayload?.isGzip ?? false) 'Content-Encoding': 'gzip',
+        if (idempotencyKey != null) 'x-idempotency-key': idempotencyKey,
+        if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
+      },
+      body: body,
+    );
+  }
+
+  bool _isSuccessfulStatus(int statusCode) {
+    return statusCode >= 200 && statusCode < 300;
+  }
+
+  bool _isRetriableStatus(int statusCode) {
+    return statusCode == 408 || statusCode == 429 || statusCode >= 500;
+  }
+
+  _MirrorGatewayHttpErrorCode _httpErrorCodeForStatus(int statusCode) {
+    if (statusCode == 401 || statusCode == 403) {
+      return _MirrorGatewayHttpErrorCode.unauthorized;
     }
-
-    var attempt = 0;
-    var backoff = initialBackoff;
-
-    while (true) {
-      attempt += 1;
-      final sw = Stopwatch()..start();
-      try {
-        final response = await _httpClient
-            .post(
-              Uri.parse(endpoint),
-              headers: <String, String>{
-                'Content-Type': 'application/json',
-                if (payloadIsGzip) 'Content-Encoding': 'gzip',
-                if (idempotencyKey != null) 'x-idempotency-key': idempotencyKey,
-                if (token != null && token.isNotEmpty)
-                  'Authorization': 'Bearer $token',
-              },
-              body: payloadBody,
-            )
-            .timeout(timeout);
-        sw.stop();
-
-        final bodyText = response.body;
-        if (response.statusCode >= 200 && response.statusCode < 300) {
-          _observabilityService?.recordCompileLatency(
-            durationMs: sw.elapsedMilliseconds,
-            mode: mode,
-            operation: 'apply',
-            success: true,
-            attempt: attempt,
-          );
-          return _RawGatewayResult(success: true, body: bodyText);
-        }
-
-        final retriable = response.statusCode == 408 ||
-            response.statusCode == 429 ||
-            response.statusCode >= 500;
-        if (retriable && attempt <= maxRetries) {
-          _observabilityService?.recordRetry(
-            operation: 'apply',
-            reason: response.statusCode == 429 ? 'rate_limited' : 'server_error',
-            attempt: attempt,
-            mode: mode,
-          );
-          await Future<void>.delayed(backoff);
-          backoff *= 2;
-          continue;
-        }
-
-        _observabilityService?.recordCompileLatency(
-          durationMs: sw.elapsedMilliseconds,
-          mode: mode,
-          operation: 'apply',
-          success: false,
-          attempt: attempt,
-        );
-        final code = response.statusCode == 401 || response.statusCode == 403
-          ? _MirrorGatewayHttpErrorCode.unauthorized
-          : response.statusCode == 429
-            ? _MirrorGatewayHttpErrorCode.rateLimited
-            : response.statusCode >= 500
-              ? _MirrorGatewayHttpErrorCode.server
-              : _MirrorGatewayHttpErrorCode.badRequest;
-
-        return _RawGatewayResult(
-          success: false,
-          errors: <String>[
-            '${code.value}: HTTP ${response.statusCode}',
-            if (bodyText.trim().isNotEmpty) bodyText,
-          ],
-        );
-      } on TimeoutException {
-        sw.stop();
-        if (attempt <= maxRetries) {
-          _observabilityService?.recordRetry(
-            operation: 'apply',
-            reason: 'timeout',
-            attempt: attempt,
-            mode: mode,
-          );
-          await Future<void>.delayed(backoff);
-          backoff *= 2;
-          continue;
-        }
-        _observabilityService?.recordCompileLatency(
-          durationMs: sw.elapsedMilliseconds,
-          mode: mode,
-          operation: 'apply',
-          success: false,
-          attempt: attempt,
-        );
-        return const _RawGatewayResult(
-          success: false,
-          errors: <String>['timeout: Mirror Gateway HTTP /apply request timed out.'],
-        );
-      } catch (error) {
-        sw.stop();
-        if (attempt <= maxRetries) {
-          _observabilityService?.recordRetry(
-            operation: 'apply',
-            reason: 'network',
-            attempt: attempt,
-            mode: mode,
-          );
-          await Future<void>.delayed(backoff);
-          backoff *= 2;
-          continue;
-        }
-        _observabilityService?.recordCompileLatency(
-          durationMs: sw.elapsedMilliseconds,
-          mode: mode,
-          operation: 'apply',
-          success: false,
-          attempt: attempt,
-        );
-        return _RawGatewayResult(
-          success: false,
-          errors: <String>['network: ${error.toString()}'],
-        );
-      }
+    if (statusCode == 429) {
+      return _MirrorGatewayHttpErrorCode.rateLimited;
     }
+    if (statusCode >= 500) {
+      return _MirrorGatewayHttpErrorCode.server;
+    }
+    return _MirrorGatewayHttpErrorCode.badRequest;
   }
 
   CompileResult _compileResultFromRaw(String raw) {
@@ -765,6 +645,16 @@ class _RawGatewayResult {
   final bool success;
   final String? body;
   final List<String> errors;
+}
+
+class _MirrorGatewayRequest {
+  const _MirrorGatewayRequest({
+    required this.headers,
+    required this.body,
+  });
+
+  final Map<String, String> headers;
+  final Object body;
 }
 
 String _fingerprintFileMap(Map<String, String> files) {
