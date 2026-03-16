@@ -166,6 +166,9 @@ class MirrorEditorOrchestrationService {
         mode: selectedMode,
         output: compileOutput,
       );
+      final previewServerVersionToken = _normalizeServerVersionToken(
+        compileResult.serverVersionToken,
+      );
 
       if (compileResult.warnings.isNotEmpty) {
         appendTerminalLine(
@@ -220,13 +223,15 @@ class MirrorEditorOrchestrationService {
       }
 
       appendTerminalLine(l10n.mirrorStepApplySent);
+      final applyMetadata = _buildApplyMetadata(
+        metadata: compileContextForPreviewAndApply.metadata,
+        previewServerVersionToken: previewServerVersionToken,
+      );
       final applyContext = ProjectContext(
         projectId: compileContextForPreviewAndApply.projectId,
         taskId: compileContextForPreviewAndApply.taskId,
         files: Map<String, String>.from(compileContextForPreviewAndApply.files),
-        metadata: Map<String, dynamic>.from(
-          compileContextForPreviewAndApply.metadata,
-        ),
+        metadata: applyMetadata,
       );
       final applyResult = await orchestrator.apply(
         ref: ref,
@@ -348,6 +353,30 @@ class MirrorEditorOrchestrationService {
     messenger.showSnackBar(
       SnackBar(content: Text(message)),
     );
+  }
+
+  Map<String, dynamic> _buildApplyMetadata({
+    required Map<String, dynamic> metadata,
+    required String? previewServerVersionToken,
+  }) {
+    final applyMetadata = Map<String, dynamic>.from(metadata);
+    if (previewServerVersionToken == null) {
+      return applyMetadata;
+    }
+
+    applyMetadata['previewReuseRequested'] = true;
+    applyMetadata['previewReuseStrategy'] = 'server_version_token';
+    applyMetadata['previewServerVersionToken'] = previewServerVersionToken;
+    applyMetadata['previewArtifactPath'] = previewServerVersionToken;
+    return applyMetadata;
+  }
+
+  String? _normalizeServerVersionToken(String? rawToken) {
+    final token = rawToken?.trim();
+    if (token == null || token.isEmpty) {
+      return null;
+    }
+    return token;
   }
 
   String _computeContextFingerprint(Map<String, String> files) {

@@ -39,12 +39,14 @@ class CompileResult {
   const CompileResult({
     required this.success,
     this.output,
+    this.serverVersionToken,
     this.errors = const <String>[],
     this.warnings = const <String>[],
   });
 
   final bool success;
   final String? output;
+  final String? serverVersionToken;
   final List<String> errors;
   final List<String> warnings;
 }

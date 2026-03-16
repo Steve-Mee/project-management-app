@@ -661,6 +661,7 @@ class MirrorGatewayBackend implements MirrorComputeBackend {
       return CompileResult(
         success: (decoded['success'] as bool?) ?? true,
         output: decoded['output']?.toString(),
+        serverVersionToken: _normalizeServerVersionToken(decoded['artifactPath']),
         errors: errorsRaw is List
             ? errorsRaw.map((e) => e.toString()).toList()
             : const <String>[],
@@ -671,6 +672,14 @@ class MirrorGatewayBackend implements MirrorComputeBackend {
     }
 
     return CompileResult(success: true, output: raw);
+  }
+
+  String? _normalizeServerVersionToken(Object? rawToken) {
+    final token = rawToken?.toString().trim();
+    if (token == null || token.isEmpty) {
+      return null;
+    }
+    return token;
   }
 
   static String resolveCompileEndpoint({String? httpEndpoint}) {

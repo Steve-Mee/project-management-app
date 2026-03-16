@@ -78,6 +78,8 @@ class PrivateGrpcBackend implements MirrorComputeBackend {
       return CompileResult(
         success: response.success,
         output: response.output.trim().isEmpty ? null : response.output,
+        serverVersionToken:
+            response.artifactPath.trim().isEmpty ? null : response.artifactPath,
         errors: response.errors.toList(),
         warnings: response.warnings.toList(),
       );
