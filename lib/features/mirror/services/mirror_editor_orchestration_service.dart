@@ -226,6 +226,8 @@ class MirrorEditorOrchestrationService {
       final applyMetadata = _buildApplyMetadata(
         metadata: compileContextForPreviewAndApply.metadata,
         previewServerVersionToken: previewServerVersionToken,
+        previewCompileFingerprint: compileFingerprint,
+        previewCompileOutput: compileOutput,
       );
       final applyContext = ProjectContext(
         projectId: compileContextForPreviewAndApply.projectId,
@@ -239,7 +241,7 @@ class MirrorEditorOrchestrationService {
         prompt: runPrompt,
         context: applyContext,
         mode: selectedMode,
-        compileFingerprint: applyDecision?.compileFingerprint,
+        compileFingerprint: compileFingerprint,
       );
 
       if (!isMounted()) {
@@ -358,17 +360,53 @@ class MirrorEditorOrchestrationService {
   Map<String, dynamic> _buildApplyMetadata({
     required Map<String, dynamic> metadata,
     required String? previewServerVersionToken,
+    required String previewCompileFingerprint,
+    required String previewCompileOutput,
   }) {
     final applyMetadata = Map<String, dynamic>.from(metadata);
+
+    applyMetadata['previewCompileFingerprint'] = previewCompileFingerprint;
+    applyMetadata['previewCompileOutputSha256'] =
+        sha256.convert(utf8.encode(previewCompileOutput)).toString();
+
     if (previewServerVersionToken == null) {
+      applyMetadata['previewReuseRequested'] = false;
+      applyMetadata['previewReuseStrategy'] = 'none';
       return applyMetadata;
     }
+
+    final reusePayload = _buildPreviewReusePayload(
+      serverVersionToken: previewServerVersionToken,
+      compileFingerprint: previewCompileFingerprint,
+      compileOutput: previewCompileOutput,
+    );
 
     applyMetadata['previewReuseRequested'] = true;
     applyMetadata['previewReuseStrategy'] = 'server_version_token';
     applyMetadata['previewServerVersionToken'] = previewServerVersionToken;
     applyMetadata['previewArtifactPath'] = previewServerVersionToken;
+    applyMetadata['previewReusePayload'] = reusePayload;
     return applyMetadata;
+  }
+
+  Map<String, dynamic> _buildPreviewReusePayload({
+    required String serverVersionToken,
+    required String compileFingerprint,
+    required String compileOutput,
+  }) {
+    const maxInlinePreviewChars = 64 * 1024;
+    final normalizedOutput = compileOutput.trim();
+    final inlineOutput = normalizedOutput.length <= maxInlinePreviewChars
+        ? normalizedOutput
+        : normalizedOutput.substring(0, maxInlinePreviewChars);
+
+    return <String, dynamic>{
+      'token': serverVersionToken,
+      'fingerprint': compileFingerprint,
+      'outputSha256': sha256.convert(utf8.encode(normalizedOutput)).toString(),
+      'inlineOutput': inlineOutput,
+      'inlineOutputTruncated': normalizedOutput.length > maxInlinePreviewChars,
+    };
   }
 
   String? _normalizeServerVersionToken(String? rawToken) {

@@ -152,11 +152,7 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
                 isEnabled: !_isRunInProgress,
                 onModeChanged: (String mode) {
                   if (mode == 'cloud' && !isPremium) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(_l10n.mirrorCloudPremiumOnly),
-                      ),
-                    );
+                    _appendTerminalLine(_l10n.mirrorCloudPremiumOnly);
                     return;
                   }
 
@@ -567,12 +563,6 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
 
     final available = await _speechToText.initialize();
     if (!available) {
-      if (!mounted) {
-        return;
-      }
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(_l10n.mirrorVoiceUnavailable)),
-      );
       _appendTerminalLine(_l10n.mirrorVoiceUnavailableTerminal);
       return;
     }
@@ -744,14 +734,6 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
     _sessionNotifier.updateSelectedFileContent(template.seedContent);
     _appendTerminalLine(
       _l10n.mirrorTemplateAppliedTerminal(selectedFile, template.title),
-    );
-    if (!mounted) {
-      return;
-    }
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(_l10n.mirrorTemplateLoaded(template.title)),
-      ),
     );
   }
 

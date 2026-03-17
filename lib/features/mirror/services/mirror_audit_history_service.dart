@@ -17,6 +17,37 @@ class MirrorAuditHistoryPatchEntry {
 class MirrorAuditHistoryService {
   const MirrorAuditHistoryService();
 
+  /// Persists local, device-side Mirror apply history in Hive.
+  ///
+  /// This is not the server audit trail. Server-side audit events are written
+  /// in the Mirror Gateway (`mirror_apply_audit_events`).
+  Future<void> persistLocalApplyHistory({
+    required String projectId,
+    required String taskId,
+    required String mode,
+    required String prompt,
+    required String backupId,
+    required Map<String, String> signedInputUrls,
+    required Map<String, String> backupSignedUrls,
+    required List<MirrorAuditHistoryPatchEntry> patches,
+    String backend = 'unknown',
+    Map<String, String> updatedFiles = const <String, String>{},
+  }) async {
+    await persistApplyHistory(
+      projectId: projectId,
+      taskId: taskId,
+      mode: mode,
+      prompt: prompt,
+      backupId: backupId,
+      signedInputUrls: signedInputUrls,
+      backupSignedUrls: backupSignedUrls,
+      patches: patches,
+      backend: backend,
+      updatedFiles: updatedFiles,
+    );
+  }
+
+  /// Backward-compatible alias for existing call sites.
   Future<void> persistApplyHistory({
     required String projectId,
     required String taskId,
@@ -60,7 +91,7 @@ class MirrorAuditHistoryService {
       usedChars += pathCost + persistedContent.length;
     }
 
-    final box = await _openApplyHistoryBox();
+    final box = await _openLocalApplyHistoryBox();
     final key = '$projectId::$taskId';
     final existing = box.get(key);
 
@@ -103,7 +134,8 @@ class MirrorAuditHistoryService {
     await box.put(key, trimmed);
   }
 
-  Future<Box<dynamic>> _openApplyHistoryBox() async {
+  Future<Box<dynamic>> _openLocalApplyHistoryBox() async {
+    // Local Hive history only. Server audit is stored in Supabase.
     const boxName = 'mirror_apply_history';
     if (Hive.isBoxOpen(boxName)) {
       return Hive.box<dynamic>(boxName);

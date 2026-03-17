@@ -9,6 +9,8 @@ import 'package:pma_core/models/task_model.dart';
 import 'package:pma_core/providers/project/project_providers.dart';
 import 'package:pma_core/providers/task/task_providers.dart';
 
+import '../../features/mirror/services/mirror_draft_cache_service.dart';
+
 class MirrorSessionState {
   const MirrorSessionState({
     required this.projectId,
@@ -73,12 +75,30 @@ class MirrorSessionState {
 
 class MirrorSessionNotifier
   extends AutoDisposeFamilyNotifier<MirrorSessionState, String> {
+  static const Duration _draftPersistDebounce = Duration(milliseconds: 500);
+
   bool _cacheHydrated = false;
+  final MirrorDraftCacheService _draftCacheService =
+      const MirrorDraftCacheService();
+  Timer? _draftPersistTimer;
+  String? _activeSessionKey;
 
   @override
   MirrorSessionState build(String sessionKey) {
+    _activeSessionKey = sessionKey;
+
+    ref.onDispose(() {
+      _draftPersistTimer?.cancel();
+      _draftPersistTimer = null;
+      final activeKey = _activeSessionKey;
+      if (activeKey != null) {
+        unawaited(_persistDraftNow(activeKey));
+      }
+    });
+
     if (!_cacheHydrated) {
       _cacheHydrated = true;
+      unawaited(_hydrateDraftFromCache(sessionKey));
       unawaited(_hydrateFromRepository(sessionKey));
     }
 
@@ -116,14 +136,28 @@ class MirrorSessionNotifier
       final preferred = selectedTask != null
           ? 'context/task_${selectedTask.id}.md'
           : 'README.md';
-      final selectedFile = files.containsKey(preferred)
-          ? preferred
-          : files.keys.first;
+
+      final draftSnapshot = await _draftCacheService.readDraft(sessionKey);
+      final mergedFiles = Map<String, String>.from(files);
+      String selectedFile;
+      if (draftSnapshot != null) {
+        mergedFiles.addAll(draftSnapshot.files);
+        final draftSelected = draftSnapshot.selectedFile;
+        selectedFile = mergedFiles.containsKey(draftSelected)
+            ? draftSelected
+            : (mergedFiles.containsKey(preferred)
+                ? preferred
+                : mergedFiles.keys.first);
+      } else {
+        selectedFile = mergedFiles.containsKey(preferred)
+            ? preferred
+            : mergedFiles.keys.first;
+      }
 
       state = state.copyWith(
         projectId: projectId,
         taskId: taskId,
-        files: files,
+        files: mergedFiles,
         selectedFile: selectedFile,
       );
 
@@ -134,6 +168,31 @@ class MirrorSessionNotifier
       appendTerminalLine(
         'Mirror session fallback active: unable to load repository context ($error).',
       );
+    }
+  }
+
+  Future<void> _hydrateDraftFromCache(String sessionKey) async {
+    try {
+      final snapshot = await _draftCacheService.readDraft(sessionKey);
+      if (snapshot == null || snapshot.files.isEmpty) {
+        return;
+      }
+
+      final preferredSelected = snapshot.selectedFile;
+      final selectedFile = snapshot.files.containsKey(preferredSelected)
+          ? preferredSelected
+          : snapshot.files.keys.first;
+
+      state = state.copyWith(
+        files: Map<String, String>.from(snapshot.files),
+        selectedFile: selectedFile,
+      );
+
+      appendTerminalLine(
+        'Mirror session restored unsaved draft from local cache.',
+      );
+    } catch (_) {
+      // Keep startup resilient when local draft cache cannot be read.
     }
   }
 
@@ -235,18 +294,21 @@ class MirrorSessionNotifier
       return;
     }
     state = state.copyWith(selectedFile: path);
+    _scheduleDraftPersist();
   }
 
   void updateSelectedFileContent(String content) {
     final updatedFiles = Map<String, String>.from(state.files);
     updatedFiles[state.selectedFile] = content;
     state = state.copyWith(files: updatedFiles);
+    _scheduleDraftPersist();
   }
 
   void upsertFileContent({required String path, required String content}) {
     final updatedFiles = Map<String, String>.from(state.files);
     updatedFiles[path] = content;
     state = state.copyWith(files: updatedFiles);
+    _scheduleDraftPersist();
   }
 
   void appendLiveOutput(List<String> lines, {int maxLines = 500}) {
@@ -269,6 +331,34 @@ class MirrorSessionNotifier
         ? merged
         : merged.sublist(merged.length - maxLines);
     state = state.copyWith(terminalLog: capped);
+  }
+
+  void _scheduleDraftPersist() {
+    final sessionKey = _activeSessionKey;
+    if (sessionKey == null || sessionKey.isEmpty) {
+      return;
+    }
+
+    _draftPersistTimer?.cancel();
+    _draftPersistTimer = Timer(_draftPersistDebounce, () {
+      unawaited(_persistDraftNow(sessionKey));
+    });
+  }
+
+  Future<void> _persistDraftNow(String sessionKey) async {
+    if (state.files.isEmpty) {
+      return;
+    }
+
+    try {
+      await _draftCacheService.writeDraft(
+        sessionKey: sessionKey,
+        files: state.files,
+        selectedFile: state.selectedFile,
+      );
+    } catch (_) {
+      // Keep editing responsive when draft persistence is unavailable.
+    }
   }
 }
 

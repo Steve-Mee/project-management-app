@@ -12,14 +12,12 @@ class PrivateGrpcBackend implements MirrorComputeBackend {
     this.host = '127.0.0.1',
     this.port = 50051,
     this.timeout = const Duration(seconds: 30),
-    this.servicePath = '/mirror.compute.v1.MirrorComputeService/Compile',
     this.credentials = const ChannelCredentials.insecure(),
   });
 
   final String host;
   final int port;
   final Duration timeout;
-  final String servicePath;
   final ChannelCredentials credentials;
 
   @override

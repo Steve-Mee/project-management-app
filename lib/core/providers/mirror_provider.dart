@@ -5,6 +5,8 @@ import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+import 'package:pma_core/core/feature_flags/feature_flag_resolver.dart';
+import 'package:pma_core/core/providers.dart';
 import 'package:pma_core/repository/encrypted_hive_box.dart';
 import 'package:pma_core/services/mirror_access_policy.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -156,6 +158,11 @@ final mirrorGatewayBackendProvider = Provider<MirrorGatewayBackend>((ref) {
 });
 
 final mirrorBackendProvider = FutureProvider<MirrorComputeBackend>((ref) async {
+  final isMirrorEnabled = await _isMirrorFeatureEnabled(ref);
+  if (!isMirrorEnabled) {
+    return const _MirrorDisabledBackend();
+  }
+
   final mode = ref.watch(mirrorModeProvider);
   final isPremium = await ref.watch(mirrorPremiumProvider.future);
   final runnerModeVariant =
@@ -201,6 +208,18 @@ class MirrorNotifier extends Notifier<MirrorState> {
   }
 
   Future<void> setMode(String mode) async {
+    final isMirrorEnabled = await _isMirrorFeatureEnabled(ref);
+    if (!isMirrorEnabled) {
+      ref.read(mirrorModeProvider.notifier).state = 'private';
+      ref.read(mirrorOfflineWarningProvider.notifier).state = null;
+      state = state.copyWith(
+        mode: 'private',
+        offlineWarning: null,
+      );
+      unawaited(_MirrorOfflineCache.saveMode('private'));
+      return;
+    }
+
     final hasPremium = await ref.read(mirrorPremiumProvider.future);
     final runnerModeVariant =
         await ref.read(mirrorRunnerModeVariantProvider.future);
@@ -290,6 +309,72 @@ class MirrorNotifier extends Notifier<MirrorState> {
 
 final mirrorProvider =
     NotifierProvider<MirrorNotifier, MirrorState>(MirrorNotifier.new);
+
+Future<bool> _isMirrorFeatureEnabled(Ref ref) async {
+  final flagsAsync = ref.watch(featureFlagProvider);
+  final syncResolved = flagsAsync.maybeWhen(
+    data: (flags) =>
+        FeatureFlagResolver.isEnabled(flags, 'mirror_enabled', defaultValue: true),
+    orElse: () => null,
+  );
+
+  if (syncResolved != null) {
+    return syncResolved;
+  }
+
+  try {
+    await ref.watch(featureFlagProvider.future);
+    return ref.read(featureFlagProvider.notifier).isEnabled('mirror_enabled');
+  } catch (_) {
+    // Fail-open when flags are temporarily unavailable.
+    return true;
+  }
+}
+
+class _MirrorDisabledBackend implements MirrorComputeBackend {
+  const _MirrorDisabledBackend();
+
+  static const String _message =
+      'Mirror is disabled by feature flag: mirror_enabled';
+
+  @override
+  Future<GenerateResult> generate({
+    required String prompt,
+    required ProjectContext context,
+    required String mode,
+  }) async {
+    return const GenerateResult(
+      success: false,
+      message: _message,
+      diagnostics: <String>[_message],
+    );
+  }
+
+  @override
+  Future<CompileResult> compile({
+    required String prompt,
+    required ProjectContext context,
+    required String mode,
+  }) async {
+    return const CompileResult(
+      success: false,
+      errors: <String>[_message],
+    );
+  }
+
+  @override
+  Future<ApplyResult> apply({
+    required String prompt,
+    required ProjectContext context,
+    required String mode,
+    String? compileFingerprint,
+  }) async {
+    return const ApplyResult(
+      success: false,
+      message: _message,
+    );
+  }
+}
 
 class _MirrorOfflineCache {
   static const String _boxName = 'mirror_offline_cache';

@@ -46,6 +46,7 @@ interface StructuredError {
     | 'bad_request'
     | 'payload_too_large'
     | 'unauthorized'
+    | 'forbidden'
     | 'method_not_allowed'
     | 'config_error'
     | 'timeout'
@@ -100,6 +101,7 @@ function resolveErrorFamily(
     case 'method_not_allowed':
       return 'client'
     case 'unauthorized':
+    case 'forbidden':
       return 'auth'
     case 'config_error':
       return 'config'
@@ -159,6 +161,115 @@ function buildAuditErrorDetails(
     ...(error.details === undefined ? {} : { details: error.details }),
     ...extra,
   }
+}
+
+const PREMIUM_LEVELS = new Set(['premium', 'pro', 'enterprise', 'premiumplus'])
+
+function isMissingCloudEntitlementRpc(error: unknown): boolean {
+  if (!error || typeof error !== 'object') {
+    return false
+  }
+
+  const maybeMessage = 'message' in error ? String((error as { message?: unknown }).message ?? '') : ''
+  const maybeCode = 'code' in error ? String((error as { code?: unknown }).code ?? '') : ''
+
+  const haystack = `${maybeCode} ${maybeMessage}`.toLowerCase()
+  return (
+    haystack.includes('has_cloud_mirror_access') &&
+    (haystack.includes('does not exist') ||
+      haystack.includes('not found') ||
+      haystack.includes('undefined function') ||
+      haystack.includes('42883'))
+  )
+}
+
+function metadataHasCloudMirrorAccess(user: {
+  app_metadata?: Record<string, unknown>
+  user_metadata?: Record<string, unknown>
+}): boolean {
+  const appMetadata = user.app_metadata ?? {}
+  const userMetadata = user.user_metadata ?? {}
+
+  const stripeActive =
+    appMetadata['stripe_subscription_active'] ?? userMetadata['stripe_subscription_active']
+  const stripeTier =
+    appMetadata['stripe_subscription_tier'] ?? userMetadata['stripe_subscription_tier']
+
+  if (stripeActive === true) {
+    const normalizedStripeTier = String(stripeTier ?? '').toLowerCase().trim()
+    if (PREMIUM_LEVELS.has(normalizedStripeTier)) {
+      return true
+    }
+  }
+
+  const fallbackTier =
+    appMetadata['subscription'] ??
+    appMetadata['plan'] ??
+    userMetadata['subscription'] ??
+    userMetadata['plan']
+  const normalizedFallbackTier = String(fallbackTier ?? '').toLowerCase().trim()
+
+  return PREMIUM_LEVELS.has(normalizedFallbackTier)
+}
+
+async function hasCloudMirrorAccess(
+  supabase: ReturnType<typeof createClient>,
+  user: {
+    id: string
+    app_metadata?: Record<string, unknown>
+    user_metadata?: Record<string, unknown>
+  },
+): Promise<boolean> {
+  const { data, error } = await supabase.rpc('has_cloud_mirror_access')
+
+  if (!error) {
+    if (typeof data === 'boolean') {
+      return data
+    }
+
+    if (data && typeof data === 'object') {
+      const record = data as Record<string, unknown>
+      const shapedValue = record['has_access'] ?? record['allowed'] ?? record['result']
+      if (typeof shapedValue === 'boolean') {
+        return shapedValue
+      }
+    }
+  } else if (!isMissingCloudEntitlementRpc(error)) {
+    throw new Error(`cloud_entitlement_rpc_failed:${error.message}`)
+  }
+
+  if (metadataHasCloudMirrorAccess(user)) {
+    return true
+  }
+
+  const { data: subscriptions, error: subscriptionsError } = await supabase
+    .from('subscriptions')
+    .select('level,status,payment_provider')
+    .eq('user_id', user.id)
+    .in('status', ['active', 'trialing'])
+    .limit(5)
+
+  if (subscriptionsError) {
+    throw new Error(`cloud_entitlement_fallback_failed:${subscriptionsError.message}`)
+  }
+
+  const rows = Array.isArray(subscriptions) ? subscriptions : []
+  for (const entry of rows) {
+    if (!entry || typeof entry !== 'object') {
+      continue
+    }
+
+    const row = entry as Record<string, unknown>
+    const provider = String(row['payment_provider'] ?? '').toLowerCase().trim()
+    const level = String(row['level'] ?? '').toLowerCase().trim()
+    const isStripeOrUnspecified = provider === '' || provider === 'stripe'
+
+    if (isStripeOrUnspecified && PREMIUM_LEVELS.has(level)) {
+      return true
+    }
+  }
+
+  return false
 }
 
 function resolveForwardEndpoint(mode: 'private' | 'cloud', action: 'compile' | 'apply'): string {
@@ -1070,6 +1181,44 @@ Deno.serve(async (req: Request) => {
         }),
         403,
       )
+    }
+
+    if (normalized.mode === 'cloud') {
+      let hasCloudEntitlement = false
+      try {
+        hasCloudEntitlement = await hasCloudMirrorAccess(supabase, user)
+      } catch (error) {
+        return errorResponse(req,
+          buildStructuredError({
+            code: 'config_error',
+            message: 'Cloud entitlement check failed',
+            retryable: true,
+            requestId,
+            idempotencyKey,
+            details: String(error),
+            stage: 'authorization',
+          }),
+          500,
+        )
+      }
+
+      if (!hasCloudEntitlement) {
+        return errorResponse(req,
+          buildStructuredError({
+            code: 'forbidden',
+            message: 'Cloud Mirror mode requires an active premium cloud entitlement',
+            retryable: false,
+            requestId,
+            idempotencyKey,
+            details: {
+              mode: normalized.mode,
+              entitlement: 'cloud_mirror_access',
+            },
+            stage: 'authorization',
+          }),
+          403,
+        )
+      }
     }
 
     const idempotencyRequestHash = buildIdempotencyRequestHash(user.id, action, normalized)
