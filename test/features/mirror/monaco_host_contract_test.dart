@@ -32,7 +32,7 @@ void main() {
           'lib/features/mirror/widgets/monaco_editor_host_web.dart');
 
       expect(source, contains('HtmlElementView'));
-      expect(source, contains('loader.min.js'));
+      expect(source, contains('loader.js'));
       expect(source, contains('mirror-monaco'));
     });
   });

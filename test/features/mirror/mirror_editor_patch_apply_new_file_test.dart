@@ -22,7 +22,8 @@ void main() {
       expect(providerSource,
           contains('void upsertFileContent({required String path, required String content})'));
       expect(providerSource, contains('updatedFiles[path] = content;'));
-      expect(providerSource, contains('state = state.copyWith(files: updatedFiles);'));
+      expect(providerSource, contains('state = state.copyWith('));
+      expect(providerSource, contains('files: updatedFiles,'));
     });
 
     test('realtime output merge keeps only latest max lines', () {

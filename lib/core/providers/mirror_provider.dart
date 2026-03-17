@@ -96,7 +96,7 @@ final mirrorPremiumProvider = FutureProvider<bool>((ref) async {
 
 final mirrorTeamModeVariantProvider = FutureProvider<String>((ref) async {
   final warningNotifier = ref.read(mirrorOfflineWarningProvider.notifier);
-  final user = Supabase.instance.client.auth.currentUser;
+  final user = _currentSupabaseUserOrNull();
   final userId = user?.id ?? 'anonymous';
 
   try {
@@ -123,7 +123,7 @@ final mirrorTeamModeVariantProvider = FutureProvider<String>((ref) async {
 
 final mirrorRunnerModeVariantProvider = FutureProvider<String>((ref) async {
   final warningNotifier = ref.read(mirrorOfflineWarningProvider.notifier);
-  final user = Supabase.instance.client.auth.currentUser;
+  final user = _currentSupabaseUserOrNull();
   final userId = user?.id ?? 'anonymous';
 
   try {
@@ -158,7 +158,7 @@ final mirrorGatewayBackendProvider = Provider<MirrorGatewayBackend>((ref) {
 });
 
 final mirrorBackendProvider = FutureProvider<MirrorComputeBackend>((ref) async {
-  final isMirrorEnabled = await _isMirrorFeatureEnabled(ref);
+  final isMirrorEnabled = await _isMirrorFeatureEnabled(ref, useWatch: true);
   if (!isMirrorEnabled) {
     return const _MirrorDisabledBackend();
   }
@@ -282,7 +282,7 @@ class MirrorNotifier extends Notifier<MirrorState> {
   }
 
   Future<void> _hydrateFromCache() async {
-    final user = Supabase.instance.client.auth.currentUser;
+    final user = _currentSupabaseUserOrNull();
     final userId = user?.id ?? 'anonymous';
 
     await _MirrorOfflineCache.invalidateOnAuthChange(currentUserId: userId);
@@ -307,11 +307,21 @@ class MirrorNotifier extends Notifier<MirrorState> {
   }
 }
 
+User? _currentSupabaseUserOrNull() {
+  try {
+    return Supabase.instance.client.auth.currentUser;
+  } catch (_) {
+    return null;
+  }
+}
+
 final mirrorProvider =
     NotifierProvider<MirrorNotifier, MirrorState>(MirrorNotifier.new);
 
-Future<bool> _isMirrorFeatureEnabled(Ref ref) async {
-  final flagsAsync = ref.watch(featureFlagProvider);
+Future<bool> _isMirrorFeatureEnabled(Ref ref, {bool useWatch = false}) async {
+  final flagsAsync = useWatch
+      ? ref.watch(featureFlagProvider)
+      : ref.read(featureFlagProvider);
   final syncResolved = flagsAsync.maybeWhen(
     data: (flags) =>
         FeatureFlagResolver.isEnabled(flags, 'mirror_enabled', defaultValue: true),
@@ -323,7 +333,11 @@ Future<bool> _isMirrorFeatureEnabled(Ref ref) async {
   }
 
   try {
-    await ref.watch(featureFlagProvider.future);
+    if (useWatch) {
+      await ref.watch(featureFlagProvider.future);
+    } else {
+      await ref.read(featureFlagProvider.future);
+    }
     return ref.read(featureFlagProvider.notifier).isEnabled('mirror_enabled');
   } catch (_) {
     // Fail-open when flags are temporarily unavailable.

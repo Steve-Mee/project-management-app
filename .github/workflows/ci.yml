@@ -12,6 +12,8 @@ jobs:
   test:
     name: ci-test
     runs-on: ubuntu-latest
+    env:
+      CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
 
     steps:
       - name: Checkout
@@ -32,7 +34,7 @@ jobs:
           Copy-Item -Path .env.ci -Destination .env -Force
 
       - name: Analyze
-        run: flutter analyze --no-fatal-warnings --no-fatal-infos
+        run: flutter analyze --no-fatal-warnings
 
       - name: Analyze pma_core
         run: dart analyze packages/pma_core
@@ -74,14 +76,15 @@ jobs:
       # Coverage goal: keep >85% coverage focused on core + repositories.
       # Repository secret required: Settings -> Secrets and variables -> Actions -> New repository secret
       # Name: CODECOV_TOKEN
-      - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v4
-        with:
-          token: ${{ secrets.CODECOV_TOKEN }}
-          fail_ci_if_error: true
-
       - name: Verify coverage output
         run: test -f coverage/lcov.info
+
+      - name: Upload coverage to Codecov
+        if: env.CODECOV_TOKEN != ''
+        uses: codecov/codecov-action@v4
+        with:
+          token: ${{ env.CODECOV_TOKEN }}
+          fail_ci_if_error: false
 
       - name: Upload coverage artifact
         uses: actions/upload-artifact@v4

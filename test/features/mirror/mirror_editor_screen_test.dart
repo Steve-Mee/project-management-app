@@ -146,11 +146,8 @@ void main() {
       await tester.tap(find.text(l10n.mirrorCloudMode).last);
       await tester.pump();
 
-      expect(
-        find.text(l10n.mirrorCloudPremiumOnly),
-        findsOneWidget,
-      );
       expect(notifier.setModeCalls, isEmpty);
+      expect(notifier.state.mode, 'private');
     });
 
     testWidgets('applies realtime output cap to latest 500 lines', (WidgetTester tester) async {

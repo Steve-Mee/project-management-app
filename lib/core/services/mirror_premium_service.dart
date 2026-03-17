@@ -11,7 +11,7 @@ class MirrorPremiumService {
     bool? outboxFailClosedOnEncryptionError,
     bool? productionMode,
     bool autoRefreshOnEntitlementChange = true,
-  })  : _clientOverride = client,
+  })  : _client = _resolveClient(client),
         _productionMode =
             productionMode ?? const bool.fromEnvironment('dart.vm.product'),
         _outboxFailClosedOnEncryptionError =
@@ -22,20 +22,18 @@ class MirrorPremiumService {
                       productionMode ?? const bool.fromEnvironment('dart.vm.product'),
                 ),
         _autoRefreshOnEntitlementChange = autoRefreshOnEntitlementChange {
-    if (_autoRefreshOnEntitlementChange) {
-      _authSubscription = _client.auth.onAuthStateChange.listen(
+    if (_autoRefreshOnEntitlementChange && _client != null) {
+      _authSubscription = _client!.auth.onAuthStateChange.listen(
         _handleAuthStateChange,
       );
     }
   }
 
-  final SupabaseClient? _clientOverride;
+  final SupabaseClient? _client;
   final bool _productionMode;
   final bool _outboxFailClosedOnEncryptionError;
   final bool _autoRefreshOnEntitlementChange;
   StreamSubscription<AuthState>? _authSubscription;
-
-  SupabaseClient get _client => _clientOverride ?? Supabase.instance.client;
 
   static const Set<String> _premiumLevels = <String>{
     'premium',
@@ -64,7 +62,7 @@ class MirrorPremiumService {
           : (_productionMode ? 300 : 30));
 
   Future<void> triggerEntitlementRefresh({User? user}) async {
-    final resolvedUser = user ?? _client.auth.currentUser;
+    final resolvedUser = user ?? _client?.auth.currentUser;
     if (resolvedUser == null) {
       clearCache();
       return;
@@ -84,7 +82,7 @@ class MirrorPremiumService {
     bool forceRefresh = false,
     Duration? cacheTtl,
   }) async {
-    final resolvedUser = user ?? _client.auth.currentUser;
+    final resolvedUser = user ?? _client?.auth.currentUser;
     if (resolvedUser == null) {
       return false;
     }
@@ -143,7 +141,7 @@ class MirrorPremiumService {
       case AuthChangeEvent.passwordRecovery:
       case AuthChangeEvent.mfaChallengeVerified:
       case AuthChangeEvent.initialSession:
-        final user = sessionUser ?? _client.auth.currentUser;
+        final user = sessionUser ?? _client?.auth.currentUser;
         if (user == null) {
           return;
         }
@@ -180,8 +178,13 @@ class MirrorPremiumService {
       return true;
     }
 
+    final client = _client;
+    if (client == null) {
+      return _metadataSaysPremium(user);
+    }
+
     try {
-      final List<dynamic> rows = await _client
+      final List<dynamic> rows = await client
           .from('subscriptions')
           .select('level,status,payment_provider')
           .eq('user_id', user.id)
@@ -233,6 +236,18 @@ class MirrorPremiumService {
     final normalizedFallback =
         fallbackTier?.toString().toLowerCase().trim() ?? '';
     return _premiumLevels.contains(normalizedFallback);
+  }
+
+  static SupabaseClient? _resolveClient(SupabaseClient? client) {
+    if (client != null) {
+      return client;
+    }
+
+    try {
+      return Supabase.instance.client;
+    } catch (_) {
+      return null;
+    }
   }
 }
 

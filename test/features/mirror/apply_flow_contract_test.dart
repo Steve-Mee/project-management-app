@@ -11,18 +11,23 @@ import 'package:project_management_app/features/mirror/mirror_compute_backend.da
 void main() {
   group('Mirror apply end-to-end contract', () {
     test('signed uploads contract keeps backup and signed URL artifacts', () {
-      final source =
+      final backendSource =
           _readRepoFile('lib/features/mirror/mirror_compute_backend.dart');
+      final secureApplySource = _readRepoFile(
+        'lib/features/mirror/services/mirror_secure_apply_service.dart',
+      );
 
-      expect(source, contains('prepareSignedInputAndBackup'));
-      expect(source, contains('signedInputBucket = \'mirror-signed-inputs\''));
-      expect(source, contains('backupBucket = \'mirror-backups\''));
-      expect(source, contains('await _uploadReplaceBinary('));
-      expect(source, contains('.createSignedUrl(signedInputPath'));
-      expect(source, contains('.createSignedUrl(backupPath'));
-      expect(source, contains('signedInputUrls'));
-      expect(source, contains('backupSignedUrls'));
-      expect(source, contains('backupId'));
+      expect(backendSource, contains('prepareSignedInputAndBackup'));
+      expect(backendSource,
+          contains('signedInputBucket = MirrorSecureApplyService.defaultSignedInputBucket'));
+      expect(backendSource,
+          contains('backupBucket = MirrorSecureApplyService.defaultBackupBucket'));
+      expect(secureApplySource, contains('await _uploadReplaceBinary('));
+      expect(secureApplySource, contains('.createSignedUrl(signedInputPath'));
+      expect(secureApplySource, contains('.createSignedUrl(backupPath'));
+      expect(backendSource, contains('signedInputUrls'));
+      expect(backendSource, contains('backupSignedUrls'));
+      expect(backendSource, contains('backupId'));
     });
 
     test('apply forwards metadata and security payload fields', () async {
@@ -82,8 +87,9 @@ void main() {
     });
 
     test('audit consistency contract keeps canonical apply event flow', () {
-      final source =
-          _readRepoFile('lib/features/mirror/mirror_compute_backend.dart');
+      final source = _readRepoFile(
+        'lib/features/mirror/services/mirror_secure_apply_service.dart',
+      );
 
       expect(source, contains("const eventApplyStarted = 'apply_started';"));
       expect(source,

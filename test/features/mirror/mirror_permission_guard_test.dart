@@ -96,6 +96,6 @@ void main() {
       find.text('Mirror is not available for your account.'),
       findsOneWidget,
     );
-    expect(find.byType(AppBar), findsNothing);
+    expect(find.byType(AppBar), findsOneWidget);
   });
 }

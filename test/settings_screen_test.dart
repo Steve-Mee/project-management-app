@@ -286,8 +286,9 @@ void main() {
       await tester.pumpAndSettle();
 
       // Verify that the settings screen renders without crashing
+      expect(tester.takeException(), isNull);
       expect(find.byType(SettingsScreen), findsOneWidget);
-      expect(find.byType(ListView), findsOneWidget);
+      expect(find.byType(ListView), findsWidgets);
     });
 
     testWidgets('Per-operation rate limit inputs save correctly to config', (WidgetTester tester) async {

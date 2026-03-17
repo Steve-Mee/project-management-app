@@ -142,11 +142,20 @@ class MirrorGatewayBackend implements MirrorComputeBackend {
     }
 
     final normalizedCompileFingerprint = compileFingerprint?.trim() ?? '';
-    if (normalizedCompileFingerprint.isEmpty) {
+    if (useSecureApply && normalizedCompileFingerprint.isEmpty) {
       return const ApplyResult(
         success: false,
         message:
             'Apply blocked: preview fingerprint missing. Re-run preview before applying.',
+      );
+    }
+
+    if (!useSecureApply && normalizedCompileFingerprint.isEmpty) {
+      return _applyWithoutSecurity(
+        endpoint: endpoint,
+        prompt: prompt,
+        context: context,
+        mode: mode,
       );
     }
 
@@ -298,9 +307,11 @@ class MirrorGatewayBackend implements MirrorComputeBackend {
       );
     }
 
+    final normalizedOutput = _normalizeApplyPayload(raw.body!);
+
     final patches = buildPatchesFromApplyPayload(
       context: context,
-      output: raw.body!,
+      output: normalizedOutput,
     );
 
     if (patches.isEmpty) {
@@ -540,7 +551,7 @@ class MirrorGatewayBackend implements MirrorComputeBackend {
 
       return CompileResult(
         success: (decoded['success'] as bool?) ?? true,
-        output: decoded['output']?.toString(),
+        output: _normalizeOutputField(decoded['output']),
         serverVersionToken: _normalizeServerVersionToken(decoded['artifactPath']),
         errors: errorsRaw is List
             ? errorsRaw.map((e) => e.toString()).toList()
@@ -560,6 +571,44 @@ class MirrorGatewayBackend implements MirrorComputeBackend {
       return null;
     }
     return token;
+  }
+
+  String _normalizeApplyPayload(String raw) {
+    try {
+      final decoded = jsonDecode(raw);
+      if (decoded is Map<String, dynamic>) {
+        final normalizedOutput = _normalizeOutputField(decoded['output']);
+        if (normalizedOutput != null && normalizedOutput.trim().isNotEmpty) {
+          return normalizedOutput;
+        }
+      } else if (decoded is Map) {
+        final map = Map<String, dynamic>.from(decoded);
+        final normalizedOutput = _normalizeOutputField(map['output']);
+        if (normalizedOutput != null && normalizedOutput.trim().isNotEmpty) {
+          return normalizedOutput;
+        }
+      }
+    } catch (_) {
+      // Keep original raw payload when response is not JSON.
+    }
+
+    return raw;
+  }
+
+  String? _normalizeOutputField(Object? output) {
+    if (output == null) {
+      return null;
+    }
+    if (output is String) {
+      return output;
+    }
+    if (output is Map) {
+      return jsonEncode(Map<String, dynamic>.from(output));
+    }
+    if (output is List) {
+      return jsonEncode(output);
+    }
+    return output.toString();
   }
 
   static String resolveCompileEndpoint({String? httpEndpoint}) {

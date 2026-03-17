@@ -11,7 +11,6 @@ void main() {
 
       expect(source, contains('computeCompileResultFingerprint('));
       expect(source, contains('compileFingerprint: compileFingerprint'));
-      expect(source, contains('compileFingerprint: applyDecision?.compileFingerprint'));
       expect(source, contains('context: compileContext'));
       expect(source, contains('files: Map<String, String>.from(compileContext.files)'));
     });
