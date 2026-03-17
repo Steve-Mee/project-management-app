@@ -165,22 +165,9 @@ function buildAuditErrorDetails(
 
 const PREMIUM_LEVELS = new Set(['premium', 'pro', 'enterprise', 'premiumplus'])
 
-function isMissingCloudEntitlementRpc(error: unknown): boolean {
-  if (!error || typeof error !== 'object') {
-    return false
-  }
-
-  const maybeMessage = 'message' in error ? String((error as { message?: unknown }).message ?? '') : ''
-  const maybeCode = 'code' in error ? String((error as { code?: unknown }).code ?? '') : ''
-
-  const haystack = `${maybeCode} ${maybeMessage}`.toLowerCase()
-  return (
-    haystack.includes('has_cloud_mirror_access') &&
-    (haystack.includes('does not exist') ||
-      haystack.includes('not found') ||
-      haystack.includes('undefined function') ||
-      haystack.includes('42883'))
-  )
+function isProductionSupabaseEnv(): boolean {
+  const environment = (Deno.env.get('SUPABASE_ENV') ?? '').trim().toLowerCase()
+  return environment === 'production'
 }
 
 function metadataHasCloudMirrorAccess(user: {
@@ -219,8 +206,10 @@ async function hasCloudMirrorAccess(
     app_metadata?: Record<string, unknown>
     user_metadata?: Record<string, unknown>
   },
+  requestId: string,
 ): Promise<boolean> {
   const { data, error } = await supabase.rpc('has_cloud_mirror_access')
+  const isProduction = isProductionSupabaseEnv()
 
   if (!error) {
     if (typeof data === 'boolean') {
@@ -234,11 +223,21 @@ async function hasCloudMirrorAccess(
         return shapedValue
       }
     }
-  } else if (!isMissingCloudEntitlementRpc(error)) {
+
+    throw new Error('cloud_entitlement_rpc_invalid_shape')
+  }
+
+  if (isProduction) {
     throw new Error(`cloud_entitlement_rpc_failed:${error.message}`)
   }
 
-  if (metadataHasCloudMirrorAccess(user)) {
+  const metadataFallbackAllowed = metadataHasCloudMirrorAccess(user)
+  if (metadataFallbackAllowed) {
+    console.warn('mirror-gateway non-production entitlement fallback via metadata', {
+      requestId,
+      userId: user.id,
+      reason: String(error.message ?? 'rpc_failed'),
+    })
     return true
   }
 
@@ -265,6 +264,11 @@ async function hasCloudMirrorAccess(
     const isStripeOrUnspecified = provider === '' || provider === 'stripe'
 
     if (isStripeOrUnspecified && PREMIUM_LEVELS.has(level)) {
+      console.warn('mirror-gateway non-production entitlement fallback via subscriptions', {
+        requestId,
+        userId: user.id,
+        reason: String(error.message ?? 'rpc_failed'),
+      })
       return true
     }
   }
@@ -1186,19 +1190,25 @@ Deno.serve(async (req: Request) => {
     if (normalized.mode === 'cloud') {
       let hasCloudEntitlement = false
       try {
-        hasCloudEntitlement = await hasCloudMirrorAccess(supabase, user)
+        hasCloudEntitlement = await hasCloudMirrorAccess(supabase, user, requestId)
       } catch (error) {
         return errorResponse(req,
           buildStructuredError({
-            code: 'config_error',
-            message: 'Cloud entitlement check failed',
-            retryable: true,
+            code: 'forbidden',
+            message: 'Cloud Mirror mode requires successful cloud entitlement verification',
+            retryable: false,
             requestId,
             idempotencyKey,
-            details: String(error),
+            details: {
+              mode: normalized.mode,
+              entitlement: 'cloud_mirror_access',
+              reason: 'rpc_failed',
+              cause: String(error),
+              environment: (Deno.env.get('SUPABASE_ENV') ?? 'unknown').trim() || 'unknown',
+            },
             stage: 'authorization',
           }),
-          500,
+          403,
         )
       }
 
@@ -1213,6 +1223,7 @@ Deno.serve(async (req: Request) => {
             details: {
               mode: normalized.mode,
               entitlement: 'cloud_mirror_access',
+              reason: 'rpc_false_or_fallback_false',
             },
             stage: 'authorization',
           }),

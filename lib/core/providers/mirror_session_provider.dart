@@ -3,6 +3,7 @@ library;
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:crypto/crypto.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pma_core/models/project_model.dart';
 import 'package:pma_core/models/task_model.dart';
@@ -10,6 +11,7 @@ import 'package:pma_core/providers/project/project_providers.dart';
 import 'package:pma_core/providers/task/task_providers.dart';
 
 import '../../features/mirror/services/mirror_draft_cache_service.dart';
+import 'mirror_provider.dart';
 
 class MirrorSessionState {
   const MirrorSessionState({
@@ -19,6 +21,8 @@ class MirrorSessionState {
     required this.selectedFile,
     required this.liveOutput,
     required this.terminalLog,
+    this.contextFingerprint,
+    this.contextVersion,
   });
 
   final String projectId;
@@ -27,6 +31,8 @@ class MirrorSessionState {
   final String selectedFile;
   final List<String> liveOutput;
   final List<String> terminalLog;
+  final String? contextFingerprint;
+  final int? contextVersion;
 
   MirrorSessionState copyWith({
     String? projectId,
@@ -35,6 +41,8 @@ class MirrorSessionState {
     String? selectedFile,
     List<String>? liveOutput,
     List<String>? terminalLog,
+    String? contextFingerprint,
+    int? contextVersion,
   }) {
     return MirrorSessionState(
       projectId: projectId ?? this.projectId,
@@ -43,6 +51,8 @@ class MirrorSessionState {
       selectedFile: selectedFile ?? this.selectedFile,
       liveOutput: liveOutput ?? this.liveOutput,
       terminalLog: terminalLog ?? this.terminalLog,
+      contextFingerprint: contextFingerprint ?? this.contextFingerprint,
+      contextVersion: contextVersion ?? this.contextVersion,
     );
   }
 
@@ -59,6 +69,8 @@ class MirrorSessionState {
       selectedFile: 'lib/main.dart',
       liveOutput: <String>[],
       terminalLog: <String>[],
+      contextFingerprint: _computeContextFingerprint(defaultFiles),
+      contextVersion: _draftContextVersion,
     );
   }
 
@@ -71,6 +83,24 @@ class MirrorSessionState {
       'lib/main.dart': "void main() {\n  print('Mirror session: $projectId::$taskId');\n}\n",
     };
   }
+}
+
+const int _draftContextVersion = 1;
+
+String _computeContextFingerprint(Map<String, String> files) {
+  final entries = files.entries.toList(growable: false)
+    ..sort((a, b) => a.key.compareTo(b.key));
+
+  final buffer = StringBuffer();
+  for (final entry in entries) {
+    buffer
+      ..write(entry.key)
+      ..write('::')
+      ..write(entry.value)
+      ..write('\n');
+  }
+
+  return sha256.convert(utf8.encode(buffer.toString())).toString();
 }
 
 class MirrorSessionNotifier
@@ -148,6 +178,8 @@ class MirrorSessionNotifier
             : (mergedFiles.containsKey(preferred)
                 ? preferred
                 : mergedFiles.keys.first);
+
+        _restoreDraftMetadata(draftSnapshot);
       } else {
         selectedFile = mergedFiles.containsKey(preferred)
             ? preferred
@@ -159,6 +191,10 @@ class MirrorSessionNotifier
         taskId: taskId,
         files: mergedFiles,
         selectedFile: selectedFile,
+        contextFingerprint:
+            draftSnapshot?.contextFingerprint ??
+            _computeContextFingerprint(mergedFiles),
+        contextVersion: draftSnapshot?.contextVersion ?? _draftContextVersion,
       );
 
       appendTerminalLine(
@@ -186,7 +222,13 @@ class MirrorSessionNotifier
       state = state.copyWith(
         files: Map<String, String>.from(snapshot.files),
         selectedFile: selectedFile,
+        contextFingerprint:
+            snapshot.contextFingerprint ??
+            _computeContextFingerprint(snapshot.files),
+        contextVersion: snapshot.contextVersion ?? _draftContextVersion,
       );
+
+      _restoreDraftMetadata(snapshot);
 
       appendTerminalLine(
         'Mirror session restored unsaved draft from local cache.',
@@ -300,14 +342,22 @@ class MirrorSessionNotifier
   void updateSelectedFileContent(String content) {
     final updatedFiles = Map<String, String>.from(state.files);
     updatedFiles[state.selectedFile] = content;
-    state = state.copyWith(files: updatedFiles);
+    state = state.copyWith(
+      files: updatedFiles,
+      contextFingerprint: _computeContextFingerprint(updatedFiles),
+      contextVersion: _draftContextVersion,
+    );
     _scheduleDraftPersist();
   }
 
   void upsertFileContent({required String path, required String content}) {
     final updatedFiles = Map<String, String>.from(state.files);
     updatedFiles[path] = content;
-    state = state.copyWith(files: updatedFiles);
+    state = state.copyWith(
+      files: updatedFiles,
+      contextFingerprint: _computeContextFingerprint(updatedFiles),
+      contextVersion: _draftContextVersion,
+    );
     _scheduleDraftPersist();
   }
 
@@ -355,10 +405,25 @@ class MirrorSessionNotifier
         sessionKey: sessionKey,
         files: state.files,
         selectedFile: state.selectedFile,
+        mode: ref.read(mirrorModeProvider),
+        offlineWarningKey: ref.read(mirrorOfflineWarningProvider),
+        contextFingerprint:
+            state.contextFingerprint ?? _computeContextFingerprint(state.files),
+        contextVersion: state.contextVersion ?? _draftContextVersion,
       );
     } catch (_) {
       // Keep editing responsive when draft persistence is unavailable.
     }
+  }
+
+  void _restoreDraftMetadata(MirrorDraftCacheSnapshot snapshot) {
+    final mode = snapshot.mode;
+    if (mode != null && (mode == 'private' || mode == 'cloud')) {
+      ref.read(mirrorModeProvider.notifier).state = mode;
+    }
+
+    ref.read(mirrorOfflineWarningProvider.notifier).state =
+        snapshot.offlineWarningKey;
   }
 }
 

@@ -34,8 +34,6 @@ class MirrorEditorRealtimeController {
     required Stream<Map<String, dynamic>>? debugRealtimeRecords,
     required bool Function() isMounted,
     required void Function(List<String> lines) onFlush,
-    required void Function(String line) onTerminalLine,
-    required String Function(int count) realtimeOutputReceivedLabel,
     required String Function(String status) statusLineLabel,
   }) {
     if (debugRealtimeRecords != null) {
@@ -46,8 +44,6 @@ class MirrorEditorRealtimeController {
             enforceScope: false,
             isMounted: isMounted,
             onFlush: onFlush,
-            onTerminalLine: onTerminalLine,
-            realtimeOutputReceivedLabel: realtimeOutputReceivedLabel,
             statusLineLabel: statusLineLabel,
           );
         },
@@ -58,8 +54,6 @@ class MirrorEditorRealtimeController {
     _subscribeToLiveOutput(
       isMounted: isMounted,
       onFlush: onFlush,
-      onTerminalLine: onTerminalLine,
-      realtimeOutputReceivedLabel: realtimeOutputReceivedLabel,
       statusLineLabel: statusLineLabel,
     );
   }
@@ -75,8 +69,6 @@ class MirrorEditorRealtimeController {
   void _subscribeToLiveOutput({
     required bool Function() isMounted,
     required void Function(List<String> lines) onFlush,
-    required void Function(String line) onTerminalLine,
-    required String Function(int count) realtimeOutputReceivedLabel,
     required String Function(String status) statusLineLabel,
   }) {
     final currentUserId = Supabase.instance.client.auth.currentUser?.id;
@@ -99,8 +91,6 @@ class MirrorEditorRealtimeController {
               record,
               isMounted: isMounted,
               onFlush: onFlush,
-              onTerminalLine: onTerminalLine,
-              realtimeOutputReceivedLabel: realtimeOutputReceivedLabel,
               statusLineLabel: statusLineLabel,
             );
           },
@@ -112,8 +102,6 @@ class MirrorEditorRealtimeController {
     Map<String, dynamic> record, {
     required bool Function() isMounted,
     required void Function(List<String> lines) onFlush,
-    required void Function(String line) onTerminalLine,
-    required String Function(int count) realtimeOutputReceivedLabel,
     required String Function(String status) statusLineLabel,
     bool enforceScope = true,
   }) {
@@ -125,8 +113,6 @@ class MirrorEditorRealtimeController {
       record: record,
       mounted: isMounted(),
       onFlush: onFlush,
-      onTerminalLine: onTerminalLine,
-      realtimeOutputReceivedLabel: realtimeOutputReceivedLabel,
       statusLineLabel: statusLineLabel,
       enforceScope: enforceScope,
     );

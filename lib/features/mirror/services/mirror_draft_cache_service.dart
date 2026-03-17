@@ -9,12 +9,20 @@ class MirrorDraftCacheSnapshot {
     required this.files,
     required this.selectedFile,
     required this.savedAt,
+    this.mode,
+    this.offlineWarningKey,
+    this.contextFingerprint,
+    this.contextVersion,
   });
 
   final String sessionKey;
   final Map<String, String> files;
   final String selectedFile;
   final DateTime savedAt;
+  final String? mode;
+  final String? offlineWarningKey;
+  final String? contextFingerprint;
+  final int? contextVersion;
 }
 
 class MirrorDraftCacheService {
@@ -68,11 +76,35 @@ class MirrorDraftCacheService {
     final savedAt = DateTime.tryParse(savedAtRaw ?? '')?.toUtc() ??
         DateTime.fromMillisecondsSinceEpoch(0, isUtc: true);
 
+    final modeRaw = map['mode']?.toString().trim();
+    final mode = (modeRaw == 'private' || modeRaw == 'cloud') ? modeRaw : null;
+
+    final offlineWarningRaw = map['offlineWarningKey']?.toString().trim();
+    final offlineWarningKey =
+        (offlineWarningRaw == null || offlineWarningRaw.isEmpty)
+            ? null
+            : offlineWarningRaw;
+
+    final contextFingerprintRaw = map['contextFingerprint']?.toString().trim();
+    final contextFingerprint =
+        (contextFingerprintRaw == null || contextFingerprintRaw.isEmpty)
+            ? null
+            : contextFingerprintRaw;
+
+    final contextVersionRaw = map['contextVersion'];
+    final contextVersion = contextVersionRaw is int
+        ? contextVersionRaw
+        : int.tryParse(contextVersionRaw?.toString() ?? '');
+
     return MirrorDraftCacheSnapshot(
       sessionKey: sessionKey,
       files: files,
       selectedFile: selectedFile,
       savedAt: savedAt,
+      mode: mode,
+      offlineWarningKey: offlineWarningKey,
+      contextFingerprint: contextFingerprint,
+      contextVersion: contextVersion,
     );
   }
 
@@ -80,6 +112,10 @@ class MirrorDraftCacheService {
     required String sessionKey,
     required Map<String, String> files,
     required String selectedFile,
+    String? mode,
+    String? offlineWarningKey,
+    String? contextFingerprint,
+    int? contextVersion,
   }) async {
     if (sessionKey.trim().isEmpty || files.isEmpty) {
       return;
@@ -101,6 +137,12 @@ class MirrorDraftCacheService {
       'selectedFile': normalizedSelected,
       'files': cappedFiles,
       'savedAt': DateTime.now().toUtc().toIso8601String(),
+      if (mode != null) 'mode': mode,
+      if (offlineWarningKey != null && offlineWarningKey.trim().isNotEmpty)
+        'offlineWarningKey': offlineWarningKey.trim(),
+      if (contextFingerprint != null && contextFingerprint.trim().isNotEmpty)
+        'contextFingerprint': contextFingerprint.trim(),
+      if (contextVersion != null) 'contextVersion': contextVersion,
       'version': 1,
     });
 

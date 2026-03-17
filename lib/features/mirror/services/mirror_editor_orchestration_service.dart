@@ -31,7 +31,6 @@ class MirrorEditorOrchestrationService {
     final selectedContent = sessionState.files[selectedFile]?.trim() ?? '';
 
     if (selectedContent.isEmpty) {
-      appendTerminalLine(l10n.mirrorRunAbortedFileEmpty(selectedFile));
       if (!isMounted()) {
         return;
       }
@@ -83,7 +82,6 @@ class MirrorEditorOrchestrationService {
         final errorText =
             _firstNonEmpty(generateResult.message, generateResult.diagnostics.join(' | ')) ??
                 l10n.mirrorUnknownGenerateError;
-        appendTerminalLine(l10n.mirrorGenerateFailedTerminal(errorText));
         _showSnackBar(messenger, l10n.mirrorGenerateFailed(errorText));
         return;
       }
@@ -146,7 +144,6 @@ class MirrorEditorOrchestrationService {
       if (!compileResult.success) {
         final errorText =
             _firstNonEmpty(compileResult.errors.join(' | '), l10n.mirrorUnknownCompileError)!;
-        appendTerminalLine(l10n.mirrorCompileFailedTerminal(errorText));
         _showSnackBar(messenger, l10n.mirrorCompileFailed(errorText));
         return;
       }
@@ -155,7 +152,6 @@ class MirrorEditorOrchestrationService {
       final compileOutput = compileResult.output;
       if (compileOutput == null || compileOutput.trim().isEmpty) {
         final errorText = l10n.mirrorUnknownCompileError;
-        appendTerminalLine(l10n.mirrorCompileFailedTerminal(errorText));
         _showSnackBar(messenger, l10n.mirrorCompileFailed(errorText));
         return;
       }
@@ -187,7 +183,6 @@ class MirrorEditorOrchestrationService {
 
       if (patches.isEmpty) {
         appendTerminalLine(l10n.mirrorNoPatchPreviewTerminal);
-        _showSnackBar(messenger, l10n.mirrorNoChangesAfterCompile);
         return;
       }
 
@@ -218,7 +213,6 @@ class MirrorEditorOrchestrationService {
       final applyApproved = applyDecision?.apply == true && applyDecision?.acceptRisk == true;
       if (!applyApproved) {
         appendTerminalLine(l10n.mirrorStepApplyCanceled);
-        _showSnackBar(messenger, l10n.mirrorApplyCanceled);
         return;
       }
 
@@ -260,15 +254,12 @@ class MirrorEditorOrchestrationService {
           appendTerminalLine(l10n.mirrorAppliedFiles(applyResult.appliedFiles.join(', ')));
         }
         appendTerminalLine(l10n.mirrorRunCompletedTerminal);
-        _showSnackBar(messenger, l10n.mirrorRunSuccess);
         return;
       }
 
       final errorText = applyResult.message ?? l10n.mirrorUnknownApplyError;
-      appendTerminalLine(l10n.mirrorApplyFailedTerminal(errorText));
       _showSnackBar(messenger, l10n.mirrorApplyFailed(errorText));
     } catch (error) {
-      appendTerminalLine(l10n.mirrorRunCrashedTerminal(error.toString()));
       if (!isMounted()) {
         return;
       }

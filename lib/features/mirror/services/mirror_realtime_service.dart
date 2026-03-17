@@ -42,8 +42,6 @@ class MirrorRealtimeService {
     required Map<String, dynamic> record,
     required bool mounted,
     required void Function(List<String> lines) onFlush,
-    required void Function(String line) onTerminalLine,
-    required String Function(int count) realtimeOutputReceivedLabel,
     String Function(String status)? statusLineLabel,
     bool enforceScope = true,
   }) {
@@ -133,8 +131,6 @@ class MirrorRealtimeService {
       _flushDebouncedRealtimeOutput(
         mounted: mounted,
         onFlush: onFlush,
-        onTerminalLine: onTerminalLine,
-        realtimeOutputReceivedLabel: realtimeOutputReceivedLabel,
       );
     });
   }
@@ -164,8 +160,6 @@ class MirrorRealtimeService {
   void _flushDebouncedRealtimeOutput({
     required bool mounted,
     required void Function(List<String> lines) onFlush,
-    required void Function(String line) onTerminalLine,
-    required String Function(int count) realtimeOutputReceivedLabel,
   }) {
     if (!mounted || _pendingRealtimeLines.isEmpty) {
       return;
@@ -175,7 +169,6 @@ class MirrorRealtimeService {
     _pendingRealtimeLines.clear();
 
     onFlush(flushedLines);
-    onTerminalLine(realtimeOutputReceivedLabel(flushedLines.length));
   }
 
   bool _isRecordInRealtimeScope(Map<String, dynamic> record) {

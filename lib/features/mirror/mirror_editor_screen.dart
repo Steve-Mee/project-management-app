@@ -35,7 +35,6 @@ class MirrorEditorScreen extends ConsumerStatefulWidget {
 }
 
 class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
-  late String _selectedMode;
   late final Terminal _terminal;
   late final TerminalController _terminalController;
   late final stt.SpeechToText _speechToText;
@@ -61,7 +60,6 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
     final canUseMirror = ref.read(
       hasPermissionProvider(AppPermissions.useMirror),
     );
-    _selectedMode = 'private';
     _terminal = Terminal(maxLines: 1000);
     _terminalController = TerminalController();
     _speechToText = stt.SpeechToText();
@@ -96,8 +94,6 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
       debugRealtimeRecords: widget.debugRealtimeRecords,
       isMounted: () => mounted,
       onFlush: _handleRealtimeFlush,
-      onTerminalLine: _appendTerminalLine,
-      realtimeOutputReceivedLabel: _realtimeOutputReceivedLabel,
       statusLineLabel: _statusLineLabel,
     );
   }
@@ -126,10 +122,6 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
     final sessionState = ref.watch(mirrorSessionProvider(_sessionKey));
     final isPremium = mirrorState.isPremium;
 
-    if (_selectedMode != mirrorState.mode) {
-      _selectedMode = mirrorState.mode;
-    }
-
     return Scaffold(
       appBar: AppBar(
         title: Text(_l10n.mirrorEditorTitle),
@@ -147,7 +139,7 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
             children: <Widget>[
               _ModeSelector(
                 l10n: _l10n,
-                selectedMode: _selectedMode,
+                selectedMode: mirrorState.mode,
                 isPremium: isPremium,
                 isEnabled: !_isRunInProgress,
                 onModeChanged: (String mode) {
@@ -156,9 +148,6 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
                     return;
                   }
 
-                  setState(() {
-                    _selectedMode = mode;
-                  });
                   ref.read(mirrorProvider.notifier).setMode(mode);
                 },
               ),
@@ -187,7 +176,7 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
                               ref: ref,
                               projectId: widget.projectId,
                               taskId: widget.taskId,
-                              selectedMode: _selectedMode,
+                              selectedMode: mirrorState.mode,
                               sessionKey: _sessionKey,
                               l10n: _l10n,
                               isRunInProgress: _isRunInProgress,
@@ -740,9 +729,6 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
   void _appendTerminalLine(String line) {
     _sessionNotifier.appendTerminalLine(line, maxLines: 1000);
     _terminal.write('$line\\r\\n');
-  }
-  String _realtimeOutputReceivedLabel(int count) {
-    return _l10n.mirrorRealtimeOutputReceived(count);
   }
 
   String _statusLineLabel(String status) {
