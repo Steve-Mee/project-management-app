@@ -1,3 +1,9 @@
+## [1.41.0](https://github.com/Steve-Mee/project-management-app/compare/v1.40.0...v1.41.0) (2026-03-17)
+
+### Features
+
+* **mirror:** harden gateway/provider flow and offline editor reliability ([7babb65](https://github.com/Steve-Mee/project-management-app/commit/7babb65e49e4e85aa476a8d8ba4ec172dd389eee))
+
 ## [1.40.0](https://github.com/Steve-Mee/project-management-app/compare/v1.39.0...v1.40.0) (2026-03-16)
 
 ### Features
