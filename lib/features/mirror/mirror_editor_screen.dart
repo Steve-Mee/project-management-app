@@ -139,7 +139,7 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
             children: <Widget>[
               _ModeSelector(
                 l10n: _l10n,
-                selectedMode: mirrorState.mode,
+                mode: mirrorState.mode,
                 isPremium: isPremium,
                 isEnabled: !_isRunInProgress,
                 onModeChanged: (String mode) {
@@ -761,14 +761,14 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
 class _ModeSelector extends StatelessWidget {
   const _ModeSelector({
     required this.l10n,
-    required this.selectedMode,
+    required this.mode,
     required this.isPremium,
     required this.isEnabled,
     required this.onModeChanged,
   });
 
   final AppLocalizations l10n;
-  final String selectedMode;
+  final String mode;
   final bool isPremium;
   final bool isEnabled;
   final ValueChanged<String> onModeChanged;
@@ -781,7 +781,8 @@ class _ModeSelector extends StatelessWidget {
         const SizedBox(width: 12),
         Expanded(
           child: DropdownButtonFormField<String>(
-            initialValue: selectedMode,
+            key: ValueKey<String>(mode),
+            initialValue: mode,
             decoration: const InputDecoration(
               border: OutlineInputBorder(),
               isDense: true,
