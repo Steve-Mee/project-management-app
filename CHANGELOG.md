@@ -1,3 +1,9 @@
+## [1.42.1](https://github.com/Steve-Mee/project-management-app/compare/v1.42.0...v1.42.1) (2026-03-17)
+
+### Bug Fixes
+
+* **mirror:** align schema, gateway, editor, and contracts ([add4032](https://github.com/Steve-Mee/project-management-app/commit/add4032a560336ffb44bda74f3775c103042bb5b))
+
 ## [1.42.0](https://github.com/Steve-Mee/project-management-app/compare/v1.41.0...v1.42.0) (2026-03-17)
 
 ### Features
