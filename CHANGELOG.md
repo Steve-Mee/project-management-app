@@ -1,3 +1,9 @@
+## [1.42.0](https://github.com/Steve-Mee/project-management-app/compare/v1.41.0...v1.42.0) (2026-03-17)
+
+### Features
+
+* **mirror:** harden gateway entitlement, persist draft metadata, and reduce duplicate status channels ([ba60e4f](https://github.com/Steve-Mee/project-management-app/commit/ba60e4f34585378bb3f276284abf102c675a66e9))
+
 ## [1.41.0](https://github.com/Steve-Mee/project-management-app/compare/v1.40.0...v1.41.0) (2026-03-17)
 
 ### Features
