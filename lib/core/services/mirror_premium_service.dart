@@ -184,7 +184,45 @@ class MirrorPremiumService {
   Future<bool> _resolvePremium(User user) async {
     // Use auth metadata only as a lightweight local hint. The gateway remains
     // server-authoritative for all cloud entitlement decisions.
-    return _metadataSaysPremium(user);
+    
+    // First, check if metadata indicates premium (short-circuits subscriptions lookup).
+    if (_metadataSaysPremium(user)) {
+      return true;
+    }
+
+    // If metadata is not premium, fall back to checking subscriptions table.
+    return _subscriptionsSaysPremium(user);
+  }
+
+  Future<bool> _subscriptionsSaysPremium(User user) async {
+    if (_client == null) {
+      return false;
+    }
+
+    try {
+      final response = await _client!.rest
+          .from('subscriptions')
+          .select()
+          .eq('user_id', user.id)
+          .then(
+            (response) =>
+                (response as List<dynamic>?)?.cast<Map<String, dynamic>>() ?? [],
+          );
+
+      for (final row in response) {
+        final level = row['level']?.toString().toLowerCase().trim() ?? '';
+        final status = row['status']?.toString().toLowerCase().trim() ?? '';
+
+        if (_premiumLevels.contains(level) && status == 'active') {
+          return true;
+        }
+      }
+
+      return false;
+    } catch (_) {
+      // Subscription lookup failed; default to non-premium for safety.
+      return false;
+    }
   }
 
   bool _metadataSaysPremium(User user) {

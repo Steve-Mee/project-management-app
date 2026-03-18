@@ -1,13 +1,110 @@
-﻿### 1. Algemene beoordeling
-- Sterke punten: de implementatie volgt grotendeels een duidelijke scheiding tussen UI, orchestration/services, Riverpod state, backend contracten en Supabase runtime. `MirrorEditorScreen` blijft relatief dun doordat realtime, run lifecycle en orchestration zijn geëxtraheerd naar aparte services.
-- Sterke punten: security is serieus genomen. `use_mirror` wordt gecontroleerd in launcher-flow, schermniveau en Edge Function, storage buckets zijn private met owner-scoped policies, en apply gebruikt signed-input/backups plus audit trail.
-- Sterke punten: offline-first is niet cosmetisch maar functioneel. Drafts, templates, premium state en experimentvarianten hebben lokale caching; daarnaast is er een persistente outbox met idempotency, retry/backoff en replay bij netwerkherstel.
-- Sterke punten: operationele hardening is bovengemiddeld sterk voor een appfeature. Er zijn contracttests voor RLS/idempotency, retention jobs, usage metering, structured errors, replaybare responses en runtime observability hooks.
-- Zwakke punten: de feature-flag architectuur is niet consequent tot aan de entrypoints doorgetrokken. `mirror_enabled` beïnvloedt backendselectie, maar `openMirrorFromTask`, deeplink gating en de editor-UI blokkeren de feature niet expliciet op launch-niveau.
-- Zwakke punten: er is logische duplicatie in entitlement/policy-beslissingen tussen client (`MirrorPremiumService`, `MirrorAccessPolicy`) en Edge Function (`hasCloudMirrorAccess`). Dat verhoogt kans op drift bij toekomstige wijzigingen in premium/Stripe-regels.
-- Zwakke punten: de orchestration pipeline is functioneel sterk maar complex. Generate, preview, compile, fingerprinting, preview-reuse metadata en apply-context muteren op meerdere plaatsen, wat onderhoud en regressieanalyse lastig maakt.
-- Zwakke punten: de cloud/local runner architectuur is goed afgeschermd op API-, quota- en path-niveau, maar uit de code blijkt geen harde sandboxingstrategie per job. Voor multi-tenant productie blijft dat een belangrijk restrisico.
-- Overall score (1-10): 8.7/10.
+﻿# Mirror Feature - Comprehensive Architecture Analysis
+
+**Analysis Date**: March 18, 2026  
+**Overall Implementation Status**: **Mature, production-ready with minor refinements needed**
+
+---
+
+## 1. Algemene beoordeling
+
+### Sterke punten
+
+1. **Architectuur Lock & Clarity**
+   - Clear separation: Gateway = thin proxy only; Compute = Fly.io/local runner only
+   - No compute logic leaks into gateway—excellent architectural discipline
+   - Provider-driven mode selection (private/cloud) with fallback strategy
+   - Offline-first caching strategy with Hive for draft, templates, and outbox
+
+2. **Security & RLS**
+   - Strong RLS policies on storage buckets (`mirror-signed-inputs`, `mirror-backups`)
+   - Owner-scoped path validation: `storage.foldername(name)[1] = auth.uid()`
+   - Idempotency table with claim/finalize pattern prevents replay attacks
+   - 7-day lifecycle cleanup for signed URL artifacts
+   - Premium service hint cache non-authoritative; server-side authoritative
+   - Bearer JWT validation at gateway and runner layers
+
+3. **Offline & Caching**
+   - Multi-layer caching: draft cache, templates cache, outbox with replay
+   - Encrypted Hive storage for sensitive data (drafts, audit history)
+   - Graceful fallback: offline warning + cached variant fallback
+   - Contextual budget enforcement (file count, byte size, char limits)
+   - Circulating dedup queue for realtime events (FIFO-bounded)
+
+4. **Error Handling & Observability**
+   - Structured telemetry via `MirrorObservabilityService`
+   - Deterministic retry policy with exponential backoff
+   - Comprehensive threat model documentation
+   - RLS contract tests and idempotency contract tests
+   - Permission-based access gating (use_mirror, manage_templates)
+
+5. **User Experience**
+   - Smooth editor/terminal/live output UI wiring
+   - Diff preview dialog with git branch suggestion
+   - Template gallery with icon/tag filtering
+   - Permission revocation handler (immediate screen lock-out)
+   - Voice input support (speech-to-text integration)
+
+6. **Code Quality**
+   - Consistent module boundaries (features/mirror)
+   - Extracted service responsibilities (not monolithic screen)
+   - Comprehensive model layer with type safety
+   - JSON encoding/decoding with fallback safety checks
+   - Clear documentation of data contracts
+
+### Zwakke punten
+
+1. **Type Safety & Compile-Time Guards**
+   - `ProjectContext.metadata` is `Map<String, dynamic>`—no type-safe schema
+   - Unvalidated metadata access in prompt builder can silently fail
+   - gRPC request marshalling manually serializes metadata to JSON string
+   - No compile-time validation of template seed_content structure
+
+2. **Distributed Request Tracing**
+   - No request-id/trace-id propagation from client → gateway → runner
+   - Observability service logs events but not linked across layers
+   - Difficult to trace single compile/apply through full pipeline in logs
+
+3. **Error Recovery & Resilience**
+   - Outbox replay policy not fully documented (retry count limits, backoff)
+   - No circuit breaker pattern for repeated runner failures
+   - Timeout defaults (30s) not tuned for all scenarios (large contexts)
+   - Failed signed URL generation not gracefully downgraded
+
+4. **Test Coverage Gaps**
+   - Widget tests for MirrorEditorScreen need platform fallback for inappwebview
+   - Integration tests for compile→apply consistency not comprehensive
+   - No test cases for concurrent apply requests or race scenarios
+   - Template sync seed function not tested against schema version mismatch
+
+5. **Documentation Gaps**
+   - Production readiness checklist file exists but is nearly empty
+   - Operations runbook incomplete (no deployment, monitoring, incident response sections)
+   - No clear SLA or uptime targets documented
+   - Dedup behavior and limits (maxProcessedRealtimeEventIds) not well explained
+
+6. **Performance Edge Cases**
+   - No batch compile support (only single-file operations)
+   - Large context (300 files, 400 KB) may timeout or OOM on weak devices
+   - Realtime dedup queue size (2000 events) can become memory-intensive
+   - Audit history persists up to 40 entries per session (unbounded growth risk)
+
+7. **Permissions & Feature Flags**
+   - `use_mirror` permission checked but no granular controls (e.g., private-only, cloud-only)
+   - Feature flag `mirror_enabled` checked via slow future provider on every request
+   - No override mechanism for admin testing (feature-flag bypass)
+   - Premium check is client-side hint; no server-side enforcement for private mode cost limits
+
+8. **Offline Mode Transitions**
+   - Fallback variants (solo → team, cloud → private) not transparent to user intent
+   - Offline warning displayed but not actionable (user cannot retry online)
+   - Outbox replay does not preserve user's requested mode preference
+
+### Overall Score: **7.8/10**
+
+- **Strengths (50%)**: Excellent architecture, security, caching, observability = **8.2/10**
+- **Weaknesses (50%)**: Type safety, tracing, error recovery, gaps in docs/tests = **7.4/10**
+
+**Verdict**: Production-ready for v1 launch. Monitoring and refinement needed post-launch for distributed tracing, test hardening, and performance tuning.
 
 ### 2. Laag-voor-laag analyse
 - Supabase / Database laag: sterk opgezet met `ai_sessions`, `mirror_templates`, `mirror_apply_audit_events`, `mirror_request_idempotency` en `mirror_usage_logs`. De migraties laten zien dat Mirror niet alleen functioneel is toegevoegd, maar ook lifecycle, audit en abuse/billing-signalen meeneemt.
