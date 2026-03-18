@@ -1730,6 +1730,10 @@ class AppLocalizationsKo extends AppLocalizations {
   String get mirrorApplyBranchTip => '팁: 안전한 검토 및 롤백을 위해 먼저 새 브랜치를 만드세요.';
 
   @override
+  String get mirrorApplyBranchWorkingTreeNotice =>
+      'Mirror applies changes in your current working tree and does not create or switch branches automatically.';
+
+  @override
   String get mirrorOfflineTeamVariantLoadedFromCacheWarning =>
       'Offline mode: Team Mode variant loaded from local cache.';
 

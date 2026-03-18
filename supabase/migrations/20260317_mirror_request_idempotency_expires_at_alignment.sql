@@ -45,6 +45,33 @@ $$;
 ALTER TABLE public.mirror_request_idempotency
 ADD COLUMN IF NOT EXISTS expires_at TIMESTAMP WITH TIME ZONE;
 
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1
+    FROM information_schema.columns
+    WHERE table_schema = 'public'
+      AND table_name = 'mirror_request_idempotency'
+      AND column_name = 'expiry'
+  )
+  AND EXISTS (
+    SELECT 1
+    FROM information_schema.columns
+    WHERE table_schema = 'public'
+      AND table_name = 'mirror_request_idempotency'
+      AND column_name = 'expires_at'
+  ) THEN
+    EXECUTE '
+      UPDATE public.mirror_request_idempotency
+      SET expires_at = COALESCE(expires_at, expiry)
+      WHERE expires_at IS NULL AND expiry IS NOT NULL
+    ';
+
+    EXECUTE 'ALTER TABLE public.mirror_request_idempotency DROP COLUMN IF EXISTS expiry';
+  END IF;
+END;
+$$;
+
 ALTER TABLE public.mirror_request_idempotency
 ADD COLUMN IF NOT EXISTS response_status INTEGER,
 ADD COLUMN IF NOT EXISTS response_body TEXT,

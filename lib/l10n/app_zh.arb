@@ -1229,6 +1229,11 @@
   "@mirrorApplyBranchTip": {
     "description": "Tip text in the branch advice card encouraging branch-based workflow."
   }
+  
+  ,"mirrorApplyBranchWorkingTreeNotice": "Mirror applies changes in your current working tree and does not create or switch branches automatically.",
+  "@mirrorApplyBranchWorkingTreeNotice": {
+    "description": "Notice in the branch advice card explaining apply behavior in the current working tree."
+  }
   ,"mirrorOfflineTeamVariantLoadedFromCacheWarning": "Offline mode: Team Mode variant loaded from local cache.",
   "@mirrorOfflineTeamVariantLoadedFromCacheWarning": {
     "description": "Offline warning when team mode variant is loaded from local cache."

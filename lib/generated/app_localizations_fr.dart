@@ -1754,6 +1754,10 @@ class AppLocalizationsFr extends AppLocalizations {
       'Conseil : créez d\'abord une nouvelle branche pour une révision et un retour arrière sécurisés.';
 
   @override
+  String get mirrorApplyBranchWorkingTreeNotice =>
+      'Mirror applies changes in your current working tree and does not create or switch branches automatically.';
+
+  @override
   String get mirrorOfflineTeamVariantLoadedFromCacheWarning =>
       'Offline mode: Team Mode variant loaded from local cache.';
 

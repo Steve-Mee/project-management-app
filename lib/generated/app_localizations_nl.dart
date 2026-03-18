@@ -1749,6 +1749,10 @@ class AppLocalizationsNl extends AppLocalizations {
       'Tip: maak eerst een nieuwe branch voor veilige review en rollback.';
 
   @override
+  String get mirrorApplyBranchWorkingTreeNotice =>
+      'Mirror applies changes in your current working tree and does not create or switch branches automatically.';
+
+  @override
   String get mirrorOfflineTeamVariantLoadedFromCacheWarning =>
       'Offline mode: Team Mode variant loaded from local cache.';
 

@@ -2,6 +2,7 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
 import 'package:grpc/grpc.dart';
 
 import 'grpc_generated/mirror.pbgrpc.dart';
@@ -13,12 +14,26 @@ class PrivateGrpcBackend implements MirrorComputeBackend {
     this.port = 50051,
     this.timeout = const Duration(seconds: 30),
     this.credentials = const ChannelCredentials.insecure(),
-  });
+  }) {
+    _enforceProductionTransportSecurity();
+  }
 
   final String host;
   final int port;
   final Duration timeout;
   final ChannelCredentials credentials;
+
+  void _enforceProductionTransportSecurity() {
+    if (!kReleaseMode) {
+      return;
+    }
+
+    if (identical(credentials, const ChannelCredentials.insecure())) {
+      throw StateError(
+        'Insecure gRPC transport is blocked in release builds. Configure TLS credentials for PrivateGrpcBackend.',
+      );
+    }
+  }
 
   @override
   Future<GenerateResult> generate({

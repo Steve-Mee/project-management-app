@@ -1748,6 +1748,10 @@ class AppLocalizationsEs extends AppLocalizations {
       'Consejo: cree primero una nueva rama para una revisión segura y reversión.';
 
   @override
+  String get mirrorApplyBranchWorkingTreeNotice =>
+      'Mirror applies changes in your current working tree and does not create or switch branches automatically.';
+
+  @override
   String get mirrorOfflineTeamVariantLoadedFromCacheWarning =>
       'Offline mode: Team Mode variant loaded from local cache.';
 

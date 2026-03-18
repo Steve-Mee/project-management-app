@@ -545,14 +545,16 @@ class MirrorGatewayBackend implements MirrorComputeBackend {
       decoded = <String, dynamic>{'success': true, 'output': raw};
     }
 
-    if (decoded is Map<String, dynamic>) {
-      final errorsRaw = decoded['errors'];
-      final warningsRaw = decoded['warnings'];
+    if (decoded is Map) {
+      final normalized = Map<String, dynamic>.from(decoded);
+      final errorsRaw = normalized['errors'];
+      final warningsRaw = normalized['warnings'];
 
       return CompileResult(
-        success: (decoded['success'] as bool?) ?? true,
-        output: _normalizeOutputField(decoded['output']),
-        serverVersionToken: _normalizeServerVersionToken(decoded['artifactPath']),
+        success: (normalized['success'] as bool?) ?? true,
+        output: _normalizeOutputField(normalized['output']),
+        serverVersionToken:
+            _normalizeServerVersionToken(normalized['artifactPath']),
         errors: errorsRaw is List
             ? errorsRaw.map((e) => e.toString()).toList()
             : const <String>[],
@@ -576,12 +578,7 @@ class MirrorGatewayBackend implements MirrorComputeBackend {
   String _normalizeApplyPayload(String raw) {
     try {
       final decoded = jsonDecode(raw);
-      if (decoded is Map<String, dynamic>) {
-        final normalizedOutput = _normalizeOutputField(decoded['output']);
-        if (normalizedOutput != null && normalizedOutput.trim().isNotEmpty) {
-          return normalizedOutput;
-        }
-      } else if (decoded is Map) {
+      if (decoded is Map) {
         final map = Map<String, dynamic>.from(decoded);
         final normalizedOutput = _normalizeOutputField(map['output']);
         if (normalizedOutput != null && normalizedOutput.trim().isNotEmpty) {

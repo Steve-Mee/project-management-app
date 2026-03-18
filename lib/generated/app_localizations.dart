@@ -3249,6 +3249,12 @@ abstract class AppLocalizations {
   /// **'Tip: create a new branch first for safe review and rollback.'**
   String get mirrorApplyBranchTip;
 
+  /// Notice in the branch advice card explaining apply behavior in the current working tree.
+  ///
+  /// In en, this message translates to:
+  /// **'Mirror applies changes in your current working tree and does not create or switch branches automatically.'**
+  String get mirrorApplyBranchWorkingTreeNotice;
+
   /// Offline warning when team mode variant is loaded from local cache.
   ///
   /// In en, this message translates to:

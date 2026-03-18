@@ -1732,6 +1732,10 @@ class AppLocalizationsJa extends AppLocalizations {
       'ヒント: 安全なレビューとロールバックのために、まず新しいブランチを作成してください。';
 
   @override
+  String get mirrorApplyBranchWorkingTreeNotice =>
+      'Mirror applies changes in your current working tree and does not create or switch branches automatically.';
+
+  @override
   String get mirrorOfflineTeamVariantLoadedFromCacheWarning =>
       'Offline mode: Team Mode variant loaded from local cache.';
 
