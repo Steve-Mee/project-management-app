@@ -1,3 +1,9 @@
+## [1.42.2](https://github.com/Steve-Mee/project-management-app/compare/v1.42.1...v1.42.2) (2026-03-18)
+
+### Bug Fixes
+
+* MirrorPremiumService subscriptions fallback logic ([8cdbc69](https://github.com/Steve-Mee/project-management-app/commit/8cdbc69419a1ed86d29c0bd19c559298791d31fb))
+
 ## [1.42.1](https://github.com/Steve-Mee/project-management-app/compare/v1.42.0...v1.42.1) (2026-03-17)
 
 ### Bug Fixes
