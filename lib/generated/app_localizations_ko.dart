@@ -1731,7 +1731,7 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get mirrorApplyBranchWorkingTreeNotice =>
-      'Mirror applies changes in your current working tree and does not create or switch branches automatically.';
+      'Mirror는 현재 작업 트리에 변경 사항을 적용하며 브랜치를 자동으로 생성하거나 전환하지 않습니다.';
 
   @override
   String get mirrorOfflineTeamVariantLoadedFromCacheWarning =>

@@ -1747,7 +1747,7 @@ class AppLocalizationsIt extends AppLocalizations {
 
   @override
   String get mirrorApplyBranchWorkingTreeNotice =>
-      'Mirror applies changes in your current working tree and does not create or switch branches automatically.';
+      'Mirror applica le modifiche nella directory di lavoro corrente e non crea né cambia branch automaticamente.';
 
   @override
   String get mirrorOfflineTeamVariantLoadedFromCacheWarning =>

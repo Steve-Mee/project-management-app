@@ -1729,7 +1729,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get mirrorApplyBranchWorkingTreeNotice =>
-      'Mirror applies changes in your current working tree and does not create or switch branches automatically.';
+      'Mirror 会将更改应用到您当前的工作树中，不会自动创建或切换分支。';
 
   @override
   String get mirrorOfflineTeamVariantLoadedFromCacheWarning =>

@@ -1850,7 +1850,7 @@
     "description": "Tip text in the branch advice card encouraging branch-based workflow."
   }
   
-  ,"mirrorApplyBranchWorkingTreeNotice": "Mirror applies changes in your current working tree and does not create or switch branches automatically.",
+  ,"mirrorApplyBranchWorkingTreeNotice": "Mirror past wijzigingen toe in je huidige working tree en maakt of wisselt niet automatisch van branch.",
   "@mirrorApplyBranchWorkingTreeNotice": {
     "description": "Notice in the branch advice card explaining apply behavior in the current working tree."
   }

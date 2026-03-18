@@ -5,6 +5,12 @@ import 'dart:math';
 
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+/// Client-side entitlement hint cache for Mirror UX.
+///
+/// This service is intentionally non-authoritative: it only provides a fast,
+/// local hint used to shape client UX while the final cloud entitlement
+/// decision is always enforced server-side by `has_cloud_mirror_access()` in
+/// the Mirror Gateway.
 class MirrorPremiumService {
   MirrorPremiumService({
     SupabaseClient? client,
@@ -82,6 +88,8 @@ class MirrorPremiumService {
     bool forceRefresh = false,
     Duration? cacheTtl,
   }) async {
+    // This is a client UX hint only. Never treat it as the final source of
+    // truth for cloud Mirror authorization.
     final resolvedUser = user ?? _client?.auth.currentUser;
     if (resolvedUser == null) {
       return false;
@@ -174,41 +182,8 @@ class MirrorPremiumService {
   }
 
   Future<bool> _resolvePremium(User user) async {
-    if (_metadataSaysPremium(user)) {
-      return true;
-    }
-
-    final client = _client;
-    if (client == null) {
-      return _metadataSaysPremium(user);
-    }
-
-    try {
-      final List<dynamic> rows = await client
-          .from('subscriptions')
-          .select('level,status,payment_provider')
-          .eq('user_id', user.id)
-          .eq('status', 'active')
-          .limit(5);
-
-      for (final entry in rows) {
-        if (entry is! Map) {
-          continue;
-        }
-
-        final row = Map<String, dynamic>.from(entry);
-        final provider =
-            (row['payment_provider']?.toString() ?? '').toLowerCase().trim();
-        final level = (row['level']?.toString() ?? '').toLowerCase().trim();
-        final isStripe = provider.isEmpty || provider == 'stripe';
-        if (isStripe && _premiumLevels.contains(level)) {
-          return true;
-        }
-      }
-    } catch (_) {
-      // Keep metadata fallback behavior when subscriptions query fails.
-    }
-
+    // Use auth metadata only as a lightweight local hint. The gateway remains
+    // server-authoritative for all cloud entitlement decisions.
     return _metadataSaysPremium(user);
   }
 

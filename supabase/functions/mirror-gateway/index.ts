@@ -163,168 +163,29 @@ function buildAuditErrorDetails(
   }
 }
 
-const PREMIUM_LEVELS = new Set(['premium', 'pro', 'enterprise', 'premiumplus'])
-
-function isProductionSupabaseEnv(): boolean {
-  const environment = (Deno.env.get('SUPABASE_ENV') ?? '').trim().toLowerCase()
-  return environment === 'production'
-}
-
-function isCloudEntitlementStrictMode(): boolean {
-  const raw = (Deno.env.get('MIRROR_CLOUD_ENTITLEMENT_STRICT') ?? '').trim().toLowerCase()
-  if (raw === 'false') {
-    return false
-  }
-  if (raw === 'true') {
-    return true
-  }
-
-  // Default to strict behavior. Production must never silently downgrade entitlement checks.
-  return true
-}
-
-function metadataHasCloudMirrorAccess(user: {
-  app_metadata?: Record<string, unknown>
-  user_metadata?: Record<string, unknown>
-}): boolean {
-  const appMetadata = user.app_metadata ?? {}
-  const userMetadata = user.user_metadata ?? {}
-
-  const stripeActive =
-    appMetadata['stripe_subscription_active'] ?? userMetadata['stripe_subscription_active']
-  const stripeTier =
-    appMetadata['stripe_subscription_tier'] ?? userMetadata['stripe_subscription_tier']
-
-  if (stripeActive === true) {
-    const normalizedStripeTier = String(stripeTier ?? '').toLowerCase().trim()
-    if (PREMIUM_LEVELS.has(normalizedStripeTier)) {
-      return true
-    }
-  }
-
-  const fallbackTier =
-    appMetadata['subscription'] ??
-    appMetadata['plan'] ??
-    userMetadata['subscription'] ??
-    userMetadata['plan']
-  const normalizedFallbackTier = String(fallbackTier ?? '').toLowerCase().trim()
-
-  return PREMIUM_LEVELS.has(normalizedFallbackTier)
-}
-
 async function hasCloudMirrorAccess(
   supabase: ReturnType<typeof createClient>,
-  user: {
-    id: string
-    app_metadata?: Record<string, unknown>
-    user_metadata?: Record<string, unknown>
-  },
   requestId: string,
 ): Promise<boolean> {
-  const strictMode = isCloudEntitlementStrictMode()
   const { data, error } = await supabase.rpc('has_cloud_mirror_access')
 
-  if (!error) {
-    if (typeof data === 'boolean') {
-      if (!data && !strictMode) {
-        return metadataOrSubscriptionsFallbackAllowed(supabase, user, requestId, 'rpc_false')
-      }
-      return data
-    }
-
-    if (data && typeof data === 'object') {
-      const record = data as Record<string, unknown>
-      const shapedValue = record['has_access'] ?? record['allowed'] ?? record['result']
-      if (typeof shapedValue === 'boolean') {
-        if (!shapedValue && !strictMode) {
-          return metadataOrSubscriptionsFallbackAllowed(
-            supabase,
-            user,
-            requestId,
-            'rpc_false_shaped',
-          )
-        }
-        return shapedValue
-      }
-    }
-
-    if (strictMode) {
-      throw new Error('cloud_entitlement_rpc_invalid_shape')
-    }
-
-    return metadataOrSubscriptionsFallbackAllowed(supabase, user, requestId, 'rpc_invalid_shape')
-  }
-
-  if (strictMode) {
+  if (error) {
     throw new Error(`cloud_entitlement_rpc_failed:${error.message}`)
   }
 
-  return metadataOrSubscriptionsFallbackAllowed(
-    supabase,
-    user,
-    requestId,
-    `rpc_failed:${String(error.message ?? 'unknown_error')}`,
-  )
-}
-
-async function metadataOrSubscriptionsFallbackAllowed(
-  supabase: ReturnType<typeof createClient>,
-  user: {
-    id: string
-    app_metadata?: Record<string, unknown>
-    user_metadata?: Record<string, unknown>
-  },
-  requestId: string,
-  reason: string,
-): Promise<boolean> {
-  const metadataFallbackAllowed = metadataHasCloudMirrorAccess(user)
-  if (metadataFallbackAllowed) {
-    console.warn('mirror-gateway entitlement fallback via metadata', {
-      requestId,
-      userId: user.id,
-      reason,
-      strictMode: false,
-      environment: (Deno.env.get('SUPABASE_ENV') ?? 'unknown').trim() || 'unknown',
-    })
-    return true
+  if (typeof data === 'boolean') {
+    return data
   }
 
-  const { data: subscriptions, error: subscriptionsError } = await supabase
-    .from('subscriptions')
-    .select('level,status,payment_provider')
-    .eq('user_id', user.id)
-    .in('status', ['active', 'trialing'])
-    .limit(5)
-
-  if (subscriptionsError) {
-    throw new Error(`cloud_entitlement_fallback_failed:${subscriptionsError.message}`)
-  }
-
-  const rows = Array.isArray(subscriptions) ? subscriptions : []
-  for (const entry of rows) {
-    if (!entry || typeof entry !== 'object') {
-      continue
-    }
-
-    const row = entry as Record<string, unknown>
-    const provider = String(row['payment_provider'] ?? '').toLowerCase().trim()
-    const level = String(row['level'] ?? '').toLowerCase().trim()
-    const isStripeOrUnspecified = provider === '' || provider === 'stripe'
-
-    if (isStripeOrUnspecified && PREMIUM_LEVELS.has(level)) {
-      console.warn('mirror-gateway entitlement fallback via subscriptions', {
-        requestId,
-        userId: user.id,
-        reason,
-        strictMode: false,
-        environment: (Deno.env.get('SUPABASE_ENV') ?? 'unknown').trim() || 'unknown',
-      })
-      return true
-    }
+  if (data && typeof data === 'object') {
+    const record = data as Record<string, unknown>
+    const shapedValue = record['has_access'] ?? record['allowed'] ?? record['result']
+    if (typeof shapedValue === 'boolean') {
+      return shapedValue
   }
 
   return false
-}
+  throw new Error(`cloud_entitlement_rpc_invalid_shape:request_id=${requestId}`)
 
 function resolveForwardEndpoint(mode: 'private' | 'cloud', action: 'compile' | 'apply'): string {
   const key = mode === 'private' ? 'PRIVATE_COMPUTE_ENDPOINT' : 'FLY_MIRROR_COMPUTE_ENDPOINT'
@@ -1240,7 +1101,7 @@ Deno.serve(async (req: Request) => {
     if (normalized.mode === 'cloud') {
       let hasCloudEntitlement = false
       try {
-        hasCloudEntitlement = await hasCloudMirrorAccess(supabase, user, requestId)
+        hasCloudEntitlement = await hasCloudMirrorAccess(supabase, requestId)
       } catch (error) {
         return errorResponse(req,
           buildStructuredError({
@@ -1254,7 +1115,7 @@ Deno.serve(async (req: Request) => {
               entitlement: 'cloud_mirror_access',
               reason: 'rpc_failed',
               cause: String(error),
-              strictMode: isCloudEntitlementStrictMode(),
+              authority: 'rpc_only',
               environment: (Deno.env.get('SUPABASE_ENV') ?? 'unknown').trim() || 'unknown',
             },
             stage: 'authorization',
@@ -1275,7 +1136,7 @@ Deno.serve(async (req: Request) => {
               mode: normalized.mode,
               entitlement: 'cloud_mirror_access',
               reason: 'rpc_false',
-              strictMode: isCloudEntitlementStrictMode(),
+              authority: 'rpc_only',
             },
             stage: 'authorization',
           }),

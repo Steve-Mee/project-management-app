@@ -201,6 +201,8 @@ class _BranchInfoCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(12),
@@ -212,19 +214,17 @@ class _BranchInfoCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
           Text(
-            AppLocalizations.of(context)!.mirrorApplyBranchAdviceTitle,
+            l10n.mirrorApplyBranchAdviceTitle,
             style: Theme.of(context).textTheme.titleSmall,
           ),
           const SizedBox(height: 6),
-          Text(AppLocalizations.of(context)!.mirrorApplyCurrentBranch(currentBranch)),
-          Text(AppLocalizations.of(context)!.mirrorApplySuggestedBranch(suggestedBranch)),
+          Text(l10n.mirrorApplyCurrentBranch(currentBranch)),
+          Text(l10n.mirrorApplySuggestedBranch(suggestedBranch)),
+          const SizedBox(height: 6),
+          Text(l10n.mirrorApplyBranchTip),
           const SizedBox(height: 6),
           Text(
-            AppLocalizations.of(context)!.mirrorApplyBranchTip,
-          ),
-          const SizedBox(height: 6),
-          Text(
-            AppLocalizations.of(context)!.mirrorApplyBranchWorkingTreeNotice,
+            l10n.mirrorApplyBranchWorkingTreeNotice,
             style: Theme.of(context).textTheme.bodySmall,
           ),
         ],

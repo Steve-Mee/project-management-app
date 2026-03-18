@@ -8,6 +8,11 @@ import 'package:grpc/grpc.dart';
 import 'grpc_generated/mirror.pbgrpc.dart';
 import 'mirror_compute_backend.dart';
 
+const bool _isProductionGrpcRuntime =
+  bool.fromEnvironment('dart.vm.product', defaultValue: false);
+const ChannelCredentials _insecureChannelCredentials =
+  ChannelCredentials.insecure();
+
 class PrivateGrpcBackend implements MirrorComputeBackend {
   PrivateGrpcBackend({
     this.host = '127.0.0.1',
@@ -24,13 +29,13 @@ class PrivateGrpcBackend implements MirrorComputeBackend {
   final ChannelCredentials credentials;
 
   void _enforceProductionTransportSecurity() {
-    if (!kReleaseMode) {
+    if (!kReleaseMode && !_isProductionGrpcRuntime) {
       return;
     }
 
-    if (identical(credentials, const ChannelCredentials.insecure())) {
+    if (identical(credentials, _insecureChannelCredentials)) {
       throw StateError(
-        'Insecure gRPC transport is blocked in release builds. Configure TLS credentials for PrivateGrpcBackend.',
+        'Insecure gRPC transport is blocked in production runtime. Configure TLS credentials for PrivateGrpcBackend.',
       );
     }
   }

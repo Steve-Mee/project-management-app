@@ -307,7 +307,7 @@ class MirrorGatewayBackend implements MirrorComputeBackend {
       );
     }
 
-    final normalizedOutput = _normalizeApplyPayload(raw.body!);
+    final normalizedOutput = _normalizeGatewayOutput(raw.body!);
 
     final patches = buildPatchesFromApplyPayload(
       context: context,
@@ -552,7 +552,7 @@ class MirrorGatewayBackend implements MirrorComputeBackend {
 
       return CompileResult(
         success: (normalized['success'] as bool?) ?? true,
-        output: _normalizeOutputField(normalized['output']),
+        output: _normalizeDecodedOutput(normalized),
         serverVersionToken:
             _normalizeServerVersionToken(normalized['artifactPath']),
         errors: errorsRaw is List
@@ -575,12 +575,13 @@ class MirrorGatewayBackend implements MirrorComputeBackend {
     return token;
   }
 
-  String _normalizeApplyPayload(String raw) {
+  String _normalizeGatewayOutput(String raw) {
     try {
       final decoded = jsonDecode(raw);
       if (decoded is Map) {
-        final map = Map<String, dynamic>.from(decoded);
-        final normalizedOutput = _normalizeOutputField(map['output']);
+        final normalizedOutput = _normalizeDecodedOutput(
+          Map<String, dynamic>.from(decoded),
+        );
         if (normalizedOutput != null && normalizedOutput.trim().isNotEmpty) {
           return normalizedOutput;
         }
@@ -590,6 +591,10 @@ class MirrorGatewayBackend implements MirrorComputeBackend {
     }
 
     return raw;
+  }
+
+  String? _normalizeDecodedOutput(Map<String, dynamic> decoded) {
+    return _normalizeOutputField(decoded['output']);
   }
 
   String? _normalizeOutputField(Object? output) {
