@@ -1,3 +1,9 @@
+## [1.44.0](https://github.com/Steve-Mee/project-management-app/compare/v1.43.0...v1.44.0) (2026-03-20)
+
+### Features
+
+* **mirror:** complete gateway hardening, strict flags, provider split, and unified diff UX ([c9ac0d1](https://github.com/Steve-Mee/project-management-app/commit/c9ac0d1a62d8fe5a40c25794547af10ef0d1ce89))
+
 ## [1.43.0](https://github.com/Steve-Mee/project-management-app/compare/v1.42.2...v1.43.0) (2026-03-20)
 
 ### Features
