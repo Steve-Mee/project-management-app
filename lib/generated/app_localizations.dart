@@ -3246,7 +3246,7 @@ abstract class AppLocalizations {
   /// Tip text in the branch advice card encouraging branch-based workflow.
   ///
   /// In en, this message translates to:
-  /// **'Tip: create a new branch first for safe review and rollback.'**
+  /// **'Tip: create and switch to a dedicated review branch before applying, so rollback stays simple.'**
   String get mirrorApplyBranchTip;
 
   /// Notice in the branch advice card explaining apply behavior in the current working tree.
