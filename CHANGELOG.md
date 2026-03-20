@@ -1,3 +1,9 @@
+## [1.46.0](https://github.com/Steve-Mee/project-management-app/compare/v1.45.0...v1.46.0) (2026-03-20)
+
+### Features
+
+* **error:** structured error codes + retry feedback (P1) ([673cdff](https://github.com/Steve-Mee/project-management-app/commit/673cdff0c47c12c5f91052d2ef9b1ede7eea6d20))
+
 ## [1.45.0](https://github.com/Steve-Mee/project-management-app/compare/v1.44.0...v1.45.0) (2026-03-20)
 
 ### Features
