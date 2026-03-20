@@ -1,3 +1,9 @@
+## [1.45.0](https://github.com/Steve-Mee/project-management-app/compare/v1.44.0...v1.45.0) (2026-03-20)
+
+### Features
+
+* **mirror:** harden gateway, refactor providers, and localize apply branch tip ([b4f67cb](https://github.com/Steve-Mee/project-management-app/commit/b4f67cb2e9ddc9f37526f1e0923652fbb0abf317))
+
 ## [1.44.0](https://github.com/Steve-Mee/project-management-app/compare/v1.43.0...v1.44.0) (2026-03-20)
 
 ### Features
