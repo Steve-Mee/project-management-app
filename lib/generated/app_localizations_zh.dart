@@ -1728,6 +1728,11 @@ class AppLocalizationsZh extends AppLocalizations {
   String get mirrorApplyBranchTip => '提示：请先创建一个新分支，以便安全审查和回滚。';
 
   @override
+  String mirrorApplyBranchTipWithBranch(String branch) {
+    return '提示：请使用建议分支“$branch”，以便安全审查并轻松回滚。';
+  }
+
+  @override
   String get mirrorApplyBranchWorkingTreeNotice =>
       'Mirror 会将更改应用到您当前的工作树中，不会自动创建或切换分支。';
 

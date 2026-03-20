@@ -1848,6 +1848,15 @@
   "mirrorApplyBranchTip": "Tip: maak eerst een nieuwe branch voor veilige review en rollback.",
   "@mirrorApplyBranchTip": {
     "description": "Tip text in the branch advice card encouraging branch-based workflow."
+  },
+  "mirrorApplyBranchTipWithBranch": "Tip: gebruik de voorgestelde branch \"{branch}\" voor veilige review en eenvoudige rollback.",
+  "@mirrorApplyBranchTipWithBranch": {
+    "description": "Tip text in the branch advice card with the suggested branch name.",
+    "placeholders": {
+      "branch": {
+        "type": "String"
+      }
+    }
   }
   
   ,"mirrorApplyBranchWorkingTreeNotice": "Mirror past wijzigingen toe in je huidige working tree en maakt of wisselt niet automatisch van branch.",

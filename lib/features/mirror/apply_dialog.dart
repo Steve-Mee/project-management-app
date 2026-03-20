@@ -190,7 +190,7 @@ class _BranchInfoCard extends StatelessWidget {
           Text(l10n.mirrorApplyCurrentBranch(currentBranch)),
           Text(l10n.mirrorApplySuggestedBranch(suggestedBranch)),
           const SizedBox(height: 6),
-          Text(l10n.mirrorApplyBranchTip),
+          Text(l10n.mirrorApplyBranchTipWithBranch(suggestedBranch)),
           const SizedBox(height: 6),
           Text(
             l10n.mirrorApplyBranchWorkingTreeNotice,

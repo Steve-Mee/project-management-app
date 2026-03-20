@@ -1752,6 +1752,11 @@ class AppLocalizationsDe extends AppLocalizations {
       'Tipp: Erstellen Sie zuerst einen neuen Branch für sichere Überprüfung und Rollback.';
 
   @override
+  String mirrorApplyBranchTipWithBranch(String branch) {
+    return 'Tipp: Nutzen Sie den vorgeschlagenen Branch \"$branch\" fuer sichere Ueberpruefung und einfaches Rollback.';
+  }
+
+  @override
   String get mirrorApplyBranchWorkingTreeNotice =>
       'Mirror wendet Änderungen in Ihrem aktuellen Arbeitsverzeichnis an und erstellt oder wechselt keine Branches automatisch.';
 

@@ -1740,6 +1740,11 @@ class AppLocalizationsEn extends AppLocalizations {
       'Tip: create and switch to a dedicated review branch before applying, so rollback stays simple.';
 
   @override
+  String mirrorApplyBranchTipWithBranch(String branch) {
+    return 'Tip: use the suggested branch \"$branch\" for safer review and simpler rollback.';
+  }
+
+  @override
   String get mirrorApplyBranchWorkingTreeNotice =>
       'Mirror applies changes in your current working tree and does not create or switch branches automatically.';
 

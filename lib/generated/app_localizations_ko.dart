@@ -1730,6 +1730,11 @@ class AppLocalizationsKo extends AppLocalizations {
   String get mirrorApplyBranchTip => '팁: 안전한 검토 및 롤백을 위해 먼저 새 브랜치를 만드세요.';
 
   @override
+  String mirrorApplyBranchTipWithBranch(String branch) {
+    return '팁: 안전한 검토와 쉬운 롤백을 위해 제안된 브랜치 \"$branch\"를 사용하세요.';
+  }
+
+  @override
   String get mirrorApplyBranchWorkingTreeNotice =>
       'Mirror는 현재 작업 트리에 변경 사항을 적용하며 브랜치를 자동으로 생성하거나 전환하지 않습니다.';
 

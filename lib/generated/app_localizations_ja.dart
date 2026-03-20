@@ -1732,6 +1732,11 @@ class AppLocalizationsJa extends AppLocalizations {
       'ヒント: 安全なレビューとロールバックのために、まず新しいブランチを作成してください。';
 
   @override
+  String mirrorApplyBranchTipWithBranch(String branch) {
+    return 'ヒント: 安全なレビューと簡単なロールバックのため、提案ブランチ「$branch」を使ってください。';
+  }
+
+  @override
   String get mirrorApplyBranchWorkingTreeNotice =>
       'Mirror は現在のワーキングツリーに変更を適用し、ブランチを自動で作成または切り替えません。';
 

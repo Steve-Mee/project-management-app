@@ -1232,6 +1232,15 @@
   "mirrorApplyBranchTip": "Dica: crie primeiro um novo branch para revisão segura e reversão.",
   "@mirrorApplyBranchTip": {
     "description": "Tip text in the branch advice card encouraging branch-based workflow."
+  },
+  "mirrorApplyBranchTipWithBranch": "Dica: use o branch sugerido \"{branch}\" para revisao segura e rollback facil.",
+  "@mirrorApplyBranchTipWithBranch": {
+    "description": "Tip text in the branch advice card with the suggested branch name.",
+    "placeholders": {
+      "branch": {
+        "type": "String"
+      }
+    }
   }
   
   ,"mirrorApplyBranchWorkingTreeNotice": "Mirror aplica as alterações no seu diretório de trabalho atual e não cria nem muda de branch automaticamente.",

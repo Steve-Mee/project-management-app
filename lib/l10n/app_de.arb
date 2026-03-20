@@ -1232,6 +1232,15 @@
   "mirrorApplyBranchTip": "Tipp: Erstellen Sie zuerst einen neuen Branch für sichere Überprüfung und Rollback.",
   "@mirrorApplyBranchTip": {
     "description": "Tip text in the branch advice card encouraging branch-based workflow."
+  },
+  "mirrorApplyBranchTipWithBranch": "Tipp: Nutzen Sie den vorgeschlagenen Branch \"{branch}\" fuer sichere Ueberpruefung und einfaches Rollback.",
+  "@mirrorApplyBranchTipWithBranch": {
+    "description": "Tip text in the branch advice card with the suggested branch name.",
+    "placeholders": {
+      "branch": {
+        "type": "String"
+      }
+    }
   }
   
   ,"mirrorApplyBranchWorkingTreeNotice": "Mirror wendet Änderungen in Ihrem aktuellen Arbeitsverzeichnis an und erstellt oder wechselt keine Branches automatisch.",

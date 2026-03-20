@@ -11,7 +11,7 @@ import 'package:pma_core/providers/project/project_providers.dart';
 import 'package:pma_core/providers/task/task_providers.dart';
 
 import '../../features/mirror/services/mirror_draft_cache_service.dart';
-import 'mirror_provider.dart';
+import 'mirror_offline_cache_provider.dart';
 
 class MirrorSessionState {
   const MirrorSessionState({

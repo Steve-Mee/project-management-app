@@ -3249,6 +3249,12 @@ abstract class AppLocalizations {
   /// **'Tip: create and switch to a dedicated review branch before applying, so rollback stays simple.'**
   String get mirrorApplyBranchTip;
 
+  /// Tip text in the branch advice card with the suggested branch name.
+  ///
+  /// In en, this message translates to:
+  /// **'Tip: use the suggested branch \"{branch}\" for safer review and simpler rollback.'**
+  String mirrorApplyBranchTipWithBranch(String branch);
+
   /// Notice in the branch advice card explaining apply behavior in the current working tree.
   ///
   /// In en, this message translates to:

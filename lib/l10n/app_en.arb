@@ -2442,6 +2442,15 @@
   "mirrorApplyBranchTip": "Tip: create and switch to a dedicated review branch before applying, so rollback stays simple.",
   "@mirrorApplyBranchTip": {
     "description": "Tip text in the branch advice card encouraging branch-based workflow."
+  },
+  "mirrorApplyBranchTipWithBranch": "Tip: use the suggested branch \"{branch}\" for safer review and simpler rollback.",
+  "@mirrorApplyBranchTipWithBranch": {
+    "description": "Tip text in the branch advice card with the suggested branch name.",
+    "placeholders": {
+      "branch": {
+        "type": "String"
+      }
+    }
   }
   
   ,"mirrorApplyBranchWorkingTreeNotice": "Mirror applies changes in your current working tree and does not create or switch branches automatically.",

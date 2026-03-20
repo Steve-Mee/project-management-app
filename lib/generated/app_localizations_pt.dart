@@ -1744,6 +1744,11 @@ class AppLocalizationsPt extends AppLocalizations {
       'Dica: crie primeiro um novo branch para revisão segura e reversão.';
 
   @override
+  String mirrorApplyBranchTipWithBranch(String branch) {
+    return 'Dica: use o branch sugerido \"$branch\" para revisao segura e rollback facil.';
+  }
+
+  @override
   String get mirrorApplyBranchWorkingTreeNotice =>
       'Mirror aplica as alterações no seu diretório de trabalho atual e não cria nem muda de branch automaticamente.';
 

@@ -1232,6 +1232,15 @@
   "mirrorApplyBranchTip": "نصيحة: أنشئ فرعاً جديداً أولاً للمراجعة الآمنة والتراجع.",
   "@mirrorApplyBranchTip": {
     "description": "Tip text in the branch advice card encouraging branch-based workflow."
+  },
+  "mirrorApplyBranchTipWithBranch": "نصيحة: استخدم الفرع المقترح \"{branch}\" لمراجعة آمنة وتراجع أسهل.",
+  "@mirrorApplyBranchTipWithBranch": {
+    "description": "Tip text in the branch advice card with the suggested branch name.",
+    "placeholders": {
+      "branch": {
+        "type": "String"
+      }
+    }
   }
   
   ,"mirrorApplyBranchWorkingTreeNotice": "يطبّق Mirror التغييرات على شجرة العمل الحالية لديك ولا ينشئ الفروع أو يبدّلها تلقائياً.",

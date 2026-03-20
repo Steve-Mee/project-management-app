@@ -11,7 +11,7 @@ Analyse datum: 20 maart 2026
    - Integratie met bestaande project/task flows is consistent en direct bruikbaar via `openMirrorFromTask` en navigatie naar de editor vanuit task- en projectcontext.
    - Testdekking voor Mirror is bovengemiddeld breed met Dart tests plus SQL contracttests voor RLS/idempotency.
 - Zwakke punten
-   - Architecturale fragmentatie in naming en contracten: in de context noem je `EdgeFunctionBackend`, `CloudFlyBackend`, `mirror_staging` en `mirror_compute`, maar in code staan feitelijk `MirrorGatewayBackend`, `PrivateGrpcBackend`, `mirror-gateway` en buckets `mirror-signed-inputs` / `mirror-backups`.
+   - Architecturale fragmentatie in naming en contracten: documentatie en context moeten consistent verwijzen naar `MirrorGatewayBackend`, `PrivateGrpcBackend`, `mirror-gateway` en buckets `mirror-signed-inputs` / `mirror-backups`.
    - De gateway gebruikt FNV-1a 32-bit voor idempotency request-hashing; dat is snel maar collision-gevoeliger dan nodig voor een security-kritische dedupe-laag.
    - `mirror_provider.dart` combineert policy, entitlement, AB-varianten, cache-hydratie en backend-selectie in een grote orchestrator; onderhoudbaarheid en regressierisico nemen daardoor toe.
    - Productie-entitlement leunt in client op metadata/subscriptions hinting; server is wel autoritatief, maar UX-gedrag en mode-switching kunnen tijdelijk inconsistent aanvoelen.
@@ -95,6 +95,6 @@ Analyse datum: 20 maart 2026
    - `docs/mirror-security-hardening.md`: minimale productiebaseline voor runner sandboxing (non-root, seccomp/apparmor, readonly rootfs, egress policy, CPU/mem limits).
 
 - Verwijderingen (wat weg kan en waarom)
-   - Verwijder of archiveer niet-overeenkomende terminologie in projectdocumentatie waar nog gesproken wordt over `mirror_staging`, `mirror_compute`, `EdgeFunctionBackend`, `CloudFlyBackend` als dat niet de actuele implementatie is.
+   - Verwijder of archiveer niet-overeenkomende terminologie in projectdocumentatie en contextbestanden zodat naming consistent blijft met `MirrorGatewayBackend`, `PrivateGrpcBackend`, `mirror-signed-inputs` en `mirror-backups`.
    - Verwijder duplicatieve entitlement-providerlaag (`lib/core/providers/mirror_entitlement_provider.dart`) of consolideer deze met `mirror_premium_service` om API-oppervlak en verwarring te reduceren.
    - Verwijder legacy/fallback tekstpaden die premium/mirror status impliciet als boolean forceren zonder onzekerheidsstatus, zodat UX eerlijker en voorspelbaarder wordt.

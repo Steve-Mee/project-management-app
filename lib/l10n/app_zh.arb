@@ -1228,6 +1228,15 @@
   "mirrorApplyBranchTip": "提示：请先创建一个新分支，以便安全审查和回滚。",
   "@mirrorApplyBranchTip": {
     "description": "Tip text in the branch advice card encouraging branch-based workflow."
+  },
+  "mirrorApplyBranchTipWithBranch": "提示：请使用建议分支“{branch}”，以便安全审查并轻松回滚。",
+  "@mirrorApplyBranchTipWithBranch": {
+    "description": "Tip text in the branch advice card with the suggested branch name.",
+    "placeholders": {
+      "branch": {
+        "type": "String"
+      }
+    }
   }
   
   ,"mirrorApplyBranchWorkingTreeNotice": "Mirror 会将更改应用到您当前的工作树中，不会自动创建或切换分支。",

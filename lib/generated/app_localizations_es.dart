@@ -1748,6 +1748,11 @@ class AppLocalizationsEs extends AppLocalizations {
       'Consejo: cree primero una nueva rama para una revisión segura y reversión.';
 
   @override
+  String mirrorApplyBranchTipWithBranch(String branch) {
+    return 'Consejo: use la rama sugerida \"$branch\" para una revision segura y un rollback sencillo.';
+  }
+
+  @override
   String get mirrorApplyBranchWorkingTreeNotice =>
       'Mirror aplica los cambios en su árbol de trabajo actual y no crea ni cambia de rama automáticamente.';
 

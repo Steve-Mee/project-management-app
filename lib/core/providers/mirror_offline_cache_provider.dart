@@ -1,7 +1,95 @@
 library;
 
+import 'dart:async';
+
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:pma_core/repository/encrypted_hive_box.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+
+import '../ab_testing_service.dart';
+
+class MirrorOfflineWarningKeys {
+  const MirrorOfflineWarningKeys._();
+
+  static const String teamVariantLoadedFromCache =
+    'mirrorOfflineTeamVariantLoadedFromCacheWarning';
+  static const String teamVariantFallbackSolo =
+    'mirrorOfflineTeamVariantFallbackSoloWarning';
+  static const String runnerVariantLoadedFromCache =
+    'mirrorOfflineRunnerVariantLoadedFromCacheWarning';
+  static const String runnerVariantFallbackCloud =
+    'mirrorOfflineRunnerVariantFallbackCloudWarning';
+  static const String cloudModeRequiresPremium =
+    'mirrorCloudModeRequiresPremiumWarning';
+}
+
+final mirrorModeProvider = StateProvider<String>((ref) => 'private');
+
+final mirrorOfflineWarningProvider = StateProvider<String?>((ref) => null);
+
+final mirrorTeamModeVariantProvider = FutureProvider<String>((ref) async {
+  final warningNotifier = ref.read(mirrorOfflineWarningProvider.notifier);
+  final user = _currentSupabaseUserOrNull();
+  final userId = user?.id ?? 'anonymous';
+
+  try {
+    final variant = await ABTestingService.instance.assignVariant(
+      experimentKey: 'mirror_team_mode',
+      userId: userId,
+      variants: const <String>['solo', 'team'],
+    ).timeout(const Duration(seconds: 3));
+
+    await MirrorOfflineCache.saveTeamModeVariant(userId, variant);
+    warningNotifier.state = null;
+    return variant;
+  } catch (_) {
+    final cached = await MirrorOfflineCache.getTeamModeVariant(userId);
+    if (cached != null) {
+      warningNotifier.state = MirrorOfflineWarningKeys.teamVariantLoadedFromCache;
+      return cached;
+    }
+
+    warningNotifier.state = MirrorOfflineWarningKeys.teamVariantFallbackSolo;
+    return 'solo';
+  }
+});
+
+final mirrorRunnerModeVariantProvider = FutureProvider<String>((ref) async {
+  final warningNotifier = ref.read(mirrorOfflineWarningProvider.notifier);
+  final user = _currentSupabaseUserOrNull();
+  final userId = user?.id ?? 'anonymous';
+
+  try {
+    final variant = await ABTestingService.instance.assignVariant(
+      experimentKey: 'mirror_runner_mode',
+      userId: userId,
+      variants: const <String>['local', 'cloud'],
+    ).timeout(const Duration(seconds: 3));
+
+    await MirrorOfflineCache.saveRunnerModeVariant(userId, variant);
+    warningNotifier.state = null;
+    return variant;
+  } catch (_) {
+    final cached = await MirrorOfflineCache.getRunnerModeVariant(userId);
+    if (cached != null) {
+      warningNotifier.state =
+          MirrorOfflineWarningKeys.runnerVariantLoadedFromCache;
+      return cached;
+    }
+
+    warningNotifier.state = MirrorOfflineWarningKeys.runnerVariantFallbackCloud;
+    return 'cloud';
+  }
+});
+
+User? _currentSupabaseUserOrNull() {
+  try {
+    return Supabase.instance.client.auth.currentUser;
+  } catch (_) {
+    return null;
+  }
+}
 
 class MirrorOfflineCache {
   static const String _boxName = 'mirror_offline_cache';

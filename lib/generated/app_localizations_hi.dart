@@ -1741,6 +1741,11 @@ class AppLocalizationsHi extends AppLocalizations {
       'सुझाव: सुरक्षित समीक्षा और रोलबैक के लिए पहले एक नई शाखा बनाएं।';
 
   @override
+  String mirrorApplyBranchTipWithBranch(String branch) {
+    return 'सुझाव: सुरक्षित समीक्षा और आसान रोलबैक के लिए सुझाई गई शाखा \"$branch\" का उपयोग करें।';
+  }
+
+  @override
   String get mirrorApplyBranchWorkingTreeNotice =>
       'Mirror आपके वर्तमान वर्किंग ट्री में बदलाव लागू करता है और अपने आप शाखा नहीं बनाता या बदलता है।';
 

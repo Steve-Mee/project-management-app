@@ -1744,6 +1744,11 @@ class AppLocalizationsRu extends AppLocalizations {
       'Совет: сначала создайте новую ветку для безопасной проверки и отката.';
 
   @override
+  String mirrorApplyBranchTipWithBranch(String branch) {
+    return 'Совет: используйте предложенную ветку \"$branch\" для безопасной проверки и простого отката.';
+  }
+
+  @override
   String get mirrorApplyBranchWorkingTreeNotice =>
       'Mirror применяет изменения в вашем текущем рабочем каталоге и не создает и не переключает ветки автоматически.';
 

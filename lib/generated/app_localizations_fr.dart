@@ -1754,6 +1754,11 @@ class AppLocalizationsFr extends AppLocalizations {
       'Conseil : créez d\'abord une nouvelle branche pour une révision et un retour arrière sécurisés.';
 
   @override
+  String mirrorApplyBranchTipWithBranch(String branch) {
+    return 'Conseil : utilisez la branche suggeree \"$branch\" pour une revision securisee et un retour arriere simplifie.';
+  }
+
+  @override
   String get mirrorApplyBranchWorkingTreeNotice =>
       'Mirror applique les modifications dans votre copie de travail actuelle et ne crée ni ne change de branche automatiquement.';
 

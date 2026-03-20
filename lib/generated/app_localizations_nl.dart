@@ -1749,6 +1749,11 @@ class AppLocalizationsNl extends AppLocalizations {
       'Tip: maak eerst een nieuwe branch voor veilige review en rollback.';
 
   @override
+  String mirrorApplyBranchTipWithBranch(String branch) {
+    return 'Tip: gebruik de voorgestelde branch \"$branch\" voor veilige review en eenvoudige rollback.';
+  }
+
+  @override
   String get mirrorApplyBranchWorkingTreeNotice =>
       'Mirror past wijzigingen toe in je huidige working tree en maakt of wisselt niet automatisch van branch.';
 

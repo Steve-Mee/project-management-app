@@ -1232,6 +1232,15 @@
   "mirrorApplyBranchTip": "सुझाव: सुरक्षित समीक्षा और रोलबैक के लिए पहले एक नई शाखा बनाएं।",
   "@mirrorApplyBranchTip": {
     "description": "Tip text in the branch advice card encouraging branch-based workflow."
+  },
+  "mirrorApplyBranchTipWithBranch": "सुझाव: सुरक्षित समीक्षा और आसान रोलबैक के लिए सुझाई गई शाखा \"{branch}\" का उपयोग करें।",
+  "@mirrorApplyBranchTipWithBranch": {
+    "description": "Tip text in the branch advice card with the suggested branch name.",
+    "placeholders": {
+      "branch": {
+        "type": "String"
+      }
+    }
   }
   
   ,"mirrorApplyBranchWorkingTreeNotice": "Mirror आपके वर्तमान वर्किंग ट्री में बदलाव लागू करता है और अपने आप शाखा नहीं बनाता या बदलता है।",

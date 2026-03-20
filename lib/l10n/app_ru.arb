@@ -1232,6 +1232,15 @@
   "mirrorApplyBranchTip": "Совет: сначала создайте новую ветку для безопасной проверки и отката.",
   "@mirrorApplyBranchTip": {
     "description": "Tip text in the branch advice card encouraging branch-based workflow."
+  },
+  "mirrorApplyBranchTipWithBranch": "Совет: используйте предложенную ветку \"{branch}\" для безопасной проверки и простого отката.",
+  "@mirrorApplyBranchTipWithBranch": {
+    "description": "Tip text in the branch advice card with the suggested branch name.",
+    "placeholders": {
+      "branch": {
+        "type": "String"
+      }
+    }
   }
   
   ,"mirrorApplyBranchWorkingTreeNotice": "Mirror применяет изменения в вашем текущем рабочем каталоге и не создает и не переключает ветки автоматически.",

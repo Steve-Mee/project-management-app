@@ -1232,6 +1232,15 @@
   "mirrorApplyBranchTip": "Conseil : créez d'abord une nouvelle branche pour une révision et un retour arrière sécurisés.",
   "@mirrorApplyBranchTip": {
     "description": "Tip text in the branch advice card encouraging branch-based workflow."
+  },
+  "mirrorApplyBranchTipWithBranch": "Conseil : utilisez la branche suggeree \"{branch}\" pour une revision securisee et un retour arriere simplifie.",
+  "@mirrorApplyBranchTipWithBranch": {
+    "description": "Tip text in the branch advice card with the suggested branch name.",
+    "placeholders": {
+      "branch": {
+        "type": "String"
+      }
+    }
   }
   
   ,"mirrorApplyBranchWorkingTreeNotice": "Mirror applique les modifications dans votre copie de travail actuelle et ne crée ni ne change de branche automatiquement.",

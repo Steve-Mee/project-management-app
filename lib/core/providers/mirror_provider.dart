@@ -7,7 +7,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pma_core/services/mirror_access_policy.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-import '../ab_testing_service.dart';
 import 'mirror_entitlement_provider.dart';
 import 'mirror_feature_flag_provider.dart';
 import 'mirror_offline_cache_provider.dart';
@@ -23,21 +22,6 @@ export '../../features/mirror/services/mirror_context_budget_service.dart';
 export 'mirror_entitlement_provider.dart';
 export 'mirror_feature_flag_provider.dart';
 export 'mirror_offline_cache_provider.dart';
-
-class MirrorOfflineWarningKeys {
-  const MirrorOfflineWarningKeys._();
-
-  static const String teamVariantLoadedFromCache =
-    'mirrorOfflineTeamVariantLoadedFromCacheWarning';
-  static const String teamVariantFallbackSolo =
-    'mirrorOfflineTeamVariantFallbackSoloWarning';
-  static const String runnerVariantLoadedFromCache =
-    'mirrorOfflineRunnerVariantLoadedFromCacheWarning';
-  static const String runnerVariantFallbackCloud =
-    'mirrorOfflineRunnerVariantFallbackCloudWarning';
-  static const String cloudModeRequiresPremium =
-    'mirrorCloudModeRequiresPremiumWarning';
-}
 
 class MirrorState {
   const MirrorState({
@@ -77,69 +61,9 @@ class MirrorState {
   }
 }
 
-final mirrorModeProvider = StateProvider<String>((ref) => 'private');
-
-final mirrorOfflineWarningProvider = StateProvider<String?>((ref) => null);
-
 final mirrorContextBudgetServiceProvider =
     Provider<MirrorContextBudgetService>((ref) {
   return const MirrorContextBudgetService();
-});
-
-
-final mirrorTeamModeVariantProvider = FutureProvider<String>((ref) async {
-  final warningNotifier = ref.read(mirrorOfflineWarningProvider.notifier);
-  final user = _currentSupabaseUserOrNull();
-  final userId = user?.id ?? 'anonymous';
-
-  try {
-    final variant = await ABTestingService.instance.assignVariant(
-      experimentKey: 'mirror_team_mode',
-      userId: userId,
-      variants: const <String>['solo', 'team'],
-    ).timeout(const Duration(seconds: 3));
-
-    await MirrorOfflineCache.saveTeamModeVariant(userId, variant);
-    warningNotifier.state = null;
-    return variant;
-  } catch (_) {
-    final cached = await MirrorOfflineCache.getTeamModeVariant(userId);
-    if (cached != null) {
-      warningNotifier.state = MirrorOfflineWarningKeys.teamVariantLoadedFromCache;
-      return cached;
-    }
-
-    warningNotifier.state = MirrorOfflineWarningKeys.teamVariantFallbackSolo;
-    return 'solo';
-  }
-});
-
-final mirrorRunnerModeVariantProvider = FutureProvider<String>((ref) async {
-  final warningNotifier = ref.read(mirrorOfflineWarningProvider.notifier);
-  final user = _currentSupabaseUserOrNull();
-  final userId = user?.id ?? 'anonymous';
-
-  try {
-    final variant = await ABTestingService.instance.assignVariant(
-      experimentKey: 'mirror_runner_mode',
-      userId: userId,
-      variants: const <String>['local', 'cloud'],
-    ).timeout(const Duration(seconds: 3));
-
-    await MirrorOfflineCache.saveRunnerModeVariant(userId, variant);
-    warningNotifier.state = null;
-    return variant;
-  } catch (_) {
-    final cached = await MirrorOfflineCache.getRunnerModeVariant(userId);
-    if (cached != null) {
-      warningNotifier.state =
-          MirrorOfflineWarningKeys.runnerVariantLoadedFromCache;
-      return cached;
-    }
-
-    warningNotifier.state = MirrorOfflineWarningKeys.runnerVariantFallbackCloud;
-    return 'cloud';
-  }
 });
 
 final mirrorGatewayBackendProvider = Provider<MirrorGatewayBackend>((ref) {

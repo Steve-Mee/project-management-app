@@ -1738,6 +1738,11 @@ class AppLocalizationsAr extends AppLocalizations {
       'نصيحة: أنشئ فرعاً جديداً أولاً للمراجعة الآمنة والتراجع.';
 
   @override
+  String mirrorApplyBranchTipWithBranch(String branch) {
+    return 'نصيحة: استخدم الفرع المقترح \"$branch\" لمراجعة آمنة وتراجع أسهل.';
+  }
+
+  @override
   String get mirrorApplyBranchWorkingTreeNotice =>
       'يطبّق Mirror التغييرات على شجرة العمل الحالية لديك ولا ينشئ الفروع أو يبدّلها تلقائياً.';
 
