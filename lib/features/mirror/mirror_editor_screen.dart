@@ -1,5 +1,6 @@
 // ARCHITECTURE LOCK: Mirror Gateway = thin proxy only. Compute always on Fly.io or local runner.
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -46,6 +47,7 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
   bool _isRunInProgress = false;
   bool _isPermissionRevoked = false;
   bool _isRealtimeControllerDisposed = false;
+  _MirrorStructuredError? _lastStructuredError;
 
   String get _sessionKey => '${widget.projectId}::${widget.taskId}';
 
@@ -170,41 +172,30 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
                   OutlinedButton.icon(
                     onPressed: _isRunInProgress
                         ? null
-                        : () {
-                            _runService.runCurrentFileInTerminal(
-                              context: context,
-                              ref: ref,
-                              projectId: widget.projectId,
-                              taskId: widget.taskId,
-                              selectedMode: mirrorState.mode,
-                              sessionKey: _sessionKey,
-                              l10n: _l10n,
-                              isRunInProgress: _isRunInProgress,
-                              isMounted: () => mounted,
-                              setRunInProgress: (bool inProgress) {
-                                if (!mounted) {
-                                  return;
-                                }
-                                setState(() {
-                                  _isRunInProgress = inProgress;
-                                });
-                              },
-                              appendTerminalLine: _appendTerminalLine,
-                            );
-                          },
+                        : _runCurrentFileInTerminal,
                     icon: _isRunInProgress
                         ? const SizedBox(
                             width: 16,
                             height: 16,
                             child: CircularProgressIndicator(strokeWidth: 2),
                           )
-                        : const Icon(Icons.play_arrow),
+                        : Icon(
+                            _lastStructuredError?.retryable == true
+                                ? Icons.refresh
+                                : Icons.play_arrow,
+                          ),
                     label: Text(_isRunInProgress
                         ? _l10n.mirrorRunningLabel
-                        : _l10n.mirrorRunLabel),
+                        : _lastStructuredError?.retryable == true
+                            ? _l10n.mirrorRetryButton
+                            : _l10n.mirrorRunLabel),
                   ),
                 ],
               ),
+              if (_lastStructuredError?.retryable == true) ...<Widget>[
+                const SizedBox(height: 8),
+                _buildRetryFeedbackCard(context, _lastStructuredError!),
+              ],
               const SizedBox(height: 16),
               Expanded(
                 child: Container(
@@ -727,8 +718,204 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
   }
 
   void _appendTerminalLine(String line) {
-    _sessionNotifier.appendTerminalLine(line, maxLines: 1000);
-    _terminal.write('$line\\r\\n');
+    final structured = _tryParseStructuredMirrorError(line);
+    final displayLine = structured == null
+        ? line
+        : _l10n.mirrorRunCrashedTerminal(
+            structured.message ?? structured.errorFamily,
+          );
+
+    _sessionNotifier.appendTerminalLine(displayLine, maxLines: 1000);
+    _terminal.write('$displayLine\\r\\n');
+
+    if (structured == null) {
+      return;
+    }
+
+    if (mounted) {
+      setState(() {
+        _lastStructuredError = structured;
+      });
+    }
+    if (structured.retryable) {
+      _showRetryFeedback(structured);
+    }
+  }
+
+  void _runCurrentFileInTerminal() {
+    final beforeState = ref.read(mirrorSessionProvider(_sessionKey));
+    final beforeTerminalCount = beforeState.terminalLog.length;
+
+    setState(() {
+      _lastStructuredError = null;
+    });
+
+    _runService
+        .runCurrentFileInTerminal(
+      context: context,
+      ref: ref,
+      projectId: widget.projectId,
+      taskId: widget.taskId,
+      selectedMode: ref.read(mirrorProvider).mode,
+      sessionKey: _sessionKey,
+      l10n: _l10n,
+      isRunInProgress: _isRunInProgress,
+      isMounted: () => mounted,
+      setRunInProgress: (bool inProgress) {
+        if (!mounted) {
+          return;
+        }
+        setState(() {
+          _isRunInProgress = inProgress;
+        });
+      },
+      appendTerminalLine: _appendTerminalLine,
+    )
+        .then((_) {
+      if (!mounted) {
+        return;
+      }
+
+      final afterState = ref.read(mirrorSessionProvider(_sessionKey));
+      final recentTerminalLines = afterState.terminalLog
+          .skip(beforeTerminalCount)
+          .toList(growable: false);
+      final parsed = _findLatestStructuredError(recentTerminalLines);
+      if (parsed != null) {
+        setState(() {
+          _lastStructuredError = parsed;
+        });
+        if (parsed.retryable) {
+          _showRetryFeedback(parsed);
+        }
+        return;
+      }
+
+      final completed = recentTerminalLines
+          .any((line) => line.contains(_l10n.mirrorRunCompletedTerminal));
+      if (completed) {
+        setState(() {
+          _lastStructuredError = null;
+        });
+      }
+    });
+  }
+
+  Widget _buildRetryFeedbackCard(
+    BuildContext context,
+    _MirrorStructuredError error,
+  ) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(
+          color: Theme.of(context).colorScheme.outlineVariant,
+        ),
+        color: Theme.of(context).colorScheme.surfaceContainerLow,
+      ),
+      child: Row(
+        children: <Widget>[
+          const Icon(Icons.refresh, size: 18),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              _l10n.mirrorRunCrashed(error.message ?? error.errorFamily),
+              style: Theme.of(context).textTheme.bodySmall,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          const SizedBox(width: 8),
+          TextButton(
+            onPressed: _isRunInProgress ? null : _runCurrentFileInTerminal,
+            child: Text(_l10n.mirrorRetryButton),
+          ),
+        ],
+      ),
+    );
+  }
+
+  _MirrorStructuredError? _findLatestStructuredError(List<String> lines) {
+    for (var i = lines.length - 1; i >= 0; i--) {
+      final parsed = _tryParseStructuredMirrorError(lines[i]);
+      if (parsed != null) {
+        return parsed;
+      }
+    }
+    return null;
+  }
+
+  _MirrorStructuredError? _tryParseStructuredMirrorError(String raw) {
+    final trimmed = raw.trim();
+    if (trimmed.isEmpty) {
+      return null;
+    }
+
+    final segments = trimmed.split(' | ');
+    for (final segment in segments) {
+      try {
+        final decoded = jsonDecode(segment);
+        if (decoded is! Map) {
+          continue;
+        }
+
+        final map = Map<String, dynamic>.from(decoded);
+        final family = map['error_family']?.toString().trim();
+        if (family == null || family.isEmpty) {
+          continue;
+        }
+
+        final retryableRaw = map['retryable'];
+        final retryable = retryableRaw is bool
+            ? retryableRaw
+            : _isRetryableFamily(family);
+        final message = map['message']?.toString().trim();
+
+        return _MirrorStructuredError(
+          errorFamily: family,
+          retryable: retryable,
+          message: (message == null || message.isEmpty) ? null : message,
+        );
+      } catch (_) {
+        continue;
+      }
+    }
+
+    return null;
+  }
+
+  bool _isRetryableFamily(String family) {
+    switch (family) {
+      case 'network':
+      case 'timeout':
+      case 'rate_limited':
+      case 'server_error':
+        return true;
+      default:
+        return false;
+    }
+  }
+
+  void _showRetryFeedback(_MirrorStructuredError error) {
+    if (!mounted || !error.retryable) {
+      return;
+    }
+
+    final messenger = ScaffoldMessenger.of(context);
+    messenger.hideCurrentSnackBar();
+    messenger.showSnackBar(
+      SnackBar(
+        content: Text(
+          _l10n.mirrorRunCrashed(error.message ?? error.errorFamily),
+        ),
+        action: SnackBarAction(
+          label: _l10n.mirrorRetryButton,
+          onPressed: _runCurrentFileInTerminal,
+        ),
+      ),
+    );
   }
 
   String _statusLineLabel(String status) {
@@ -829,4 +1016,16 @@ class _ModeSelector extends StatelessWidget {
       ],
     );
   }
+}
+
+class _MirrorStructuredError {
+  const _MirrorStructuredError({
+    required this.errorFamily,
+    required this.retryable,
+    this.message,
+  });
+
+  final String errorFamily;
+  final bool retryable;
+  final String? message;
 }

@@ -5,12 +5,15 @@ import 'dart:convert';
 import 'package:crypto/crypto.dart';
 import 'package:http/http.dart' as http;
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:uuid/uuid.dart';
 
 import '../../core/config/app_config.dart';
 import 'mirror_compute_backend.dart';
 import 'services/mirror_context_budget_service.dart';
 import 'services/mirror_observability_service.dart';
 import 'services/mirror_retry_policy.dart';
+
+const Uuid _uuid = Uuid();
 
 class MirrorGatewayBackend implements MirrorComputeBackend {
   MirrorGatewayBackend({
@@ -25,6 +28,7 @@ class MirrorGatewayBackend implements MirrorComputeBackend {
     MirrorContextBudgetService? budgetService,
     MirrorObservabilityService? observabilityService,
     MirrorRetryPolicy? retryPolicy,
+    this.onCompileValidated,
   })  : _client = _resolveClient(client),
         _httpClient = httpClient ?? http.Client(),
         _budgetService = budgetService,
@@ -47,6 +51,12 @@ class MirrorGatewayBackend implements MirrorComputeBackend {
   final Duration timeout;
   final int maxRetries;
   final Duration initialBackoff;
+  final void Function({
+    required String projectId,
+    required String taskId,
+    required String compileFingerprint,
+    String? serverVersionToken,
+  })? onCompileValidated;
 
   @override
   Future<GenerateResult> generate({
@@ -72,7 +82,13 @@ class MirrorGatewayBackend implements MirrorComputeBackend {
       );
       compileResult = CompileResult(
         success: false,
-        errors: <String>['config_error: ${error.toString()}'],
+        errors: <String>[
+          _formatStructuredError(
+            family: _MirrorGatewayErrorFamily.config,
+            message: error.toString(),
+            retryable: false,
+          ),
+        ],
       );
     }
 
@@ -114,7 +130,13 @@ class MirrorGatewayBackend implements MirrorComputeBackend {
       );
       return CompileResult(
         success: false,
-        errors: <String>['config_error: ${error.toString()}'],
+        errors: <String>[
+          _formatStructuredError(
+            family: _MirrorGatewayErrorFamily.config,
+            message: error.toString(),
+            retryable: false,
+          ),
+        ],
       );
     }
   }
@@ -138,16 +160,24 @@ class MirrorGatewayBackend implements MirrorComputeBackend {
       );
       return ApplyResult(
         success: false,
-        message: 'config_error: ${error.toString()}',
+        message: _formatStructuredError(
+          family: _MirrorGatewayErrorFamily.config,
+          message: error.toString(),
+          retryable: false,
+        ),
       );
     }
 
     final normalizedCompileFingerprint = compileFingerprint?.trim() ?? '';
     if (useSecureApply && normalizedCompileFingerprint.isEmpty) {
-      return const ApplyResult(
+      return ApplyResult(
         success: false,
-        message:
-            'Apply blocked: preview fingerprint missing. Re-run preview before applying.',
+        message: _formatStructuredError(
+          family: _MirrorGatewayErrorFamily.validation,
+          message:
+              'Apply blocked: preview fingerprint missing. Re-run preview before applying.',
+          retryable: false,
+        ),
       );
     }
 
@@ -170,7 +200,11 @@ class MirrorGatewayBackend implements MirrorComputeBackend {
         return ApplyResult(
           success: false,
           message: preflight.errors.isEmpty
-              ? 'Apply failed: compile output is empty.'
+              ? _formatStructuredError(
+                  family: _MirrorGatewayErrorFamily.validation,
+                  message: 'Apply failed: compile output is empty.',
+                  retryable: false,
+                )
               : preflight.errors.join(' | '),
         );
       }
@@ -208,7 +242,11 @@ class MirrorGatewayBackend implements MirrorComputeBackend {
           return ApplyResult(
             success: false,
             message: preflight.errors.isEmpty
-                ? 'Apply failed: compile output is empty.'
+                ? _formatStructuredError(
+                    family: _MirrorGatewayErrorFamily.validation,
+                    message: 'Apply failed: compile output is empty.',
+                    retryable: false,
+                  )
                 : preflight.errors.join(' | '),
           );
         }
@@ -249,7 +287,12 @@ class MirrorGatewayBackend implements MirrorComputeBackend {
       output: preflightOutput,
     );
     if (actualFingerprint != expectedCompileFingerprint) {
-      return 'Apply blocked: preview fingerprint mismatch. Re-run preview before applying.';
+      return _formatStructuredError(
+        family: _MirrorGatewayErrorFamily.consistency,
+        message:
+            'Apply blocked: preview fingerprint mismatch. Re-run preview before applying.',
+        retryable: false,
+      );
     }
 
     final expectedContextFingerprint =
@@ -257,7 +300,12 @@ class MirrorGatewayBackend implements MirrorComputeBackend {
     if (expectedContextFingerprint.isNotEmpty) {
       final actualContextFingerprint = _fingerprintFileMap(context.files);
       if (actualContextFingerprint != expectedContextFingerprint) {
-        return 'Apply blocked: preview context mismatch. Re-run preview before applying.';
+        return _formatStructuredError(
+          family: _MirrorGatewayErrorFamily.consistency,
+          message:
+              'Apply blocked: preview context mismatch. Re-run preview before applying.',
+          retryable: false,
+        );
       }
     }
 
@@ -316,9 +364,13 @@ class MirrorGatewayBackend implements MirrorComputeBackend {
     );
 
     if (patches.isEmpty) {
-      return const ApplyResult(
+      return ApplyResult(
         success: false,
-        message: 'Apply failed: no patchable changes returned.',
+        message: _formatStructuredError(
+          family: _MirrorGatewayErrorFamily.validation,
+          message: 'Apply failed: no patchable changes returned.',
+          retryable: false,
+        ),
       );
     }
 
@@ -382,7 +434,7 @@ class MirrorGatewayBackend implements MirrorComputeBackend {
       stage: 'client_gateway_dispatch',
     );
 
-    return _retryPolicy.execute<CompileResult, http.Response>(
+    final result = await _retryPolicy.execute<CompileResult, http.Response>(
       attemptOperation: () => _httpClient.post(
         Uri.parse(endpoint),
         headers: request.headers,
@@ -392,23 +444,44 @@ class MirrorGatewayBackend implements MirrorComputeBackend {
       isRetriable: (response) => _isRetriableStatus(response.statusCode),
       retryReasonForResult: (response) =>
           response.statusCode == 429 ? 'rate_limited' : 'server_error',
-      onSuccess: (response) => _compileResultFromRaw(response.body),
+      onSuccess: (response) {
+        _recordGatewayResponseLink(
+          operation: 'compile',
+          mode: mode,
+          endpoint: endpoint,
+          requestTrace: requestTrace,
+          response: response,
+        );
+        return _compileResultFromRaw(response.body);
+      },
       onFailure: (response) => CompileResult(
         success: false,
         errors: <String>[
-          '${_httpErrorCodeForStatus(response.statusCode).value}: HTTP ${response.statusCode}',
+          _formatStructuredError(
+            family: _httpErrorCodeForStatus(response.statusCode).family,
+            message: 'HTTP ${response.statusCode}',
+            statusCode: response.statusCode,
+          ),
           if (response.body.trim().isNotEmpty) response.body,
         ],
       ),
-      onTimeoutFailure: () => const CompileResult(
+      onTimeoutFailure: () => CompileResult(
         success: false,
         errors: <String>[
-          'timeout: Mirror Gateway HTTP /compile request timed out.'
+          _formatStructuredError(
+            family: _MirrorGatewayErrorFamily.timeout,
+            message: 'Mirror Gateway HTTP /compile request timed out.',
+          ),
         ],
       ),
       onErrorFailure: (error) => CompileResult(
         success: false,
-        errors: <String>['network: ${error.toString()}'],
+        errors: <String>[
+          _formatStructuredError(
+            family: _MirrorGatewayErrorFamily.network,
+            message: error.toString(),
+          ),
+        ],
       ),
       onAttemptComplete: ({
         required int durationMs,
@@ -437,6 +510,52 @@ class MirrorGatewayBackend implements MirrorComputeBackend {
           idempotencyKey: requestTrace.idempotencyKey,
         );
       },
+    );
+
+    _persistCompileValidationArtifacts(
+      prompt: prompt,
+      context: context,
+      mode: mode,
+      compileResult: result,
+    );
+
+    return result;
+  }
+
+  void _persistCompileValidationArtifacts({
+    required String prompt,
+    required ProjectContext context,
+    required String mode,
+    required CompileResult compileResult,
+  }) {
+    final callback = onCompileValidated;
+    if (callback == null || !compileResult.success) {
+      return;
+    }
+
+    final output = compileResult.output;
+    if (output == null || output.trim().isEmpty) {
+      return;
+    }
+
+    final projectId = context.projectId.trim();
+    final taskId = context.taskId.trim();
+    if (projectId.isEmpty || taskId.isEmpty) {
+      return;
+    }
+
+    final compileFingerprint = computeCompileResultFingerprint(
+      prompt: prompt,
+      context: context,
+      mode: mode,
+      output: output,
+    );
+
+    callback(
+      projectId: projectId,
+      taskId: taskId,
+      compileFingerprint: compileFingerprint,
+      serverVersionToken: compileResult.serverVersionToken,
     );
   }
 
@@ -475,24 +594,44 @@ class MirrorGatewayBackend implements MirrorComputeBackend {
       isRetriable: (response) => _isRetriableStatus(response.statusCode),
       retryReasonForResult: (response) =>
           response.statusCode == 429 ? 'rate_limited' : 'server_error',
-      onSuccess: (response) =>
-          _RawGatewayResult(success: true, body: response.body),
+      onSuccess: (response) {
+        _recordGatewayResponseLink(
+          operation: 'apply',
+          mode: mode,
+          endpoint: endpoint,
+          requestTrace: requestTrace,
+          response: response,
+        );
+        return _RawGatewayResult(success: true, body: response.body);
+      },
       onFailure: (response) => _RawGatewayResult(
         success: false,
         errors: <String>[
-          '${_httpErrorCodeForStatus(response.statusCode).value}: HTTP ${response.statusCode}',
+          _formatStructuredError(
+            family: _httpErrorCodeForStatus(response.statusCode).family,
+            message: 'HTTP ${response.statusCode}',
+            statusCode: response.statusCode,
+          ),
           if (response.body.trim().isNotEmpty) response.body,
         ],
       ),
-      onTimeoutFailure: () => const _RawGatewayResult(
+      onTimeoutFailure: () => _RawGatewayResult(
         success: false,
         errors: <String>[
-          'timeout: Mirror Gateway HTTP /apply request timed out.'
+          _formatStructuredError(
+            family: _MirrorGatewayErrorFamily.timeout,
+            message: 'Mirror Gateway HTTP /apply request timed out.',
+          ),
         ],
       ),
       onErrorFailure: (error) => _RawGatewayResult(
         success: false,
-        errors: <String>['network: ${error.toString()}'],
+        errors: <String>[
+          _formatStructuredError(
+            family: _MirrorGatewayErrorFamily.network,
+            message: error.toString(),
+          ),
+        ],
       ),
       onAttemptComplete: ({
         required int durationMs,
@@ -535,13 +674,18 @@ class MirrorGatewayBackend implements MirrorComputeBackend {
         _budgetService?.enforce(context).context ?? context;
     final token = _client?.auth.currentSession?.accessToken;
     final idempotencyKey = requestTrace.idempotencyKey;
+    final metadata = <String, dynamic>{
+      ...effectiveContext.metadata.toJson(),
+      'requestId': requestTrace.requestId,
+      'traceId': requestTrace.traceId,
+    };
     final payload = <String, dynamic>{
       'prompt': prompt,
       'projectId': effectiveContext.projectId,
       'taskId': effectiveContext.taskId,
       'mode': mode,
       'files': effectiveContext.files,
-      'metadata': effectiveContext.metadata.toJson(),
+      'metadata': metadata,
       ...extra,
     };
 
@@ -573,6 +717,33 @@ class MirrorGatewayBackend implements MirrorComputeBackend {
       traceId: traceId,
       idempotencyKey: idempotencyKey,
       mode: mode,
+    );
+  }
+
+  void _recordGatewayResponseLink({
+    required String operation,
+    required String mode,
+    required String endpoint,
+    required _MirrorRequestTrace requestTrace,
+    required http.Response response,
+  }) {
+    final gatewayRequestId =
+        _firstNonBlank(<String?>[response.headers['x-request-id']]) ??
+            requestTrace.requestId;
+    final gatewayTraceId =
+        _firstNonBlank(<String?>[response.headers['x-trace-id']]) ??
+            requestTrace.traceId;
+
+    _observabilityService?.recordRequestLinkEvent(
+      operation: operation,
+      mode: mode,
+      requestId: requestTrace.requestId,
+      traceId: requestTrace.traceId,
+      linkedRequestId: gatewayRequestId,
+      linkedTraceId: gatewayTraceId,
+      idempotencyKey: requestTrace.idempotencyKey,
+      endpoint: endpoint,
+      stage: 'gateway_response',
     );
   }
 
@@ -737,14 +908,45 @@ class MirrorGatewayBackend implements MirrorComputeBackend {
 }
 
 enum _MirrorGatewayHttpErrorCode {
-  unauthorized('unauthorized'),
-  rateLimited('rate_limited'),
-  badRequest('bad_request'),
-  server('server_error');
+  unauthorized(_MirrorGatewayErrorFamily.unauthorized),
+  rateLimited(_MirrorGatewayErrorFamily.rateLimited),
+  badRequest(_MirrorGatewayErrorFamily.badRequest),
+  server(_MirrorGatewayErrorFamily.serverError);
 
-  const _MirrorGatewayHttpErrorCode(this.value);
+  const _MirrorGatewayHttpErrorCode(this.family);
+
+  final _MirrorGatewayErrorFamily family;
+}
+
+enum _MirrorGatewayErrorFamily {
+  config('config_error', false),
+  validation('validation_error', false),
+  consistency('consistency_error', false),
+  timeout('timeout', true),
+  network('network', true),
+  unauthorized('unauthorized', false),
+  rateLimited('rate_limited', true),
+  badRequest('bad_request', false),
+  serverError('server_error', true);
+
+  const _MirrorGatewayErrorFamily(this.value, this.defaultRetryable);
 
   final String value;
+  final bool defaultRetryable;
+}
+
+String _formatStructuredError({
+  required _MirrorGatewayErrorFamily family,
+  required String message,
+  bool? retryable,
+  int? statusCode,
+}) {
+  return jsonEncode(<String, dynamic>{
+    'error_family': family.value,
+    'retryable': retryable ?? family.defaultRetryable,
+    'message': message,
+    if (statusCode != null) 'status_code': statusCode,
+  });
 }
 
 class _RawGatewayResult {
@@ -803,7 +1005,7 @@ String _resolveRequestId(Map<String, dynamic> metadata) {
     }
   }
 
-  return 'mirror-${DateTime.now().toUtc().microsecondsSinceEpoch}';
+  return 'mirror-${_uuid.v4()}';
 }
 
 String _resolveTraceId(
@@ -822,7 +1024,20 @@ String _resolveTraceId(
     }
   }
 
-  return 'trace-$requestId';
+  return 'trace-$requestId-${_uuid.v4()}';
+}
+
+String? _firstNonBlank(List<String?> values) {
+  for (final value in values) {
+    if (value == null) {
+      continue;
+    }
+    final normalized = value.trim();
+    if (normalized.isNotEmpty) {
+      return normalized;
+    }
+  }
+  return null;
 }
 
 class _MirrorRequestTrace {
