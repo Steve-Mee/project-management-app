@@ -35,7 +35,7 @@ class MirrorEditorRunService {
         projectId: projectId,
         taskId: taskId,
         files: sessionState.files,
-        metadata: const <String, dynamic>{},
+        metadata: const ProjectContextMetadata(),
       );
       final report = budgetService.enforce(draftContext).report;
       if (report.wasEnforced) {

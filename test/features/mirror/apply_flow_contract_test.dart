@@ -18,10 +18,14 @@ void main() {
       );
 
       expect(backendSource, contains('prepareSignedInputAndBackup'));
-      expect(backendSource,
-          contains('signedInputBucket = MirrorSecureApplyService.defaultSignedInputBucket'));
-      expect(backendSource,
-          contains('backupBucket = MirrorSecureApplyService.defaultBackupBucket'));
+      expect(
+          backendSource,
+          contains(
+              'signedInputBucket = MirrorSecureApplyService.defaultSignedInputBucket'));
+      expect(
+          backendSource,
+          contains(
+              'backupBucket = MirrorSecureApplyService.defaultBackupBucket'));
       expect(secureApplySource, contains('await _uploadReplaceBinary('));
       expect(secureApplySource, contains('.createSignedUrl(signedInputPath'));
       expect(secureApplySource, contains('.createSignedUrl(backupPath'));
@@ -55,11 +59,11 @@ void main() {
         projectId: 'project-7',
         taskId: 'task-42',
         files: <String, String>{'lib/main.dart': 'void main() {}'},
-        metadata: <String, dynamic>{
-          'buildTarget': 'flutter',
-          'teamMode': true,
-          'priority': 'high',
-        },
+        metadata: ProjectContextMetadata(
+          buildTarget: 'flutter',
+          teamModeEnabled: true,
+          priority: 'high',
+        ),
       );
 
       final result = await backend.apply(
@@ -92,10 +96,14 @@ void main() {
       );
 
       expect(source, contains("const eventApplyStarted = 'apply_started';"));
-      expect(source,
-          contains("const eventApplyPreparationFailed = 'apply_preparation_failed';"));
-      expect(source, contains("const eventApplyException = 'apply_exception';"));
-      expect(source, contains("const eventApplyCompleted = 'apply_completed';"));
+      expect(
+          source,
+          contains(
+              "const eventApplyPreparationFailed = 'apply_preparation_failed';"));
+      expect(
+          source, contains("const eventApplyException = 'apply_exception';"));
+      expect(
+          source, contains("const eventApplyCompleted = 'apply_completed';"));
       expect(source, contains('event: eventApplyStarted'));
       expect(source, contains('event: eventApplyPreparationFailed'));
       expect(source, contains('event: eventApplyException'));
@@ -130,5 +138,3 @@ String _readRepoFile(String relativePath) {
 
   throw StateError('Unable to locate file for contract test: $relativePath');
 }
-
-

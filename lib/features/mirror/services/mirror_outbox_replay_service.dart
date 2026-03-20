@@ -85,7 +85,7 @@ class MirrorOutboxEntry {
         'projectId': context.projectId,
         'taskId': context.taskId,
         'files': context.files,
-        'metadata': _jsonSafe(context.metadata),
+        'metadata': _jsonSafe(context.metadata.toJson()),
       },
       'mode': mode,
       'createdAt': createdAt.toIso8601String(),
@@ -112,11 +112,6 @@ class MirrorOutboxEntry {
 
       final contextMap = Map<String, dynamic>.from(contextRaw);
       final files = _stringMap(contextMap['files']);
-      final metadataRaw = contextMap['metadata'];
-      final metadata = metadataRaw is Map
-          ? Map<String, dynamic>.from(metadataRaw)
-          : const <String, dynamic>{};
-
       final operation = map['operation']?.toString();
       final sessionKey = map['sessionKey']?.toString();
       final prompt = map['prompt']?.toString();
@@ -147,7 +142,11 @@ class MirrorOutboxEntry {
           projectId: projectId,
           taskId: taskId,
           files: files,
-          metadata: metadata,
+          metadata: contextMap['metadata'] is Map
+              ? ProjectContextMetadata.fromJson(
+                  Map<String, dynamic>.from(contextMap['metadata'] as Map),
+                )
+              : const ProjectContextMetadata(),
         ),
         mode: mode,
         createdAt: createdAt,
@@ -211,12 +210,43 @@ class MirrorOutboxEntry {
 }
 
 class MirrorOutboxReplayService {
+  /// Mirror outbox resilience policy.
+  ///
+  /// Retry model uses two layers:
+  ///
+  /// 1. In-attempt retries ([maxRetries])
+  ///    A single replay attempt retries transient failures up to
+  ///    `maxRetries + 1` total tries with exponential backoff and jitter:
+  ///    `initialBackoff * 2^n`, then jittered by ±20%.
+  ///
+  /// 2. Deferred replay retries ([maxReplayAttempts])
+  ///    If the in-attempt loop still fails, the entry is re-scheduled for the
+  ///    next replay pass with exponential backoff (also jittered), until
+  ///    [maxReplayAttempts] is reached, after which the entry becomes terminal.
+  ///
+  /// Circuit breaker:
+  ///
+  /// - Opens after [circuitBreakerFailureThreshold] consecutive replay
+  ///   operation failures.
+  /// - Stays open for [circuitBreakerOpenDuration], skipping replay dispatch.
+  /// - Transitions to half-open after cooldown and allows one probe replay.
+  /// - Probe success closes the breaker and resets counters.
+  /// - Probe failure re-opens breaker for another cooldown window.
+  ///
+  /// Per-operation timeout:
+  ///
+  /// - Every backend replay call is bounded by [operationTimeout].
+  /// - Timeout is treated as a retryable replay failure and contributes to
+  ///   circuit-breaker failure counts.
   MirrorOutboxReplayService({
     required Ref ref,
     this.maxRetries = 2,
     this.initialBackoff = const Duration(milliseconds: 250),
     this.maxReplayAttempts = 8,
     this.replayTickInterval = const Duration(seconds: 8),
+    this.operationTimeout = const Duration(seconds: 25),
+    this.circuitBreakerFailureThreshold = 4,
+    this.circuitBreakerOpenDuration = const Duration(seconds: 45),
     bool? failClosedOnEncryptionError,
     MirrorContextBudgetService? budgetService,
     Future<Box<Map<dynamic, dynamic>>> Function()? encryptedBoxOpener,
@@ -238,6 +268,9 @@ class MirrorOutboxReplayService {
   final Duration initialBackoff;
   final int maxReplayAttempts;
   final Duration replayTickInterval;
+  final Duration operationTimeout;
+  final int circuitBreakerFailureThreshold;
+  final Duration circuitBreakerOpenDuration;
   final bool _failClosedOnEncryptionError;
   final MirrorContextBudgetService? _budgetService;
   final MirrorObservabilityService? _observabilityService;
@@ -257,7 +290,10 @@ class MirrorOutboxReplayService {
   Future<void>? _readyFuture;
   Box<Map<dynamic, dynamic>>? _outboxBox;
   bool _isReplaying = false;
+  bool _isCircuitHalfOpen = false;
   bool _isDisposed = false;
+  DateTime? _circuitOpenUntil;
+  int _consecutiveReplayFailures = 0;
   Timer? _replayTicker;
 
   List<MirrorOutboxEntry> get queuedEntries =>
@@ -379,6 +415,25 @@ class MirrorOutboxReplayService {
     _isReplaying = true;
     try {
       final now = DateTime.now().toUtc();
+      if (_isCircuitOpen(now)) {
+        _observabilityService?.recordCircuitBreakerEvent(
+          state: 'open',
+          reason: 'replay_skipped',
+          consecutiveFailures: _consecutiveReplayFailures,
+          openUntil: _circuitOpenUntil,
+        );
+        return;
+      }
+
+      if (_circuitOpenUntil != null && !_isCircuitHalfOpen) {
+        _isCircuitHalfOpen = true;
+        _observabilityService?.recordCircuitBreakerEvent(
+          state: 'half_open',
+          reason: 'cooldown_elapsed',
+          consecutiveFailures: _consecutiveReplayFailures,
+        );
+      }
+
       final dueEntries = _queue.values.where((entry) {
         if (_isTerminal(entry)) {
           return false;
@@ -404,6 +459,10 @@ class MirrorOutboxReplayService {
           operationExecutor: operationExecutor,
           onReplaySuccess: onReplaySuccess,
         );
+        if (_isCircuitHalfOpen || _isCircuitOpen(DateTime.now().toUtc())) {
+          // Half-open allows only one probe; open state pauses remaining work.
+          break;
+        }
       }
     } finally {
       _isReplaying = false;
@@ -429,6 +488,7 @@ class MirrorOutboxReplayService {
       operationExecutor: operationExecutor,
     );
     if (attempt.success) {
+      _recordReplaySuccess();
       _queue.remove(entry.idempotencyKey);
       await _deleteOutboxEntry(entry.idempotencyKey);
       if (onReplaySuccess != null) {
@@ -443,6 +503,13 @@ class MirrorOutboxReplayService {
     }
 
     final now = DateTime.now().toUtc();
+    _recordReplayFailure(
+      reason: attempt.failureReason,
+      now: now,
+      operation: entry.operation,
+      mode: entry.mode,
+      sessionKey: entry.sessionKey,
+    );
     final retryCount = entry.retryCount + 1;
     if (retryCount >= maxReplayAttempts) {
       final terminalEntry = entry.copyWith(
@@ -492,8 +559,8 @@ class MirrorOutboxReplayService {
     for (var attempt = 1; attempt <= maxRetries + 1; attempt += 1) {
       try {
         final operationResult = operationExecutor == null
-            ? await _executeOperation(entry)
-            : await operationExecutor(entry);
+            ? await _executeOperation(entry).timeout(operationTimeout)
+            : await operationExecutor(entry).timeout(operationTimeout);
         if (operationResult.success) {
           if (entry.operation == 'apply') {
             await _refreshTaskAndSubTaskCaches(entry.context, entry.sessionKey);
@@ -506,6 +573,7 @@ class MirrorOutboxReplayService {
           return _ReplayAttempt(
             success: false,
             failureMessage: operationResult.message,
+            failureReason: 'operation_failed',
           );
         }
 
@@ -523,11 +591,23 @@ class MirrorOutboxReplayService {
           mode: entry.mode,
         );
       } catch (error) {
+        final failureReason = error is TimeoutException
+            ? 'operation_timeout'
+            : 'replay_exception';
+        if (error is TimeoutException) {
+          _observabilityService?.recordReplayTimeout(
+            operation: entry.operation,
+            mode: entry.mode,
+            timeoutMs: operationTimeout.inMilliseconds,
+            attempt: attempt,
+          );
+        }
         final isLastAttempt = attempt > maxRetries;
         if (isLastAttempt) {
           return _ReplayAttempt(
             success: false,
             failureMessage: error.toString(),
+            failureReason: failureReason,
           );
         }
 
@@ -540,7 +620,7 @@ class MirrorOutboxReplayService {
         );
         _observabilityService?.recordRetry(
           operation: entry.operation,
-          reason: 'replay_exception',
+          reason: failureReason,
           attempt: attempt,
           mode: entry.mode,
         );
@@ -551,6 +631,70 @@ class MirrorOutboxReplayService {
     }
 
     return const _ReplayAttempt(success: false, failureMessage: 'unreachable');
+  }
+
+  bool _isCircuitOpen(DateTime now) {
+    final openUntil = _circuitOpenUntil;
+    if (openUntil == null) {
+      return false;
+    }
+    if (!now.isBefore(openUntil)) {
+      return false;
+    }
+    return true;
+  }
+
+  void _recordReplaySuccess() {
+    if (_consecutiveReplayFailures == 0 && _circuitOpenUntil == null) {
+      return;
+    }
+
+    _consecutiveReplayFailures = 0;
+    if (_circuitOpenUntil != null || _isCircuitHalfOpen) {
+      _observabilityService?.recordCircuitBreakerEvent(
+        state: 'closed',
+        reason: 'probe_success',
+        consecutiveFailures: _consecutiveReplayFailures,
+      );
+    }
+    _circuitOpenUntil = null;
+    _isCircuitHalfOpen = false;
+  }
+
+  void _recordReplayFailure({
+    required String reason,
+    required DateTime now,
+    required String operation,
+    required String mode,
+    required String sessionKey,
+  }) {
+    _consecutiveReplayFailures += 1;
+
+    if (_consecutiveReplayFailures < circuitBreakerFailureThreshold) {
+      return;
+    }
+
+    final openUntil = now.add(circuitBreakerOpenDuration);
+    _circuitOpenUntil = openUntil;
+    _isCircuitHalfOpen = false;
+    _observabilityService?.recordCircuitBreakerEvent(
+      state: 'open',
+      reason: reason,
+      consecutiveFailures: _consecutiveReplayFailures,
+      openUntil: openUntil,
+    );
+    _emitStatus(
+      sessionKey,
+      terminalLine:
+          'Mirror replay circuit breaker opened after repeated $operation failures; pausing replay until ${openUntil.toIso8601String()}.',
+      liveLine: 'Outbox circuit breaker open',
+    );
+    _observabilityService?.recordRetry(
+      operation: operation,
+      reason: 'circuit_breaker_open',
+      attempt: _consecutiveReplayFailures,
+      mode: mode,
+    );
   }
 
   Future<MirrorOutboxOperationResult> _executeOperation(
@@ -581,8 +725,7 @@ class MirrorOutboxReplayService {
           message: result.errors.join(' | '),
         );
       case 'apply':
-        final compileFingerprint =
-            context.metadata['compileFingerprint']?.toString();
+        final compileFingerprint = context.metadata.compileFingerprint;
         final result = await backend.apply(
           prompt: entry.prompt,
           context: context,
@@ -660,7 +803,7 @@ class MirrorOutboxReplayService {
       'projectId': context.projectId,
       'taskId': context.taskId,
       'files': context.files,
-      'metadata': MirrorOutboxEntry._jsonSafe(sanitizedMetadata),
+      'metadata': MirrorOutboxEntry._jsonSafe(sanitizedMetadata.toJson()),
     });
     final payload = <String>[
       operation,
@@ -674,30 +817,13 @@ class MirrorOutboxReplayService {
   }
 
   String _resolveContextIdempotencyKey(ProjectContext context) {
-    final canonical = context.metadata['idempotencyKey']?.toString().trim();
-    if (canonical != null && canonical.isNotEmpty) {
-      return canonical;
-    }
-
-    final headerStyle =
-        context.metadata['x-idempotency-key']?.toString().trim();
-    if (headerStyle != null && headerStyle.isNotEmpty) {
-      return headerStyle;
-    }
-
-    return '';
+    return context.metadata.idempotencyKey ?? '';
   }
 
-  Map<String, dynamic> _stripIdempotencyMetadata(
-      Map<String, dynamic> metadata) {
-    if (metadata.isEmpty) {
-      return const <String, dynamic>{};
-    }
-
-    final sanitized = Map<String, dynamic>.from(metadata);
-    sanitized.remove('idempotencyKey');
-    sanitized.remove('x-idempotency-key');
-    return sanitized;
+  ProjectContextMetadata _stripIdempotencyMetadata(
+    ProjectContextMetadata metadata,
+  ) {
+    return metadata.copyWith(idempotencyKey: '');
   }
 
   ProjectContext _contextWithIdempotency(
@@ -713,14 +839,8 @@ class MirrorOutboxReplayService {
       return context;
     }
 
-    final metadata = Map<String, dynamic>.from(context.metadata);
-    metadata['idempotencyKey'] = idempotencyKey;
-
-    return ProjectContext(
-      projectId: context.projectId,
-      taskId: context.taskId,
-      files: context.files,
-      metadata: metadata,
+    return context.copyWith(
+      metadata: context.metadata.copyWith(idempotencyKey: idempotencyKey),
     );
   }
 
@@ -913,10 +1033,15 @@ class MirrorOutboxOperationResult {
 }
 
 class _ReplayAttempt {
-  const _ReplayAttempt({required this.success, this.failureMessage});
+  const _ReplayAttempt({
+    required this.success,
+    this.failureMessage,
+    this.failureReason = 'unknown_failure',
+  });
 
   final bool success;
   final String? failureMessage;
+  final String failureReason;
 }
 
 final mirrorOutboxReplayServiceProvider =

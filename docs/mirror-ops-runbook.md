@@ -17,6 +17,17 @@ Canonical naming note:
 - Use only `mirror-signed-inputs` and `mirror-backups`
 - Do not use legacy/ambiguous bucket aliases
 
+## Service Tier And Responsibilities
+
+- Tier: Production-critical developer workflow service
+- Primary owner: Mirror Backend team
+- Supporting teams: Flutter Client, SRE, Security
+- On-call handoff: SRE owns incident command, Mirror Backend owns remediation
+
+Business impact assumptions:
+- Compile/apply failures block user editing workflows.
+- Prolonged degradation increases support tickets and release risk for users.
+
 ## Architecture Contract
 Request flow:
 1. Client calls `POST /functions/v1/mirror-gateway/compile` or `POST /functions/v1/mirror-gateway/apply`
@@ -66,11 +77,118 @@ AB/remote-config contract:
 - `mirror_runner_quota_max_workspace_bytes`
 - `mirror_runner_quota_max_execution_window_seconds`
 
-## SLO and Error Budgets
-- Compile availability target: 99.9%
-- Apply availability target: 99.9%
-- Gateway timeout budget: < 1% of requests per rolling 30 days
-- Auth denied spikes are actionable when > 3x baseline for 15 minutes
+## Deployment Runbook
+
+### Preconditions
+1. Confirm readiness gates in `docs/mirror-production-readiness-checklist.md` are complete.
+2. Confirm SLO baselines and current burn-rate in `docs/mirror-production-slos.md`.
+3. Confirm no active Sev1/Sev2 incidents for Mirror dependencies (Supabase, runner infra).
+4. Confirm rollback artifacts are available for app, gateway function, and runner.
+
+### Standard Deployment Order
+1. Apply DB migrations in staging.
+2. Deploy/update cloud runner and verify health endpoints.
+3. Deploy `mirror-gateway` edge function.
+4. Deploy Flutter/web clients.
+5. Run staging smoke: one compile + one apply + verify audit record.
+6. Promote to production in canary mode.
+
+### Canary Rollout Procedure
+1. Route 5% traffic to new release for 15 minutes.
+2. Validate compile/apply success rate and latency within SLO warning thresholds.
+3. Increase to 25% for 30 minutes if stable.
+4. Increase to 100% only if no stop criteria are met.
+
+Stop criteria:
+- Availability drops below 99.5% over any 15-minute window.
+- P95 compile latency > 6s for 15 minutes.
+- P95 apply latency > 8s for 15 minutes.
+- Timeout error code exceeds 1.5% for 10 minutes.
+
+### Post-Deploy Validation (Within 30 Minutes)
+1. Verify request/trace-id propagation appears in logs across gateway and runner.
+2. Verify no auth-denied surge caused by key/config drift.
+3. Verify storage write/read to `mirror-signed-inputs` and `mirror-backups` for owner paths.
+4. Verify dashboard tiles for availability, latency, and error mix are healthy.
+
+### Rollback Procedure
+1. Declare rollback in incident/deploy channel and assign incident commander.
+2. Revert runner to last-known-good image.
+3. Revert `mirror-gateway` function version.
+4. Revert client release or disable rollout flag.
+5. If needed, disable high-risk path via feature flag (`mirror_runner_mode` fallback).
+6. Re-run smoke compile/apply and confirm recovery.
+7. Document timeline, cause, and mitigation in postmortem.
+
+## Monitoring And Alerting
+
+### Core Signals
+- Traffic: requests/minute for `/compile` and `/apply`
+- Success: 2xx/overall request ratio
+- Latency: P50/P95/P99 for compile and apply
+- Reliability: timeout ratio, upstream error ratio, auth denied ratio
+- Durability: outbox replay queue depth, replay failure ratio, circuit-breaker open events
+
+### Required Dashboards
+1. Gateway health dashboard (availability, latency, timeout).
+2. Runner health dashboard (CPU/memory saturation, queueing, execution duration).
+3. Security dashboard (auth denied, token validation failures, abnormal idempotency conflicts).
+4. Replay resilience dashboard (replay attempts, timeout events, breaker transitions).
+
+### Alert Policy
+- Sev1 page:
+- Compile/apply availability < 99.0% for 10 minutes.
+- Timeout ratio > 3% for 10 minutes.
+- Runner unreachable or repeated upstream 5xx spikes (>5% for 10 minutes).
+- Sev2 page:
+- P95 compile latency > 6s for 20 minutes.
+- P95 apply latency > 8s for 20 minutes.
+- Circuit-breaker open state sustained > 10 minutes.
+- Ticket-only:
+- Auth denied 2x baseline for 15 minutes.
+- Elevated idempotency conflict rate without user-visible errors.
+
+### Observability Correlation Requirements
+- Every request path must include `x-request-id` and `x-trace-id` in logs/events.
+- Structured errors must carry correlation identifiers.
+- Incident investigation must be able to trace one request across client, gateway, and runner logs.
+
+## Incident Response
+
+### Severity Model
+- Sev1: User-facing outage or major degradation with broad impact.
+- Sev2: Significant partial degradation with a viable workaround.
+- Sev3: Limited impact, low urgency, or non-production issue.
+
+### Initial Response (First 10 Minutes)
+1. Acknowledge page and assign incident commander.
+2. Define blast radius: compile only, apply only, or both.
+3. Confirm whether issue is client, gateway, runner, or dependency induced.
+4. Decide immediate mitigation: traffic shift, rollback, or feature kill-switch.
+
+### Investigation Workflow
+1. Start with correlation ID from a failing request.
+2. Check gateway logs for route, upstream target, and error code.
+3. Follow same request/trace ID in runner logs for execution and auth state.
+4. Validate dependency status (Supabase auth/storage/network).
+5. Determine if failure mode matches known playbooks below.
+
+### Communication Cadence
+- Sev1: status update every 15 minutes.
+- Sev2: status update every 30 minutes.
+- Include: current impact, mitigation in progress, ETA confidence, next update time.
+
+### Recovery Criteria
+- Success rate and latency return to SLO-compliant range.
+- No sustained alert re-firing for 30 minutes.
+- Smoke compile/apply verification passes.
+- On-call confirms user impact is resolved.
+
+### Post-Incident Requirements
+1. Publish incident summary within 24 hours.
+2. Publish postmortem with action items within 5 business days.
+3. Link action items to owners and due dates.
+4. Update this runbook and checklist when gaps are discovered.
 
 ## On-Call Triage
 1. Confirm whether impact is `compile`, `apply`, or both.
@@ -103,6 +221,13 @@ AB/remote-config contract:
 4. Check gateway structured errors for quota rejections:
 - `payload_too_large` (workspace/request bytes)
 - `bad_request` with file-count limit details
+
+### D. Outbox replay backlog grows
+1. Check queue depth and oldest replay item age.
+2. Check for repeated timeout failures and circuit-breaker open events.
+3. Validate runner reachability and latency; mitigate upstream bottleneck first.
+4. If breaker remains open, reduce replay pressure and restore health before reopening.
+5. Confirm replay success resumes and backlog drains at expected rate.
 
 ## Storage and RLS Verification
 Run in SQL editor (service role) when validating policies:

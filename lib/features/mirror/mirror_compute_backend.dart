@@ -2,24 +2,13 @@ import 'dart:convert';
 
 import 'package:crypto/crypto.dart';
 
+import 'models/project_context.dart';
 import 'services/mirror_audit_history_service.dart';
 import 'services/mirror_patch_service.dart';
 import 'services/mirror_prompt_builder_service.dart';
 import 'services/mirror_secure_apply_service.dart';
 
-class ProjectContext {
-  const ProjectContext({
-    required this.projectId,
-    required this.taskId,
-    this.files = const <String, String>{},
-    this.metadata = const <String, dynamic>{},
-  });
-
-  final String projectId;
-  final String taskId;
-  final Map<String, String> files;
-  final Map<String, dynamic> metadata;
-}
+export 'models/project_context.dart';
 
 class GenerateResult {
   const GenerateResult({
@@ -123,9 +112,9 @@ const MirrorPatchService _mirrorPatchService = MirrorPatchService();
 const MirrorSecureApplyService _mirrorSecureApplyService =
     MirrorSecureApplyService();
 const MirrorAuditHistoryService _mirrorAuditHistoryService =
-  MirrorAuditHistoryService();
+    MirrorAuditHistoryService();
 const MirrorPromptBuilderService _mirrorPromptBuilderService =
-  MirrorPromptBuilderService();
+    MirrorPromptBuilderService();
 
 abstract class MirrorComputeBackend {
   Future<GenerateResult> generate({
@@ -156,9 +145,8 @@ String computeCompileResultFingerprint({
 }) {
   final files = context.files.entries.toList()
     ..sort((a, b) => a.key.compareTo(b.key));
-  final filesPayload = files
-      .map((entry) => '${entry.key}:${entry.value}')
-      .join('|');
+  final filesPayload =
+      files.map((entry) => '${entry.key}:${entry.value}').join('|');
   final payload = <String>[
     prompt,
     context.projectId,
@@ -249,10 +237,12 @@ extension MirrorApplySecurity on MirrorComputeBackend {
   Future<ApplySecurityArtifacts> prepareSignedInputAndBackup({
     required ProjectContext context,
     Duration signedUrlTtl = MirrorSecureApplyService.defaultSignedUrlTtl,
-    String signedInputBucket = MirrorSecureApplyService.defaultSignedInputBucket,
+    String signedInputBucket =
+        MirrorSecureApplyService.defaultSignedInputBucket,
     String backupBucket = MirrorSecureApplyService.defaultBackupBucket,
   }) async {
-    final artifacts = await _mirrorSecureApplyService.prepareSignedInputAndBackup(
+    final artifacts =
+        await _mirrorSecureApplyService.prepareSignedInputAndBackup(
       projectId: context.projectId,
       taskId: context.taskId,
       files: context.files,
@@ -270,7 +260,8 @@ extension MirrorApplySecurity on MirrorComputeBackend {
     required Future<ApplyResult> Function(ApplySecurityArtifacts artifacts)
         onApply,
     Duration signedUrlTtl = MirrorSecureApplyService.defaultSignedUrlTtl,
-    String signedInputBucket = MirrorSecureApplyService.defaultSignedInputBucket,
+    String signedInputBucket =
+        MirrorSecureApplyService.defaultSignedInputBucket,
     String backupBucket = MirrorSecureApplyService.defaultBackupBucket,
   }) async {
     final result = await _mirrorSecureApplyService.secureApply(
@@ -300,7 +291,8 @@ extension MirrorApplySecurity on MirrorComputeBackend {
   }
 }
 
-ApplySecurityArtifacts _toBackendArtifacts(MirrorSecureApplyArtifacts artifacts) {
+ApplySecurityArtifacts _toBackendArtifacts(
+    MirrorSecureApplyArtifacts artifacts) {
   return ApplySecurityArtifacts(
     backupId: artifacts.backupId,
     signedInputUrls: artifacts.signedInputUrls,

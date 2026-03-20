@@ -29,9 +29,9 @@ void main() {
         projectId: 'project-1',
         taskId: 'task-1',
         files: <String, String>{'lib/main.dart': 'void main() {}'},
-        metadata: <String, dynamic>{
-          'idempotencyKey': 'idem-gateway-001',
-        },
+        metadata: ProjectContextMetadata(
+          idempotencyKey: 'idem-gateway-001',
+        ),
       );
 
       final result = await backend.compile(
@@ -43,6 +43,5 @@ void main() {
       expect(result.success, isTrue);
       expect(capturedIdempotencyHeader, 'idem-gateway-001');
     });
-
   });
 }

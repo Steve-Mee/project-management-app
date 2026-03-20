@@ -155,6 +155,6 @@ ProjectContext _context() {
     projectId: 'project',
     taskId: 'task',
     files: <String, String>{'lib/main.dart': 'void main() {}'},
-    metadata: <String, dynamic>{'branch': 'security-test'},
+    metadata: ProjectContextMetadata(branch: 'security-test'),
   );
 }

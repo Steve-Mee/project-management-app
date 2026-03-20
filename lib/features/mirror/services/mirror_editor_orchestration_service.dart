@@ -25,7 +25,8 @@ class MirrorEditorOrchestrationService {
     required void Function(String line) appendTerminalLine,
   }) async {
     final messenger = ScaffoldMessenger.of(context);
-    final sessionNotifier = ref.read(mirrorSessionProvider(sessionKey).notifier);
+    final sessionNotifier =
+        ref.read(mirrorSessionProvider(sessionKey).notifier);
     final sessionState = ref.read(mirrorSessionProvider(sessionKey));
     final selectedFile = sessionState.selectedFile;
     final selectedContent = sessionState.files[selectedFile]?.trim() ?? '';
@@ -46,23 +47,18 @@ class MirrorEditorOrchestrationService {
       final orchestrator = MirrorOrchestratorService(backend: backend);
 
       final originalFiles = Map<String, String>.from(sessionState.files);
-      final originalMetadata = <String, dynamic>{
-        'selectedFile': selectedFile,
-        'trigger': 'run_button',
-      };
-
       final executionContext = ProjectContext(
         projectId: projectId,
         taskId: taskId,
         files: originalFiles,
-        metadata: originalMetadata,
+        metadata: ProjectContextMetadata(
+          selectedFile: selectedFile,
+          trigger: 'run_button',
+        ),
       );
 
-      final originalCompileContext = ProjectContext(
-        projectId: executionContext.projectId,
-        taskId: executionContext.taskId,
+      final originalCompileContext = executionContext.copyWith(
         files: Map<String, String>.from(executionContext.files),
-        metadata: Map<String, dynamic>.from(executionContext.metadata),
       );
 
       appendTerminalLine(l10n.mirrorStepGenerateSent);
@@ -79,9 +75,9 @@ class MirrorEditorOrchestrationService {
       }
 
       if (!generateResult.success) {
-        final errorText =
-            _firstNonEmpty(generateResult.message, generateResult.diagnostics.join(' | ')) ??
-                l10n.mirrorUnknownGenerateError;
+        final errorText = _firstNonEmpty(generateResult.message,
+                generateResult.diagnostics.join(' | ')) ??
+            l10n.mirrorUnknownGenerateError;
         _showSnackBar(messenger, l10n.mirrorGenerateFailed(errorText));
         return;
       }
@@ -89,7 +85,8 @@ class MirrorEditorOrchestrationService {
       appendTerminalLine(l10n.mirrorStepGenerateCompleted);
       if (generateResult.diagnostics.isNotEmpty) {
         appendTerminalLine(
-          l10n.mirrorGenerateDiagnostics(generateResult.diagnostics.join(' | ')),
+          l10n.mirrorGenerateDiagnostics(
+              generateResult.diagnostics.join(' | ')),
         );
       }
 
@@ -103,30 +100,24 @@ class MirrorEditorOrchestrationService {
 
       final compileContext = generatedPatches.isEmpty
           ? originalCompileContext
-          : ProjectContext(
-              projectId: originalCompileContext.projectId,
-              taskId: originalCompileContext.taskId,
+          : originalCompileContext.copyWith(
               files: backend.applyPatchesToFiles(
                 files: originalCompileContext.files,
                 patches: generatedPatches,
               ),
-              metadata: originalCompileContext.metadata,
             );
 
       final compileContextFingerprint =
           _computeContextFingerprint(compileContext.files);
-      final compileMetadata = <String, dynamic>{
-        ...compileContext.metadata,
-        'previewContextFingerprint': compileContextFingerprint,
-      };
-      final compileContextForPreviewAndApply = ProjectContext(
-        projectId: compileContext.projectId,
-        taskId: compileContext.taskId,
+      final compileContextForPreviewAndApply = compileContext.copyWith(
         files: Map<String, String>.from(compileContext.files),
-        metadata: compileMetadata,
+        metadata: compileContext.metadata.copyWith(
+          previewContextFingerprint: compileContextFingerprint,
+        ),
       );
 
-      final runPrompt = _firstNonEmpty(generateResult.code, selectedContent) ?? selectedContent;
+      final runPrompt = _firstNonEmpty(generateResult.code, selectedContent) ??
+          selectedContent;
 
       appendTerminalLine(l10n.mirrorStepCompileSent);
       final compileResult = await orchestrator.compile(
@@ -142,8 +133,8 @@ class MirrorEditorOrchestrationService {
       }
 
       if (!compileResult.success) {
-        final errorText =
-            _firstNonEmpty(compileResult.errors.join(' | '), l10n.mirrorUnknownCompileError)!;
+        final errorText = _firstNonEmpty(
+            compileResult.errors.join(' | '), l10n.mirrorUnknownCompileError)!;
         _showSnackBar(messenger, l10n.mirrorCompileFailed(errorText));
         return;
       }
@@ -210,7 +201,8 @@ class MirrorEditorOrchestrationService {
         return;
       }
 
-      final applyApproved = applyDecision?.apply == true && applyDecision?.acceptRisk == true;
+      final applyApproved =
+          applyDecision?.apply == true && applyDecision?.acceptRisk == true;
       if (!applyApproved) {
         appendTerminalLine(l10n.mirrorStepApplyCanceled);
         return;
@@ -223,9 +215,7 @@ class MirrorEditorOrchestrationService {
         previewCompileFingerprint: compileFingerprint,
         previewCompileOutput: compileOutput,
       );
-      final applyContext = ProjectContext(
-        projectId: compileContextForPreviewAndApply.projectId,
-        taskId: compileContextForPreviewAndApply.taskId,
+      final applyContext = compileContextForPreviewAndApply.copyWith(
         files: Map<String, String>.from(compileContextForPreviewAndApply.files),
         metadata: applyMetadata,
       );
@@ -251,7 +241,8 @@ class MirrorEditorOrchestrationService {
           fallbackSelectedFile: selectedFile,
         );
         if (applyResult.appliedFiles.isNotEmpty) {
-          appendTerminalLine(l10n.mirrorAppliedFiles(applyResult.appliedFiles.join(', ')));
+          appendTerminalLine(
+              l10n.mirrorAppliedFiles(applyResult.appliedFiles.join(', ')));
         }
         appendTerminalLine(l10n.mirrorRunCompletedTerminal);
         return;
@@ -306,10 +297,14 @@ class MirrorEditorOrchestrationService {
     required List<MirrorFilePatch> patches,
     required String fallbackSelectedFile,
   }) {
-    final previousSelected = ref.read(mirrorSessionProvider(sessionKey)).selectedFile;
+    final previousSelected =
+        ref.read(mirrorSessionProvider(sessionKey)).selectedFile;
 
     for (final patch in patches) {
-      final existsInSession = ref.read(mirrorSessionProvider(sessionKey)).files.containsKey(patch.path);
+      final existsInSession = ref
+          .read(mirrorSessionProvider(sessionKey))
+          .files
+          .containsKey(patch.path);
       if (!existsInSession) {
         sessionNotifier.upsertFileContent(
           path: patch.path,
@@ -322,7 +317,10 @@ class MirrorEditorOrchestrationService {
       sessionNotifier.updateSelectedFileContent(patch.updatedContent);
     }
 
-    final restoreTarget = ref.read(mirrorSessionProvider(sessionKey)).files.containsKey(previousSelected)
+    final restoreTarget = ref
+            .read(mirrorSessionProvider(sessionKey))
+            .files
+            .containsKey(previousSelected)
         ? previousSelected
         : fallbackSelectedFile;
     sessionNotifier.selectFile(restoreTarget);
@@ -348,22 +346,22 @@ class MirrorEditorOrchestrationService {
     );
   }
 
-  Map<String, dynamic> _buildApplyMetadata({
-    required Map<String, dynamic> metadata,
+  ProjectContextMetadata _buildApplyMetadata({
+    required ProjectContextMetadata metadata,
     required String? previewServerVersionToken,
     required String previewCompileFingerprint,
     required String previewCompileOutput,
   }) {
-    final applyMetadata = Map<String, dynamic>.from(metadata);
-
-    applyMetadata['previewCompileFingerprint'] = previewCompileFingerprint;
-    applyMetadata['previewCompileOutputSha256'] =
+    final previewCompileOutputSha256 =
         sha256.convert(utf8.encode(previewCompileOutput)).toString();
 
     if (previewServerVersionToken == null) {
-      applyMetadata['previewReuseRequested'] = false;
-      applyMetadata['previewReuseStrategy'] = 'none';
-      return applyMetadata;
+      return metadata.copyWith(
+        previewCompileFingerprint: previewCompileFingerprint,
+        previewCompileOutputSha256: previewCompileOutputSha256,
+        previewReuseRequested: false,
+        previewReuseStrategy: ProjectContextPreviewReuseStrategy.none,
+      );
     }
 
     final reusePayload = _buildPreviewReusePayload(
@@ -372,15 +370,19 @@ class MirrorEditorOrchestrationService {
       compileOutput: previewCompileOutput,
     );
 
-    applyMetadata['previewReuseRequested'] = true;
-    applyMetadata['previewReuseStrategy'] = 'server_version_token';
-    applyMetadata['previewServerVersionToken'] = previewServerVersionToken;
-    applyMetadata['previewArtifactPath'] = previewServerVersionToken;
-    applyMetadata['previewReusePayload'] = reusePayload;
-    return applyMetadata;
+    return metadata.copyWith(
+      previewCompileFingerprint: previewCompileFingerprint,
+      previewCompileOutputSha256: previewCompileOutputSha256,
+      previewReuseRequested: true,
+      previewReuseStrategy:
+          ProjectContextPreviewReuseStrategy.serverVersionToken,
+      previewServerVersionToken: previewServerVersionToken,
+      previewArtifactPath: previewServerVersionToken,
+      previewReusePayload: reusePayload,
+    );
   }
 
-  Map<String, dynamic> _buildPreviewReusePayload({
+  ProjectContextPreviewReusePayload _buildPreviewReusePayload({
     required String serverVersionToken,
     required String compileFingerprint,
     required String compileOutput,
@@ -391,13 +393,13 @@ class MirrorEditorOrchestrationService {
         ? normalizedOutput
         : normalizedOutput.substring(0, maxInlinePreviewChars);
 
-    return <String, dynamic>{
-      'token': serverVersionToken,
-      'fingerprint': compileFingerprint,
-      'outputSha256': sha256.convert(utf8.encode(normalizedOutput)).toString(),
-      'inlineOutput': inlineOutput,
-      'inlineOutputTruncated': normalizedOutput.length > maxInlinePreviewChars,
-    };
+    return ProjectContextPreviewReusePayload(
+      token: serverVersionToken,
+      fingerprint: compileFingerprint,
+      outputSha256: sha256.convert(utf8.encode(normalizedOutput)).toString(),
+      inlineOutput: inlineOutput,
+      inlineOutputTruncated: normalizedOutput.length > maxInlinePreviewChars,
+    );
   }
 
   String? _normalizeServerVersionToken(String? rawToken) {

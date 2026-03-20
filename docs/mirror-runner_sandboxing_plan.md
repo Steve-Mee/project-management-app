@@ -1,117 +1,163 @@
+// ARCHITECTURE LOCK: Mirror Gateway = thin proxy only. Compute always on Fly.io or local runner.
 # Mirror Runner Sandboxing Plan
 
 ## Purpose
-Strengthen Mirror runner job isolation while preserving the locked thin-gateway architecture: the Mirror Gateway remains a thin proxy and all compute continues to run only on the local or cloud runners.
+Deliver production-grade isolation for Mirror runner execution while preserving the locked thin-gateway architecture.
 
-## Threat Model Focus
-- Untrusted or partially trusted generated code executing inside the runner.
-- Cross-job data leakage through filesystem reuse, process reuse, or shared credentials.
-- Sandbox escape attempts via syscall abuse, privilege escalation, or unexpected network egress.
-- Post-job residue that can be replayed, exfiltrated, or influence later executions.
+Non-goal:
+- Move compute into the gateway. The gateway remains a request/auth proxy only.
 
-## Current Baseline
-- Runner logic already enforces path constraints, quotas, and cleanup attempts.
-- Artifact staging is separated into `mirror-signed-inputs` and `mirror-backups`.
-- The gateway is not a compute surface and should stay out of the sandbox boundary.
-- Production hardening is still incomplete because runner isolation is primarily policy-driven, not boundary-driven.
+## Security Objectives
 
-## Non-Negotiable Target State
-- Every production job runs in an isolated runtime boundary.
-- Every job gets an ephemeral filesystem and short-lived identity.
-- Network egress is denied by default and explicitly allowlisted.
-- Privilege escalation primitives and dangerous syscalls are blocked at the runtime boundary.
-- Cleanup is verified, not assumed.
+1. Contain untrusted generated code per job boundary.
+2. Prevent cross-job data leakage.
+3. Enforce least privilege for process, filesystem, and network access.
+4. Ensure deterministic cleanup and forensic visibility.
 
-## Roadmap
+## Baseline And Gaps
 
-### Phase 0: Immediate Safety Guardrails (0-2 sprints)
-Objective: reduce obvious production exposure before deeper sandboxing lands.
+Current strengths:
+- Path and payload guardrails exist in runner and gateway flows.
+- Artifact buckets are separated (`mirror-signed-inputs`, `mirror-backups`).
+- Retry and outbox resilience controls are in place.
 
-- Enforce production guardrails in client and runner entrypoints so insecure development transport or host-style execution paths cannot silently remain enabled.
-- Run every job in a unique ephemeral workspace directory with post-run cleanup verification and audit logging on failure.
-- Make source inputs read-only wherever possible; only designated output directories remain writable.
-- Deny outbound network access by default for job processes and explicitly allow only required control-plane destinations.
-- Emit structured security telemetry for sandbox policy denials, cleanup failures, timeout kills, and unexpected process trees.
+Current gaps:
+- Isolation is not fully boundary-enforced per job.
+- Syscall restrictions are not yet codified as versioned security profiles.
+- Ephemeral filesystem attestations are not yet mandatory release gates.
 
-Deliverables:
-- Production guard for insecure gRPC/TLS configuration.
-- Verified ephemeral workspace lifecycle with cleanup attestation.
-- Baseline security telemetry events for denied operations.
+## Hardening Roadmap
 
-### Phase 1: Container Hardening (2-4 sprints)
-Objective: stop treating runner isolation as a convention and move it into runtime boundaries.
+### Phase P0: Immediate Controls (0-2 sprints)
 
-- Execute each job in a dedicated container or microVM instead of directly on the host runner process.
-- Run as non-root with `no-new-privileges`, dropped Linux capabilities, and read-only root filesystem by default.
-- Apply hardened seccomp and AppArmor/SELinux profiles tailored to the allowed compiler/runtime surface.
-- Enforce hard CPU, memory, PID, and wall-clock limits with guaranteed kill-and-cleanup behavior on breach.
+Scope:
+- Enforce production-only transport/runtime guardrails for runner entrypoints.
+- Require per-job workspace creation and explicit cleanup verification.
+- Mount staged inputs read-only and restrict writable paths to job output/temp only.
+- Add telemetry for policy denials, timeout kills, cleanup failures, and process-tree anomalies.
 
-Deliverables:
-- Per-job isolated runtime boundary.
-- Hardened container baseline image.
-- Resource enforcement documented and tested under stress.
+Acceptance criteria:
+- 100% of jobs have unique workspace IDs.
+- Cleanup verification metric is emitted for 100% of completed jobs.
+- No production run path allows insecure dev transport toggles.
 
-### Phase 2: Syscall and Process Isolation (3-5 sprints)
-Objective: make sandbox escapes materially harder even after container breakout attempts.
+### Phase P1: Container Isolation (2-4 sprints)
 
-- Restrict syscalls to the minimum set needed for supported toolchains; explicitly block mount, namespace tampering, raw socket creation, kernel module access, ptrace, and privilege-escalation primitives.
-- Forbid nested container runtimes, package manager elevation flows, and background daemon spawning from inside job execution.
-- Monitor and terminate anomalous process trees, fork bombs, or suspicious syscall bursts.
+Scope:
+- Execute each job in isolated container/microVM boundary.
+- Enforce `runAsNonRoot`, `no-new-privileges`, read-only rootfs, dropped capabilities.
+- Apply strict CPU/memory/PID/runtime limits.
+- Kill and cleanup on quota/runtime breach with deterministic status codes.
 
-Deliverables:
-- Maintained syscall allowlist/denylist per supported runner image.
-- Sandbox escape detection hooks.
-- Security regression suite for blocked syscalls and forbidden process behavior.
+Acceptance criteria:
+- 100% production jobs run inside isolated runtime boundary.
+- Host process cannot observe or reuse job workspace after completion.
+- Stress tests validate quota enforcement and termination correctness.
 
-### Phase 3: Ephemeral Filesystem and Artifact Integrity (4-6 sprints)
-Objective: guarantee that filesystem state is isolated per job and artifacts are trustworthy.
+### Phase P2: Syscall And Process Restrictions (3-5 sprints)
 
-- Move to per-job ephemeral volumes with zero cross-job reuse.
-- Mount output and temp paths separately from staged inputs to simplify policy and cleanup validation.
-- Add cryptographic integrity verification for staged inputs and produced outputs before apply/backup flows continue.
-- Verify and record zero residual data after job completion through automated post-run attestation.
+Scope:
+- Enforce hardened seccomp profile per runner image.
+- Block dangerous primitives: `mount`, `ptrace`, raw sockets, namespace tampering, kernel module interaction.
+- Enforce process-tree limits and terminate fork-bomb behavior.
+- Prohibit nested runtime/container launches from job payloads.
 
-Deliverables:
-- Per-job ephemeral storage boundary.
-- Artifact integrity checks for staged inputs and outputs.
-- Cleanup attestation records linked to runner telemetry.
+Acceptance criteria:
+- Security regression suite validates blocked syscall families.
+- Repeated syscall denial events trigger alerting and incident workflow.
+- Process anomaly detection catches and terminates runaway trees.
 
-### Phase 4: Identity and Network Isolation (5-7 sprints)
-Objective: prevent compromised jobs from laterally moving through credentials or network reachability.
+### Phase P3: Ephemeral Filesystem Guarantees (4-6 sprints)
 
-- Issue short-lived workload identity per job instead of shared runner credentials.
-- Scope every credential to the minimum buckets, queues, and APIs required for that job only.
-- Segment runner network plane from storage/control-plane services.
-- Route any allowed egress through a policy-enforcing proxy with request logging and anomaly detection.
+Scope:
+- Use per-job ephemeral volumes with zero cross-job reuse.
+- Separate mounts for inputs, outputs, and temp directories.
+- Record cleanup attestation (pre/post file inventory hash + deletion confirmation).
+- Add artifact integrity checks (input hash verification and output fingerprinting).
 
-Deliverables:
-- Per-job scoped identity.
-- Default-deny egress posture with audited exceptions.
-- Network segmentation diagram and enforcement tests.
+Acceptance criteria:
+- Residual workspace check passes for 99.99% of jobs.
+- Cross-job file reads are impossible by policy and verified by tests.
+- All apply-relevant outputs have integrity metadata.
 
-### Phase 5: Supply Chain and Runtime Assurance (ongoing)
-Objective: keep the sandbox trustworthy over time, not just at launch.
+### Phase P4: Identity And Network Isolation (5-7 sprints)
 
-- Sign runner images and enforce signature verification before deployment.
-- Continuously scan base images and dependencies for CVEs.
-- Add runtime anomaly detection for process tree drift, syscall spikes, suspicious egress, and repeated sandbox denials.
-- Run scheduled sandbox escape exercises and feed results back into profile tightening.
+Scope:
+- Replace shared runner credentials with short-lived per-job workload identity.
+- Enforce bucket/API scope per job principal.
+- Default deny network egress; allowlist control-plane endpoints only.
+- Route approved egress through policy-aware proxy with audit logs.
 
-Deliverables:
-- Signed runner images.
-- Continuous vulnerability monitoring.
-- Operational playbook for sandbox incidents.
+Acceptance criteria:
+- 0 shared long-lived credentials in job runtime.
+- Egress deny-by-default validated in integration tests.
+- Network policy exceptions are versioned and reviewable.
 
-## Verification Matrix
-- Unit tests for path enforcement, workspace lifecycle, and artifact integrity guards.
-- Integration tests for per-job isolation, cleanup attestation, and credential scoping.
-- Security tests validating blocked syscalls, blocked egress, denied privilege escalation, and forbidden process creation.
-- Chaos tests for timeout handling, cleanup failures, crashed workers, and leaked temp directory simulation.
-- Red-team scenarios for attempted escape, cross-job read access, and artifact tampering.
+### Phase P5: Continuous Assurance (ongoing)
 
-## Production Exit Criteria
-- No production job executes directly on a shared host context without an isolated runtime boundary.
-- Insecure development transport and host-style execution paths are blocked in production.
-- Every production job uses ephemeral filesystem state, short-lived identity, and verified cleanup.
-- Security telemetry and audit trails exist for all runner executions and denial events.
-- Incident response runbook is tested against sandbox policy violation scenarios.
+Scope:
+- Sign runner images and verify signatures at deploy/boot.
+- Enforce CVE scanning gates for base image and dependencies.
+- Schedule sandbox escape exercises and policy tightening reviews.
+- Maintain security runbook with incident learnings.
+
+Acceptance criteria:
+- High/critical CVEs fail release gate unless exception is approved.
+- Quarterly sandbox tabletop/red-team exercises completed.
+- Drift detection alerts on profile/image mismatch.
+
+## Implementation Tracks
+
+### Track A: Container Isolation Controls
+- Runtime profile definitions (dev/staging/prod).
+- Resource policy templates and enforcement tests.
+- Isolation conformance checks in CI and pre-deploy.
+
+### Track B: Syscall Restriction Program
+- Baseline seccomp profile per supported toolchain.
+- Denylist for high-risk syscalls and privilege primitives.
+- Automated tests for expected deny outcomes.
+
+### Track C: Ephemeral Filesystem Program
+- Workspace lifecycle manager with explicit create/teardown contract.
+- Read-only input mounts and output-only write surfaces.
+- Cleanup attestation persisted with request/trace IDs.
+
+## Operational Metrics And Alerts
+
+Mandatory metrics:
+- `mirror_sandbox_policy_denied_total`
+- `mirror_sandbox_cleanup_failure_total`
+- `mirror_runner_process_tree_killed_total`
+- `mirror_runner_ephemeral_workspace_attested_total`
+- `mirror_runner_syscall_denied_total`
+
+Alert thresholds:
+- Cleanup failures > 0.1% in 15m.
+- Syscall denials burst > 50 in 5m per runner instance.
+- Workspace attestation missing for any completed production job.
+
+## Test Matrix
+
+- Unit: workspace lifecycle, read-only mounts, identity scoping guards.
+- Integration: per-job isolation, egress deny, scoped credentials.
+- Security: blocked syscall families, privilege-escalation attempts, process-tree abuse.
+- Chaos: forced runner crash, timeout kill, partial cleanup failure.
+- Adversarial: cross-job access attempts and artifact tampering.
+
+## Release Gates
+
+Before enabling production-by-default sandbox mode:
+
+- [ ] P1 container isolation controls complete and verified.
+- [ ] P2 syscall restriction suite passing in staging.
+- [ ] P3 ephemeral FS attestation enabled and dashboarded.
+- [ ] Incident runbook updated and exercised.
+- [ ] Security sign-off recorded with rollback plan.
+
+## Ownership
+
+- Security owner: Mirror Security Lead
+- Platform owner: Runner Platform Lead
+- SRE owner: Reliability Lead
+- Review cadence: bi-weekly until P4 completion, monthly thereafter

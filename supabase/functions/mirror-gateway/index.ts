@@ -33,6 +33,8 @@ interface ForwardPayload {
   mode: 'private' | 'cloud'
   action: 'compile' | 'apply'
   userId: string
+  requestId: string
+  traceId: string
   files: Record<string, string>
   metadata: Record<string, unknown>
   actorUserId: string
@@ -56,6 +58,7 @@ interface StructuredError {
   message: string
   retryable: boolean
   requestId: string
+  traceId: string
   idempotencyKey?: string
   error_family: 'client' | 'auth' | 'config' | 'timeout' | 'upstream' | 'rate_limit' | 'internal'
   upstream_status: number | null
@@ -121,6 +124,7 @@ function buildStructuredError({
   message,
   retryable,
   requestId,
+  traceId,
   idempotencyKey,
   details,
   upstreamStatus = null,
@@ -130,6 +134,7 @@ function buildStructuredError({
   message: string
   retryable: boolean
   requestId: string
+  traceId: string
   idempotencyKey?: string
   details?: unknown
   upstreamStatus?: number | null
@@ -140,6 +145,7 @@ function buildStructuredError({
     message,
     retryable,
     requestId,
+    traceId,
     idempotencyKey,
     error_family: resolveErrorFamily(code),
     upstream_status: upstreamStatus,
@@ -182,10 +188,11 @@ async function hasCloudMirrorAccess(
     const shapedValue = record['has_access'] ?? record['allowed'] ?? record['result']
     if (typeof shapedValue === 'boolean') {
       return shapedValue
+    }
   }
 
-  return false
   throw new Error(`cloud_entitlement_rpc_invalid_shape:request_id=${requestId}`)
+}
 
 function resolveForwardEndpoint(mode: 'private' | 'cloud', action: 'compile' | 'apply'): string {
   const key = mode === 'private' ? 'PRIVATE_COMPUTE_ENDPOINT' : 'FLY_MIRROR_COMPUTE_ENDPOINT'
@@ -243,6 +250,22 @@ function resolveIdempotencyKey(req: Request): string {
     return key.trim()
   }
   return crypto.randomUUID()
+}
+
+function resolveRequestId(req: Request): string {
+  const direct = req.headers.get('x-request-id') ?? req.headers.get('request-id')
+  if (direct && direct.trim().length > 0) {
+    return direct.trim()
+  }
+  return `gateway-${Date.now().toString(36)}-${crypto.randomUUID()}`
+}
+
+function resolveTraceId(req: Request, requestId: string): string {
+  const direct = req.headers.get('x-trace-id') ?? req.headers.get('trace-id')
+  if (direct && direct.trim().length > 0) {
+    return direct.trim()
+  }
+  return `trace-${requestId}`
 }
 
 function stableStringify(value: unknown): string {
@@ -925,7 +948,8 @@ logIdempotencyStatusContractOnColdStart()
 
 // @ts-ignore - Deno global
 Deno.serve(async (req: Request) => {
-  const requestId = crypto.randomUUID()
+  const requestId = resolveRequestId(req)
+  const traceId = resolveTraceId(req, requestId)
   const idempotencyKey = resolveIdempotencyKey(req)
   const action = resolveActionFromPath(new URL(req.url).pathname)
 
@@ -940,6 +964,7 @@ Deno.serve(async (req: Request) => {
         message: 'Method not allowed',
         retryable: false,
         requestId,
+        traceId,
         idempotencyKey,
         stage: 'request_validation',
       }),
@@ -954,6 +979,7 @@ Deno.serve(async (req: Request) => {
         message: 'Invalid route. Use /compile or /apply.',
         retryable: false,
         requestId,
+        traceId,
         idempotencyKey,
         stage: 'routing',
       }),
@@ -970,6 +996,7 @@ Deno.serve(async (req: Request) => {
           message: 'Missing or invalid authorization header',
           retryable: false,
           requestId,
+          traceId,
           idempotencyKey,
           stage: 'authentication',
         }),
@@ -986,6 +1013,7 @@ Deno.serve(async (req: Request) => {
           message: 'Supabase environment is not configured',
           retryable: false,
           requestId,
+          traceId,
           idempotencyKey,
           stage: 'configuration',
         }),
@@ -1009,6 +1037,7 @@ Deno.serve(async (req: Request) => {
           message: 'Unauthorized',
           retryable: false,
           requestId,
+          traceId,
           idempotencyKey,
           stage: 'authentication',
         }),
@@ -1027,6 +1056,7 @@ Deno.serve(async (req: Request) => {
             message: `Request body exceeds ${MAX_REQUEST_BODY_BYTES} bytes limit`,
             retryable: false,
             requestId,
+            traceId,
             idempotencyKey,
             stage: 'request_validation',
           }),
@@ -1041,6 +1071,7 @@ Deno.serve(async (req: Request) => {
             message: 'Invalid JSON body',
             retryable: false,
             requestId,
+            traceId,
             idempotencyKey,
             stage: 'request_validation',
           }),
@@ -1059,6 +1090,7 @@ Deno.serve(async (req: Request) => {
           message: 'Missing or invalid fields: prompt, projectId, taskId, mode',
           retryable: false,
           requestId,
+          traceId,
           idempotencyKey,
           stage: 'request_validation',
         }),
@@ -1076,6 +1108,7 @@ Deno.serve(async (req: Request) => {
           message: 'Mirror permission check failed',
           retryable: false,
           requestId,
+          traceId,
           idempotencyKey,
           details: String(error),
           stage: 'authorization',
@@ -1091,6 +1124,7 @@ Deno.serve(async (req: Request) => {
           message: 'Insufficient permissions: use_mirror required',
           retryable: false,
           requestId,
+          traceId,
           idempotencyKey,
           stage: 'authorization',
         }),
@@ -1109,6 +1143,7 @@ Deno.serve(async (req: Request) => {
             message: 'Cloud Mirror mode requires successful cloud entitlement verification',
             retryable: false,
             requestId,
+            traceId,
             idempotencyKey,
             details: {
               mode: normalized.mode,
@@ -1131,6 +1166,7 @@ Deno.serve(async (req: Request) => {
             message: 'Cloud Mirror mode requires an active premium cloud entitlement',
             retryable: false,
             requestId,
+            traceId,
             idempotencyKey,
             details: {
               mode: normalized.mode,
@@ -1164,6 +1200,7 @@ Deno.serve(async (req: Request) => {
             message: 'Idempotency storage is unavailable',
             retryable: false,
             requestId,
+            traceId,
             idempotencyKey,
             details: error.message,
             stage: 'idempotency',
@@ -1181,6 +1218,7 @@ Deno.serve(async (req: Request) => {
           message: 'Idempotency key reuse with different payload is not allowed',
           retryable: false,
           requestId,
+          traceId,
           idempotencyKey,
           details: {
             action,
@@ -1199,6 +1237,7 @@ Deno.serve(async (req: Request) => {
           message: 'A request with this idempotency key is already processing',
           retryable: true,
           requestId,
+          traceId,
           idempotencyKey,
           details: {
             action,
@@ -1224,6 +1263,7 @@ Deno.serve(async (req: Request) => {
           ...buildCorsHeaders(req),
           'Content-Type': cachedContentType,
           'x-request-id': requestId,
+          'x-trace-id': traceId,
           'x-idempotency-key': idempotencyKey,
           'x-idempotency-replay': 'true',
         },
@@ -1241,6 +1281,7 @@ Deno.serve(async (req: Request) => {
             message: 'Rate limit check is unavailable',
             retryable: true,
             requestId,
+            traceId,
             idempotencyKey,
             details: error.message,
             stage: 'rate_limit',
@@ -1262,6 +1303,7 @@ Deno.serve(async (req: Request) => {
         message: 'Mirror gateway rate limit exceeded',
         retryable: true,
         requestId,
+        traceId,
         idempotencyKey,
         details: {
           reason: rateLimitCheck.reason,
@@ -1304,6 +1346,7 @@ Deno.serve(async (req: Request) => {
           'Content-Type': 'application/json',
           'Retry-After': String(retryAfterSeconds),
           'x-request-id': requestId,
+          'x-trace-id': traceId,
           'x-idempotency-key': idempotencyKey,
         },
       })
@@ -1338,6 +1381,8 @@ Deno.serve(async (req: Request) => {
       userId: user.id,
       files: normalized.files ?? {},
       metadata: normalized.metadata ?? {},
+      requestId,
+      traceId,
       actorUserId: normalizedForwardFields.actorUserId,
       backupId: normalizedForwardFields.backupId,
       fileSetFingerprint: normalizedForwardFields.fileSetFingerprint,
@@ -1346,6 +1391,17 @@ Deno.serve(async (req: Request) => {
 
     const controller = new AbortController()
     const timeout = setTimeout(() => controller.abort(), timeoutMs())
+
+    console.info('mirror-gateway forwarding request', {
+      requestId,
+      traceId,
+      idempotencyKey,
+      action,
+      mode: normalized.mode,
+      targetUrl,
+      projectId: normalized.projectId,
+      taskId: normalized.taskId,
+    })
 
     let upstreamResponse: Response
     try {
@@ -1356,6 +1412,7 @@ Deno.serve(async (req: Request) => {
           Authorization: authHeader,
           'x-user-id': user.id,
           'x-request-id': requestId,
+          'x-trace-id': traceId,
           'x-idempotency-key': idempotencyKey,
         },
         body: JSON.stringify(payload),
@@ -1369,6 +1426,7 @@ Deno.serve(async (req: Request) => {
           message: `Upstream /${action} request timed out`,
           retryable: true,
           requestId,
+          traceId,
           idempotencyKey,
           stage: 'forward',
         })
@@ -1416,6 +1474,7 @@ Deno.serve(async (req: Request) => {
         message: `Failed to reach upstream /${action} endpoint`,
         retryable: true,
         requestId,
+        traceId,
         idempotencyKey,
         details: String(error),
         stage: 'forward',
@@ -1474,6 +1533,7 @@ Deno.serve(async (req: Request) => {
           upstreamResponse.status === 429 ||
           upstreamResponse.status >= 500,
         requestId,
+        traceId,
         idempotencyKey,
         details: {
           status: upstreamResponse.status,
@@ -1577,6 +1637,7 @@ Deno.serve(async (req: Request) => {
         ...buildCorsHeaders(req),
         'Content-Type': contentType,
         'x-request-id': requestId,
+        'x-trace-id': traceId,
         'x-idempotency-key': idempotencyKey,
       },
     })
@@ -1592,6 +1653,7 @@ Deno.serve(async (req: Request) => {
           message: error.message,
           retryable: false,
           requestId,
+          traceId,
           idempotencyKey,
           stage: 'configuration',
         }),
@@ -1606,6 +1668,7 @@ Deno.serve(async (req: Request) => {
         message: 'Internal server error',
         retryable: false,
         requestId,
+        traceId,
         idempotencyKey,
         details: String(error),
         stage: 'internal',

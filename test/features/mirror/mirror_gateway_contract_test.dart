@@ -56,7 +56,7 @@ void main() {
         projectId: 'project-1',
         taskId: 'task-1',
         files: <String, String>{'lib/main.dart': 'void main() {}'},
-        metadata: <String, dynamic>{'teamMode': true},
+        metadata: ProjectContextMetadata(teamModeEnabled: true),
       );
 
       final result = await backend.compile(
@@ -221,5 +221,3 @@ String _readRepoFile(String relativePath) {
 
   throw StateError('Unable to locate file for contract test: $relativePath');
 }
-
-

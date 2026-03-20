@@ -9,9 +9,9 @@ import 'grpc_generated/mirror.pbgrpc.dart';
 import 'mirror_compute_backend.dart';
 
 const bool _isProductionGrpcRuntime =
-  bool.fromEnvironment('dart.vm.product', defaultValue: false);
+    bool.fromEnvironment('dart.vm.product', defaultValue: false);
 const ChannelCredentials _insecureChannelCredentials =
-  ChannelCredentials.insecure();
+    ChannelCredentials.insecure();
 
 class PrivateGrpcBackend implements MirrorComputeBackend {
   PrivateGrpcBackend({
@@ -89,7 +89,7 @@ class PrivateGrpcBackend implements MirrorComputeBackend {
           taskId: context.taskId,
           mode: mode,
           files: context.files.entries,
-          metadataJson: jsonEncode(context.metadata),
+          metadataJson: jsonEncode(context.metadata.toJson()),
         ),
         options: CallOptions(timeout: timeout),
       );
@@ -236,7 +236,7 @@ class PrivateGrpcBackend implements MirrorComputeBackend {
           taskId: context.taskId,
           mode: mode,
           files: context.files.entries,
-          metadataJson: jsonEncode(context.metadata),
+          metadataJson: jsonEncode(context.metadata.toJson()),
         ),
         options: CallOptions(timeout: timeout),
       );
@@ -277,5 +277,3 @@ class _ApplyRpcResult {
   final String? output;
   final List<String> errors;
 }
-
-

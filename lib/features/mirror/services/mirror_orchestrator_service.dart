@@ -316,17 +316,14 @@ class MirrorOrchestratorService {
         liveLine: 'Apply done.',
       );
     } else {
-      final queueContext = compileFingerprint == null || compileFingerprint.isEmpty
-          ? context
-          : ProjectContext(
-              projectId: context.projectId,
-              taskId: context.taskId,
-              files: context.files,
-              metadata: <String, dynamic>{
-                ...context.metadata,
-                'compileFingerprint': compileFingerprint,
-              },
-            );
+      final queueContext =
+          compileFingerprint == null || compileFingerprint.isEmpty
+              ? context
+              : context.copyWith(
+                  metadata: context.metadata.copyWith(
+                    compileFingerprint: compileFingerprint,
+                  ),
+                );
       await _replayService(ref).enqueue(
         operation: 'apply',
         sessionKey: sessionKey,
@@ -345,7 +342,8 @@ class MirrorOrchestratorService {
       _emitStatus(
         ref,
         sessionKey,
-        terminalLine: 'Mirror apply failed: ${result.message ?? 'unknown error'}',
+        terminalLine:
+            'Mirror apply failed: ${result.message ?? 'unknown error'}',
         liveLine: 'Apply failed.',
       );
     }
@@ -451,7 +449,8 @@ class MirrorOrchestratorService {
     }
   }
 
-  Future<void> _replayQueuedWork(WidgetRef ref, {required String reason}) async {
+  Future<void> _replayQueuedWork(WidgetRef ref,
+      {required String reason}) async {
     await _replayService(ref).replayDueEntries(
       reason: reason,
       operationExecutor: _createOutboxExecutor(),
@@ -484,8 +483,7 @@ class MirrorOrchestratorService {
             message: result.errors.join(' | '),
           );
         case 'apply':
-          final compileFingerprint =
-              entry.context.metadata['compileFingerprint']?.toString();
+          final compileFingerprint = entry.context.metadata.compileFingerprint;
           final result = await _backend.apply(
             prompt: entry.prompt,
             context: entry.context,
@@ -538,5 +536,3 @@ class MirrorOrchestratorService {
     return Duration(milliseconds: max(1, jittered));
   }
 }
-
-

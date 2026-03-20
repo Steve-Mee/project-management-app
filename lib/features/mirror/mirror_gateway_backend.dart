@@ -29,11 +29,12 @@ class MirrorGatewayBackend implements MirrorComputeBackend {
         _httpClient = httpClient ?? http.Client(),
         _budgetService = budgetService,
         _observabilityService = observabilityService,
-        _retryPolicy = retryPolicy ?? MirrorRetryPolicy(
-          timeout: timeout,
-          maxRetries: maxRetries,
-          initialBackoff: initialBackoff,
-        );
+        _retryPolicy = retryPolicy ??
+            MirrorRetryPolicy(
+              timeout: timeout,
+              maxRetries: maxRetries,
+              initialBackoff: initialBackoff,
+            );
 
   final SupabaseClient? _client;
   final http.Client _httpClient;
@@ -252,7 +253,7 @@ class MirrorGatewayBackend implements MirrorComputeBackend {
     }
 
     final expectedContextFingerprint =
-        context.metadata['previewContextFingerprint']?.toString().trim() ?? '';
+        context.metadata.previewContextFingerprint ?? '';
     if (expectedContextFingerprint.isNotEmpty) {
       final actualContextFingerprint = _fingerprintFileMap(context.files);
       if (actualContextFingerprint != expectedContextFingerprint) {
@@ -364,10 +365,21 @@ class MirrorGatewayBackend implements MirrorComputeBackend {
     required ProjectContext context,
     required String mode,
   }) async {
+    final requestTrace = _buildRequestTrace(context: context, mode: mode);
     final request = _buildGatewayRequest(
       prompt: prompt,
       context: context,
       mode: mode,
+      requestTrace: requestTrace,
+    );
+    _observabilityService?.recordRequestLinkEvent(
+      operation: 'compile',
+      mode: mode,
+      requestId: requestTrace.requestId,
+      traceId: requestTrace.traceId,
+      idempotencyKey: requestTrace.idempotencyKey,
+      endpoint: endpoint,
+      stage: 'client_gateway_dispatch',
     );
 
     return _retryPolicy.execute<CompileResult, http.Response>(
@@ -390,7 +402,9 @@ class MirrorGatewayBackend implements MirrorComputeBackend {
       ),
       onTimeoutFailure: () => const CompileResult(
         success: false,
-        errors: <String>['timeout: Mirror Gateway HTTP /compile request timed out.'],
+        errors: <String>[
+          'timeout: Mirror Gateway HTTP /compile request timed out.'
+        ],
       ),
       onErrorFailure: (error) => CompileResult(
         success: false,
@@ -407,6 +421,9 @@ class MirrorGatewayBackend implements MirrorComputeBackend {
           operation: 'compile',
           success: success,
           attempt: attempt,
+          requestId: requestTrace.requestId,
+          traceId: requestTrace.traceId,
+          idempotencyKey: requestTrace.idempotencyKey,
         );
       },
       onRetry: ({required String reason, required int attempt}) {
@@ -415,6 +432,9 @@ class MirrorGatewayBackend implements MirrorComputeBackend {
           reason: reason,
           attempt: attempt,
           mode: mode,
+          requestId: requestTrace.requestId,
+          traceId: requestTrace.traceId,
+          idempotencyKey: requestTrace.idempotencyKey,
         );
       },
     );
@@ -427,11 +447,22 @@ class MirrorGatewayBackend implements MirrorComputeBackend {
     required String mode,
     Map<String, dynamic> extra = const <String, dynamic>{},
   }) async {
+    final requestTrace = _buildRequestTrace(context: context, mode: mode);
     final request = _buildGatewayRequest(
       prompt: prompt,
       context: context,
       mode: mode,
       extra: extra,
+      requestTrace: requestTrace,
+    );
+    _observabilityService?.recordRequestLinkEvent(
+      operation: 'apply',
+      mode: mode,
+      requestId: requestTrace.requestId,
+      traceId: requestTrace.traceId,
+      idempotencyKey: requestTrace.idempotencyKey,
+      endpoint: endpoint,
+      stage: 'client_gateway_dispatch',
     );
 
     return _retryPolicy.execute<_RawGatewayResult, http.Response>(
@@ -444,7 +475,8 @@ class MirrorGatewayBackend implements MirrorComputeBackend {
       isRetriable: (response) => _isRetriableStatus(response.statusCode),
       retryReasonForResult: (response) =>
           response.statusCode == 429 ? 'rate_limited' : 'server_error',
-      onSuccess: (response) => _RawGatewayResult(success: true, body: response.body),
+      onSuccess: (response) =>
+          _RawGatewayResult(success: true, body: response.body),
       onFailure: (response) => _RawGatewayResult(
         success: false,
         errors: <String>[
@@ -454,7 +486,9 @@ class MirrorGatewayBackend implements MirrorComputeBackend {
       ),
       onTimeoutFailure: () => const _RawGatewayResult(
         success: false,
-        errors: <String>['timeout: Mirror Gateway HTTP /apply request timed out.'],
+        errors: <String>[
+          'timeout: Mirror Gateway HTTP /apply request timed out.'
+        ],
       ),
       onErrorFailure: (error) => _RawGatewayResult(
         success: false,
@@ -471,6 +505,9 @@ class MirrorGatewayBackend implements MirrorComputeBackend {
           operation: 'apply',
           success: success,
           attempt: attempt,
+          requestId: requestTrace.requestId,
+          traceId: requestTrace.traceId,
+          idempotencyKey: requestTrace.idempotencyKey,
         );
       },
       onRetry: ({required String reason, required int attempt}) {
@@ -479,6 +516,9 @@ class MirrorGatewayBackend implements MirrorComputeBackend {
           reason: reason,
           attempt: attempt,
           mode: mode,
+          requestId: requestTrace.requestId,
+          traceId: requestTrace.traceId,
+          idempotencyKey: requestTrace.idempotencyKey,
         );
       },
     );
@@ -488,18 +528,20 @@ class MirrorGatewayBackend implements MirrorComputeBackend {
     required String prompt,
     required ProjectContext context,
     required String mode,
+    required _MirrorRequestTrace requestTrace,
     Map<String, dynamic> extra = const <String, dynamic>{},
   }) {
-    final effectiveContext = _budgetService?.enforce(context).context ?? context;
+    final effectiveContext =
+        _budgetService?.enforce(context).context ?? context;
     final token = _client?.auth.currentSession?.accessToken;
-    final idempotencyKey = _resolveIdempotencyKey(context.metadata);
+    final idempotencyKey = requestTrace.idempotencyKey;
     final payload = <String, dynamic>{
       'prompt': prompt,
       'projectId': effectiveContext.projectId,
       'taskId': effectiveContext.taskId,
       'mode': mode,
       'files': effectiveContext.files,
-      'metadata': effectiveContext.metadata,
+      'metadata': effectiveContext.metadata.toJson(),
       ...extra,
     };
 
@@ -509,10 +551,28 @@ class MirrorGatewayBackend implements MirrorComputeBackend {
       headers: <String, String>{
         'Content-Type': 'application/json',
         if (encodedPayload?.isGzip ?? false) 'Content-Encoding': 'gzip',
+        'x-request-id': requestTrace.requestId,
+        'x-trace-id': requestTrace.traceId,
         if (idempotencyKey != null) 'x-idempotency-key': idempotencyKey,
         if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
       },
       body: body,
+    );
+  }
+
+  _MirrorRequestTrace _buildRequestTrace({
+    required ProjectContext context,
+    required String mode,
+  }) {
+    final metadataJson = context.metadata.toJson();
+    final requestId = _resolveRequestId(metadataJson);
+    final traceId = _resolveTraceId(metadataJson, requestId: requestId);
+    final idempotencyKey = _resolveIdempotencyKey(context.metadata);
+    return _MirrorRequestTrace(
+      requestId: requestId,
+      traceId: traceId,
+      idempotencyKey: idempotencyKey,
+      mode: mode,
     );
   }
 
@@ -637,7 +697,8 @@ class MirrorGatewayBackend implements MirrorComputeBackend {
       return _defaultApplyEndpoint();
     }
 
-    final compileEndpoint = resolveCompileEndpoint(httpEndpoint: explicitCompile);
+    final compileEndpoint =
+        resolveCompileEndpoint(httpEndpoint: explicitCompile);
     if (compileEndpoint.endsWith('/compile')) {
       return '${compileEndpoint.substring(0, compileEndpoint.length - '/compile'.length)}/apply';
     }
@@ -721,18 +782,59 @@ String _fingerprintFileMap(Map<String, String> files) {
   return sha256.convert(utf8.encode(buffer.toString())).toString();
 }
 
-String? _resolveIdempotencyKey(Map<String, dynamic> metadata) {
-  final fromCanonical = metadata['idempotencyKey']?.toString().trim();
-  if (fromCanonical != null && fromCanonical.isNotEmpty) {
-    return fromCanonical;
+String? _resolveIdempotencyKey(ProjectContextMetadata metadata) {
+  final idempotencyKey = metadata.idempotencyKey;
+  if (idempotencyKey != null && idempotencyKey.isNotEmpty) {
+    return idempotencyKey;
   }
-
-  final fromHeaderStyle = metadata['x-idempotency-key']?.toString().trim();
-  if (fromHeaderStyle != null && fromHeaderStyle.isNotEmpty) {
-    return fromHeaderStyle;
-  }
-
   return null;
 }
 
+String _resolveRequestId(Map<String, dynamic> metadata) {
+  const candidates = <String>[
+    'requestId',
+    'request_id',
+    'x-request-id',
+  ];
+  for (final key in candidates) {
+    final value = metadata[key]?.toString().trim();
+    if (value != null && value.isNotEmpty) {
+      return value;
+    }
+  }
 
+  return 'mirror-${DateTime.now().toUtc().microsecondsSinceEpoch}';
+}
+
+String _resolveTraceId(
+  Map<String, dynamic> metadata, {
+  required String requestId,
+}) {
+  const candidates = <String>[
+    'traceId',
+    'trace_id',
+    'x-trace-id',
+  ];
+  for (final key in candidates) {
+    final value = metadata[key]?.toString().trim();
+    if (value != null && value.isNotEmpty) {
+      return value;
+    }
+  }
+
+  return 'trace-$requestId';
+}
+
+class _MirrorRequestTrace {
+  const _MirrorRequestTrace({
+    required this.requestId,
+    required this.traceId,
+    required this.mode,
+    this.idempotencyKey,
+  });
+
+  final String requestId;
+  final String traceId;
+  final String mode;
+  final String? idempotencyKey;
+}

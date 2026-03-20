@@ -57,6 +57,47 @@ void main() {
       );
     });
 
+    test('private-only policy downgrades cloud request', () {
+      const policy = MirrorAccessPolicy();
+      final decision = policy.resolveRequestedMode(
+        requestedMode: 'cloud',
+        isPremium: true,
+        allowCloudMode: false,
+        allowPrivateMode: true,
+      );
+
+      expect(decision.effectiveMode, 'private');
+      expect(decision.usedAdminBypass, isFalse);
+      expect(decision.warning, contains('disabled by policy'));
+    });
+
+    test('cloud-only policy upgrades private request when allowed', () {
+      const policy = MirrorAccessPolicy();
+      final decision = policy.resolveRequestedMode(
+        requestedMode: 'private',
+        isPremium: true,
+        allowPrivateMode: false,
+        allowCloudMode: true,
+      );
+
+      expect(decision.effectiveMode, 'cloud');
+      expect(decision.warning, contains('restricted'));
+    });
+
+    test('admin bypass allows cloud without premium', () {
+      const policy = MirrorAccessPolicy();
+      final decision = policy.resolveRequestedMode(
+        requestedMode: 'cloud',
+        isPremium: false,
+        allowCloudMode: false,
+        allowAdminBypass: true,
+      );
+
+      expect(decision.effectiveMode, 'cloud');
+      expect(decision.requiresPremium, isFalse);
+      expect(decision.usedAdminBypass, isTrue);
+    });
+
     test('warning clear behavior', () {
       final container = ProviderContainer(
         overrides: <Override>[

@@ -5,8 +5,10 @@ import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+import 'package:pma_core/auth/permissions.dart';
 import 'package:pma_core/core/feature_flags/feature_flag_resolver.dart';
 import 'package:pma_core/core/providers.dart';
+import 'package:pma_core/providers/auth/auth_providers.dart';
 import 'package:pma_core/repository/encrypted_hive_box.dart';
 import 'package:pma_core/services/mirror_access_policy.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -167,14 +169,29 @@ final mirrorBackendProvider = FutureProvider<MirrorComputeBackend>((ref) async {
   final isPremium = await ref.watch(mirrorPremiumProvider.future);
   final runnerModeVariant =
       await ref.watch(mirrorRunnerModeVariantProvider.future);
+  final canUsePrivateMode = await _isMirrorPrivateModeEnabled(
+    ref,
+    useWatch: true,
+  );
+  final canUseCloudMode = await _isMirrorCloudModeEnabled(
+    ref,
+    useWatch: true,
+  );
+  final allowAdminBypass = await _isMirrorAdminBypassEnabled(
+    ref,
+    useWatch: true,
+  );
   const policy = MirrorAccessPolicy();
   final decision = policy.resolveRequestedMode(
     requestedMode: mode,
     isPremium: isPremium,
     runnerModeVariant: runnerModeVariant,
+    allowPrivateMode: canUsePrivateMode,
+    allowCloudMode: canUseCloudMode,
+    allowAdminBypass: allowAdminBypass,
   );
 
-  if (decision.effectiveMode == 'cloud' && isPremium) {
+  if (decision.effectiveMode == 'cloud') {
     return ref.watch(mirrorGatewayBackendProvider);
   }
 
@@ -223,11 +240,17 @@ class MirrorNotifier extends Notifier<MirrorState> {
     final hasPremium = await ref.read(mirrorPremiumProvider.future);
     final runnerModeVariant =
         await ref.read(mirrorRunnerModeVariantProvider.future);
+    final canUsePrivateMode = await _isMirrorPrivateModeEnabled(ref);
+    final canUseCloudMode = await _isMirrorCloudModeEnabled(ref);
+    final allowAdminBypass = await _isMirrorAdminBypassEnabled(ref);
     const policy = MirrorAccessPolicy();
     final decision = policy.resolveRequestedMode(
       requestedMode: mode,
       isPremium: hasPremium,
       runnerModeVariant: runnerModeVariant,
+      allowPrivateMode: canUsePrivateMode,
+      allowCloudMode: canUseCloudMode,
+      allowAdminBypass: allowAdminBypass,
     );
 
     ref.read(mirrorModeProvider.notifier).state = decision.effectiveMode;
@@ -342,6 +365,79 @@ Future<bool> _isMirrorFeatureEnabled(Ref ref, {bool useWatch = false}) async {
   } catch (_) {
     // Fail-open when flags are temporarily unavailable.
     return true;
+  }
+}
+
+Future<bool> _isMirrorPrivateModeEnabled(Ref ref, {bool useWatch = false}) async {
+  return _resolveBooleanFeatureFlag(
+    ref,
+    key: 'mirror_private_mode_enabled',
+    defaultValue: true,
+    useWatch: useWatch,
+  );
+}
+
+Future<bool> _isMirrorCloudModeEnabled(Ref ref, {bool useWatch = false}) async {
+  return _resolveBooleanFeatureFlag(
+    ref,
+    key: 'mirror_cloud_mode_enabled',
+    defaultValue: true,
+    useWatch: useWatch,
+  );
+}
+
+Future<bool> _isMirrorAdminBypassEnabled(Ref ref, {bool useWatch = false}) async {
+  final canManageRoles = useWatch
+      ? ref.watch(hasPermissionProvider(AppPermissions.manageRoles))
+      : ref.read(hasPermissionProvider(AppPermissions.manageRoles));
+  final canManageUsers = useWatch
+      ? ref.watch(hasPermissionProvider(AppPermissions.manageUsers))
+      : ref.read(hasPermissionProvider(AppPermissions.manageUsers));
+  final canUseBypass = canManageRoles || canManageUsers;
+  if (!canUseBypass) {
+    return false;
+  }
+
+  return _resolveBooleanFeatureFlag(
+    ref,
+    key: 'mirror_admin_testing_bypass',
+    defaultValue: false,
+    useWatch: useWatch,
+  );
+}
+
+Future<bool> _resolveBooleanFeatureFlag(
+  Ref ref, {
+  required String key,
+  required bool defaultValue,
+  bool useWatch = false,
+}) async {
+  final flagsAsync = useWatch
+      ? ref.watch(featureFlagProvider)
+      : ref.read(featureFlagProvider);
+  final syncResolved = flagsAsync.maybeWhen(
+    data: (flags) =>
+        FeatureFlagResolver.isEnabled(flags, key, defaultValue: defaultValue),
+    orElse: () => null,
+  );
+
+  if (syncResolved != null) {
+    return syncResolved;
+  }
+
+  try {
+    if (useWatch) {
+      await ref.watch(featureFlagProvider.future);
+    } else {
+      await ref.read(featureFlagProvider.future);
+    }
+    return FeatureFlagResolver.isEnabled(
+      ref.read(featureFlagProvider).valueOrNull ?? const <String, dynamic>{},
+      key,
+      defaultValue: defaultValue,
+    );
+  } catch (_) {
+    return defaultValue;
   }
 }
 

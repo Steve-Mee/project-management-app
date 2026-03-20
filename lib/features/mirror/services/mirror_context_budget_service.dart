@@ -38,8 +38,7 @@ class MirrorContextBudgetReport {
   final List<String> truncatedFiles;
 
   @override
-  String toString() =>
-      'MirrorContextBudgetReport('
+  String toString() => 'MirrorContextBudgetReport('
       'wasEnforced=$wasEnforced, '
       'files=$originalFileCount→$enforcedFileCount, '
       'bytes=$originalBytes→$enforcedBytes, '
@@ -195,8 +194,7 @@ class MirrorContextBudgetService {
   /// Returns `(bytes, isGzip)`. When `isGzip` is `true` the caller must
   /// include `Content-Encoding: gzip` in the HTTP request headers.
   ({Uint8List bytes, bool isGzip}) encodePayload(Map<String, dynamic> payload) {
-    final jsonBytes =
-        Uint8List.fromList(utf8.encode(jsonEncode(payload)));
+    final jsonBytes = Uint8List.fromList(utf8.encode(jsonEncode(payload)));
     if (!enableGzip) {
       return (bytes: jsonBytes, isGzip: false);
     }
@@ -224,8 +222,10 @@ class MirrorContextBudgetService {
     final protected = <String>{};
     final files = context.files;
 
-    final selected = _readSelectedFile(context.metadata);
-    if (selected != null && selected.isNotEmpty && files.containsKey(selected)) {
+    final selected = context.metadata.selectedFile;
+    if (selected != null &&
+        selected.isNotEmpty &&
+        files.containsKey(selected)) {
       protected.add(selected);
     }
 
@@ -242,7 +242,7 @@ class MirrorContextBudgetService {
       }
     }
 
-    final requiredFiles = _readRequiredFiles(context.metadata);
+    final requiredFiles = context.metadata.requiredFiles;
     for (final file in requiredFiles) {
       if (files.containsKey(file)) {
         protected.add(file);
@@ -318,87 +318,5 @@ class MirrorContextBudgetService {
     }
 
     return path.contains(taskId);
-  }
-
-  String? _readSelectedFile(Map<String, dynamic> metadata) {
-    const keys = <String>[
-      'selectedFile',
-      'selected_file',
-      'activeFile',
-      'active_file',
-    ];
-    for (final key in keys) {
-      final value = metadata[key];
-      if (value == null) {
-        continue;
-      }
-      final normalized = value.toString().trim();
-      if (normalized.isNotEmpty) {
-        return normalized;
-      }
-    }
-    return null;
-  }
-
-  Set<String> _readRequiredFiles(Map<String, dynamic> metadata) {
-    const keys = <String>[
-      'requiredFiles',
-      'required_files',
-      'requiredFilePaths',
-      'required_file_paths',
-      'requiredPaths',
-      'required_paths',
-    ];
-
-    final required = <String>{};
-    for (final key in keys) {
-      final value = metadata[key];
-      if (value == null) {
-        continue;
-      }
-
-      if (value is Iterable) {
-        for (final item in value) {
-          final normalized = item.toString().trim();
-          if (normalized.isNotEmpty) {
-            required.add(normalized);
-          }
-        }
-        continue;
-      }
-
-      if (value is String) {
-        final normalized = value.trim();
-        if (normalized.isEmpty) {
-          continue;
-        }
-
-        if (normalized.startsWith('[') && normalized.endsWith(']')) {
-          try {
-            final decoded = jsonDecode(normalized);
-            if (decoded is Iterable) {
-              for (final item in decoded) {
-                final decodedValue = item.toString().trim();
-                if (decodedValue.isNotEmpty) {
-                  required.add(decodedValue);
-                }
-              }
-              continue;
-            }
-          } catch (_) {
-            // Fall through to comma/newline parsing.
-          }
-        }
-
-        for (final item in normalized.split(RegExp(r'[\n,;]'))) {
-          final trimmed = item.trim();
-          if (trimmed.isNotEmpty) {
-            required.add(trimmed);
-          }
-        }
-      }
-    }
-
-    return required;
   }
 }

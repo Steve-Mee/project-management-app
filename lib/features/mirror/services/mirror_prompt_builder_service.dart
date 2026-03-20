@@ -1,3 +1,5 @@
+import '../models/project_context.dart';
+
 class MirrorPromptBuilderService {
   const MirrorPromptBuilderService();
 
@@ -6,14 +8,13 @@ class MirrorPromptBuilderService {
     required String projectId,
     required String taskId,
     required Map<String, String> files,
-    required Map<String, dynamic> metadata,
+    required ProjectContextMetadata metadata,
     int maxFiles = 24,
     int maxFileChars = 6000,
     int maxTotalChars = 64000,
   }) {
     final sanitizedPrompt = _normalizeText(prompt).trim();
     final metadataSection = _buildMetadataSection(metadata);
-    final teamModeEnabled = _isTeamModeEnabled(metadata);
     final teamModeSection = _buildTeamModeSection(metadata);
     final filesSection = _buildFilesSection(
       files,
@@ -42,7 +43,7 @@ class MirrorPromptBuilderService {
         ..writeln();
     }
 
-    if (teamModeEnabled && teamModeSection.isNotEmpty) {
+    if (metadata.hasTeamMode && teamModeSection.isNotEmpty) {
       buffer
         ..writeln('### Team Mode')
         ..writeln(teamModeSection)
@@ -65,43 +66,28 @@ class MirrorPromptBuilderService {
   }
 }
 
-String _buildMetadataSection(Map<String, dynamic> metadata) {
-  if (metadata.isEmpty) {
+String _buildMetadataSection(ProjectContextMetadata metadata) {
+  final metadataJson = metadata.toJson();
+  if (metadataJson.isEmpty) {
     return '';
   }
 
-  final sortedKeys = metadata.keys.toList()..sort();
+  final sortedKeys = metadataJson.keys.toList()..sort();
   final lines = <String>[];
   for (final key in sortedKeys) {
-    lines.add('- $key: ${_stringify(metadata[key])}');
+    lines.add('- $key: ${_stringify(metadataJson[key])}');
   }
   return lines.join('\n');
 }
 
-bool _isTeamModeEnabled(Map<String, dynamic> metadata) {
-  final value =
-      metadata['teamMode'] ?? metadata['team_mode'] ?? metadata['multiAgent'];
-  if (value is bool) {
-    return value;
-  }
-  if (value is String) {
-    final normalized = value.toLowerCase().trim();
-    return normalized == 'true' || normalized == '1' || normalized == 'enabled';
-  }
-  if (value is num) {
-    return value != 0;
-  }
-  return false;
-}
-
-String _buildTeamModeSection(Map<String, dynamic> metadata) {
-  final roles = _resolveTeamRoles(metadata);
+String _buildTeamModeSection(ProjectContextMetadata metadata) {
+  final roles = metadata.effectiveTeamRoles;
   if (roles.isEmpty) {
     return '';
   }
 
   final buffer = StringBuffer()
-    ..writeln('Active roles: ${roles.join(', ')}')
+    ..writeln('Active roles: ${roles.map((role) => role.label).join(', ')}')
     ..writeln()
     ..writeln('Orchestration protocol:')
     ..writeln(
@@ -112,18 +98,18 @@ String _buildTeamModeSection(Map<String, dynamic> metadata) {
     ..writeln()
     ..writeln('Role outputs:');
 
-  if (roles.contains('Architect')) {
+  if (roles.contains(ProjectContextTeamRole.architect)) {
     buffer.writeln('- Architect: architecture notes + exact change plan.');
   }
-  if (roles.contains('Coder')) {
+  if (roles.contains(ProjectContextTeamRole.coder)) {
     buffer.writeln('- Coder: concrete code patch details.');
   }
-  if (roles.contains('Reviewer')) {
+  if (roles.contains(ProjectContextTeamRole.reviewer)) {
     buffer.writeln(
         '- Reviewer: findings ordered by severity with follow-up actions.');
   }
 
-  final customGoal = metadata['teamGoal'] ?? metadata['team_goal'];
+  final customGoal = metadata.teamGoal;
   if (customGoal != null) {
     buffer
       ..writeln()
@@ -131,37 +117,6 @@ String _buildTeamModeSection(Map<String, dynamic> metadata) {
   }
 
   return buffer.toString().trim();
-}
-
-List<String> _resolveTeamRoles(Map<String, dynamic> metadata) {
-  final rawRoles =
-      metadata['teamRoles'] ?? metadata['team_roles'] ?? metadata['agents'];
-  final resolved = <String>{};
-
-  if (rawRoles is Iterable) {
-    for (final role in rawRoles) {
-      final normalized = role.toString().toLowerCase().trim();
-      if (normalized == 'architect') {
-        resolved.add('Architect');
-      } else if (normalized == 'coder') {
-        resolved.add('Coder');
-      } else if (normalized == 'reviewer') {
-        resolved.add('Reviewer');
-      }
-    }
-  }
-
-  if (resolved.isEmpty && _isTeamModeEnabled(metadata)) {
-    return <String>['Architect', 'Coder', 'Reviewer'];
-  }
-
-  final ordered = <String>[];
-  for (final role in <String>['Architect', 'Coder', 'Reviewer']) {
-    if (resolved.contains(role)) {
-      ordered.add(role);
-    }
-  }
-  return ordered;
 }
 
 String _buildFilesSection(

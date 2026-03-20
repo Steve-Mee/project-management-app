@@ -1,118 +1,166 @@
 // ARCHITECTURE LOCK: Mirror Gateway = thin proxy only. Compute always on Fly.io or local runner.
 # Mirror Production Readiness Checklist
 
+Use this checklist as the release gate for Mirror production changes.
+
 Status legend:
-- [ ] Not started
-- [~] In progress
-- [x] Done
-- [!] Blocked external dependency
+- [ ] Not complete
+- [x] Complete
 
-## 1. Architecture And Ownership
+Release metadata:
+- Release version/tag:
+- Change window:
+- Incident commander for rollout:
+- Primary approvers (Backend, Flutter, SRE, Security):
 
-- [x] DB-first source of truth defined for `mirror_templates`.
-- [x] Supabase bootstrap SQL no longer owns Mirror schema.
-- [x] Mirror schema changes live in versioned migrations only.
-- [ ] ADR for Mirror data ownership is linked from architecture docs. (Owner: Platform Architecture, Deadline: 2026-03-21)
-- [x] Service boundaries documented for Mirror Gateway (thin proxy only) vs runners.
-- [x] Architecture lock header present in all Mirror source files and docs (`mirror-gateway = thin proxy only`).
-- [x] `docs/mirror-architecture.md` updated with locked naming (`MirrorGatewayBackend`, `mirror-gateway` folder, new service classes).
+## 1. Architecture Lock And Ownership
 
-## 2. Database And Migrations
+- [ ] `mirror-gateway` remains a thin proxy only (no compute logic introduced).
+- [ ] Compute paths are limited to cloud runner and local runner implementations.
+- [ ] `docs/mirror-architecture.md` reflects current service boundaries and naming.
+- [ ] Data ownership is DB-first and all schema changes are migration-driven.
+- [ ] Architectural Decision Record (ADR) for Mirror ownership is linked and current.
 
-- [x] `mirror_templates` migration includes RLS and deterministic seed sync.
-- [x] Mirror audit table has retention and indexes.
-- [x] Mirror storage hardening migration in place.
-- [ ] Migration dry-run completed on staging copy. (Owner: Data Engineering, Deadline: 2026-03-18)
-- [ ] Rollback SQL documented for each new Mirror migration. (Owner: Data Engineering, Deadline: 2026-03-20)
-- [ ] Post-migration verification script added (table/policy/index assertions). (Owner: Data Engineering, Deadline: 2026-03-22)
+Evidence:
+- PR/commit links:
+- ADR link:
 
-## 3. Security, Auth, And RLS
+## 2. Database, Migration, And Rollback Safety
 
-- [x] Mirror Gateway enforces bearer auth and request idempotency.
-- [x] Request body size guard enforced (max 512KB).
-- [x] Apply payload normalization enforced for actor/artifact fields.
-- [x] Storage policies restrict signed input/backup object access to owner path.
-- [x] Idempotency stale-claim takeover implemented: `processing` records older than 300 s are reclaimed rather than returning 409 conflict.
-- [x] Idempotency finalize ownership guard: `finalizeIdempotencyKey` requires matching `request_id`, `request_hash`, and `status = processing`; returns conflict error on mismatch.
-- [x] Expired idempotency records are reclaimed (not replayed or blocked) on any claim path.
-- [ ] Pen-test checklist run for signed URL leakage and replay scenarios. (Owner: Security Engineering, Deadline: 2026-03-24)
-- [ ] JWT/service-token rotation runbook tested end-to-end. (Owner: Security Engineering, Deadline: 2026-03-19)
+- [ ] All new Mirror migrations were applied successfully in staging.
+- [ ] Migration rollback SQL exists for each migration touching Mirror tables or policies.
+- [ ] Post-migration verification confirms expected tables, indexes, and RLS policies.
+- [ ] Seed synchronization for `mirror_templates` is deterministic and repeatable.
+- [ ] Retention and index strategy for `mirror_apply_audit_events` is validated.
 
-## 4. API Contracts
+Verification commands:
+- `supabase db push --linked`
+- `supabase migration list`
 
-- [x] `/compile` and `/apply` routing explicit and validated.
-- [x] Cloud backend contract-check for apply support added.
-- [x] Local and cloud runners expose `Apply` method with compile-like signature.
-- [x] Apply contract tests cover signed upload, metadata forwarding, audit flow.
-- [ ] OpenAPI/proto contract artifact published for CI drift detection. (Owner: Backend API, Deadline: 2026-03-25)
-- [ ] Backward-compatibility matrix documented for client versions. (Owner: Backend API, Deadline: 2026-03-26)
+Evidence:
+- Staging migration run ID:
+- Rollback script location:
+- Verification output link:
 
-## 5. Flutter Client Behavior
+## 3. Security And Access Controls
 
-- [x] Realtime updates debounced in editor (300ms).
-- [x] Realtime filtering scoped by `task_id`, `project_id`, and `user_id`.
-- [x] `PrivateGrpcBackend.generate` fully implemented.
-- [x] Templates gallery no longer uses hardcoded defaults.
-- [x] `MirrorEditorScreen` reduced to pure UI: realtime subscription extracted to `MirrorEditorRealtimeController`, run lifecycle extracted to `MirrorEditorRunService`.
-- [x] `MirrorRealtimeEventSetDeduplicator` moved to `mirror_realtime_service.dart` (canonical service module, not screen file).
-- [x] Editor change-guard prevents mode/content mutations during active run (`_isRunInProgress`).
-- [ ] Empty-state UX for template gallery validated when DB returns zero templates. (Owner: Flutter Client, Deadline: 2026-03-17)
-- [ ] Telemetry for editor apply failures includes actionable reason buckets. (Owner: Flutter Client, Deadline: 2026-03-21)
+- [ ] Gateway enforces bearer auth for compile/apply routes.
+- [ ] Idempotency claim and finalize ownership checks are enforced and tested.
+- [ ] Request size guard is active (max payload enforced).
+- [ ] Storage object paths are owner-prefixed (`<auth.uid>/...`) and policy-conformant.
+- [ ] JWT key rotation procedure has been executed in staging in the last 30 days.
+- [ ] Service token scope is least-privilege and not shared outside runner/gateway runtime.
+- [ ] Security checklist for replay/signed-URL leakage scenarios is complete.
 
-## 6. Reliability And Performance
+Evidence:
+- Security test report:
+- Key-rotation validation date:
 
-- [x] Apply history persistence capped (`updatedFiles` max 50 files / 100k chars).
-- [x] Runner workspace cleanup job enabled.
-- [ ] Load test executed for burst compile/apply traffic. (Owner: SRE, Deadline: 2026-03-27)
-- [ ] P95 and P99 latency baselines captured and documented. (Owner: SRE, Deadline: 2026-03-28)
-- [ ] Timeout/retry values validated under degraded network conditions. (Owner: SRE, Deadline: 2026-03-29)
+## 4. API And Contract Stability
 
-## 7. Test Coverage
+- [ ] `/compile` and `/apply` routes are validated end-to-end.
+- [ ] Request correlation headers are propagated (`x-request-id`, `x-trace-id`).
+- [ ] Structured error responses include actionable machine-readable codes.
+- [ ] Runner contract compatibility matrix is documented for supported client versions.
+- [ ] Contract artifacts (OpenAPI/proto/schema snapshots) are published for CI drift checks.
 
-- [x] Mirror gateway contract tests exist for compile/apply pathing.
-- [x] Apply flow contract test added.
-- [x] Premium precedence integration tests added (metadata vs subscriptions).
-- [ ] Golden/widget tests for templates gallery DB-empty and DB-populated states. (Owner: QA Automation, Deadline: 2026-03-20)
-- [ ] End-to-end staging smoke test script added to CI. (Owner: QA Automation, Deadline: 2026-03-24)
-- [ ] Mutation or fault-injection test for audit write failures. (Owner: QA Automation, Deadline: 2026-03-27)
+Evidence:
+- Contract test run URL:
+- Contract artifact path:
 
-## 8. Observability And Operations
+## 5. Client And UX Readiness
 
-- [x] Audit events include consistent apply event constants.
-- [x] Runner structured logs include request identifiers.
-- [ ] Dashboard for compile/apply success, auth denials, and timeout rates. (Owner: Observability, Deadline: 2026-03-22)
-- [ ] Alert thresholds defined for error spikes and elevated latency. (Owner: Observability, Deadline: 2026-03-23)
-- [ ] On-call runbook covers incident triage for Mirror endpoints. (Owner: SRE, Deadline: 2026-03-18)
-- [ ] Sentry breadcrumb mapping validated for Mirror editor flows. (Owner: Flutter Client, Deadline: 2026-03-19)
+- [ ] Mirror editor run lifecycle prevents conflicting edits during in-flight operations.
+- [ ] Realtime dedup/filtering behavior is verified for project/task/user scope.
+- [ ] Template gallery handles empty and populated states without fallback regressions.
+- [ ] User-facing error messages map to actionable categories (auth, timeout, quota, runner).
+- [ ] Offline/degraded-network behavior is validated for compile/apply flows.
 
-## 9. Deployment And Rollout
+Evidence:
+- Widget/integration test links:
+- UX validation notes:
 
-- [ ] Staging rollout completed with migration + app + runner versions aligned. (Owner: Release Management, Deadline: 2026-03-30)
-- [ ] Feature flags prepared for controlled rollout and quick disable. (Owner: Release Management, Deadline: 2026-03-26)
-- [ ] Canary cohort enabled and monitored for 24h. (Owner: Release Management, Deadline: 2026-03-31)
-- [ ] Production rollout checklist signed by backend + mobile/web owners. (Owner: Engineering Management, Deadline: 2026-04-01)
-- [ ] Post-release verification completed (smoke tests + metrics checks). (Owner: Release Management, Deadline: 2026-04-02)
+## 6. Reliability, Performance, And Capacity
 
-## 10. Data Governance And Cleanup
+- [ ] Retry policy and circuit-breaker behavior are documented and implemented.
+- [ ] Timeout values are explicitly configured and validated under degraded conditions.
+- [ ] P50/P95/P99 latency baselines are captured for compile and apply.
+- [ ] Burst-load and soak tests are completed for expected concurrency.
+- [ ] Runner cleanup and workspace quota protections are active.
 
-- [x] Legacy bootstrap SQL marked as non-canonical for Mirror.
-- [ ] Historical template records reviewed for conflicts before DB-first sync. (Owner: Data Governance, Deadline: 2026-03-22)
-- [ ] Data retention policy approved for audit and session artifacts. (Owner: Data Governance, Deadline: 2026-03-25)
-- [ ] GDPR/DSAR procedure validated for Mirror audit metadata. (Owner: Compliance, Deadline: 2026-03-28)
+Targets reference:
+- Must meet `docs/mirror-production-slos.md` SLI/SLO targets.
 
-## 11. Release Gate (Must Pass)
+Evidence:
+- Load test report:
+- Latency baseline dashboard link:
 
-- [ ] No critical/high security findings open. (Owner: Security Engineering, Deadline: 2026-04-01)
-- [ ] All Mirror migrations applied and verified in staging. (Owner: Data Engineering, Deadline: 2026-03-30)
-- [ ] Contract and integration test suites green in CI. (Owner: QA Automation, Deadline: 2026-03-31)
-- [ ] Rollback plan reviewed and tested. (Owner: SRE, Deadline: 2026-03-31)
-- [ ] Product + engineering sign-off recorded. (Owner: Product Management, Deadline: 2026-04-02)
+## 7. Test And Quality Gates
 
-## Sign-off
+- [ ] `flutter analyze` is clean for app code paths impacted by Mirror changes.
+- [ ] Mirror contract tests for gateway compile/apply are green.
+- [ ] Integration tests cover premium/entitlement precedence and failure paths.
+- [ ] At least one staging smoke run validates compile + apply + audit event creation.
+- [ ] Fault-injection test exists for at least one dependency failure mode (runner/audit/storage).
 
-- Feature owner: Mirror Product Lead (Nina Verhoef)
-- Backend owner: Mirror Backend Lead (Arjan de Vries)
-- Flutter owner: Mirror Flutter Lead (Sven Koster)
-- QA owner: Mirror QA Lead (Laura Smit)
-- Date: 2026-03-10
-- Release version/tag: pending
+Verification commands:
+- `flutter analyze`
+- `flutter test test/features/mirror/mirror_gateway_contract_test.dart`
+
+Evidence:
+- CI workflow links:
+- Staging smoke test log:
+
+## 8. Observability And Alerting
+
+- [ ] Dashboards include request volume, success rate, latency percentiles, timeout rate, auth denials.
+- [ ] Alerts exist for error-rate spikes, sustained latency breach, and availability burn-rate.
+- [ ] Logs include request and trace correlation IDs across client/gateway/runner.
+- [ ] On-call runbook is up to date and linked from pager policy.
+- [ ] Sentry/breadcrumb correlation is validated for primary editor flows.
+
+Evidence:
+- Dashboard links:
+- Alert policy links:
+- On-call runbook link:
+
+## 9. Deployment And Rollout Controls
+
+- [ ] Staging deploy used production-like config and passed smoke checks.
+- [ ] Rollout plan includes canary scope, abort criteria, and owner responsibilities.
+- [ ] Feature flags provide fast kill-switch behavior for high-risk paths.
+- [ ] Rollback to previous app/gateway/runner version has been tested.
+- [ ] Post-deploy verification completed within 30 minutes after production release.
+
+Evidence:
+- Deployment ticket:
+- Canary report:
+- Rollback rehearsal log:
+
+## 10. Compliance, Data Governance, And Retention
+
+- [ ] Data retention windows are configured for audit/session artifacts.
+- [ ] DSAR/GDPR process for Mirror metadata is documented and validated.
+- [ ] PII handling in logs/telemetry is reviewed and compliant.
+- [ ] Backup and restoration controls for Mirror-critical data are tested.
+
+Evidence:
+- Compliance review reference:
+- Retention job verification:
+
+## 11. Final Go/No-Go Gate
+
+All items below must be checked before production release:
+
+- [ ] No open Critical/High severity security findings.
+- [ ] No open P0/P1 reliability defects tied to compile/apply.
+- [ ] SLO dashboard shows release-week compliance trend.
+- [ ] Required stakeholders approved release in writing.
+
+Approvals:
+- Backend owner:
+- Flutter owner:
+- SRE owner:
+- Security owner:
+- Product owner:
+- Approval timestamp:

@@ -1,5 +1,7 @@
 import 'dart:convert';
 
+import '../models/project_context.dart';
+
 class MirrorPatch {
   const MirrorPatch({
     required this.path,
@@ -19,7 +21,7 @@ class MirrorPatchService {
 
   List<MirrorPatch> buildPatchesFromApplyPayload({
     required Map<String, String> files,
-    required Map<String, dynamic> metadata,
+    required ProjectContextMetadata metadata,
     required String output,
     String? fallbackPath,
   }) {
@@ -110,7 +112,8 @@ class MirrorPatchService {
         path: targetPath,
         originalContent: original,
         updatedContent: output,
-        diff: _buildUnifiedDiff(path: targetPath, before: original, after: output),
+        diff: _buildUnifiedDiff(
+            path: targetPath, before: original, after: output),
       ),
     ];
   }
@@ -143,11 +146,11 @@ class MirrorPatchService {
 
   String? _resolveFallbackPath(
     Map<String, String> files,
-    Map<String, dynamic> metadata,
+    ProjectContextMetadata metadata,
   ) {
-    final fromMetadata = metadata['activeFile'] ?? metadata['active_file'];
-    if (fromMetadata != null && fromMetadata.toString().trim().isNotEmpty) {
-      return fromMetadata.toString().trim();
+    final fromMetadata = metadata.activeFile;
+    if (fromMetadata != null && fromMetadata.isNotEmpty) {
+      return fromMetadata;
     }
     if (files.isNotEmpty) {
       return files.keys.first;

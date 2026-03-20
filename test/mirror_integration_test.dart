@@ -14,9 +14,7 @@ void main() {
         files: const <String, String>{
           'lib/main.dart': 'void main() {}',
         },
-        metadata: const <String, dynamic>{
-          'teamMode': true,
-        },
+        metadata: const ProjectContextMetadata(teamModeEnabled: true),
       );
 
       final privateResult = await backend.compile(
@@ -119,5 +117,3 @@ String _buildLineDiff(String before, String after) {
 
   return rows.join('\n');
 }
-
-

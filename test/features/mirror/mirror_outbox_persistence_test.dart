@@ -231,9 +231,7 @@ ProjectContext _buildContext() {
     files: <String, String>{
       'lib/main.dart': 'void main() {}',
     },
-    metadata: <String, dynamic>{
-      'branch': 'offline-test',
-    },
+    metadata: ProjectContextMetadata(branch: 'offline-test'),
   );
 }
 
@@ -250,5 +248,3 @@ Future<void> _waitUntil(
     await Future<void>.delayed(pollInterval);
   }
 }
-
-

@@ -48,6 +48,9 @@ class MirrorObservabilityService {
     required String operation,
     required bool success,
     int attempt = 1,
+    String? requestId,
+    String? traceId,
+    String? idempotencyKey,
   }) {
     AppLogger.event(
       'mirror_compile_latency',
@@ -57,6 +60,9 @@ class MirrorObservabilityService {
         'operation': operation,
         'success': success,
         'attempt': attempt,
+        if (requestId != null) 'requestId': requestId,
+        if (traceId != null) 'traceId': traceId,
+        if (idempotencyKey != null) 'idempotencyKey': idempotencyKey,
       },
     );
   }
@@ -74,6 +80,9 @@ class MirrorObservabilityService {
     required String reason,
     required int attempt,
     required String mode,
+    String? requestId,
+    String? traceId,
+    String? idempotencyKey,
   }) {
     AppLogger.event(
       'mirror_gateway_retry',
@@ -82,6 +91,33 @@ class MirrorObservabilityService {
         'reason': reason,
         'attempt': attempt,
         'mode': mode,
+        if (requestId != null) 'requestId': requestId,
+        if (traceId != null) 'traceId': traceId,
+        if (idempotencyKey != null) 'idempotencyKey': idempotencyKey,
+      },
+    );
+  }
+
+  /// Records correlation identifiers attached to a gateway-bound request.
+  void recordRequestLinkEvent({
+    required String operation,
+    required String mode,
+    required String requestId,
+    required String traceId,
+    String? idempotencyKey,
+    String? endpoint,
+    String stage = 'client_gateway_dispatch',
+  }) {
+    AppLogger.event(
+      'mirror_request_link',
+      params: <String, Object?>{
+        'operation': operation,
+        'mode': mode,
+        'requestId': requestId,
+        'traceId': traceId,
+        'stage': stage,
+        if (idempotencyKey != null) 'idempotencyKey': idempotencyKey,
+        if (endpoint != null) 'endpoint': endpoint,
       },
     );
   }
@@ -130,6 +166,42 @@ class MirrorObservabilityService {
         'dueEntryCount': dueEntryCount,
         'queueDepth': queueDepth,
         'reason': reason,
+      },
+    );
+  }
+
+  /// Records outbox replay operation timeouts.
+  void recordReplayTimeout({
+    required String operation,
+    required String mode,
+    required int timeoutMs,
+    required int attempt,
+  }) {
+    AppLogger.event(
+      'mirror_replay_timeout',
+      params: <String, Object?>{
+        'operation': operation,
+        'mode': mode,
+        'timeoutMs': timeoutMs,
+        'attempt': attempt,
+      },
+    );
+  }
+
+  /// Records circuit breaker transitions and enforced-open skips.
+  void recordCircuitBreakerEvent({
+    required String state,
+    required String reason,
+    required int consecutiveFailures,
+    DateTime? openUntil,
+  }) {
+    AppLogger.event(
+      'mirror_replay_circuit_breaker',
+      params: <String, Object?>{
+        'state': state,
+        'reason': reason,
+        'consecutiveFailures': consecutiveFailures,
+        if (openUntil != null) 'openUntil': openUntil.toUtc().toIso8601String(),
       },
     );
   }
