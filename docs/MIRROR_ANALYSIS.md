@@ -8,7 +8,6 @@ Analyse datum: 20 maart 2026
 - Sterke punten: Offline-first principes zijn serieus toegepast met Hive cache, encrypted box fallback-beleid, outbox replay met retry/jitter/circuit breaker, en cache invalidatie op auth/premium mutaties.
 - Sterke punten: De apply-flow bevat belangrijke productie-rails: preview->apply fingerprint matching, signed input + backup, risicobevestiging in UI, en audit events.
 - Sterke punten: Integratie in bestaande project/task flows is praktisch en coherent via `openMirrorFromTask` en directe editor-navigatie vanuit task- en projectschermen.
-- Zwakke punten: De beschreven architectuur in context/docs en de actuele code zijn deels uit fase geraakt; er zijn geen afzonderlijke `EdgeFunctionBackend` of `CloudFlyBackend` classes in de Flutter-laag, maar een geconsolideerde `MirrorGatewayBackend` plus `PrivateGrpcBackend`.
 - Zwakke punten: `mirror_provider.dart` combineert te veel verantwoordelijkheden (feature flags, premium, AB-varianten, cachehydratatie, backendselectie), wat testbaarheid en change safety verlaagt.
 - Zwakke punten: De gateway-idempotency hash gebruikt een 32-bit FNV-variant, wat voor security/finops-kritische deduplicatie onnodig collision-gevoelig blijft.
 - Zwakke punten: In `server/mirror-shared/lib/runner_service.dart` wordt dezelfde compile-runner route gebruikt voor zowel compile als apply zonder aparte apply-engine; dat maakt de semantiek van "apply" potentieel ambigu en moeilijker te verifiëren.
@@ -27,7 +26,7 @@ Analyse datum: 20 maart 2026
 - Edge Functions & gRPC backend laag: Request-tracing (`x-request-id`, trace-id) en gestandaardiseerde error families zijn correct voor observability en supportability.
 - Edge Functions & gRPC backend laag: `server/mirror-shared/lib/http_gateway.dart` handhaaft payload quota en execution window; dit is een belangrijke DoS/abuse-control.
 - Edge Functions & gRPC backend laag: `PrivateGrpcBackend` blokkeert insecure channel credentials in production runtime; dit is een sterke guardrail.
-- Edge Functions & gRPC backend laag: Architectuurafwijking t.o.v. requestcontext: in code ontbreekt een expliciete `CloudFlyBackend` klasse; cloud-routing gebeurt via env-resolved endpoints in `MirrorGatewayBackend`/gateway.
+- Edge Functions & gRPC backend laag: Cloud-routing gebruikt env-resolved endpoints in `MirrorGatewayBackend` en thin-proxy gateway. Canonical backends zijn `MirrorGatewayBackend` (cloud) en `PrivateGrpcBackend` (local).
 - Edge Functions & gRPC backend laag: Potentieel semantisch risico is dat runner `apply` op dit moment dezelfde compile-flow gebruikt; voor auditbaarheid, rollback en correctness hoort apply een duidelijk eigen contract/pad te hebben.
 
 - Dart/Flutter core & providers laag: `mirror_provider.dart` en `MirrorAccessPolicy` regelen mode resolving (private/cloud), premium-afweging en admin bypass op een duidelijke policy-first manier.
@@ -73,6 +72,5 @@ Analyse datum: 20 maart 2026
 - Toevoegingen (nieuwe bestanden/features met korte beschrijving): `docs/mirror-backend-contracts.md` - canonieke mapping van runtimecomponenten (MirrorGatewayBackend, PrivateGrpcBackend, mirror-gateway, local/cloud runner, buckets) en request/response contracts.
 - Toevoegingen (nieuwe bestanden/features met korte beschrijving): `docs/mirror-security-baseline.md` - concrete productie-hardening checklist voor runner isolation (non-root, seccomp/apparmor, readonly rootfs, egress allowlist, CPU/mem quotas, key rotation).
 
-- Verwijderingen (wat weg kan en waarom): verwijder of archiveer verouderde referenties naar niet-bestaande backendklassen (`EdgeFunctionBackend`, `CloudFlyBackend`) in docs/context om architectuurdrift en miscommunicatie in reviews te voorkomen.
 - Verwijderingen (wat weg kan en waarom): verwijder duplicatieve of overlappende entitlement wiring wanneer `mirror_entitlement_provider.dart` geen unieke waarde toevoegt boven `mirror_premium_service.dart` + `mirror_provider.dart`.
 - Verwijderingen (wat weg kan en waarom): verwijder legacy/onduidelijke statusstrings of fallback-berichten in Mirror UX die niet aansluiten op huidige structured error families, om support en observability eenvoudiger te maken.
