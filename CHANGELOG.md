@@ -1,3 +1,9 @@
+## [1.43.0](https://github.com/Steve-Mee/project-management-app/compare/v1.42.2...v1.43.0) (2026-03-20)
+
+### Features
+
+* **mirror:** finalize production hardening, tracing, policy, and docs ([0e3a601](https://github.com/Steve-Mee/project-management-app/commit/0e3a6015ec7ff59a01870cf5d5168a3aa3e32c8c))
+
 ## [1.42.2](https://github.com/Steve-Mee/project-management-app/compare/v1.42.1...v1.42.2) (2026-03-18)
 
 ### Bug Fixes
