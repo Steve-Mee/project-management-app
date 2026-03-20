@@ -76,11 +76,11 @@ Analyse datum: 20 maart 2026
    - `supabase/functions/mirror-gateway/index.ts`: pas rate-limit checks aan van `>` naar `>=` zodat limieten exact worden afgedwongen.
    - `lib/core/providers/mirror_provider.dart`: split in aparte modules voor feature-flag resolutie, entitlement/policy-resolutie en offline cache-hydratie.
    - `lib/core/providers/mirror_provider.dart`: maak `mirror_enabled` gedrag configureerbaar fail-open/fail-closed via expliciete environment flag voor production hardening.
-   - `lib/features/mirror/apply_dialog.dart`: vervang line-by-line vergelijking door echte unified diff rendering (minimaal hunk context + file header) en duidelijke no-op detectie.
+   - `lib/features/mirror/apply_dialog.dart`: line-by-line vergelijking is vervangen door unified diff rendering via `mirror_diff_service.dart` (met hunk-context, file headers en no-op detectie).
    - `lib/features/mirror/services/mirror_editor_orchestration_service.dart`: centraliseer preview/apply metadata en fingerprint-constructie in een aparte helper om drift te voorkomen.
    - `lib/features/mirror/services/mirror_secure_apply_service.dart`: documenteer en implementeer expliciete reconciliatie tussen lokale Hive-audit en server `mirror_apply_audit_events`.
    - `lib/l10n/app_nl.arb`: harmoniseer Mirror-gerelateerde labels zodat editornaam en productnaam consistent blijven.
-   - `lib/l10n/app_en.arb`: harmoniseer Mirror-gerelateerde labels zodat editornaam en productnaam consistent blijven.
+   - `lib/l10n/app_en.arb`: branch-tip en Mirror-gerelateerde labels geharmoniseerd zodat editornaam en productnaam consistent blijven.
    - `server/mirror-shared/lib/http_gateway.dart`: verlaag coupling door auth/validation/quota in aparte middleware-achtige componenten op te delen voor betere maintainability.
 - Toevoegingen (nieuwe bestanden/features met korte beschrijving)
    - `test/features/mirror/mirror_gateway_stale_processing_test.dart`: regressietest voor stale idempotency claims met verschillende request-id formaten.

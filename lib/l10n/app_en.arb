@@ -2439,7 +2439,7 @@
       }
     }
   },
-  "mirrorApplyBranchTip": "Tip: create a new branch first for safe review and rollback.",
+  "mirrorApplyBranchTip": "Tip: create and switch to a dedicated review branch before applying, so rollback stays simple.",
   "@mirrorApplyBranchTip": {
     "description": "Tip text in the branch advice card encouraging branch-based workflow."
   }

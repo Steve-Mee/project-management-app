@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../generated/app_localizations.dart';
+import 'services/mirror_diff_service.dart';
 
 class ApplyDialogResult {
   const ApplyDialogResult({
@@ -60,14 +61,17 @@ class ApplyDialog extends StatefulWidget {
 }
 
 class _ApplyDialogState extends State<ApplyDialog> {
+  static const MirrorDiffService _diffService = MirrorDiffService();
   bool _acceptRisk = false;
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    final diffLines = _buildDiffLines(
-      widget.originalContent,
-      widget.updatedContent,
+    final diffLines = _diffService.buildUnifiedDiffLines(
+      oldText: widget.originalContent,
+      newText: widget.updatedContent,
+      oldLabel: 'a/${widget.currentBranch}:${widget.title}',
+      newLabel: 'b/${widget.suggestedBranch}:${widget.title}',
       noDiffText: l10n.mirrorApplyNoDiff,
     );
 
@@ -153,41 +157,6 @@ class _ApplyDialogState extends State<ApplyDialog> {
     );
   }
 
-  List<_DiffLine> _buildDiffLines(
-    String oldText,
-    String newText, {
-    required String noDiffText,
-  }) {
-    final a = oldText.split('\n');
-    final b = newText.split('\n');
-
-    final buffer = <_DiffLine>[];
-    final maxLines = a.length > b.length ? a.length : b.length;
-
-    for (var i = 0; i < maxLines; i++) {
-      final left = i < a.length ? a[i] : null;
-      final right = i < b.length ? b[i] : null;
-
-      if (left != null && right != null) {
-        if (left == right) {
-          buffer.add(_DiffLine(context: ' ', text: left));
-        } else {
-          buffer.add(_DiffLine(context: '-', text: left));
-          buffer.add(_DiffLine(context: '+', text: right));
-        }
-      } else if (left != null) {
-        buffer.add(_DiffLine(context: '-', text: left));
-      } else if (right != null) {
-        buffer.add(_DiffLine(context: '+', text: right));
-      }
-    }
-
-    if (buffer.isEmpty) {
-      buffer.add(_DiffLine(context: ' ', text: noDiffText));
-    }
-
-    return buffer;
-  }
 }
 
 class _BranchInfoCard extends StatelessWidget {
@@ -236,14 +205,20 @@ class _BranchInfoCard extends StatelessWidget {
 class _DiffLineTile extends StatelessWidget {
   const _DiffLineTile({required this.line});
 
-  final _DiffLine line;
+  final MirrorDiffLine line;
 
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    final bg = switch (line.context) {
-      '+' => colorScheme.tertiaryContainer.withValues(alpha: 0.45),
-      '-' => colorScheme.errorContainer.withValues(alpha: 0.45),
+    final bg = switch (line.kind) {
+      MirrorDiffLineKind.added =>
+        colorScheme.tertiaryContainer.withValues(alpha: 0.45),
+      MirrorDiffLineKind.removed =>
+        colorScheme.errorContainer.withValues(alpha: 0.45),
+      MirrorDiffLineKind.hunkHeader =>
+        colorScheme.secondaryContainer.withValues(alpha: 0.45),
+      MirrorDiffLineKind.fileHeader =>
+        colorScheme.surfaceContainerHighest.withValues(alpha: 0.65),
       _ => Colors.transparent,
     };
 
@@ -252,7 +227,7 @@ class _DiffLineTile extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       color: bg,
       child: Text(
-        '${line.context} ${line.text}',
+        line.text,
         style: const TextStyle(
           fontFamily: 'Consolas',
           fontSize: 13,
@@ -260,14 +235,4 @@ class _DiffLineTile extends StatelessWidget {
       ),
     );
   }
-}
-
-class _DiffLine {
-  const _DiffLine({
-    required this.context,
-    required this.text,
-  });
-
-  final String context;
-  final String text;
 }

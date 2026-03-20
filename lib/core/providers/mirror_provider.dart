@@ -4,17 +4,13 @@ library;
 import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:hive_flutter/hive_flutter.dart';
-import 'package:pma_core/auth/permissions.dart';
-import 'package:pma_core/core/feature_flags/feature_flag_resolver.dart';
-import 'package:pma_core/core/providers.dart';
-import 'package:pma_core/providers/auth/auth_providers.dart';
-import 'package:pma_core/repository/encrypted_hive_box.dart';
 import 'package:pma_core/services/mirror_access_policy.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../ab_testing_service.dart';
-import '../services/mirror_premium_service.dart';
+import 'mirror_entitlement_provider.dart';
+import 'mirror_feature_flag_provider.dart';
+import 'mirror_offline_cache_provider.dart';
 import '../../features/mirror/mirror_compute_backend.dart';
 import '../../features/mirror/mirror_gateway_backend.dart';
 import '../../features/mirror/private_grpc_backend.dart';
@@ -24,6 +20,9 @@ export '../../features/mirror/mirror_compute_backend.dart';
 export '../../features/mirror/mirror_gateway_backend.dart';
 export '../../features/mirror/private_grpc_backend.dart';
 export '../../features/mirror/services/mirror_context_budget_service.dart';
+export 'mirror_entitlement_provider.dart';
+export 'mirror_feature_flag_provider.dart';
+export 'mirror_offline_cache_provider.dart';
 
 class MirrorOfflineWarningKeys {
   const MirrorOfflineWarningKeys._();
@@ -82,19 +81,11 @@ final mirrorModeProvider = StateProvider<String>((ref) => 'private');
 
 final mirrorOfflineWarningProvider = StateProvider<String?>((ref) => null);
 
-final mirrorPremiumServiceProvider = Provider<MirrorPremiumService>((ref) {
-  return MirrorPremiumService();
-});
-
 final mirrorContextBudgetServiceProvider =
     Provider<MirrorContextBudgetService>((ref) {
   return const MirrorContextBudgetService();
 });
 
-final mirrorPremiumProvider = FutureProvider<bool>((ref) async {
-  final premiumService = ref.watch(mirrorPremiumServiceProvider);
-  return premiumService.isPremium();
-});
 
 final mirrorTeamModeVariantProvider = FutureProvider<String>((ref) async {
   final warningNotifier = ref.read(mirrorOfflineWarningProvider.notifier);
@@ -108,11 +99,11 @@ final mirrorTeamModeVariantProvider = FutureProvider<String>((ref) async {
       variants: const <String>['solo', 'team'],
     ).timeout(const Duration(seconds: 3));
 
-    await _MirrorOfflineCache.saveTeamModeVariant(userId, variant);
+    await MirrorOfflineCache.saveTeamModeVariant(userId, variant);
     warningNotifier.state = null;
     return variant;
   } catch (_) {
-    final cached = await _MirrorOfflineCache.getTeamModeVariant(userId);
+    final cached = await MirrorOfflineCache.getTeamModeVariant(userId);
     if (cached != null) {
       warningNotifier.state = MirrorOfflineWarningKeys.teamVariantLoadedFromCache;
       return cached;
@@ -135,11 +126,11 @@ final mirrorRunnerModeVariantProvider = FutureProvider<String>((ref) async {
       variants: const <String>['local', 'cloud'],
     ).timeout(const Duration(seconds: 3));
 
-    await _MirrorOfflineCache.saveRunnerModeVariant(userId, variant);
+    await MirrorOfflineCache.saveRunnerModeVariant(userId, variant);
     warningNotifier.state = null;
     return variant;
   } catch (_) {
-    final cached = await _MirrorOfflineCache.getRunnerModeVariant(userId);
+    final cached = await MirrorOfflineCache.getRunnerModeVariant(userId);
     if (cached != null) {
       warningNotifier.state =
           MirrorOfflineWarningKeys.runnerVariantLoadedFromCache;
@@ -160,7 +151,7 @@ final mirrorGatewayBackendProvider = Provider<MirrorGatewayBackend>((ref) {
 });
 
 final mirrorBackendProvider = FutureProvider<MirrorComputeBackend>((ref) async {
-  final isMirrorEnabled = await _isMirrorFeatureEnabled(ref, useWatch: true);
+  final isMirrorEnabled = await resolveMirrorFeatureEnabled(ref, useWatch: true);
   if (!isMirrorEnabled) {
     return const _MirrorDisabledBackend();
   }
@@ -169,15 +160,15 @@ final mirrorBackendProvider = FutureProvider<MirrorComputeBackend>((ref) async {
   final isPremium = await ref.watch(mirrorPremiumProvider.future);
   final runnerModeVariant =
       await ref.watch(mirrorRunnerModeVariantProvider.future);
-  final canUsePrivateMode = await _isMirrorPrivateModeEnabled(
+  final canUsePrivateMode = await resolveMirrorPrivateModeEnabled(
     ref,
     useWatch: true,
   );
-  final canUseCloudMode = await _isMirrorCloudModeEnabled(
+  final canUseCloudMode = await resolveMirrorCloudModeEnabled(
     ref,
     useWatch: true,
   );
-  final allowAdminBypass = await _isMirrorAdminBypassEnabled(
+  final allowAdminBypass = await resolveMirrorAdminBypassEnabled(
     ref,
     useWatch: true,
   );
@@ -225,7 +216,7 @@ class MirrorNotifier extends Notifier<MirrorState> {
   }
 
   Future<void> setMode(String mode) async {
-    final isMirrorEnabled = await _isMirrorFeatureEnabled(ref);
+    final isMirrorEnabled = await resolveMirrorFeatureEnabled(ref);
     if (!isMirrorEnabled) {
       ref.read(mirrorModeProvider.notifier).state = 'private';
       ref.read(mirrorOfflineWarningProvider.notifier).state = null;
@@ -233,16 +224,16 @@ class MirrorNotifier extends Notifier<MirrorState> {
         mode: 'private',
         offlineWarning: null,
       );
-      unawaited(_MirrorOfflineCache.saveMode('private'));
+      unawaited(MirrorOfflineCache.saveMode('private'));
       return;
     }
 
     final hasPremium = await ref.read(mirrorPremiumProvider.future);
     final runnerModeVariant =
         await ref.read(mirrorRunnerModeVariantProvider.future);
-    final canUsePrivateMode = await _isMirrorPrivateModeEnabled(ref);
-    final canUseCloudMode = await _isMirrorCloudModeEnabled(ref);
-    final allowAdminBypass = await _isMirrorAdminBypassEnabled(ref);
+    final canUsePrivateMode = await resolveMirrorPrivateModeEnabled(ref);
+    final canUseCloudMode = await resolveMirrorCloudModeEnabled(ref);
+    final allowAdminBypass = await resolveMirrorAdminBypassEnabled(ref);
     const policy = MirrorAccessPolicy();
     final decision = policy.resolveRequestedMode(
       requestedMode: mode,
@@ -261,7 +252,7 @@ class MirrorNotifier extends Notifier<MirrorState> {
       runnerModeVariant: runnerModeVariant,
       offlineWarning: decision.warning,
     );
-    unawaited(_MirrorOfflineCache.saveMode(decision.effectiveMode));
+    unawaited(MirrorOfflineCache.saveMode(decision.effectiveMode));
   }
 
   Future<void> refreshPremiumFromMetadata() async {
@@ -270,7 +261,7 @@ class MirrorNotifier extends Notifier<MirrorState> {
     final isPremium = await ref.read(mirrorPremiumProvider.future);
     state = state.copyWith(isPremium: isPremium);
 
-    await _MirrorOfflineCache.invalidateOnPremiumChange(
+    await MirrorOfflineCache.invalidateOnPremiumChange(
       previousPremium: previousPremium,
       currentPremium: isPremium,
     );
@@ -281,7 +272,7 @@ class MirrorNotifier extends Notifier<MirrorState> {
         mode: 'private',
         offlineWarning: MirrorOfflineWarningKeys.cloudModeRequiresPremium,
       );
-      unawaited(_MirrorOfflineCache.saveMode('private'));
+      unawaited(MirrorOfflineCache.saveMode('private'));
     }
   }
 
@@ -308,20 +299,20 @@ class MirrorNotifier extends Notifier<MirrorState> {
     final user = _currentSupabaseUserOrNull();
     final userId = user?.id ?? 'anonymous';
 
-    await _MirrorOfflineCache.invalidateOnAuthChange(currentUserId: userId);
+    await MirrorOfflineCache.invalidateOnAuthChange(currentUserId: userId);
 
-    final cachedMode = await _MirrorOfflineCache.getMode();
+    final cachedMode = await MirrorOfflineCache.getMode();
     if (cachedMode == 'private' || cachedMode == 'cloud') {
       ref.read(mirrorModeProvider.notifier).state = cachedMode!;
     }
 
-    final cachedVariant = await _MirrorOfflineCache.getTeamModeVariant(userId);
+    final cachedVariant = await MirrorOfflineCache.getTeamModeVariant(userId);
     if (cachedVariant != null) {
       state = state.copyWith(teamModeVariant: cachedVariant);
     }
 
     final cachedRunnerVariant =
-        await _MirrorOfflineCache.getRunnerModeVariant(userId);
+      await MirrorOfflineCache.getRunnerModeVariant(userId);
     if (cachedRunnerVariant != null) {
       state = state.copyWith(runnerModeVariant: cachedRunnerVariant);
     }
@@ -340,106 +331,6 @@ User? _currentSupabaseUserOrNull() {
 
 final mirrorProvider =
     NotifierProvider<MirrorNotifier, MirrorState>(MirrorNotifier.new);
-
-Future<bool> _isMirrorFeatureEnabled(Ref ref, {bool useWatch = false}) async {
-  final flagsAsync = useWatch
-      ? ref.watch(featureFlagProvider)
-      : ref.read(featureFlagProvider);
-  final syncResolved = flagsAsync.maybeWhen(
-    data: (flags) =>
-        FeatureFlagResolver.isEnabled(flags, 'mirror_enabled', defaultValue: true),
-    orElse: () => null,
-  );
-
-  if (syncResolved != null) {
-    return syncResolved;
-  }
-
-  try {
-    if (useWatch) {
-      await ref.watch(featureFlagProvider.future);
-    } else {
-      await ref.read(featureFlagProvider.future);
-    }
-    return ref.read(featureFlagProvider.notifier).isEnabled('mirror_enabled');
-  } catch (_) {
-    // Fail-open when flags are temporarily unavailable.
-    return true;
-  }
-}
-
-Future<bool> _isMirrorPrivateModeEnabled(Ref ref, {bool useWatch = false}) async {
-  return _resolveBooleanFeatureFlag(
-    ref,
-    key: 'mirror_private_mode_enabled',
-    defaultValue: true,
-    useWatch: useWatch,
-  );
-}
-
-Future<bool> _isMirrorCloudModeEnabled(Ref ref, {bool useWatch = false}) async {
-  return _resolveBooleanFeatureFlag(
-    ref,
-    key: 'mirror_cloud_mode_enabled',
-    defaultValue: true,
-    useWatch: useWatch,
-  );
-}
-
-Future<bool> _isMirrorAdminBypassEnabled(Ref ref, {bool useWatch = false}) async {
-  final canManageRoles = useWatch
-      ? ref.watch(hasPermissionProvider(AppPermissions.manageRoles))
-      : ref.read(hasPermissionProvider(AppPermissions.manageRoles));
-  final canManageUsers = useWatch
-      ? ref.watch(hasPermissionProvider(AppPermissions.manageUsers))
-      : ref.read(hasPermissionProvider(AppPermissions.manageUsers));
-  final canUseBypass = canManageRoles || canManageUsers;
-  if (!canUseBypass) {
-    return false;
-  }
-
-  return _resolveBooleanFeatureFlag(
-    ref,
-    key: 'mirror_admin_testing_bypass',
-    defaultValue: false,
-    useWatch: useWatch,
-  );
-}
-
-Future<bool> _resolveBooleanFeatureFlag(
-  Ref ref, {
-  required String key,
-  required bool defaultValue,
-  bool useWatch = false,
-}) async {
-  final flagsAsync = useWatch
-      ? ref.watch(featureFlagProvider)
-      : ref.read(featureFlagProvider);
-  final syncResolved = flagsAsync.maybeWhen(
-    data: (flags) =>
-        FeatureFlagResolver.isEnabled(flags, key, defaultValue: defaultValue),
-    orElse: () => null,
-  );
-
-  if (syncResolved != null) {
-    return syncResolved;
-  }
-
-  try {
-    if (useWatch) {
-      await ref.watch(featureFlagProvider.future);
-    } else {
-      await ref.read(featureFlagProvider.future);
-    }
-    return FeatureFlagResolver.isEnabled(
-      ref.read(featureFlagProvider).valueOrNull ?? const <String, dynamic>{},
-      key,
-      defaultValue: defaultValue,
-    );
-  } catch (_) {
-    return defaultValue;
-  }
-}
 
 class _MirrorDisabledBackend implements MirrorComputeBackend {
   const _MirrorDisabledBackend();
@@ -483,207 +374,5 @@ class _MirrorDisabledBackend implements MirrorComputeBackend {
       success: false,
       message: _message,
     );
-  }
-}
-
-class _MirrorOfflineCache {
-  static const String _boxName = 'mirror_offline_cache';
-  static const String _schemaVersionKey = '__schema_version__';
-  static const String _authUserKey = '__auth_user_id__';
-  static const String _premiumSnapshotKey = '__premium_snapshot__';
-  static const int _schemaVersion = 4;
-  static const int _variantMetadataVersion = 1;
-  static const Duration _ttl = Duration(days: 7);
-  static const String _modeKey = 'mode';
-  static const String _encryptionKeyName =
-      'hive_encryption_key_mirror_offline_cache';
-  static const bool _failClosedOnEncryptionError = bool.fromEnvironment(
-    'MIRROR_FAIL_CLOSED_ON_ENCRYPTION_ERROR',
-    defaultValue: bool.fromEnvironment('dart.vm.product'),
-  );
-
-  static Future<Box<dynamic>> _openBox() async {
-    if (Hive.isBoxOpen(_boxName)) {
-      final box = Hive.box<dynamic>(_boxName);
-      await _ensureSchema(box);
-      return box;
-    }
-
-    late final Box<dynamic> box;
-    try {
-      box = await EncryptedHiveBox<dynamic>(
-        boxName: _boxName,
-        encryptionKey: _encryptionKeyName,
-      ).open();
-    } catch (error) {
-      if (_failClosedOnEncryptionError) {
-        throw StateError(
-          'Encrypted mirror offline cache is unavailable: $error',
-        );
-      }
-      box = await Hive.openBox<dynamic>(_boxName);
-    }
-
-    await _ensureSchema(box);
-    return box;
-  }
-
-  static Future<void> _ensureSchema(Box<dynamic> box) async {
-    final version = box.get(_schemaVersionKey);
-    if (version is int && version == _schemaVersion) {
-      return;
-    }
-
-    await box.clear();
-    await box.put(_schemaVersionKey, _schemaVersion);
-  }
-
-  static Future<void> saveMode(String mode) async {
-    final box = await _openBox();
-    await box.put(_modeKey, _CacheEnvelope.wrap(mode));
-  }
-
-  static Future<String?> getMode() async {
-    final box = await _openBox();
-    final value = _CacheEnvelope.unwrap<String>(box.get(_modeKey), ttl: _ttl);
-    if (value == null) {
-      await box.delete(_modeKey);
-    }
-    return value;
-  }
-
-  static String _variantKey(String userId) => 'team_mode_variant::$userId';
-  static String _runnerVariantKey(String userId) =>
-      'runner_mode_variant::$userId';
-
-  static Future<void> saveTeamModeVariant(String userId, String variant) async {
-    await _saveVariant(_variantKey(userId), variant);
-  }
-
-  static Future<String?> getTeamModeVariant(String userId) async {
-    return _getVariant(_variantKey(userId));
-  }
-
-  static Future<void> saveRunnerModeVariant(
-      String userId, String variant) async {
-    await _saveVariant(_runnerVariantKey(userId), variant);
-  }
-
-  static Future<String?> getRunnerModeVariant(String userId) async {
-    return _getVariant(_runnerVariantKey(userId));
-  }
-
-  static Future<void> _saveVariant(String key, String variant) async {
-    final box = await _openBox();
-    final now = DateTime.now().toUtc();
-    await box.put(
-      key,
-      _CacheEnvelope.wrap(<String, dynamic>{
-        'variant': variant,
-        'variant_timestamp': now.toIso8601String(),
-        'variant_version': _variantMetadataVersion,
-      }),
-    );
-  }
-
-  static Future<String?> _getVariant(String key) async {
-    final box = await _openBox();
-    final raw = _CacheEnvelope.unwrap<Map>(box.get(key), ttl: _ttl);
-    if (raw == null) {
-      await box.delete(key);
-      return null;
-    }
-
-    final map = Map<String, dynamic>.from(raw);
-    final version = map['variant_version'];
-    final timestampRaw = map['variant_timestamp'];
-    final variant = map['variant'];
-
-    final versionValid = version is int && version == _variantMetadataVersion;
-    final timestampValid =
-        timestampRaw is String && DateTime.tryParse(timestampRaw) != null;
-    final variantValid = variant is String && variant.isNotEmpty;
-
-    if (!versionValid || !timestampValid || !variantValid) {
-      await box.delete(key);
-      return null;
-    }
-
-    return variant;
-  }
-
-  static Future<void> invalidateOnAuthChange({
-    required String currentUserId,
-  }) async {
-    final box = await _openBox();
-    final previousUserId = box.get(_authUserKey)?.toString();
-    if (previousUserId == null || previousUserId == currentUserId) {
-      await box.put(_authUserKey, currentUserId);
-      return;
-    }
-
-    await _clearStateCache(box);
-    await box.put(_authUserKey, currentUserId);
-  }
-
-  static Future<void> invalidateOnPremiumChange({
-    required bool previousPremium,
-    required bool currentPremium,
-  }) async {
-    final box = await _openBox();
-    final previousSnapshot = box.get(_premiumSnapshotKey);
-    final previousCachedPremium =
-        previousSnapshot is bool ? previousSnapshot : previousPremium;
-
-    if (previousCachedPremium == currentPremium) {
-      await box.put(_premiumSnapshotKey, currentPremium);
-      return;
-    }
-
-    await _clearStateCache(box);
-    await box.put(_premiumSnapshotKey, currentPremium);
-  }
-
-  static Future<void> _clearStateCache(Box<dynamic> box) async {
-    final keys = box.keys.map((key) => key.toString()).toList();
-    for (final key in keys) {
-      if (key == _schemaVersionKey ||
-          key == _authUserKey ||
-          key == _premiumSnapshotKey) {
-        continue;
-      }
-      await box.delete(key);
-    }
-  }
-}
-
-class _CacheEnvelope {
-  static Map<String, dynamic> wrap(dynamic value) {
-    return <String, dynamic>{
-      'v': value,
-      'savedAt': DateTime.now().toUtc().millisecondsSinceEpoch,
-      'schema': 1,
-    };
-  }
-
-  static T? unwrap<T>(dynamic raw, {required Duration ttl}) {
-    if (raw is Map) {
-      final map = Map<String, dynamic>.from(raw);
-      final savedAtMs = map['savedAt'];
-      final value = map['v'];
-      final savedAt = savedAtMs is int
-          ? DateTime.fromMillisecondsSinceEpoch(savedAtMs, isUtc: true)
-          : null;
-      if (savedAt == null) {
-        return null;
-      }
-      final expired = DateTime.now().toUtc().difference(savedAt) > ttl;
-      if (expired) {
-        return null;
-      }
-      return value is T ? value : null;
-    }
-
-    return raw is T ? raw : null;
   }
 }

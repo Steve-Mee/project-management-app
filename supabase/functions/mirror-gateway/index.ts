@@ -77,6 +77,8 @@ interface IdempotencyRecord {
   response_body: string | null
   response_content_type: string | null
   expires_at: string
+  created_at: string | null
+  updated_at: string | null
 }
 
 interface IdempotencyClaimResult {
@@ -502,23 +504,55 @@ function isExpiredIso(iso: string | undefined): boolean {
   return parsed <= Date.now()
 }
 
-function parseRequestTimestamp(requestId: string | undefined): number | null {
+function parseRequestTimestamp(record: Pick<IdempotencyRecord, 'request_id' | 'created_at' | 'updated_at'>): number | null {
+  const parseIsoTimestamp = (value: string | null | undefined): number | null => {
+    if (!value) {
+      return null
+    }
+
+    const parsed = Date.parse(value)
+    if (Number.isNaN(parsed)) {
+      return null
+    }
+
+    return parsed
+  }
+
+  // Prefer DB timestamps since request_id format is not guaranteed for all clients.
+  const updatedAt = parseIsoTimestamp(record.updated_at)
+  if (updatedAt != null) {
+    return updatedAt
+  }
+
+  const createdAt = parseIsoTimestamp(record.created_at)
+  if (createdAt != null) {
+    return createdAt
+  }
+
+  const requestId = record.request_id
   if (!requestId) {
     return null
   }
 
-  const match = requestId.match(/^compile-(\d{6,})$/)
-  if (!match || !match[1]) {
-    return null
+  const compileMatch = requestId.match(/^compile-(\d{6,})$/)
+  if (compileMatch && compileMatch[1]) {
+    const parsed = Number.parseInt(compileMatch[1], 10)
+    if (Number.isFinite(parsed)) {
+      // compile request_id was generated using microseconds.
+      return Math.floor(parsed / 1000)
+    }
   }
 
-  const parsed = Number.parseInt(match[1], 10)
-  if (!Number.isFinite(parsed)) {
-    return null
+  const gatewayMatch = requestId.match(/^gateway-([0-9a-z]+)-/)
+  if (gatewayMatch && gatewayMatch[1]) {
+    const parsed = Number.parseInt(gatewayMatch[1], 36)
+    if (Number.isFinite(parsed)) {
+      // gateway request_id embeds Date.now().toString(36).
+      return parsed
+    }
   }
 
-  // request_id is generated using microseconds.
-  return Math.floor(parsed / 1000)
+  return null
 }
 
 function isProcessingClaimStale(record: IdempotencyRecord): boolean {
@@ -526,7 +560,7 @@ function isProcessingClaimStale(record: IdempotencyRecord): boolean {
     return false
   }
 
-  const timestamp = parseRequestTimestamp(record.request_id)
+  const timestamp = parseRequestTimestamp(record)
   if (timestamp == null) {
     return false
   }
@@ -621,7 +655,7 @@ async function claimIdempotencyKey({
   const { data: existing, error: selectError } = await supabase
     .from('mirror_request_idempotency')
     .select(
-      'user_id,action,idempotency_key,request_hash,request_id,status,response_status,response_body,response_content_type,expires_at',
+      'user_id,action,idempotency_key,request_hash,request_id,status,response_status,response_body,response_content_type,expires_at,created_at,updated_at',
     )
     .eq('user_id', userId)
     .eq('action', action)
@@ -687,7 +721,7 @@ async function claimIdempotencyKey({
       const { data: raceWinner, error: raceSelectError } = await supabase
         .from('mirror_request_idempotency')
         .select(
-          'user_id,action,idempotency_key,request_hash,request_id,status,response_status,response_body,response_content_type,expires_at',
+          'user_id,action,idempotency_key,request_hash,request_id,status,response_status,response_body,response_content_type,expires_at,created_at,updated_at',
         )
         .eq('user_id', userId)
         .eq('action', action)
@@ -856,7 +890,7 @@ async function checkPerUserRateLimit(
   const safeMinuteCount = minuteCount ?? 0
   const safeBurstCount = burstCount ?? 0
 
-  if (safeMinuteCount > minuteLimit) {
+  if (safeMinuteCount >= minuteLimit) {
     return {
       allowed: false,
       reason: 'minute_rate',
@@ -866,7 +900,7 @@ async function checkPerUserRateLimit(
     }
   }
 
-  if (safeBurstCount > burstLimit) {
+  if (safeBurstCount >= burstLimit) {
     return {
       allowed: false,
       reason: 'burst_quota',

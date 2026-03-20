@@ -3,8 +3,6 @@ library;
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pma_core/auth/permissions.dart';
-import 'package:pma_core/core/feature_flags/feature_flag_resolver.dart';
-import 'package:pma_core/core/providers/feature_flag_provider.dart';
 import 'package:pma_core/providers/ai_providers.dart' show aiChatProvider;
 import 'package:pma_core/providers/auth/auth_providers.dart';
 
@@ -74,25 +72,7 @@ class AiChatBridgeNotifier extends Notifier<MirrorLaunchPayload?> {
   }
 
   Future<bool> _isMirrorFeatureEnabled() async {
-    final resolved = ref.read(featureFlagProvider).maybeWhen(
-      data: (flags) => FeatureFlagResolver.isEnabled(
-        flags,
-        'mirror_enabled',
-        defaultValue: true,
-      ),
-      orElse: () => null,
-    );
-
-    if (resolved != null) {
-      return resolved;
-    }
-
-    try {
-      await ref.read(featureFlagProvider.future);
-      return ref.read(featureFlagProvider.notifier).isEnabled('mirror_enabled');
-    } catch (_) {
-      return true;
-    }
+    return resolveMirrorFeatureEnabled(ref);
   }
 }
 
