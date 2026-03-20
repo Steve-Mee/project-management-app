@@ -1737,7 +1737,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get mirrorApplyBranchTip =>
-      'Tip: create a new branch first for safe review and rollback.';
+      'Tip: create and switch to a dedicated review branch before applying, so rollback stays simple.';
 
   @override
   String get mirrorApplyBranchWorkingTreeNotice =>
