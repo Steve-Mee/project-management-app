@@ -67,17 +67,95 @@ class MirrorPromptBuilderService {
 }
 
 String _buildMetadataSection(ProjectContextMetadata metadata) {
-  final metadataJson = metadata.toJson();
-  if (metadataJson.isEmpty) {
+  final lines = <String>[];
+  _appendMetadataLine(lines, 'selectedFile', metadata.selectedFile);
+  _appendMetadataLine(lines, 'trigger', metadata.trigger);
+  _appendMetadataLine(lines, 'buildTarget', metadata.buildTarget);
+  _appendMetadataLine(lines, 'priority', metadata.priority);
+  _appendMetadataLine(lines, 'branch', metadata.branch);
+  if (metadata.requiredFiles.isNotEmpty) {
+    _appendMetadataLine(lines, 'requiredFiles', metadata.requiredFiles);
+  }
+  if (metadata.teamModeEnabled) {
+    _appendMetadataLine(lines, 'teamMode', true);
+  }
+  if (metadata.teamRoles.isNotEmpty) {
+    _appendMetadataLine(
+      lines,
+      'teamRoles',
+      metadata.teamRoles.map((role) => role.name).toList(growable: false),
+    );
+  }
+  _appendMetadataLine(lines, 'teamGoal', metadata.teamGoal);
+  _appendMetadataLine(
+    lines,
+    'previewContextFingerprint',
+    metadata.previewContextFingerprint,
+  );
+  _appendMetadataLine(
+    lines,
+    'previewCompileFingerprint',
+    metadata.previewCompileFingerprint,
+  );
+  _appendMetadataLine(
+    lines,
+    'previewCompileOutputSha256',
+    metadata.previewCompileOutputSha256,
+  );
+  final shouldWritePreviewReuseFields = metadata.previewReuseRequested ||
+      metadata.previewReuseStrategy != ProjectContextPreviewReuseStrategy.none ||
+      (metadata.previewServerVersionToken?.isNotEmpty ?? false) ||
+      (metadata.previewArtifactPath?.isNotEmpty ?? false) ||
+      metadata.previewReusePayload != null;
+  if (shouldWritePreviewReuseFields) {
+    _appendMetadataLine(
+      lines,
+      'previewReuseRequested',
+      metadata.previewReuseRequested,
+    );
+    _appendMetadataLine(
+      lines,
+      'previewReuseStrategy',
+      metadata.previewReuseStrategy.value,
+    );
+  }
+  _appendMetadataLine(
+    lines,
+    'previewServerVersionToken',
+    metadata.previewServerVersionToken,
+  );
+  _appendMetadataLine(lines, 'previewArtifactPath', metadata.previewArtifactPath);
+  if (metadata.previewReusePayload != null) {
+    _appendMetadataLine(
+      lines,
+      'previewReusePayload',
+      metadata.previewReusePayload!.toJson(),
+    );
+  }
+  _appendMetadataLine(lines, 'compileFingerprint', metadata.compileFingerprint);
+  _appendMetadataLine(lines, 'idempotencyKey', metadata.idempotencyKey);
+
+  if (lines.isEmpty) {
     return '';
   }
 
-  final sortedKeys = metadataJson.keys.toList()..sort();
-  final lines = <String>[];
-  for (final key in sortedKeys) {
-    lines.add('- $key: ${_stringify(metadataJson[key])}');
-  }
   return lines.join('\n');
+}
+
+void _appendMetadataLine(List<String> lines, String key, Object? value) {
+  if (value == null) {
+    return;
+  }
+  if (value is String && value.isEmpty) {
+    return;
+  }
+  if (value is Iterable && value.isEmpty) {
+    return;
+  }
+  if (value is Map && value.isEmpty) {
+    return;
+  }
+  lines.add('- $key: ${_stringify(value)}');
 }
 
 String _buildTeamModeSection(ProjectContextMetadata metadata) {

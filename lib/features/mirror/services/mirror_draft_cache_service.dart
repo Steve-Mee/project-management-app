@@ -3,26 +3,29 @@ import 'dart:math';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:pma_core/repository/encrypted_hive_box.dart';
 
+import '../models/project_context.dart';
+
 class MirrorDraftCacheSnapshot {
   const MirrorDraftCacheSnapshot({
     required this.sessionKey,
     required this.files,
-    required this.selectedFile,
+    required this.metadata,
     required this.savedAt,
     this.mode,
     this.offlineWarningKey,
-    this.contextFingerprint,
     this.contextVersion,
   });
 
   final String sessionKey;
   final Map<String, String> files;
-  final String selectedFile;
+  final ProjectContextMetadata metadata;
   final DateTime savedAt;
   final String? mode;
   final String? offlineWarningKey;
-  final String? contextFingerprint;
   final int? contextVersion;
+
+  String get selectedFile => metadata.selectedFile ?? '';
+  String? get contextFingerprint => metadata.previewContextFingerprint;
 }
 
 class MirrorDraftCacheService {
@@ -87,23 +90,27 @@ class MirrorDraftCacheService {
 
     final contextFingerprintRaw = map['contextFingerprint']?.toString().trim();
     final contextFingerprint =
-        (contextFingerprintRaw == null || contextFingerprintRaw.isEmpty)
-            ? null
-            : contextFingerprintRaw;
+      (contextFingerprintRaw == null || contextFingerprintRaw.isEmpty)
+        ? null
+        : contextFingerprintRaw;
 
     final contextVersionRaw = map['contextVersion'];
     final contextVersion = contextVersionRaw is int
         ? contextVersionRaw
         : int.tryParse(contextVersionRaw?.toString() ?? '');
 
+    final metadata = ProjectContextMetadata(
+      selectedFile: selectedFile,
+      previewContextFingerprint: contextFingerprint,
+    );
+
     return MirrorDraftCacheSnapshot(
       sessionKey: sessionKey,
       files: files,
-      selectedFile: selectedFile,
+      metadata: metadata,
       savedAt: savedAt,
       mode: mode,
       offlineWarningKey: offlineWarningKey,
-      contextFingerprint: contextFingerprint,
       contextVersion: contextVersion,
     );
   }
@@ -112,6 +119,7 @@ class MirrorDraftCacheService {
     required String sessionKey,
     required Map<String, String> files,
     required String selectedFile,
+    ProjectContextMetadata? metadata,
     String? mode,
     String? offlineWarningKey,
     String? contextFingerprint,
@@ -131,17 +139,26 @@ class MirrorDraftCacheService {
     final normalizedSelected = cappedFiles.containsKey(selectedFile)
         ? selectedFile
         : cappedFiles.keys.first;
+    final normalizedFingerprint =
+        (contextFingerprint != null && contextFingerprint.trim().isNotEmpty)
+            ? contextFingerprint.trim()
+            : null;
+    final effectiveMetadata =
+        (metadata ?? const ProjectContextMetadata()).copyWith(
+      selectedFile: normalizedSelected,
+      previewContextFingerprint: normalizedFingerprint,
+    );
 
     await box.put(sessionKey, {
       'sessionKey': sessionKey,
-      'selectedFile': normalizedSelected,
+      'selectedFile': effectiveMetadata.selectedFile,
       'files': cappedFiles,
       'savedAt': DateTime.now().toUtc().toIso8601String(),
       if (mode != null) 'mode': mode,
       if (offlineWarningKey != null && offlineWarningKey.trim().isNotEmpty)
         'offlineWarningKey': offlineWarningKey.trim(),
-      if (contextFingerprint != null && contextFingerprint.trim().isNotEmpty)
-        'contextFingerprint': contextFingerprint.trim(),
+      if (effectiveMetadata.previewContextFingerprint != null)
+        'contextFingerprint': effectiveMetadata.previewContextFingerprint,
       if (contextVersion != null) 'contextVersion': contextVersion,
       'version': 1,
     });

@@ -272,6 +272,7 @@ class MirrorRunnerService extends MirrorComputeServiceBase {
   }) async {
     final stopwatch = Stopwatch()..start();
     final requestId = resolveRequestId(call.clientMetadata);
+    final traceId = resolveTraceId(call.clientMetadata, requestId: requestId);
 
     final verifier = verifyAuth;
     if (verifier != null) {
@@ -283,6 +284,7 @@ class MirrorRunnerService extends MirrorComputeServiceBase {
           'unauthorized compile request blocked',
           context: <String, Object?>{
             'requestId': requestId,
+            'traceId': traceId,
             'reasonCode': verdict.reasonCode,
             ...?metricsSnapshot?.call(),
           },
@@ -299,6 +301,7 @@ class MirrorRunnerService extends MirrorComputeServiceBase {
       '$action request received',
       context: <String, Object?>{
         'requestId': requestId,
+        'traceId': traceId,
         'projectId': projectId,
         'taskId': taskId,
         'mode': mode,
@@ -349,6 +352,7 @@ class MirrorRunnerService extends MirrorComputeServiceBase {
       '$action request completed',
       context: <String, Object?>{
         'requestId': requestId,
+        'traceId': traceId,
         'projectId': projectId,
         'taskId': taskId,
         'success': compileResult.success,
@@ -389,6 +393,27 @@ String resolveRequestId(Map<String, String>? metadata) {
   }
 
   return 'grpc-${DateTime.now().toUtc().microsecondsSinceEpoch}';
+}
+
+String resolveTraceId(
+  Map<String, String>? metadata, {
+  required String requestId,
+}) {
+  final headers = metadata ?? const <String, String>{};
+  final direct = headers['x-trace-id'] ?? headers['trace-id'];
+  if (direct != null && direct.trim().isNotEmpty) {
+    return direct.trim();
+  }
+
+  for (final entry in headers.entries) {
+    final key = entry.key.toLowerCase();
+    if ((key == 'x-trace-id' || key == 'trace-id') &&
+        entry.value.trim().isNotEmpty) {
+      return entry.value.trim();
+    }
+  }
+
+  return 'trace-$requestId';
 }
 
 class _RunnerRpcResponse {

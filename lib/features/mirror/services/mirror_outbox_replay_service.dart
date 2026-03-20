@@ -111,21 +111,19 @@ class MirrorOutboxEntry {
       }
 
       final contextMap = Map<String, dynamic>.from(contextRaw);
-      final files = _stringMap(contextMap['files']);
+      final parsedContext = ProjectContext.fromJson(contextMap);
       final operation = map['operation']?.toString();
       final sessionKey = map['sessionKey']?.toString();
       final prompt = map['prompt']?.toString();
       final mode = map['mode']?.toString();
       final createdAtRaw = map['createdAt']?.toString();
-      final projectId = contextMap['projectId']?.toString();
-      final taskId = contextMap['taskId']?.toString();
       if (operation == null ||
           sessionKey == null ||
           prompt == null ||
           mode == null ||
           createdAtRaw == null ||
-          projectId == null ||
-          taskId == null) {
+          parsedContext.projectId.isEmpty ||
+          parsedContext.taskId.isEmpty) {
         return null;
       }
 
@@ -138,16 +136,7 @@ class MirrorOutboxEntry {
         operation: operation,
         sessionKey: sessionKey,
         prompt: prompt,
-        context: ProjectContext(
-          projectId: projectId,
-          taskId: taskId,
-          files: files,
-          metadata: contextMap['metadata'] is Map
-              ? ProjectContextMetadata.fromJson(
-                  Map<String, dynamic>.from(contextMap['metadata'] as Map),
-                )
-              : const ProjectContextMetadata(),
-        ),
+        context: parsedContext,
         mode: mode,
         createdAt: createdAt,
         idempotencyKey: map['idempotencyKey']?.toString() ?? '',
@@ -181,18 +170,6 @@ class MirrorOutboxEntry {
     }
     return DateTime.tryParse(value.toString())?.toUtc();
   }
-
-  static Map<String, String> _stringMap(dynamic value) {
-    if (value is! Map) {
-      return const <String, String>{};
-    }
-    final result = <String, String>{};
-    for (final entry in value.entries) {
-      result[entry.key.toString()] = entry.value?.toString() ?? '';
-    }
-    return result;
-  }
-
   static dynamic _jsonSafe(dynamic value) {
     if (value is Map) {
       return value.map(

@@ -106,6 +106,8 @@ class MirrorObservabilityService {
     required String traceId,
     String? idempotencyKey,
     String? endpoint,
+    String? linkedRequestId,
+    String? linkedTraceId,
     String stage = 'client_gateway_dispatch',
   }) {
     AppLogger.event(
@@ -118,6 +120,8 @@ class MirrorObservabilityService {
         'stage': stage,
         if (idempotencyKey != null) 'idempotencyKey': idempotencyKey,
         if (endpoint != null) 'endpoint': endpoint,
+        if (linkedRequestId != null) 'linkedRequestId': linkedRequestId,
+        if (linkedTraceId != null) 'linkedTraceId': linkedTraceId,
       },
     );
   }

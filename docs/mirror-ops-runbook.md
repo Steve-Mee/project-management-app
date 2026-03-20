@@ -153,6 +153,106 @@ Stop criteria:
 - Structured errors must carry correlation identifiers.
 - Incident investigation must be able to trace one request across client, gateway, and runner logs.
 
+## Full Deployment Procedure
+
+### Release Inputs
+1. Release tag is cut and immutable.
+2. DB migration plan and rollback SQL are attached.
+3. Gateway env-var diff is reviewed.
+4. Runner image digest and runtime config are pinned.
+5. Flutter client build hash is pinned.
+
+### Production Deployment Steps
+1. Announce deployment start in the release/incident channel.
+2. Apply production DB migrations.
+3. Deploy cloud runner using pinned image digest.
+4. Deploy `mirror-gateway` edge function revision.
+5. Roll out client version behind existing feature-flag safety controls.
+6. Run post-deploy smoke checks:
+  - one `/compile`
+  - one `/apply`
+  - verify audit event row and storage artifact path
+7. Execute canary ramps: 5% -> 25% -> 100% with hold windows.
+8. Mark deployment complete and post summary.
+
+### Deployment Abort Criteria
+1. Compile/apply availability below 99.5% during any canary hold window.
+2. P95 latency breaches stop criteria defined in this runbook for 15+ minutes.
+3. Timeout ratio > 3% for 10 minutes.
+4. Auth-denied errors > 2x baseline caused by deployment changes.
+
+### Deployment Verification Checklist
+1. Correlation IDs observed across client, gateway, and runner logs.
+2. Idempotency replay behavior is healthy (no unexpected conflict spike).
+3. Runner resource saturation remains below paging thresholds.
+4. Circuit breaker is closed and replay queue depth is stable.
+5. SLO dashboard remains within target during the first 30 minutes.
+
+## Full Monitoring Procedure
+
+### Monitoring Stack Requirements
+1. Metrics dashboard for gateway:
+  - request volume
+  - success ratio
+  - P50/P95/P99 latency
+  - timeout ratio
+2. Metrics dashboard for runner:
+  - CPU/memory
+  - execution duration
+  - error ratio
+3. Resilience dashboard:
+  - replay queue depth
+  - replay timeout count
+  - circuit-breaker state transitions
+4. Log search views with request/trace correlation filters.
+
+### Standard Monitoring Cadence
+1. During release canary: every 5 minutes.
+2. First hour after release: every 15 minutes.
+3. Normal operation: hourly dashboard spot-check.
+4. Weekly: reliability review against SLO report.
+
+### Alert Handling Rules
+1. Every page must include current severity, affected path (`compile`/`apply`), and top suspected layer.
+2. Sev1 and Sev2 alerts require explicit owner assignment in channel.
+3. Repeated flapping alerts require threshold tuning ticket after incident closure.
+
+## Full Incident Response Procedure
+
+### Incident Roles
+1. Incident Commander (IC): owns coordination and timelines.
+2. Ops Lead: executes mitigations and rollback actions.
+3. Communications Lead: posts updates and stakeholder notes.
+4. Subject-Matter Engineer (SME): deep technical diagnosis.
+
+### First 15 Minutes Playbook
+1. Acknowledge alert and open incident channel.
+2. Assign IC, Ops Lead, and SME.
+3. Classify severity and blast radius (`compile`, `apply`, or both).
+4. Start an incident timeline with timestamps.
+5. Execute immediate triage:
+  - verify dependency status
+  - inspect error mix
+  - identify first failing request ID
+
+### Containment Options
+1. Roll back runner revision.
+2. Roll back `mirror-gateway` function revision.
+3. Shift traffic to healthy mode via `mirror_runner_mode` where safe.
+4. Reduce pressure by pausing high-risk feature rollout.
+
+### Recovery Validation
+1. Error rate returns below alert threshold for 30 minutes.
+2. Latency percentiles return within runbook bounds.
+3. Replay queue resumes normal drain behavior.
+4. End-to-end smoke compile/apply succeeds.
+
+### Incident Closure Criteria
+1. User impact is no longer ongoing.
+2. Mitigation is stable and monitored.
+3. Timeline, root cause hypothesis, and next actions are documented.
+4. Postmortem owner and due date are assigned before closure.
+
 ## Incident Response
 
 ### Severity Model

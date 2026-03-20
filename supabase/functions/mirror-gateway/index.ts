@@ -1475,6 +1475,11 @@ Deno.serve(async (req: Request) => {
     }
 
     const normalizedForwardFields = normalizeForwardFields(normalized, user.id)
+    const forwardMetadata: Record<string, unknown> = {
+      ...(normalized.metadata ?? {}),
+      requestId,
+      traceId,
+    }
 
     const payload: ForwardPayload = {
       prompt: normalized.prompt,
@@ -1484,7 +1489,7 @@ Deno.serve(async (req: Request) => {
       action,
       userId: user.id,
       files: normalized.files ?? {},
-      metadata: normalized.metadata ?? {},
+      metadata: forwardMetadata,
       requestId,
       traceId,
       actorUserId: normalizedForwardFields.actorUserId,

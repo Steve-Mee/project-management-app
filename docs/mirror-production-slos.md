@@ -21,6 +21,12 @@ External SLA targets:
 - Compile API monthly uptime: 99.9%
 - Apply API monthly uptime: 99.9%
 
+SLA accounting notes:
+- Measurement window: calendar month (UTC).
+- Eligible requests: authenticated production requests that pass request-shape validation.
+- Planned maintenance: excluded only when announced >= 24 hours in advance.
+- Incident exclusion policy: third-party outage exclusions require written incident record and owner approval.
+
 Internal SLO targets:
 - Compile availability: 99.95% (rolling 30 days)
 - Apply availability: 99.95% (rolling 30 days)
@@ -29,6 +35,13 @@ Internal SLO targets:
 Allowed monthly downtime budget by target (30-day month):
 - 99.9%: 43.2 minutes
 - 99.95%: 21.6 minutes
+
+Uptime commitment summary:
+
+| Service Path | SLA Target | Internal SLO | Downtime Budget (30d) |
+| --- | --- | --- | --- |
+| `/compile` | 99.9% | 99.95% | 43.2m SLA / 21.6m SLO |
+| `/apply` | 99.9% | 99.95% | 43.2m SLA / 21.6m SLO |
 
 ## 3. SLI Definitions
 
@@ -45,6 +58,10 @@ Success criteria:
 Excluded from numerator and denominator:
 - Requests failing validation due to client input errors (`400`, schema violations).
 - Unauthorized/forbidden user entitlement failures (`401`, `403`) when system is healthy.
+
+Included in denominator and counted as failures:
+- Gateway timeouts and upstream unavailability.
+- Contract-valid requests that return `5xx` or structured timeout/upstream errors.
 
 ### SLI-B: Latency
 Definition:
@@ -117,6 +134,13 @@ Aggregation windows:
 Reporting cadence:
 - Weekly reliability review for Mirror owners
 - Monthly SLA compliance summary for product/engineering leadership
+
+Monthly compliance output (required):
+1. Availability report for `/compile` and `/apply`.
+2. Latency percentile report (P50/P95/P99).
+3. Timeout/error mix breakdown.
+4. Error-budget burn chart and change-freeze decisions.
+5. Incident count and MTTR summary.
 
 ## 7. Incident And Breach Handling
 

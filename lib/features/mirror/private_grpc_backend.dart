@@ -29,6 +29,8 @@ class PrivateGrpcBackend implements MirrorComputeBackend {
   final ChannelCredentials credentials;
 
   void _enforceProductionTransportSecurity() {
+    // Production guard: fail closed when insecure transport is configured in
+    // release/runtime-product environments.
     if (!kReleaseMode && !_isProductionGrpcRuntime) {
       return;
     }
@@ -73,6 +75,8 @@ class PrivateGrpcBackend implements MirrorComputeBackend {
     required ProjectContext context,
     required String mode,
   }) async {
+    // Use a short-lived channel per RPC and always close it to prevent
+    // file-descriptor/socket leakage in long-running production sessions.
     final channel = ClientChannel(
       host,
       port: port,
@@ -221,6 +225,8 @@ class PrivateGrpcBackend implements MirrorComputeBackend {
     required ProjectContext context,
     required String mode,
   }) async {
+    // Use a short-lived channel per RPC and always close it to prevent
+    // file-descriptor/socket leakage in long-running production sessions.
     final channel = ClientChannel(
       host,
       port: port,

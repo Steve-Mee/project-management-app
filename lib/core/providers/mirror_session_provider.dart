@@ -23,6 +23,8 @@ class MirrorSessionState {
     required this.terminalLog,
     this.contextFingerprint,
     this.contextVersion,
+    this.compileFingerprint,
+    this.compileServerVersionToken,
   });
 
   final String projectId;
@@ -33,6 +35,8 @@ class MirrorSessionState {
   final List<String> terminalLog;
   final String? contextFingerprint;
   final int? contextVersion;
+  final String? compileFingerprint;
+  final String? compileServerVersionToken;
 
   MirrorSessionState copyWith({
     String? projectId,
@@ -43,6 +47,8 @@ class MirrorSessionState {
     List<String>? terminalLog,
     String? contextFingerprint,
     int? contextVersion,
+    String? compileFingerprint,
+    String? compileServerVersionToken,
   }) {
     return MirrorSessionState(
       projectId: projectId ?? this.projectId,
@@ -53,6 +59,9 @@ class MirrorSessionState {
       terminalLog: terminalLog ?? this.terminalLog,
       contextFingerprint: contextFingerprint ?? this.contextFingerprint,
       contextVersion: contextVersion ?? this.contextVersion,
+      compileFingerprint: compileFingerprint ?? this.compileFingerprint,
+      compileServerVersionToken:
+          compileServerVersionToken ?? this.compileServerVersionToken,
     );
   }
 
@@ -71,6 +80,8 @@ class MirrorSessionState {
       terminalLog: <String>[],
       contextFingerprint: _computeContextFingerprint(defaultFiles),
       contextVersion: _draftContextVersion,
+      compileFingerprint: null,
+      compileServerVersionToken: null,
     );
   }
 
@@ -381,6 +392,26 @@ class MirrorSessionNotifier
         ? merged
         : merged.sublist(merged.length - maxLines);
     state = state.copyWith(terminalLog: capped);
+  }
+
+  void setCompileValidationArtifacts({
+    required String compileFingerprint,
+    String? serverVersionToken,
+  }) {
+    final normalizedFingerprint = compileFingerprint.trim();
+    if (normalizedFingerprint.isEmpty) {
+      return;
+    }
+
+    final normalizedToken = serverVersionToken?.trim();
+    state = state.copyWith(
+      compileFingerprint: normalizedFingerprint,
+      compileServerVersionToken:
+          (normalizedToken == null || normalizedToken.isEmpty)
+              ? null
+              : normalizedToken,
+    );
+    _scheduleDraftPersist();
   }
 
   void _scheduleDraftPersist() {

@@ -1,5 +1,9 @@
 import 'dart:collection';
 
+import 'package:freezed_annotation/freezed_annotation.dart';
+
+part 'project_context.freezed.dart';
+
 enum ProjectContextTeamRole {
   architect('Architect'),
   coder('Coder'),
@@ -25,7 +29,9 @@ enum ProjectContextTeamRole {
 }
 
 enum ProjectContextPreviewReuseStrategy {
+  @JsonValue('none')
   none('none'),
+  @JsonValue('server_version_token')
   serverVersionToken('server_version_token');
 
   const ProjectContextPreviewReuseStrategy(this.value);
@@ -48,23 +54,22 @@ enum ProjectContextPreviewReuseStrategy {
   }
 }
 
-class ProjectContextPreviewReusePayload {
-  const ProjectContextPreviewReusePayload({
-    required this.token,
-    required this.fingerprint,
-    required this.outputSha256,
-    required this.inlineOutput,
-    required this.inlineOutputTruncated,
-  });
+@freezed
+abstract class ProjectContextPreviewReusePayload
+    with _$ProjectContextPreviewReusePayload {
+  const ProjectContextPreviewReusePayload._();
 
-  final String token;
-  final String fingerprint;
-  final String outputSha256;
-  final String inlineOutput;
-  final bool inlineOutputTruncated;
+  const factory ProjectContextPreviewReusePayload({
+    required String token,
+    required String fingerprint,
+    required String outputSha256,
+    required String inlineOutput,
+    required bool inlineOutputTruncated,
+  }) = _ProjectContextPreviewReusePayload;
 
   factory ProjectContextPreviewReusePayload.fromJson(
-      Map<String, dynamic> json) {
+    Map<String, dynamic> json,
+  ) {
     return ProjectContextPreviewReusePayload(
       token: _readString(json, 'token') ?? '',
       fingerprint: _readString(json, 'fingerprint') ?? '',
@@ -85,48 +90,32 @@ class ProjectContextPreviewReusePayload {
   }
 }
 
-class ProjectContextMetadata {
-  const ProjectContextMetadata({
-    this.selectedFile,
-    this.trigger,
-    this.buildTarget,
-    this.priority,
-    this.branch,
-    this.requiredFiles = const <String>[],
-    this.teamModeEnabled = false,
-    this.teamRoles = const <ProjectContextTeamRole>[],
-    this.teamGoal,
-    this.previewContextFingerprint,
-    this.previewCompileFingerprint,
-    this.previewCompileOutputSha256,
-    this.previewReuseRequested = false,
-    this.previewReuseStrategy = ProjectContextPreviewReuseStrategy.none,
-    this.previewServerVersionToken,
-    this.previewArtifactPath,
-    this.previewReusePayload,
-    this.compileFingerprint,
-    this.idempotencyKey,
-  });
+@freezed
+abstract class ProjectContextMetadata with _$ProjectContextMetadata {
+  const ProjectContextMetadata._();
 
-  final String? selectedFile;
-  final String? trigger;
-  final String? buildTarget;
-  final String? priority;
-  final String? branch;
-  final List<String> requiredFiles;
-  final bool teamModeEnabled;
-  final List<ProjectContextTeamRole> teamRoles;
-  final String? teamGoal;
-  final String? previewContextFingerprint;
-  final String? previewCompileFingerprint;
-  final String? previewCompileOutputSha256;
-  final bool previewReuseRequested;
-  final ProjectContextPreviewReuseStrategy previewReuseStrategy;
-  final String? previewServerVersionToken;
-  final String? previewArtifactPath;
-  final ProjectContextPreviewReusePayload? previewReusePayload;
-  final String? compileFingerprint;
-  final String? idempotencyKey;
+  const factory ProjectContextMetadata({
+    String? selectedFile,
+    String? trigger,
+    String? buildTarget,
+    String? priority,
+    String? branch,
+    @Default(<String>[]) List<String> requiredFiles,
+    @Default(false) bool teamModeEnabled,
+    @Default(<ProjectContextTeamRole>[]) List<ProjectContextTeamRole> teamRoles,
+    String? teamGoal,
+    String? previewContextFingerprint,
+    String? previewCompileFingerprint,
+    String? previewCompileOutputSha256,
+    @Default(false) bool previewReuseRequested,
+    @Default(ProjectContextPreviewReuseStrategy.none)
+    ProjectContextPreviewReuseStrategy previewReuseStrategy,
+    String? previewServerVersionToken,
+    String? previewArtifactPath,
+    ProjectContextPreviewReusePayload? previewReusePayload,
+    String? compileFingerprint,
+    String? idempotencyKey,
+  }) = _ProjectContextMetadata;
 
   factory ProjectContextMetadata.fromJson(Map<String, dynamic> json) {
     final selectedFile = _firstNonBlank(<String?>[
@@ -209,55 +198,6 @@ class ProjectContextMetadata {
           : const <ProjectContextTeamRole>[]);
 
   String? get activeFile => selectedFile;
-
-  ProjectContextMetadata copyWith({
-    String? selectedFile,
-    String? trigger,
-    String? buildTarget,
-    String? priority,
-    String? branch,
-    List<String>? requiredFiles,
-    bool? teamModeEnabled,
-    List<ProjectContextTeamRole>? teamRoles,
-    String? teamGoal,
-    String? previewContextFingerprint,
-    String? previewCompileFingerprint,
-    String? previewCompileOutputSha256,
-    bool? previewReuseRequested,
-    ProjectContextPreviewReuseStrategy? previewReuseStrategy,
-    String? previewServerVersionToken,
-    String? previewArtifactPath,
-    ProjectContextPreviewReusePayload? previewReusePayload,
-    String? compileFingerprint,
-    String? idempotencyKey,
-  }) {
-    return ProjectContextMetadata(
-      selectedFile: selectedFile ?? this.selectedFile,
-      trigger: trigger ?? this.trigger,
-      buildTarget: buildTarget ?? this.buildTarget,
-      priority: priority ?? this.priority,
-      branch: branch ?? this.branch,
-      requiredFiles: requiredFiles ?? this.requiredFiles,
-      teamModeEnabled: teamModeEnabled ?? this.teamModeEnabled,
-      teamRoles: teamRoles ?? this.teamRoles,
-      teamGoal: teamGoal ?? this.teamGoal,
-      previewContextFingerprint:
-          previewContextFingerprint ?? this.previewContextFingerprint,
-      previewCompileFingerprint:
-          previewCompileFingerprint ?? this.previewCompileFingerprint,
-      previewCompileOutputSha256:
-          previewCompileOutputSha256 ?? this.previewCompileOutputSha256,
-      previewReuseRequested:
-          previewReuseRequested ?? this.previewReuseRequested,
-      previewReuseStrategy: previewReuseStrategy ?? this.previewReuseStrategy,
-      previewServerVersionToken:
-          previewServerVersionToken ?? this.previewServerVersionToken,
-      previewArtifactPath: previewArtifactPath ?? this.previewArtifactPath,
-      previewReusePayload: previewReusePayload ?? this.previewReusePayload,
-      compileFingerprint: compileFingerprint ?? this.compileFingerprint,
-      idempotencyKey: idempotencyKey ?? this.idempotencyKey,
-    );
-  }
 
   Map<String, dynamic> toJson() {
     final json = <String, dynamic>{};
@@ -355,18 +295,16 @@ class ProjectContextMetadata {
   }
 }
 
-class ProjectContext {
-  const ProjectContext({
-    required this.projectId,
-    required this.taskId,
-    this.files = const <String, String>{},
-    this.metadata = const ProjectContextMetadata(),
-  });
+@freezed
+abstract class ProjectContext with _$ProjectContext {
+  const ProjectContext._();
 
-  final String projectId;
-  final String taskId;
-  final Map<String, String> files;
-  final ProjectContextMetadata metadata;
+  const factory ProjectContext({
+    required String projectId,
+    required String taskId,
+    @Default(<String, String>{}) Map<String, String> files,
+    @Default(ProjectContextMetadata()) ProjectContextMetadata metadata,
+  }) = _ProjectContext;
 
   factory ProjectContext.fromJson(Map<String, dynamic> json) {
     final rawFiles = json['files'];
@@ -381,26 +319,12 @@ class ProjectContext {
     return ProjectContext(
       projectId: _readString(json, 'projectId') ?? '',
       taskId: _readString(json, 'taskId') ?? '',
-      files: Map<String, String>.unmodifiable(files),
+      files: files,
       metadata: rawMetadata is Map
           ? ProjectContextMetadata.fromJson(
               Map<String, dynamic>.from(rawMetadata),
             )
           : const ProjectContextMetadata(),
-    );
-  }
-
-  ProjectContext copyWith({
-    String? projectId,
-    String? taskId,
-    Map<String, String>? files,
-    ProjectContextMetadata? metadata,
-  }) {
-    return ProjectContext(
-      projectId: projectId ?? this.projectId,
-      taskId: taskId ?? this.taskId,
-      files: files ?? this.files,
-      metadata: metadata ?? this.metadata,
     );
   }
 
