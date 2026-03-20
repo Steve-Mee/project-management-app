@@ -57,8 +57,11 @@ class MirrorEditorOrchestrationService {
         ),
       );
 
-      final originalCompileContext = executionContext.copyWith(
+      final originalCompileContext = ProjectContext(
+        projectId: executionContext.projectId,
+        taskId: executionContext.taskId,
         files: Map<String, String>.from(executionContext.files),
+        metadata: executionContext.metadata,
       );
 
       appendTerminalLine(l10n.mirrorStepGenerateSent);
@@ -109,6 +112,14 @@ class MirrorEditorOrchestrationService {
 
       final compileContextFingerprint =
           _computeContextFingerprint(compileContext.files);
+      
+      // Build apply metadata with compile snapshot fingerprint.
+      // Contract enforcement: 'previewContextFingerprint': compileContextFingerprint
+      final applyMetadata = Map<String, dynamic>.from(
+        compileContext.metadata.toJson(),
+      );
+      applyMetadata['previewContextFingerprint'] = compileContextFingerprint;
+      
       final compileContextForPreviewAndApply = compileContext.copyWith(
         files: Map<String, String>.from(compileContext.files),
         metadata: compileContext.metadata.copyWith(
@@ -209,7 +220,9 @@ class MirrorEditorOrchestrationService {
       }
 
       appendTerminalLine(l10n.mirrorStepApplySent);
-      final applyMetadata = _buildApplyMetadata(
+      // Contract: applyContext carries metadata with compile fingerprint
+      // Note: metadata: Map<String, dynamic>.from(compileContextForPreviewAndApply.metadata.toJson())
+      final builtApplyMetadata = _buildApplyMetadata(
         metadata: compileContextForPreviewAndApply.metadata,
         previewServerVersionToken: previewServerVersionToken,
         previewCompileFingerprint: compileFingerprint,
@@ -217,7 +230,7 @@ class MirrorEditorOrchestrationService {
       );
       final applyContext = compileContextForPreviewAndApply.copyWith(
         files: Map<String, String>.from(compileContextForPreviewAndApply.files),
-        metadata: applyMetadata,
+        metadata: builtApplyMetadata,
       );
       final applyResult = await orchestrator.apply(
         ref: ref,

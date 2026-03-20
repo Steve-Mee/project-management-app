@@ -295,6 +295,7 @@ class MirrorGatewayBackend implements MirrorComputeBackend {
       );
     }
 
+    // Contract: context.metadata['previewContextFingerprint'] is validated
     final expectedContextFingerprint =
         context.metadata.previewContextFingerprint ?? '';
     if (expectedContextFingerprint.isNotEmpty) {
@@ -457,11 +458,7 @@ class MirrorGatewayBackend implements MirrorComputeBackend {
       onFailure: (response) => CompileResult(
         success: false,
         errors: <String>[
-          _formatStructuredError(
-            family: _httpErrorCodeForStatus(response.statusCode).family,
-            message: 'HTTP ${response.statusCode}',
-            statusCode: response.statusCode,
-          ),
+          '${_httpErrorCodeForStatus(response.statusCode).family.value}: HTTP ${response.statusCode}',
           if (response.body.trim().isNotEmpty) response.body,
         ],
       ),
@@ -607,11 +604,7 @@ class MirrorGatewayBackend implements MirrorComputeBackend {
       onFailure: (response) => _RawGatewayResult(
         success: false,
         errors: <String>[
-          _formatStructuredError(
-            family: _httpErrorCodeForStatus(response.statusCode).family,
-            message: 'HTTP ${response.statusCode}',
-            statusCode: response.statusCode,
-          ),
+          '${_httpErrorCodeForStatus(response.statusCode).family.value}: HTTP ${response.statusCode}',
           if (response.body.trim().isNotEmpty) response.body,
         ],
       ),

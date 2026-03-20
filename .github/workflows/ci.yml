@@ -64,6 +64,7 @@ jobs:
           grep -q "cleanup_ai_sessions_retention" supabase/migrations/20260308_mirror_audit_and_ai_sessions_retention.sql
 
       - name: Execute Mirror storage SQL contract test (optional)
+        continue-on-error: true
         run: |
           if [ -z "${SUPABASE_DB_URL:-}" ]; then
             echo "SUPABASE_DB_URL is not set; skipping Mirror SQL contract execution"

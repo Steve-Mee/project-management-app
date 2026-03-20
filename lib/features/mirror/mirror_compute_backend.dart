@@ -237,8 +237,7 @@ extension MirrorApplySecurity on MirrorComputeBackend {
   Future<ApplySecurityArtifacts> prepareSignedInputAndBackup({
     required ProjectContext context,
     Duration signedUrlTtl = MirrorSecureApplyService.defaultSignedUrlTtl,
-    String signedInputBucket =
-        MirrorSecureApplyService.defaultSignedInputBucket,
+    String signedInputBucket = MirrorSecureApplyService.defaultSignedInputBucket,
     String backupBucket = MirrorSecureApplyService.defaultBackupBucket,
   }) async {
     final artifacts =
@@ -260,8 +259,7 @@ extension MirrorApplySecurity on MirrorComputeBackend {
     required Future<ApplyResult> Function(ApplySecurityArtifacts artifacts)
         onApply,
     Duration signedUrlTtl = MirrorSecureApplyService.defaultSignedUrlTtl,
-    String signedInputBucket =
-        MirrorSecureApplyService.defaultSignedInputBucket,
+    String signedInputBucket = MirrorSecureApplyService.defaultSignedInputBucket,
     String backupBucket = MirrorSecureApplyService.defaultBackupBucket,
   }) async {
     final result = await _mirrorSecureApplyService.secureApply(

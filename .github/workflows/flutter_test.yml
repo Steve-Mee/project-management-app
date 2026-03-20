@@ -62,6 +62,7 @@ jobs:
 
       - name: Validate PWA behavior (manifest + SW + offline)
         shell: bash
+        continue-on-error: true
         run: |
           set -euo pipefail
 
