@@ -28,6 +28,7 @@ class _MonacoEditorHostState extends State<MonacoEditorHost> {
   InAppWebViewController? _webViewController;
   late TextEditingController _fallbackController;
   String _lastDesktopCode = '';
+  bool _allowDesktopLimitedEditor = false;
 
   bool get _isDesktop =>
       Platform.isWindows || Platform.isLinux || Platform.isMacOS;
@@ -75,8 +76,15 @@ class _MonacoEditorHostState extends State<MonacoEditorHost> {
 
   @override
   Widget build(BuildContext context) {
-    if (!_isDesktop || !_canUseInAppWebView) {
+    if (!_isDesktop) {
       return _buildMobileFallback();
+    }
+
+    if (!_canUseInAppWebView) {
+      if (_allowDesktopLimitedEditor) {
+        return _buildDesktopLimitedFallback();
+      }
+      return _buildDesktopDegradedState();
     }
 
     return InAppWebView(
@@ -130,6 +138,101 @@ class _MonacoEditorHostState extends State<MonacoEditorHost> {
           fontSize: 14,
           color: widget.theme == 'vs-dark' ? Colors.white : Colors.black87,
         ),
+      ),
+    );
+  }
+
+  Widget _buildDesktopDegradedState() {
+    final isDark = widget.theme == 'vs-dark';
+    final warningColor = isDark ? const Color(0xFF2A2010) : const Color(0xFFFFF7E6);
+    final warningBorder = isDark ? const Color(0xFFD6A64B) : const Color(0xFFDB9A00);
+
+    return Container(
+      color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
+      padding: const EdgeInsets.all(16),
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 720),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              Text(
+                'Studio editor unavailable on this desktop runtime',
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Mirror can continue in a limited text editor. Syntax features and studio-level safeguards may be reduced until Monaco is available again.',
+                style: Theme.of(context).textTheme.bodyMedium,
+              ),
+              const SizedBox(height: 12),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: warningColor,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: warningBorder),
+                ),
+                child: const Text(
+                  'Recommended: retry initialization first. Continue in limited mode only if needed.',
+                ),
+              ),
+              const SizedBox(height: 14),
+              Wrap(
+                spacing: 10,
+                runSpacing: 10,
+                children: <Widget>[
+                  FilledButton.tonalIcon(
+                    onPressed: () {
+                      setState(() {});
+                    },
+                    icon: const Icon(Icons.refresh),
+                    label: const Text('Retry editor initialization'),
+                  ),
+                  OutlinedButton.icon(
+                    onPressed: () {
+                      setState(() {
+                        _allowDesktopLimitedEditor = true;
+                      });
+                    },
+                    icon: const Icon(Icons.warning_amber_rounded),
+                    label: const Text('Continue in limited editor'),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDesktopLimitedFallback() {
+    final isDark = widget.theme == 'vs-dark';
+
+    return Container(
+      color: isDark ? const Color(0xFF1E1E1E) : const Color(0xFFFFFFFF),
+      child: Column(
+        children: <Widget>[
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            decoration: BoxDecoration(
+              color: isDark ? const Color(0xFF3A2B15) : const Color(0xFFFFF4D6),
+              border: Border(
+                bottom: BorderSide(
+                  color: isDark ? const Color(0xFFB4883A) : const Color(0xFFDB9A00),
+                ),
+              ),
+            ),
+            child: const Text(
+              'Limited desktop editor mode active. Monaco features are temporarily unavailable.',
+            ),
+          ),
+          Expanded(child: _buildMobileFallback()),
+        ],
       ),
     );
   }
