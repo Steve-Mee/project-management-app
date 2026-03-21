@@ -55,3 +55,14 @@ The following rules are permanent unless explicitly changed by architecture deci
 - Deterministic behavior via structured errors and idempotency
 - Security-first defaults, fail closed on missing secrets
 - Offline continuity with encrypted local cache and outbox replay
+
+## Apply Security & Delivery Mode
+
+The `MirrorApplySecurityModeService` centralizes the decision logic for patch delivery (signed vs. inline flow):
+
+- **Signed Flow**: Patches uploaded to Supabase Storage with signed URLs; suitable for large patches, audit-sensitive contexts, and cloud deployments.
+- **Direct (Inline) Flow**: Patches sent in request body; suitable for small patches (<100KB) and trusted users.
+
+Decision factors include total patch size, audit logging status, cloud vs. private mode, explicit security policies, and user trust score.
+
+See [Mirror Apply Security Mode Integration Guide](mirror_apply_security_mode_integration.md) for full details.
