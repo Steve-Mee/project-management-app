@@ -1,3 +1,9 @@
+## [1.49.0](https://github.com/Steve-Mee/project-management-app/compare/v1.48.0...v1.49.0) (2026-03-21)
+
+### Features
+
+* **mirror-gateway:** extract usage telemetry module ([e26cff8](https://github.com/Steve-Mee/project-management-app/commit/e26cff876963159c3c53935645b6349c79fa8909))
+
 ## [1.48.0](https://github.com/Steve-Mee/project-management-app/compare/v1.47.0...v1.48.0) (2026-03-21)
 
 ### Features
