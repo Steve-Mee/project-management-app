@@ -102,6 +102,7 @@ test/failures/
 
 # Root junk/temp cleanup
 temp/
+.tools/
 *.tmp
 *.bak
 *.diff
