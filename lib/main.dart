@@ -29,7 +29,8 @@ import 'package:pma_core/services/cloud_sync_service.dart';
 import 'package:pma_core/repository/impl/hive_project_repository.dart';
 import 'core/routes.dart';
 import 'package:pma_core/widgets/offline_indicator.dart';
-import 'package:pma_core/repository/hive_initializer.dart' hide ProjectsInitializer;
+import 'package:pma_core/repository/hive_initializer.dart'
+    hide ProjectsInitializer;
 import 'package:pma_core/core/services/feature_flag_service.dart';
 import 'package:pma_core/services/app_logger.dart';
 import 'package:pma_core/services/login_rate_limiter.dart';
@@ -43,6 +44,7 @@ import 'models/task_model.dart';
 import 'models/comment_model.dart';
 import 'package:pma_core/models/adapters/migrated_model_adapters.dart';
 import 'core/config/app_config.dart';
+import 'core/providers/supabase_client_provider.dart';
 import 'core/services/sentry_service.dart';
 import 'core/widgets/error_boundary.dart';
 import 'core/projects_initializer.dart';
@@ -51,9 +53,8 @@ import 'features/mirror/services/mirror_outbox_replay_service.dart';
 /// Enable Semantics Debugger only in debug mode when explicitly requested.
 /// Use: flutter run --dart-define=ENABLE_SEMANTICS_DEBUGGER=true
 const bool _enableSemanticsDebugger =
-  bool.fromEnvironment('ENABLE_SEMANTICS_DEBUGGER', defaultValue: false);
-const bool _showSemanticsDebugger =
-  kDebugMode && _enableSemanticsDebugger;
+    bool.fromEnvironment('ENABLE_SEMANTICS_DEBUGGER', defaultValue: false);
+const bool _showSemanticsDebugger = kDebugMode && _enableSemanticsDebugger;
 
 /// Debug flags for issue #072 error-path verification.
 ///
@@ -61,9 +62,9 @@ const bool _showSemanticsDebugger =
 /// - flutter run --dart-define=DEBUG_THROW_STARTUP_ERROR=true
 /// - flutter run --dart-define=DEBUG_THROW_POSTFRAME_ERROR=true
 const bool _debugThrowStartupError =
-  bool.fromEnvironment('DEBUG_THROW_STARTUP_ERROR', defaultValue: false);
+    bool.fromEnvironment('DEBUG_THROW_STARTUP_ERROR', defaultValue: false);
 const bool _debugThrowPostFrameError =
-  bool.fromEnvironment('DEBUG_THROW_POSTFRAME_ERROR', defaultValue: false);
+    bool.fromEnvironment('DEBUG_THROW_POSTFRAME_ERROR', defaultValue: false);
 
 /// Main entry point of the application
 /// Initializes Riverpod for state management and ScreenUtil for responsive design
@@ -114,19 +115,20 @@ void main() async {
     await HiveInitializer.initialize();
     await LoginRateLimiter.instance.initialize();
 
+    final container = ProviderContainer();
+
     final featureFlags = FeatureFlagService(
-      supabaseClient: Supabase.instance.client,
+      supabaseClient: container.read(supabaseClientProvider),
     );
     await featureFlags.initialize();
     await featureFlags.refresh();
-
-    final container = ProviderContainer();
 
     // Start mirror outbox replay worker for startup/network restoration replay.
     container.read(mirrorOutboxReplayServiceProvider);
 
     // Initialize reCAPTCHA config with settings repository.
-    final settingsRepo = await container.read(settingsRepositoryProvider.future);
+    final settingsRepo =
+        await container.read(settingsRepositoryProvider.future);
     RecaptchaConfig.initializeWithRepository(settingsRepo);
     RecaptchaConfig.initialize();
 
@@ -135,7 +137,8 @@ void main() async {
     WidgetsBinding.instance.addObserver(lifecycleHandler);
 
     if (kDebugMode && _debugThrowStartupError) {
-      throw StateError('Debug startup error for ErrorBoundary/Sentry validation');
+      throw StateError(
+          'Debug startup error for ErrorBoundary/Sentry validation');
     }
 
     // Initialize Sentry, then launch the app tree with global ErrorBoundary.
@@ -271,8 +274,13 @@ class _AppLifecycleHandler extends WidgetsBindingObserver {
   Timer? _backupTimer;
 
   _AppLifecycleHandler(this._container) {
-    final repository = _container.read(projectRepositoryProvider) as HiveProjectRepository;
-    _cloudSync = CloudSyncService(repository: repository);
+    final supabaseClient = _container.read(supabaseClientProvider);
+    final repository =
+        _container.read(projectRepositoryProvider) as HiveProjectRepository;
+    _cloudSync = CloudSyncService(
+      supabaseClient: supabaseClient,
+      repository: repository,
+    );
   }
 
   @override
@@ -320,17 +328,16 @@ class _AppLifecycleHandler extends WidgetsBindingObserver {
     _closed = true;
     try {
       await HiveInitializer.backupHive();
-      final projectRepository =
-          _container.read(projectRepositoryProvider);
+      final projectRepository = _container.read(projectRepositoryProvider);
       await projectRepository.close();
 
-        final taskRepository =
+      final taskRepository =
           await _container.read(taskRepositoryProvider.future);
-        await taskRepository.close();
+      await taskRepository.close();
 
-        final metaRepository =
+      final metaRepository =
           await _container.read(projectMetaRepositoryProvider.future);
-        await metaRepository.close();
+      await metaRepository.close();
     } catch (e) {
       AppLogger.instance.e('Error closing repositories', error: e);
     } finally {
@@ -401,7 +408,8 @@ class _MyAppState extends ConsumerState<MyApp> {
   }
 
   void _handleDeepLink(Uri uri) {
-    if (uri.path == '/accept-invite' && uri.queryParameters.containsKey('token')) {
+    if (uri.path == '/accept-invite' &&
+        uri.queryParameters.containsKey('token')) {
       final token = uri.queryParameters['token']!;
       _handleInvitationToken(token);
     }
@@ -423,7 +431,8 @@ class _MyAppState extends ConsumerState<MyApp> {
 
     // Accept invitation
     try {
-      final invitationService = ProjectInvitationService(Supabase.instance.client);
+      final invitationService =
+          ProjectInvitationService(ref.read(supabaseClientProvider));
       await invitationService.acceptInvitation(token);
 
       if (mounted) {
@@ -473,7 +482,7 @@ class _MyAppState extends ConsumerState<MyApp> {
     final effectiveLocale =
         locale ?? WidgetsBinding.instance.platformDispatcher.locale;
     final isRtl = _isRtlLocale(effectiveLocale);
-    
+
     // Create router for navigation
     final goRouter = AppRoutes.createRouter();
 
@@ -486,7 +495,8 @@ class _MyAppState extends ConsumerState<MyApp> {
 
     // Initialize ScreenUtil for responsive design across different screen sizes
     return ScreenUtilInit(
-      designSize: const Size(375, 812), // Base design size (iPhone X dimensions)
+      designSize:
+          const Size(375, 812), // Base design size (iPhone X dimensions)
       minTextAdapt: true,
       splitScreenMode: true,
       builder: (context, child) {
@@ -568,6 +578,7 @@ bool _isRtlLocale(Locale locale) {
   const rtlLanguageCodes = <String>['ar'];
   return rtlLanguageCodes.contains(locale.languageCode.toLowerCase());
 }
+
 /// Responsive navigation layout widget
 /// Shows Drawer on desktop (width > 600) and BottomNavigationBar on mobile
 class ResponsiveNavigationLayout extends ConsumerWidget {
@@ -634,7 +645,8 @@ class ResponsiveNavigationLayout extends ConsumerWidget {
                 Expanded(
                   child: Container(
                     constraints: BoxConstraints(
-                      maxWidth: max(constraints.maxWidth - 280.w, 400.w), // Account for max nav width
+                      maxWidth: max(constraints.maxWidth - 280.w,
+                          400.w), // Account for max nav width
                     ),
                     child: Column(
                       children: [
@@ -748,8 +760,10 @@ class ResponsiveNavigationLayout extends ConsumerWidget {
                 ),
                 title: Text(item.label),
                 selected: isSelected,
-                selectedTileColor:
-                    Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
+                selectedTileColor: Theme.of(context)
+                    .colorScheme
+                    .primary
+                    .withValues(alpha: 0.1),
                 onTap: () {
                   _handleNavigation(context, ref, items, index);
                   Navigator.pop(context); // Close drawer after selection
@@ -884,6 +898,3 @@ class ResponsiveNavigationLayout extends ConsumerWidget {
 }
 
 // Import GoRouter extension moved to top
-
-
-

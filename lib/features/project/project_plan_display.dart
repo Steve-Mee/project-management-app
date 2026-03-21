@@ -13,8 +13,10 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:mailer/mailer.dart';
 import 'package:mailer/smtp_server.dart';
 import 'package:pma_core/services/payment_service.dart';
+import 'package:project_management_app/core/providers/supabase_client_provider.dart';
 
 enum HelpLevel { basis, gedetailleerd, stapVoorStap }
+
 enum Complexity { simpel, middel, complex }
 
 /// Widget to display a structured project plan
@@ -57,9 +59,10 @@ class _ProjectPlanDisplayState extends ConsumerState<ProjectPlanDisplay> {
   bool voting = false;
   RealtimeChannel? _realtimeChannel;
   StreamSubscription? _projectSubscription;
+  SupabaseClient get _supabase => ref.read(supabaseClientProvider);
 
   Future<void> _loadLiteMode() async {
-    final supabase = Supabase.instance.client;
+    final supabase = _supabase;
     final userId = supabase.auth.currentUser?.id;
     if (userId != null) {
       try {
@@ -82,14 +85,13 @@ class _ProjectPlanDisplayState extends ConsumerState<ProjectPlanDisplay> {
   }
 
   Future<void> toggleLite(bool value) async {
-    final supabase = Supabase.instance.client;
+    final supabase = _supabase;
     final userId = supabase.auth.currentUser?.id;
     if (userId != null) {
       try {
         await supabase
             .from('users')
-            .update({'lite_mode': value})
-            .eq('id', userId);
+            .update({'lite_mode': value}).eq('id', userId);
       } catch (e) {
         debugPrint('Error updating lite mode: $e');
       }
@@ -100,7 +102,7 @@ class _ProjectPlanDisplayState extends ConsumerState<ProjectPlanDisplay> {
   }
 
   Future<void> rollbackToVersion(String projectId, int versionIndex) async {
-    final supabase = Supabase.instance.client;
+    final supabase = _supabase;
     final userId = supabase.auth.currentUser?.id;
     if (userId == null) {
       throw Exception('User not authenticated');
@@ -121,10 +123,7 @@ class _ProjectPlanDisplayState extends ConsumerState<ProjectPlanDisplay> {
     final plan = snapshot['plan'] as Map<String, dynamic>;
 
     // Update the current plan
-    await supabase
-        .from('projects')
-        .update({'plan': plan})
-        .eq('id', projectId);
+    await supabase.from('projects').update({'plan': plan}).eq('id', projectId);
 
     // Update local state if needed
     setState(() {
@@ -135,8 +134,10 @@ class _ProjectPlanDisplayState extends ConsumerState<ProjectPlanDisplay> {
   Widget buildGDPRConsent(String region) {
     if (region == 'EU' && selectedCategory == 'Software') {
       return CheckboxListTile(
-        title: const Text('I consent to processing my data for this AI request under GDPR'),
-        subtitle: const Text('Your data will be anonymized and not stored for logging purposes'),
+        title: const Text(
+            'I consent to processing my data for this AI request under GDPR'),
+        subtitle: const Text(
+            'Your data will be anonymized and not stored for logging purposes'),
         value: gdprConsent,
         onChanged: (value) {
           setState(() {
@@ -152,7 +153,7 @@ class _ProjectPlanDisplayState extends ConsumerState<ProjectPlanDisplay> {
     if (voting) return;
     voting = true;
     try {
-      final supabase = Supabase.instance.client;
+      final supabase = _supabase;
       final userId = supabase.auth.currentUser?.id;
       if (userId == null) return;
 
@@ -166,12 +167,11 @@ class _ProjectPlanDisplayState extends ConsumerState<ProjectPlanDisplay> {
       int count = (existing?['count'] as int? ?? 0) + 1;
 
       // Upsert the category
-      await supabase
-          .from('categories')
-          .upsert({'name': cat, 'count': count});
+      await supabase.from('categories').upsert({'name': cat, 'count': count});
 
       // Check threshold for promotion
-      if (count > 10) { // Assume threshold of 10 votes
+      if (count > 10) {
+        // Assume threshold of 10 votes
         // Promote category - could add to predefined list or notify admin
         debugPrint('Category "$cat" promoted with $count votes');
         // Optionally, show a snackbar or dialog
@@ -237,9 +237,11 @@ class _ProjectPlanDisplayState extends ConsumerState<ProjectPlanDisplay> {
                 try {
                   // Convert plan to JSON and save to project
                   final planJson = jsonEncode(currentPlan.toJson());
-                  await ref.read(projectsProvider.notifier).updatePlanJson(widget.projectId!, planJson);
+                  await ref
+                      .read(projectsProvider.notifier)
+                      .updatePlanJson(widget.projectId!, planJson);
                   await saveVersion(currentPlan.toJson(), widget.projectId!);
-                  
+
                   if (context.mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(content: Text('Plan saved successfully')),
@@ -255,7 +257,8 @@ class _ProjectPlanDisplayState extends ConsumerState<ProjectPlanDisplay> {
               } else {
                 if (context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('No project selected to save plan')),
+                    const SnackBar(
+                        content: Text('No project selected to save plan')),
                   );
                 }
               }
@@ -298,35 +301,36 @@ class _ProjectPlanDisplayState extends ConsumerState<ProjectPlanDisplay> {
 
             // Chapters with ExpansionTiles
             ...currentPlan.chapters.map((chapter) => Card(
-              margin: const EdgeInsets.only(bottom: 8.0),
-              child: ExpansionTile(
-                title: Text(
-                  chapter.title,
-                  style: Theme.of(context).textTheme.titleMedium,
-                ),
-                subtitle: Text(chapter.overview),
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Tasks',
-                          style: Theme.of(context).textTheme.titleSmall,
-                        ),
-                        const SizedBox(height: 8),
-                        usersAsync.when(
-                          data: (users) => _buildTasksList(chapter, users),
-                          loading: () => const CircularProgressIndicator(),
-                          error: (error, stack) => Text('Error loading users: $error'),
-                        ),
-                      ],
+                  margin: const EdgeInsets.only(bottom: 8.0),
+                  child: ExpansionTile(
+                    title: Text(
+                      chapter.title,
+                      style: Theme.of(context).textTheme.titleMedium,
                     ),
+                    subtitle: Text(chapter.overview),
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.all(16.0),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Tasks',
+                              style: Theme.of(context).textTheme.titleSmall,
+                            ),
+                            const SizedBox(height: 8),
+                            usersAsync.when(
+                              data: (users) => _buildTasksList(chapter, users),
+                              loading: () => const CircularProgressIndicator(),
+                              error: (error, stack) =>
+                                  Text('Error loading users: $error'),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
-                ],
-              ),
-            )),
+                )),
           ],
         ),
       ),
@@ -374,25 +378,28 @@ class _ProjectPlanDisplayState extends ConsumerState<ProjectPlanDisplay> {
                               child: Text('Unassigned'),
                             ),
                             ...users.map((user) => DropdownMenuItem<String>(
-                              value: user.username,
-                              child: Text(user.username, overflow: TextOverflow.ellipsis),
-                            )),
+                                  value: user.username,
+                                  child: Text(user.username,
+                                      overflow: TextOverflow.ellipsis),
+                                )),
                           ],
                           onChanged: (value) {
                             setState(() {
-                              final updatedTasks = List<PlanTask>.from(chapter.tasks);
+                              final updatedTasks =
+                                  List<PlanTask>.from(chapter.tasks);
                               final taskIndex = chapter.tasks.indexOf(task);
                               updatedTasks[taskIndex] = task.copyWith(
                                 assignedUserId: value,
                                 assignedUserName: value,
                               );
-                              final updatedChapters = List<PlanChapter>.from(currentPlan.chapters);
-                              updatedChapters[currentPlan.chapters.indexOf(chapter)] = 
-                                PlanChapter(
-                                  title: chapter.title,
-                                  overview: chapter.overview,
-                                  tasks: updatedTasks,
-                                );
+                              final updatedChapters =
+                                  List<PlanChapter>.from(currentPlan.chapters);
+                              updatedChapters[currentPlan.chapters
+                                  .indexOf(chapter)] = PlanChapter(
+                                title: chapter.title,
+                                overview: chapter.overview,
+                                tasks: updatedTasks,
+                              );
                               currentPlan = ProjectPlan(
                                 overview: currentPlan.overview,
                                 chapters: updatedChapters,
@@ -469,7 +476,9 @@ class _ProjectPlanDisplayState extends ConsumerState<ProjectPlanDisplay> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               if (questions.isNotEmpty) ...[
-                const Text('Questions', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                const Text('Questions',
+                    style:
+                        TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                 const SizedBox(height: 8),
                 ListView.builder(
                   shrinkWrap: true,
@@ -481,25 +490,31 @@ class _ProjectPlanDisplayState extends ConsumerState<ProjectPlanDisplay> {
                       margin: const EdgeInsets.only(bottom: 8.0),
                       child: ListTile(
                         title: Text(questions[i]),
-                        subtitle: response != null ? Text('Response: $response') : null,
+                        subtitle: response != null
+                            ? Text('Response: $response')
+                            : null,
                         trailing: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             ElevatedButton(
-                              onPressed: response == 'accept' ? null : () {
-                                setState(() {
-                                  questionResponses[i] = 'accept';
-                                });
-                              },
+                              onPressed: response == 'accept'
+                                  ? null
+                                  : () {
+                                      setState(() {
+                                        questionResponses[i] = 'accept';
+                                      });
+                                    },
                               child: const Text('Accept'),
                             ),
                             const SizedBox(width: 8),
                             ElevatedButton(
-                              onPressed: response == 'refuse' ? null : () {
-                                setState(() {
-                                  questionResponses[i] = 'refuse';
-                                });
-                              },
+                              onPressed: response == 'refuse'
+                                  ? null
+                                  : () {
+                                      setState(() {
+                                        questionResponses[i] = 'refuse';
+                                      });
+                                    },
                               child: const Text('Refuse'),
                             ),
                           ],
@@ -511,7 +526,9 @@ class _ProjectPlanDisplayState extends ConsumerState<ProjectPlanDisplay> {
               ],
               if (proposals.isNotEmpty) ...[
                 const SizedBox(height: 16),
-                const Text('Proposals', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                const Text('Proposals',
+                    style:
+                        TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                 const SizedBox(height: 8),
                 ListView.builder(
                   shrinkWrap: true,
@@ -545,7 +562,8 @@ class _ProjectPlanDisplayState extends ConsumerState<ProjectPlanDisplay> {
       switch (category) {
         case 'Software':
           fields = [
-            const Text('Platforms:', style: TextStyle(fontWeight: FontWeight.bold)),
+            const Text('Platforms:',
+                style: TextStyle(fontWeight: FontWeight.bold)),
             CheckboxListTile(
               title: const Text('iOS'),
               value: iosSelected,
@@ -574,13 +592,16 @@ class _ProjectPlanDisplayState extends ConsumerState<ProjectPlanDisplay> {
               },
             ),
             const SizedBox(height: 16),
-            const Text('Regions:', style: TextStyle(fontWeight: FontWeight.bold)),
+            const Text('Regions:',
+                style: TextStyle(fontWeight: FontWeight.bold)),
             DropdownButtonFormField<String>(
               initialValue: selectedRegion,
-              items: ['EU', 'US', 'Wereldwijd'].map((e) => DropdownMenuItem<String>(
-                value: e,
-                child: Text(e),
-              )).toList(),
+              items: ['EU', 'US', 'Wereldwijd']
+                  .map((e) => DropdownMenuItem<String>(
+                        value: e,
+                        child: Text(e),
+                      ))
+                  .toList(),
               onChanged: (String? value) {
                 setState(() {
                   selectedRegion = value;
@@ -589,13 +610,16 @@ class _ProjectPlanDisplayState extends ConsumerState<ProjectPlanDisplay> {
               decoration: const InputDecoration(labelText: 'Regio'),
             ),
             const SizedBox(height: 16),
-            const Text('AI-agent keuze:', style: TextStyle(fontWeight: FontWeight.bold)),
+            const Text('AI-agent keuze:',
+                style: TextStyle(fontWeight: FontWeight.bold)),
             DropdownButtonFormField<String>(
               initialValue: selectedAIAgent,
-              items: ['Grok', 'ChatGPT', 'Claude', 'Other'].map((e) => DropdownMenuItem<String>(
-                value: e,
-                child: Text(e),
-              )).toList(),
+              items: ['Grok', 'ChatGPT', 'Claude', 'Other']
+                  .map((e) => DropdownMenuItem<String>(
+                        value: e,
+                        child: Text(e),
+                      ))
+                  .toList(),
               onChanged: (String? value) {
                 setState(() {
                   selectedAIAgent = value;
@@ -638,7 +662,8 @@ class _ProjectPlanDisplayState extends ConsumerState<ProjectPlanDisplay> {
               style: TextStyle(color: Colors.red),
             ),
           ),
-        const Text('Hulpniveau', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+        const Text('Hulpniveau',
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
         ListTile(
           leading: Radio<HelpLevel>(
             value: HelpLevel.basis,
@@ -688,7 +713,8 @@ class _ProjectPlanDisplayState extends ConsumerState<ProjectPlanDisplay> {
           title: const Text('Stap-voor-stap'),
         ),
         const SizedBox(height: 16),
-        const Text('Complexiteit', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+        const Text('Complexiteit',
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
         ListTile(
           leading: Radio<Complexity>(
             value: Complexity.simpel,
@@ -749,7 +775,9 @@ class _ProjectPlanDisplayState extends ConsumerState<ProjectPlanDisplay> {
       // Collect project data
       Map<String, dynamic> data = {
         'name': projectName ?? 'Unnamed Project',
-        'category': selectedCategory == 'Custom' ? (customCategory ?? 'Custom') : selectedCategory,
+        'category': selectedCategory == 'Custom'
+            ? (customCategory ?? 'Custom')
+            : selectedCategory,
         'description': projectDescription ?? 'No description',
         'extras': {
           'helpLevel': selectedHelpLevel.name,
@@ -764,7 +792,9 @@ class _ProjectPlanDisplayState extends ConsumerState<ProjectPlanDisplay> {
         },
       };
       String jsonString = jsonEncode(data);
-      final reply = await ref.read(aiServiceProvider).generate(jsonString, projectId: widget.projectId);
+      final reply = await ref
+          .read(aiServiceProvider)
+          .generate(jsonString, projectId: widget.projectId);
       if (mounted) {
         showDialog(
           context: context,
@@ -831,14 +861,16 @@ class _ProjectPlanDisplayState extends ConsumerState<ProjectPlanDisplay> {
             return Card(
               margin: const EdgeInsets.only(bottom: 8.0),
               child: ExpansionTile(
-                title: Text(name, style: const TextStyle(fontWeight: FontWeight.bold)),
+                title: Text(name,
+                    style: const TextStyle(fontWeight: FontWeight.bold)),
                 children: tasks.map((task) {
                   final taskMap = task as Map<String, dynamic>;
                   final id = taskMap['id'] as String? ?? '';
                   final desc = taskMap['desc'] as String? ?? '';
                   return ListTile(
                     title: Text('Task $id'),
-                    subtitle: Text(desc, maxLines: 1, overflow: TextOverflow.ellipsis),
+                    subtitle: Text(desc,
+                        maxLines: 1, overflow: TextOverflow.ellipsis),
                     trailing: buildTaskActions(selectedCategory ?? '', text),
                     onTap: () {
                       showDialog(
@@ -957,7 +989,8 @@ class _ProjectPlanDisplayState extends ConsumerState<ProjectPlanDisplay> {
       isLoading = true;
     });
     try {
-      final prompt = await buildPrompt({'action': action, 'projectSummary': projectSummary}, 'software');
+      final prompt = await buildPrompt(
+          {'action': action, 'projectSummary': projectSummary}, 'software');
       if (!await estimateTokens(prompt)) {
         setState(() {
           isLoading = false;
@@ -966,7 +999,9 @@ class _ProjectPlanDisplayState extends ConsumerState<ProjectPlanDisplay> {
       }
 
       // GDPR check for EU region and Software category
-      if (selectedRegion == 'EU' && selectedCategory == 'Software' && !gdprConsent) {
+      if (selectedRegion == 'EU' &&
+          selectedCategory == 'Software' &&
+          !gdprConsent) {
         setState(() {
           isLoading = false;
         });
@@ -975,7 +1010,8 @@ class _ProjectPlanDisplayState extends ConsumerState<ProjectPlanDisplay> {
             context: context,
             builder: (context) => AlertDialog(
               title: const Text('GDPR Consent Required'),
-              content: const Text('Please provide consent for data processing in the settings.'),
+              content: const Text(
+                  'Please provide consent for data processing in the settings.'),
               actions: [
                 TextButton(
                   onPressed: () => Navigator.of(context).pop(),
@@ -988,7 +1024,9 @@ class _ProjectPlanDisplayState extends ConsumerState<ProjectPlanDisplay> {
         return;
       }
 
-      final reply = await ref.read(aiServiceProvider).generate(prompt, projectId: widget.projectId);
+      final reply = await ref
+          .read(aiServiceProvider)
+          .generate(prompt, projectId: widget.projectId);
       if (mounted) {
         showDialog(
           context: context,
@@ -1040,9 +1078,9 @@ class _ProjectPlanDisplayState extends ConsumerState<ProjectPlanDisplay> {
           ),
         ),
         ...hardware.map((item) => ListTile(
-          leading: const Icon(Icons.hardware),
-          title: Text(item.toString()),
-        )),
+              leading: const Icon(Icons.hardware),
+              title: Text(item.toString()),
+            )),
         const Divider(),
         const ListTile(
           title: Text(
@@ -1051,9 +1089,9 @@ class _ProjectPlanDisplayState extends ConsumerState<ProjectPlanDisplay> {
           ),
         ),
         ...software.map((item) => ListTile(
-          leading: const Icon(Icons.computer),
-          title: Text(item.toString()),
-        )),
+              leading: const Icon(Icons.computer),
+              title: Text(item.toString()),
+            )),
       ],
     );
   }
@@ -1121,9 +1159,9 @@ class _ProjectPlanDisplayState extends ConsumerState<ProjectPlanDisplay> {
     });
     try {
       final reply = await ref.read(aiServiceProvider).generate(
-        'message: $message\nprojectSummary: ${currentPlan.overview}',
-        projectId: widget.projectId,
-      );
+            'message: $message\nprojectSummary: ${currentPlan.overview}',
+            projectId: widget.projectId,
+          );
       if (reply.isNotEmpty) {
         setState(() {
           messages.add({
@@ -1151,7 +1189,10 @@ class _ProjectPlanDisplayState extends ConsumerState<ProjectPlanDisplay> {
 
   void _applyChanges() {
     // Collect changes from messages or something
-    final changes = messages.where((msg) => msg['isUser']).map((msg) => msg['text']).join('\n');
+    final changes = messages
+        .where((msg) => msg['isUser'])
+        .map((msg) => msg['text'])
+        .join('\n');
     // Send to Grok for update
     _sendToGrok('Apply changes: $changes');
     // Add to history
@@ -1165,7 +1206,7 @@ class _ProjectPlanDisplayState extends ConsumerState<ProjectPlanDisplay> {
   }
 
   Future<void> _updateTokens(int tokensUsed) async {
-    final supabase = Supabase.instance.client;
+    final supabase = _supabase;
     final userId = supabase.auth.currentUser?.id;
     if (userId == null) return;
 
@@ -1190,15 +1231,14 @@ class _ProjectPlanDisplayState extends ConsumerState<ProjectPlanDisplay> {
   }
 
   Widget buildTokenDashboard() {
-    final supabase = Supabase.instance.client;
+    final supabase = _supabase;
     final userId = supabase.auth.currentUser?.id;
     if (userId == null) return const Text('Not logged in');
 
     return StreamBuilder<List<Map<String, dynamic>>>(
       stream: supabase
           .from('user_tokens')
-          .stream(primaryKey: ['user_id'])
-          .eq('user_id', userId),
+          .stream(primaryKey: ['user_id']).eq('user_id', userId),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const CircularProgressIndicator();
@@ -1206,7 +1246,8 @@ class _ProjectPlanDisplayState extends ConsumerState<ProjectPlanDisplay> {
         if (snapshot.hasError) {
           return Text('Error: ${snapshot.error}');
         }
-        final data = snapshot.data?.firstOrNull ?? {'total_tokens': 0, 'monthly_tokens': 0};
+        final data = snapshot.data?.firstOrNull ??
+            {'total_tokens': 0, 'monthly_tokens': 0};
         int total = data['total_tokens'] ?? 0;
         int monthly = data['monthly_tokens'] ?? 0;
         const maxTotal = 100000; // Example max
@@ -1218,7 +1259,8 @@ class _ProjectPlanDisplayState extends ConsumerState<ProjectPlanDisplay> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Token Usage', style: Theme.of(context).textTheme.headlineSmall),
+                Text('Token Usage',
+                    style: Theme.of(context).textTheme.headlineSmall),
                 const SizedBox(height: 8),
                 Text('Total Tokens: $total / $maxTotal'),
                 LinearProgressIndicator(value: total / maxTotal),
@@ -1234,7 +1276,7 @@ class _ProjectPlanDisplayState extends ConsumerState<ProjectPlanDisplay> {
   }
 
   Future<void> saveVersion(Map<String, dynamic> plan, String projectId) async {
-    final supabase = Supabase.instance.client;
+    final supabase = _supabase;
     final userId = supabase.auth.currentUser?.id;
     if (userId == null) {
       throw Exception('User not authenticated');
@@ -1267,12 +1309,13 @@ class _ProjectPlanDisplayState extends ConsumerState<ProjectPlanDisplay> {
       // Update the project
       await supabase
           .from('projects')
-          .update({'history': history})
-          .eq('id', projectId);
+          .update({'history': history}).eq('id', projectId);
 
       // Send notification to the current user (project owner) if not EU region
       final currentUser = supabase.auth.currentUser;
-      if (selectedRegion != 'EU' && currentUser != null && currentUser.email != null) {
+      if (selectedRegion != 'EU' &&
+          currentUser != null &&
+          currentUser.email != null) {
         await sendNotification('Plan version saved', [currentUser.email!]);
       }
     } catch (e) {
@@ -1282,12 +1325,13 @@ class _ProjectPlanDisplayState extends ConsumerState<ProjectPlanDisplay> {
   }
 
   Future<bool> estimateTokens(String prompt) async {
-    final supabase = Supabase.instance.client;
+    final supabase = _supabase;
     final userId = supabase.auth.currentUser?.id;
     if (userId == null) return false;
 
     // Estimate tokens using simple formula: tokens ≈ words / 0.75
-    final words = prompt.split(RegExp(r'\s+')).where((w) => w.isNotEmpty).length;
+    final words =
+        prompt.split(RegExp(r'\s+')).where((w) => w.isNotEmpty).length;
     final estimatedTokens = (words / 0.75).round();
 
     try {
@@ -1338,15 +1382,16 @@ class _ProjectPlanDisplayState extends ConsumerState<ProjectPlanDisplay> {
 
   Future<void> sendNotification(String change, List<String> userEmails) async {
     // Send email notifications
-    final smtpServer = gmail(dotenv.env['EMAIL_USERNAME']!, dotenv.env['EMAIL_PASSWORD']!);
-    
+    final smtpServer =
+        gmail(dotenv.env['EMAIL_USERNAME']!, dotenv.env['EMAIL_PASSWORD']!);
+
     for (String email in userEmails) {
       final message = Message()
         ..from = Address(dotenv.env['EMAIL_FROM']!)
         ..recipients.add(email)
         ..subject = 'Project Change Notification'
         ..text = 'A change occurred in the project: $change';
-      
+
       try {
         await send(message, smtpServer);
         debugPrint('Email sent to $email');
@@ -1364,13 +1409,15 @@ class _ProjectPlanDisplayState extends ConsumerState<ProjectPlanDisplay> {
           Uri.parse(slackWebhook),
           headers: {'Content-Type': 'application/json'},
           body: jsonEncode({
-            'text': 'Project change notification: $change\nAffected users: ${userEmails.join(', ')}'
+            'text':
+                'Project change notification: $change\nAffected users: ${userEmails.join(', ')}'
           }),
         );
         if (response.statusCode == 200) {
           debugPrint('Slack notification sent');
         } else {
-          debugPrint('Failed to send Slack notification: ${response.statusCode}');
+          debugPrint(
+              'Failed to send Slack notification: ${response.statusCode}');
         }
       } catch (e) {
         debugPrint('Error sending Slack notification: $e');
@@ -1424,7 +1471,9 @@ class _ProjectPlanDisplayState extends ConsumerState<ProjectPlanDisplay> {
               currentPlan = ProjectPlan.fromJson(json);
             });
             // Save to Supabase
-            ref.read(projectsProvider.notifier).updatePlanJson(widget.projectId!, jsonEncode(json));
+            ref
+                .read(projectsProvider.notifier)
+                .updatePlanJson(widget.projectId!, jsonEncode(json));
           },
           decoration: const InputDecoration(labelText: 'Assigned to'),
         );
@@ -1436,7 +1485,8 @@ class _ProjectPlanDisplayState extends ConsumerState<ProjectPlanDisplay> {
 
   Widget buildHistoryTimeline(List history) {
     // Sort descending by timestamp
-    history.sort((a, b) => DateTime.parse(b['timestamp']).compareTo(DateTime.parse(a['timestamp'])));
+    history.sort((a, b) => DateTime.parse(b['timestamp'])
+        .compareTo(DateTime.parse(a['timestamp'])));
 
     return ListView.builder(
       itemCount: history.length,
@@ -1474,20 +1524,26 @@ class _ProjectPlanDisplayState extends ConsumerState<ProjectPlanDisplay> {
     // Simple projects: max 3 questions
     final questions = data['questions'] as List<dynamic>? ?? [];
     if (questions.length <= 3) {
-      instructions += '\n- This is a simple project with few requirements. Keep the plan concise and focused on the core essentials.\n';
+      instructions +=
+          '\n- This is a simple project with few requirements. Keep the plan concise and focused on the core essentials.\n';
     }
 
     // Incomplete input: check for missing fields
     final requiredFields = ['overview', 'category', 'questions'];
-    final missing = requiredFields.where((field) => data[field] == null || (data[field] is String && (data[field] as String).isEmpty) || (data[field] is List && (data[field] as List).isEmpty));
+    final missing = requiredFields.where((field) =>
+        data[field] == null ||
+        (data[field] is String && (data[field] as String).isEmpty) ||
+        (data[field] is List && (data[field] as List).isEmpty));
     if (missing.isNotEmpty) {
-      instructions += '\n- Some input is incomplete (${missing.join(', ')}). Ask for clarification if needed, but provide the best possible plan based on available information.\n';
+      instructions +=
+          '\n- Some input is incomplete (${missing.join(', ')}). Ask for clarification if needed, but provide the best possible plan based on available information.\n';
     }
 
     // Hybrid tasks: check if multiple categories
     final category = data['category'] as String?;
     if (category != null && category.contains(' ') || category == 'overig') {
-      instructions += '\n- This appears to be a hybrid or multi-disciplinary project. Integrate elements from multiple domains appropriately.\n';
+      instructions +=
+          '\n- This appears to be a hybrid or multi-disciplinary project. Integrate elements from multiple domains appropriately.\n';
     }
 
     return instructions;
@@ -1519,7 +1575,8 @@ class _ProjectPlanDisplayState extends ConsumerState<ProjectPlanDisplay> {
     };
 
     final model = modelMap[category.toLowerCase()] ?? 'general';
-    debugPrint('Selected model for category "$category" and task "$task": $model');
+    debugPrint(
+        'Selected model for category "$category" and task "$task": $model');
     return model;
   }
 
@@ -1571,16 +1628,16 @@ $historyText
 Provide a brief summary:
 ''';
 
-    final summary = await ref.read(aiServiceProvider).generate(prompt, projectId: widget.projectId);
+    final summary = await ref
+        .read(aiServiceProvider)
+        .generate(prompt, projectId: widget.projectId);
     if (summary.isNotEmpty) {
-
       // Save to DB
-      final supabase = Supabase.instance.client;
+      final supabase = _supabase;
       if (widget.projectId != null) {
         await supabase
             .from('projects')
-            .update({'history_summary': summary})
-            .eq('id', widget.projectId!);
+            .update({'history_summary': summary}).eq('id', widget.projectId!);
       }
 
       // Update tokens (assume 50 tokens for summary)
@@ -1593,7 +1650,7 @@ Provide a brief summary:
   }
 
   void setupRealtime(String projectId) {
-    final supabase = Supabase.instance.client;
+    final supabase = _supabase;
 
     // Clean up existing
     _realtimeChannel?.unsubscribe();
@@ -1608,8 +1665,10 @@ Provide a brief summary:
           if (data.isNotEmpty) {
             final project = data.first;
             final planJson = project['plan'];
-            final historyData = List<Map<String, dynamic>>.from(project['history'] ?? []);
-            final conversations = List<Map<String, dynamic>>.from(project['conversations'] ?? []);
+            final historyData =
+                List<Map<String, dynamic>>.from(project['history'] ?? []);
+            final conversations =
+                List<Map<String, dynamic>>.from(project['conversations'] ?? []);
             if (planJson != null) {
               setState(() {
                 currentPlan = ProjectPlan.fromJson(planJson);
@@ -1625,7 +1684,7 @@ Provide a brief summary:
   }
 
   Future<void> checkSubscription() async {
-    final supabase = Supabase.instance.client;
+    final supabase = _supabase;
     final userId = supabase.auth.currentUser?.id;
     if (userId == null) return;
 
@@ -1648,7 +1707,8 @@ Provide a brief summary:
           'total_tokens': premiumLimit,
           'monthly_tokens': premiumLimit,
         });
-        debugPrint('PremiumPlus subscription active: token limit set to $premiumLimit');
+        debugPrint(
+            'PremiumPlus subscription active: token limit set to $premiumLimit');
       } else {
         // Default limits
         const defaultLimit = 10000;
@@ -1695,7 +1755,8 @@ Provide a brief summary:
       if (subscriptionData != null) {
         // Process pending payment using PaymentService
         try {
-          debugPrint('Processing pending subscription payment for user $userId');
+          debugPrint(
+              'Processing pending subscription payment for user $userId');
 
           // Use PaymentService to handle the subscription upgrade
           final result = await paymentService.processSubscriptionUpgrade(
@@ -1706,13 +1767,13 @@ Provide a brief summary:
           if (result['success'] == true) {
             debugPrint('Subscription payment processed successfully');
           } else {
-            debugPrint('Error processing subscription payment: ${result['error']}');
+            debugPrint(
+                'Error processing subscription payment: ${result['error']}');
           }
         } catch (e) {
           debugPrint('Error processing subscription payment: $e');
         }
       }
-
     } catch (e) {
       debugPrint('Error checking subscription: $e');
     }
@@ -1837,7 +1898,7 @@ Provide a brief summary:
       FOR EACH ROW
       EXECUTE FUNCTION increment_version();
     ''';
-    
+
     // Note: Execute this SQL in Supabase dashboard or via custom RPC function
     // For client-side initialization, this is not directly executable
     // Supabase tables should be created server-side for security

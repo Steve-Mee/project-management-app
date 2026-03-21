@@ -10,6 +10,7 @@ import 'package:pma_core/repository/models/project_models.dart';
 import 'package:pma_core/services/app_logger.dart';
 import 'package:pma_core/providers/auth/auth_providers.dart';
 import 'package:pma_core/repository/impl/project_meta_repository.dart';
+import 'package:pma_core/core/providers/supabase_client_provider.dart';
 
 import 'package:pma_core/models/project_meta.dart';
 import 'package:pma_core/auth/permissions.dart';
@@ -60,7 +61,8 @@ final projectByIdCacheTtlProvider = Provider<Duration>((ref) {
 });
 
 /// In-memory cache value for individual projects (key = project ID).
-final projectCacheProvider = StateProvider.family<ProjectModel?, String>((ref, id) => null);
+final projectCacheProvider =
+    StateProvider.family<ProjectModel?, String>((ref, id) => null);
 
 /// Cache timestamp for individual projects (key = project ID).
 final projectCacheTimestampProvider =
@@ -81,73 +83,76 @@ final projectIsCachedProvider = Provider.family<bool, String>((ref, id) {
 /// Provider for project repository with abstract interface
 /// Easy to swap implementations for testing or different backends
 final projectRepositoryProvider = Provider<repo.IProjectRepository>((ref) {
-  return HiveProjectRepository();
+  return HiveProjectRepository(
+    supabaseClient: ref.read(pmaSupabaseClientProvider),
+  );
 });
 
 /// @deprecated Use projectsPaginatedProvider instead for better performance
 /// (kept for backward compatibility)
 /// Provider for projects with caching and TTL
 /// Uses AsyncValue.guard() for robust error handling
-final projectsProvider = AsyncNotifierProvider<ProjectsNotifier, List<ProjectModel>>(
+final projectsProvider =
+    AsyncNotifierProvider<ProjectsNotifier, List<ProjectModel>>(
   ProjectsNotifier.new,
 );
-
 
 /// Cached individual project provider (read-through/write-through with TTL).
 final projectByIdProvider =
     FutureProvider.autoDispose.family<ProjectModel, String>((ref, id) async {
-      final ttl = ref.watch(projectByIdCacheTtlProvider);
-      final cachedProject = ref.read(projectCacheProvider(id));
-      final cachedAt = ref.read(projectCacheTimestampProvider(id));
+  final ttl = ref.watch(projectByIdCacheTtlProvider);
+  final cachedProject = ref.read(projectCacheProvider(id));
+  final cachedAt = ref.read(projectCacheTimestampProvider(id));
 
-      if (cachedProject != null && cachedAt != null) {
-        final age = DateTime.now().difference(cachedAt);
-        if (age <= ttl) {
-          AppLogger.debug(
-            'project_by_id_cache_hit',
-            params: {
-              'projectId': id,
-              'cacheAgeMs': age.inMilliseconds,
-              'ttlMs': ttl.inMilliseconds,
-            },
-          );
-          return cachedProject;
-        }
-      }
-
+  if (cachedProject != null && cachedAt != null) {
+    final age = DateTime.now().difference(cachedAt);
+    if (age <= ttl) {
       AppLogger.debug(
-        'project_by_id_cache_miss',
+        'project_by_id_cache_hit',
         params: {
           'projectId': id,
-          'hadCachedValue': cachedProject != null,
+          'cacheAgeMs': age.inMilliseconds,
+          'ttlMs': ttl.inMilliseconds,
         },
       );
+      return cachedProject;
+    }
+  }
 
-      final repository = ref.watch(projectRepositoryProvider);
-      final project = await repository.getProjectById(id);
+  AppLogger.debug(
+    'project_by_id_cache_miss',
+    params: {
+      'projectId': id,
+      'hadCachedValue': cachedProject != null,
+    },
+  );
 
-      // Defer write-through update to avoid cross-provider writes during build.
-      Future<void>.microtask(() {
-        try {
-          ref.read(projectCacheProvider(id).notifier).state = project;
-          ref.read(projectCacheTimestampProvider(id).notifier).state = DateTime.now();
-        } catch (_) {
-          // Container/provider may already be disposed; ignore late cache writes.
-        }
-      });
+  final repository = ref.watch(projectRepositoryProvider);
+  final project = await repository.getProjectById(id);
 
-      // Keep this family instance alive for the TTL window.
-      final link = ref.keepAlive();
-      final disposeTimer = Timer(ttl, link.close);
-      ref.onDispose(disposeTimer.cancel);
+  // Defer write-through update to avoid cross-provider writes during build.
+  Future<void>.microtask(() {
+    try {
+      ref.read(projectCacheProvider(id).notifier).state = project;
+      ref.read(projectCacheTimestampProvider(id).notifier).state =
+          DateTime.now();
+    } catch (_) {
+      // Container/provider may already be disposed; ignore late cache writes.
+    }
+  });
 
-      return project;
-    });
+  // Keep this family instance alive for the TTL window.
+  final link = ref.keepAlive();
+  final disposeTimer = Timer(ttl, link.close);
+  ref.onDispose(disposeTimer.cancel);
+
+  return project;
+});
 
 /// Family provider for filtered projects (synchronous filtering)
 /// Uses the projectsProvider for data and filters synchronously
-final filteredProjectsProvider =
-    Provider.autoDispose.family<List<ProjectModel>, ProviderProjectFilter>((ref, filter) {
+final filteredProjectsProvider = Provider.autoDispose
+    .family<List<ProjectModel>, ProviderProjectFilter>((ref, filter) {
   final projectsAsync = ref.watch(projectsProvider);
   return projectsAsync.maybeWhen(
     data: (projects) => _applyExtendedProjectFilter(projects, filter),
@@ -157,14 +162,14 @@ final filteredProjectsProvider =
 
 /// Legacy filtered provider retained for callers still using models.ProjectFilter.
 @Deprecated('Use filteredProjectsProvider with provider ProjectFilter instead.')
-final filteredProjectsModelProvider =
-    Provider.autoDispose.family<List<ProjectModel>, models.ProjectFilter>((ref, filter) {
-      final projectsAsync = ref.watch(projectsProvider);
-      return projectsAsync.maybeWhen(
-        data: (projects) => _filterProjects(projects, filter),
-        orElse: () => <ProjectModel>[],
-      );
-    });
+final filteredProjectsModelProvider = Provider.autoDispose
+    .family<List<ProjectModel>, models.ProjectFilter>((ref, filter) {
+  final projectsAsync = ref.watch(projectsProvider);
+  return projectsAsync.maybeWhen(
+    data: (projects) => _filterProjects(projects, filter),
+    orElse: () => <ProjectModel>[],
+  );
+});
 
 /// Fuzzy search implementation for project name, description, and tags
 bool _matchesFuzzySearch(ProjectModel project, String query) {
@@ -176,20 +181,21 @@ bool _matchesFuzzySearch(ProjectModel project, String query) {
 
   // Simple fuzzy search: check if query words are contained in any field
   final queryWords = query.split(' ').where((word) => word.isNotEmpty);
-  
+
   for (final field in searchFields) {
     // Exact match gets highest priority
     if (field.contains(query)) return true;
-    
+
     // Check if all query words are present in the field (fuzzy match)
     if (queryWords.every(field.contains)) return true;
-    
+
     // Check for partial matches (e.g., "proj" matches "project")
     for (final word in queryWords) {
       if (field.contains(word)) return true;
 
       // Allow small typos for single tokens (e.g. "fluter" -> "flutter").
-      final fieldTokens = field.split(RegExp(r'[^a-z0-9]+')).where((token) => token.isNotEmpty);
+      final fieldTokens =
+          field.split(RegExp(r'[^a-z0-9]+')).where((token) => token.isNotEmpty);
       for (final token in fieldTokens) {
         if (_isApproximateTokenMatch(token, word)) {
           return true;
@@ -197,7 +203,7 @@ bool _matchesFuzzySearch(ProjectModel project, String query) {
       }
     }
   }
-  
+
   return false;
 }
 
@@ -237,11 +243,13 @@ int _levenshteinDistance(String source, String target) {
   for (var i = 1; i <= source.length; i++) {
     current[0] = i;
     for (var j = 1; j <= target.length; j++) {
-      final substitutionCost = source.codeUnitAt(i - 1) == target.codeUnitAt(j - 1) ? 0 : 1;
+      final substitutionCost =
+          source.codeUnitAt(i - 1) == target.codeUnitAt(j - 1) ? 0 : 1;
       final deletion = previous[j] + 1;
       final insertion = current[j - 1] + 1;
       final substitution = previous[j - 1] + substitutionCost;
-      current[j] = [deletion, insertion, substitution].reduce((a, b) => a < b ? a : b);
+      current[j] =
+          [deletion, insertion, substitution].reduce((a, b) => a < b ? a : b);
     }
     final swap = previous;
     previous = current;
@@ -255,16 +263,20 @@ int _levenshteinDistance(String source, String target) {
 /// Searches on name, description and tags (case-insensitive, contains or Levenshtein if simple)
 List<ProjectModel> _fuzzySearch(List<ProjectModel> projects, String query) {
   if (query.isEmpty) return projects;
-  
-  AppLogger.debug('Fuzzy search: filtering ${projects.length} projects with query "$query"');
-  final filtered = projects.where((p) => _matchesFuzzySearch(p, query.toLowerCase())).toList();
+
+  AppLogger.debug(
+      'Fuzzy search: filtering ${projects.length} projects with query "$query"');
+  final filtered = projects
+      .where((p) => _matchesFuzzySearch(p, query.toLowerCase()))
+      .toList();
   AppLogger.debug('Fuzzy search: found ${filtered.length} matching projects');
-  
+
   return filtered;
 }
 
 /// Synchronous filtering function for projects using ProjectFilter
-List<ProjectModel> _filterProjects(List<ProjectModel> projects, models.ProjectFilter filter) {
+List<ProjectModel> _filterProjects(
+    List<ProjectModel> projects, models.ProjectFilter filter) {
   var filtered = projects;
 
   // Apply status filter
@@ -284,17 +296,28 @@ List<ProjectModel> _filterProjects(List<ProjectModel> projects, models.ProjectFi
 
   // Apply tags filter (OR logic - project must have at least one of the tags)
   if (filter.tags != null && filter.tags!.isNotEmpty) {
-    filtered = filtered.where((p) => filter.tags!.any((tag) => p.tags.contains(tag))).toList();
+    filtered = filtered
+        .where((p) => filter.tags!.any((tag) => p.tags.contains(tag)))
+        .toList();
   }
 
   // Apply start date filter: include projects with startDate on or after the filter startDate
   if (filter.startDate != null) {
-    filtered = filtered.where((p) => p.startDate != null && p.startDate!.isAfter(filter.startDate!.subtract(const Duration(days: 1)))).toList();
+    filtered = filtered
+        .where((p) =>
+            p.startDate != null &&
+            p.startDate!
+                .isAfter(filter.startDate!.subtract(const Duration(days: 1))))
+        .toList();
   }
 
   // Apply end date filter: include projects with dueDate on or before the filter endDate
   if (filter.endDate != null) {
-    filtered = filtered.where((p) => p.dueDate != null && p.dueDate!.isBefore(filter.endDate!.add(const Duration(days: 1)))).toList();
+    filtered = filtered
+        .where((p) =>
+            p.dueDate != null &&
+            p.dueDate!.isBefore(filter.endDate!.add(const Duration(days: 1))))
+        .toList();
   }
 
   return filtered;
@@ -313,7 +336,8 @@ abstract class FilteredPaginationParams with _$FilteredPaginationParams {
 
 /// Provider for filtered and paginated projects
 /// Combines filtering with pagination for infinite scroll
-final filteredProjectsPaginatedProvider = FutureProvider.autoDispose.family<List<ProjectModel>, FilteredPaginationParams>((ref, params) async {
+final filteredProjectsPaginatedProvider = FutureProvider.autoDispose
+    .family<List<ProjectModel>, FilteredPaginationParams>((ref, params) async {
   final repository = ref.watch(projectRepositoryProvider);
 
   // First get all filtered projects
@@ -337,7 +361,8 @@ final filteredProjectsPaginatedProvider = FutureProvider.autoDispose.family<List
 
 /// Dedicated paginated projects provider
 /// Use this for lists that need efficient loading (dashboard, projects page, etc.)
-final projectsPaginatedProvider = FutureProvider.autoDispose.family<List<ProjectModel>, ProjectPaginationParams>(
+final projectsPaginatedProvider = FutureProvider.autoDispose
+    .family<List<ProjectModel>, ProjectPaginationParams>(
   (ref, params) async {
     if (params.page < 1) {
       throw ArgumentError.value(params.page, 'page', 'must be >= 1');
@@ -421,10 +446,18 @@ abstract class ProjectFilter with _$ProjectFilter {
       ownerId: json['ownerId'] as String?,
       searchQuery: json['searchQuery'] as String?,
       priority: json['priority'] as String?,
-      startDate: json['startDate'] != null ? DateTime.parse(json['startDate'] as String) : null,
-      endDate: json['endDate'] != null ? DateTime.parse(json['endDate'] as String) : null,
-      dueDateStart: json['dueDateStart'] != null ? DateTime.parse(json['dueDateStart'] as String) : null,
-      dueDateEnd: json['dueDateEnd'] != null ? DateTime.parse(json['dueDateEnd'] as String) : null,
+      startDate: json['startDate'] != null
+          ? DateTime.parse(json['startDate'] as String)
+          : null,
+      endDate: json['endDate'] != null
+          ? DateTime.parse(json['endDate'] as String)
+          : null,
+      dueDateStart: json['dueDateStart'] != null
+          ? DateTime.parse(json['dueDateStart'] as String)
+          : null,
+      dueDateEnd: json['dueDateEnd'] != null
+          ? DateTime.parse(json['dueDateEnd'] as String)
+          : null,
       tags: (json['tags'] as List<dynamic>?)?.cast<String>(),
       sortBy: json['sortBy'] as String?,
       sortAscending: json['sortAscending'] as bool? ?? true,
@@ -591,9 +624,10 @@ class ProjectsNotifier extends AsyncNotifier<List<ProjectModel>> {
     state = const AsyncValue.loading();
     state = await AsyncValue.guard(() async {
       final userId = ref.read(authProvider).maybeWhen(
-        data: (auth) => auth.username,
-        orElse: () => 'system',
-      ) ?? 'system'; // Use auth provider
+                data: (auth) => auth.username,
+                orElse: () => 'system',
+              ) ??
+          'system'; // Use auth provider
       await _repository.addProject(
         project,
         userId: userId,
@@ -620,9 +654,10 @@ class ProjectsNotifier extends AsyncNotifier<List<ProjectModel>> {
     state = const AsyncValue.loading();
     state = await AsyncValue.guard(() async {
       final userId = ref.read(authProvider).maybeWhen(
-        data: (auth) => auth.username,
-        orElse: () => 'system',
-      ) ?? 'system'; // Use auth provider
+                data: (auth) => auth.username,
+                orElse: () => 'system',
+              ) ??
+          'system'; // Use auth provider
       await _repository.updateProgress(
         projectId,
         newProgress,
@@ -640,13 +675,15 @@ class ProjectsNotifier extends AsyncNotifier<List<ProjectModel>> {
   }
 
   /// Update project's directory path
-  Future<void> updateDirectoryPath(String projectId, String? directoryPath) async {
+  Future<void> updateDirectoryPath(
+      String projectId, String? directoryPath) async {
     state = const AsyncValue.loading();
     state = await AsyncValue.guard(() async {
       final userId = ref.read(authProvider).maybeWhen(
-        data: (auth) => auth.username,
-        orElse: () => 'system',
-      ) ?? 'system';
+                data: (auth) => auth.username,
+                orElse: () => 'system',
+              ) ??
+          'system';
       await _repository.updateDirectoryPath(
         projectId,
         directoryPath,
@@ -669,9 +706,10 @@ class ProjectsNotifier extends AsyncNotifier<List<ProjectModel>> {
     state = const AsyncValue.loading();
     state = await AsyncValue.guard(() async {
       final userId = ref.read(authProvider).maybeWhen(
-        data: (auth) => auth.username,
-        orElse: () => 'system',
-      ) ?? 'system'; // Use auth provider
+                data: (auth) => auth.username,
+                orElse: () => 'system',
+              ) ??
+          'system'; // Use auth provider
       await _repository.updateProject(
         projectId,
         updatedProject,
@@ -703,7 +741,9 @@ class ProjectsNotifier extends AsyncNotifier<List<ProjectModel>> {
     state = await AsyncValue.guard(_loadInitialPage);
   }
 
-  @Deprecated('Use projectByIdProvider(id) family provider instead. It provides better performance by only loading the specific project when needed and auto-disposing when no longer watched. Migration: replace ref.read(projectsProvider.notifier).getProjectById(id) with ref.watch(projectByIdProvider(id)) or ref.read(projectByIdProvider(id).future). Scheduled removal: v2.1.0.')
+  @Deprecated(
+      'Use projectByIdProvider(id) family provider instead. It provides better performance by only loading the specific project when needed and auto-disposing when no longer watched. Migration: replace ref.read(projectsProvider.notifier).getProjectById(id) with ref.watch(projectByIdProvider(id)) or ref.read(projectByIdProvider(id).future). Scheduled removal: v2.1.0.')
+
   /// Use projectByIdProvider family provider instead for better performance and Riverpod patterns.
   Future<ProjectModel> getProjectById(String id) async {
     final projects = state.maybeWhen(
@@ -721,9 +761,10 @@ class ProjectsNotifier extends AsyncNotifier<List<ProjectModel>> {
     state = const AsyncValue.loading();
     state = await AsyncValue.guard(() async {
       final userId = ref.read(authProvider).maybeWhen(
-        data: (auth) => auth.username,
-        orElse: () => 'system',
-      ) ?? 'system';
+                data: (auth) => auth.username,
+                orElse: () => 'system',
+              ) ??
+          'system';
       await _repository.deleteProject(projectId, userId: userId);
       AppLogger.event('project_deleted', params: {'id': projectId});
       _invalidateProjectCache(projectId);
@@ -737,9 +778,10 @@ class ProjectsNotifier extends AsyncNotifier<List<ProjectModel>> {
     state = const AsyncValue.loading();
     state = await AsyncValue.guard(() async {
       final userId = ref.read(authProvider).maybeWhen(
-        data: (auth) => auth.username,
-        orElse: () => 'system',
-      ) ?? 'system';
+                data: (auth) => auth.username,
+                orElse: () => 'system',
+              ) ??
+          'system';
       await _repository.updatePlanJson(
         projectId,
         planJson,
@@ -789,7 +831,8 @@ final visibleProjectsProvider = Provider<AsyncValue<List<ProjectModel>>>((ref) {
         return AsyncValue.data(projects);
       }
       // fallback: only shared with user
-      final username = authAsync.maybeWhen(data: (auth) => auth.username, orElse: () => null);
+      final username = authAsync.maybeWhen(
+          data: (auth) => auth.username, orElse: () => null);
       return AsyncValue.data(
         projects.where((p) => p.sharedUsers.contains(username ?? '')).toList(),
       );
@@ -798,6 +841,7 @@ final visibleProjectsProvider = Provider<AsyncValue<List<ProjectModel>>>((ref) {
     error: AsyncValue.error,
   );
 });
+
 /// Combined parameters for pagination, filter, and sort
 class ProjectParams {
   final int page;
@@ -816,7 +860,8 @@ class ProjectParams {
 }
 
 // helper used by the combined provider
-List<ProjectModel> _sortProjects(List<ProjectModel> projects, String sortBy, bool ascending) {
+List<ProjectModel> _sortProjects(
+    List<ProjectModel> projects, String sortBy, bool ascending) {
   projects.sort((a, b) {
     int cmp;
     switch (sortBy) {
@@ -862,7 +907,8 @@ String _effectiveSortBy({String? sortBy, String? fallbackSortBy}) {
   return 'name';
 }
 
-bool _effectiveSortAscending({bool? sortAscending, bool? fallbackSortAscending}) {
+bool _effectiveSortAscending(
+    {bool? sortAscending, bool? fallbackSortAscending}) {
   if (sortAscending != null) {
     return sortAscending;
   }
@@ -879,7 +925,8 @@ List<ProjectModel> _applyProviderOnlyFilterFields(
   var filtered = projects;
 
   if (filter.ownerId != null && filter.ownerId!.isNotEmpty) {
-    filtered = filtered.where((p) => p.sharedUsers.contains(filter.ownerId!)).toList();
+    filtered =
+        filtered.where((p) => p.sharedUsers.contains(filter.ownerId!)).toList();
   }
 
   if (filter.requiredTags != null && filter.requiredTags!.isNotEmpty) {
@@ -916,24 +963,27 @@ List<ProjectModel> _applyExtendedProjectFilter(
 
   if (includeRepositoryFields) {
     filtered = _filterProjects(filtered, filter.toRepositoryFilter());
-    filtered = _applyExtraConditions(filtered, filter.extraConditions ?? const []);
+    filtered =
+        _applyExtraConditions(filtered, filter.extraConditions ?? const []);
   }
 
   filtered = _applyProviderOnlyFilterFields(filtered, filter);
 
   final resolvedSortBy =
       _effectiveSortBy(sortBy: filter.sortBy, fallbackSortBy: fallbackSortBy);
-  final resolvedSortAscending = (filter.sortBy != null && filter.sortBy!.isNotEmpty)
-      ? filter.sortAscending
-      : _effectiveSortAscending(
-          fallbackSortAscending: fallbackSortAscending,
-        );
+  final resolvedSortAscending =
+      (filter.sortBy != null && filter.sortBy!.isNotEmpty)
+          ? filter.sortAscending
+          : _effectiveSortAscending(
+              fallbackSortAscending: fallbackSortAscending,
+            );
 
   return _sortProjects(filtered, resolvedSortBy, resolvedSortAscending);
 }
 
 /// Combined projects provider with pagination, filtering and sorting
-final projectsCombinedProvider = FutureProvider.autoDispose.family<List<ProjectModel>, ProjectParams>(
+final projectsCombinedProvider =
+    FutureProvider.autoDispose.family<List<ProjectModel>, ProjectParams>(
   (ref, params) async {
     final repository = ref.watch(projectRepositoryProvider);
 
@@ -973,8 +1023,11 @@ class ProjectFilterNotifier extends StateNotifier<ProviderProjectFilter> {
   RealtimeChannel? _channel;
   StreamSubscription? _channelSubscription;
   List<ProviderProjectFilter> _recentFilters = [];
+  final SupabaseClient _supabaseClient;
 
-  ProjectFilterNotifier() : super(const ProjectFilter()) {
+  ProjectFilterNotifier({required SupabaseClient supabaseClient})
+      : _supabaseClient = supabaseClient,
+        super(const ProjectFilter()) {
     _loadFilter();
     _loadRecentFilters();
     _initializeRealtime();
@@ -982,18 +1035,19 @@ class ProjectFilterNotifier extends StateNotifier<ProviderProjectFilter> {
 
   Future<void> _initializeRealtime() async {
     try {
-      final supabase = Supabase.instance.client;
-      _channel = supabase.channel(_channelName);
+      _channel = _supabaseClient.channel(_channelName);
 
-      _channel!.onBroadcast(
-        event: 'filter_change',
-        callback: (payload, [_]) {
-          _handleRealtimeFilterChange(payload);
-        },
-      ).subscribe();
+      _channel!
+          .onBroadcast(
+            event: 'filter_change',
+            callback: (payload, [_]) {
+              _handleRealtimeFilterChange(payload);
+            },
+          )
+          .subscribe();
 
       // Track our presence for collaborative features
-      final user = supabase.auth.currentUser;
+      final user = _supabaseClient.auth.currentUser;
       if (user != null) {
         await _channel!.track({
           'user_id': user.id,
@@ -1010,12 +1064,12 @@ class ProjectFilterNotifier extends StateNotifier<ProviderProjectFilter> {
     // that listens to this notifier and shows UI notifications
   }
 
-  Future<void> _broadcastFilterChange(String changeType, {String? viewName}) async {
+  Future<void> _broadcastFilterChange(String changeType,
+      {String? viewName}) async {
     if (_channel == null) return;
 
     try {
-      final supabase = Supabase.instance.client;
-      final user = supabase.auth.currentUser;
+      final user = _supabaseClient.auth.currentUser;
       if (user == null) return;
 
       await _channel!.sendBroadcastMessage(
@@ -1061,7 +1115,8 @@ class ProjectFilterNotifier extends StateNotifier<ProviderProjectFilter> {
       final jsonList = box.get(_recentFiltersKey);
       if (jsonList != null && jsonList is List) {
         _recentFilters = jsonList
-            .map((json) => ProjectFilter.fromJson(Map<String, dynamic>.from(json)))
+            .map((json) =>
+                ProjectFilter.fromJson(Map<String, dynamic>.from(json)))
             .toList();
       }
     } catch (e) {
@@ -1169,63 +1224,66 @@ class ProjectFilterNotifier extends StateNotifier<ProviderProjectFilter> {
     }
   }
 
-  Future<void> bulkUpdatePriority(Set<String> projectIds, String priority, WidgetRef ref) async {
+  Future<void> bulkUpdatePriority(
+      Set<String> projectIds, String priority, WidgetRef ref) async {
     // Migrated to use projectByIdProvider for consistency with Riverpod patterns.
     final repository = ref.read(projectRepositoryProvider);
     for (final id in projectIds) {
       final project = await ref.read(projectByIdProvider(id).future);
       final updated = ProjectModel(
-          id: project.id,
-          name: project.name,
-          progress: project.progress,
-          directoryPath: project.directoryPath,
-          status: project.status,
-          description: project.description,
-          category: project.category,
-          aiAssistant: project.aiAssistant,
-          planJson: project.planJson,
-          helpLevel: project.helpLevel,
-          complexity: project.complexity,
-          history: project.history,
-          sharedUsers: project.sharedUsers,
-          sharedGroups: project.sharedGroups,
-          priority: priority,
-          startDate: project.startDate,
-          dueDate: project.dueDate,
-        );
-        await repository.updateProject(id, updated);
+        id: project.id,
+        name: project.name,
+        progress: project.progress,
+        directoryPath: project.directoryPath,
+        status: project.status,
+        description: project.description,
+        category: project.category,
+        aiAssistant: project.aiAssistant,
+        planJson: project.planJson,
+        helpLevel: project.helpLevel,
+        complexity: project.complexity,
+        history: project.history,
+        sharedUsers: project.sharedUsers,
+        sharedGroups: project.sharedGroups,
+        priority: priority,
+        startDate: project.startDate,
+        dueDate: project.dueDate,
+      );
+      await repository.updateProject(id, updated);
     }
   }
 
-  Future<void> bulkUpdateStatus(Set<String> projectIds, String status, WidgetRef ref) async {
+  Future<void> bulkUpdateStatus(
+      Set<String> projectIds, String status, WidgetRef ref) async {
     // Migrated to use projectByIdProvider for consistency with Riverpod patterns.
     final repository = ref.read(projectRepositoryProvider);
     for (final id in projectIds) {
       final project = await ref.read(projectByIdProvider(id).future);
       final updated = ProjectModel(
-          id: project.id,
-          name: project.name,
-          progress: project.progress,
-          directoryPath: project.directoryPath,
-          status: status,
-          description: project.description,
-          category: project.category,
-          aiAssistant: project.aiAssistant,
-          planJson: project.planJson,
-          helpLevel: project.helpLevel,
-          complexity: project.complexity,
-          history: project.history,
-          sharedUsers: project.sharedUsers,
-          sharedGroups: project.sharedGroups,
-          priority: project.priority,
-          startDate: project.startDate,
-          dueDate: project.dueDate,
-        );
-        await repository.updateProject(id, updated);
+        id: project.id,
+        name: project.name,
+        progress: project.progress,
+        directoryPath: project.directoryPath,
+        status: status,
+        description: project.description,
+        category: project.category,
+        aiAssistant: project.aiAssistant,
+        planJson: project.planJson,
+        helpLevel: project.helpLevel,
+        complexity: project.complexity,
+        history: project.history,
+        sharedUsers: project.sharedUsers,
+        sharedGroups: project.sharedGroups,
+        priority: project.priority,
+        startDate: project.startDate,
+        dueDate: project.dueDate,
+      );
+      await repository.updateProject(id, updated);
     }
   }
 
-  Future<void> bulkAssignUser(Set<String> projectIds, String username, WidgetRef ref) async {
+  Future<void> bulkAssignUser(
+      Set<String> projectIds, String username, WidgetRef ref) async {
     final repository = ref.read(projectRepositoryProvider);
     for (final id in projectIds) {
       await repository.addSharedUser(id, username);
@@ -1236,13 +1294,18 @@ class ProjectFilterNotifier extends StateNotifier<ProviderProjectFilter> {
 /// Persistent project filter provider
 final persistentProjectFilterProvider =
     StateNotifierProvider<ProjectFilterNotifier, ProviderProjectFilter>((ref) {
-  return ProjectFilterNotifier();
+  return ProjectFilterNotifier(
+    supabaseClient: ref.read(pmaSupabaseClientProvider),
+  );
 });
 
 /// Provider for saved project filter views loaded from Hive box 'saved_views'
 /// Provider for realtime filter change notifications
-final filterChangeNotificationsProvider = StateNotifierProvider<FilterNotificationNotifier, List<FilterChangeNotification>>((ref) {
-  return FilterNotificationNotifier();
+final filterChangeNotificationsProvider = StateNotifierProvider<
+    FilterNotificationNotifier, List<FilterChangeNotification>>((ref) {
+  return FilterNotificationNotifier(
+    supabaseClient: ref.read(pmaSupabaseClientProvider),
+  );
 });
 
 /// Notification model for filter changes
@@ -1285,29 +1348,34 @@ class FilterChangeNotification {
 }
 
 /// Notifier for managing filter change notifications
-class FilterNotificationNotifier extends StateNotifier<List<FilterChangeNotification>> {
+class FilterNotificationNotifier
+    extends StateNotifier<List<FilterChangeNotification>> {
   static const String _channelName = 'project_filters';
   static const Duration _notificationTimeout = Duration(seconds: 30);
 
   RealtimeChannel? _channel;
   Timer? _cleanupTimer;
+  final SupabaseClient _supabaseClient;
 
-  FilterNotificationNotifier() : super([]) {
+  FilterNotificationNotifier({required SupabaseClient supabaseClient})
+      : _supabaseClient = supabaseClient,
+        super([]) {
     _initializeRealtime();
     _startCleanupTimer();
   }
 
   Future<void> _initializeRealtime() async {
     try {
-      final supabase = Supabase.instance.client;
-      _channel = supabase.channel(_channelName);
+      _channel = _supabaseClient.channel(_channelName);
 
-      _channel!.onBroadcast(
-        event: 'filter_change',
-        callback: (payload, [_]) {
-          _handleFilterChangeNotification(payload);
-        },
-      ).subscribe();
+      _channel!
+          .onBroadcast(
+            event: 'filter_change',
+            callback: (payload, [_]) {
+              _handleFilterChangeNotification(payload);
+            },
+          )
+          .subscribe();
     } catch (e) {
       AppLogger.instance.e('Failed to initialize notification realtime: $e');
     }
@@ -1322,8 +1390,7 @@ class FilterNotificationNotifier extends StateNotifier<List<FilterChangeNotifica
     if (userId == null || changeType == null) return;
 
     // Don't show notifications for our own changes
-    final supabase = Supabase.instance.client;
-    final currentUser = supabase.auth.currentUser;
+    final currentUser = _supabaseClient.auth.currentUser;
     if (currentUser?.id == userId) return;
 
     final notification = FilterChangeNotification(
@@ -1339,7 +1406,8 @@ class FilterNotificationNotifier extends StateNotifier<List<FilterChangeNotifica
 
   void markAsRead(String notificationId) {
     state = state.map((notification) {
-      if ('${notification.userId}_${notification.timestamp.millisecondsSinceEpoch}' == notificationId) {
+      if ('${notification.userId}_${notification.timestamp.millisecondsSinceEpoch}' ==
+          notificationId) {
         return notification.copyWith(isRead: true);
       }
       return notification;
@@ -1347,7 +1415,9 @@ class FilterNotificationNotifier extends StateNotifier<List<FilterChangeNotifica
   }
 
   void dismissNotification(String notificationId) {
-    state = state.where((notification) => notification.id != notificationId).toList();
+    state = state
+        .where((notification) => notification.id != notificationId)
+        .toList();
   }
 
   void clearAll() {
@@ -1357,7 +1427,9 @@ class FilterNotificationNotifier extends StateNotifier<List<FilterChangeNotifica
   void _startCleanupTimer() {
     _cleanupTimer = Timer.periodic(_notificationTimeout, (_) {
       final cutoff = DateTime.now().subtract(_notificationTimeout);
-      state = state.where((notification) => notification.timestamp.isAfter(cutoff)).toList();
+      state = state
+          .where((notification) => notification.timestamp.isAfter(cutoff))
+          .toList();
     });
   }
 
@@ -1368,18 +1440,23 @@ class FilterNotificationNotifier extends StateNotifier<List<FilterChangeNotifica
     super.dispose();
   }
 }
+
 /// Provider for selected project IDs in bulk selection mode
 final selectedProjectIdsProvider = StateProvider<Set<String>>((ref) => {});
 
 /// Provider for bulk selection mode state
 final isSelectionModeProvider = StateProvider<bool>((ref) => false);
+
 class SavedViewsNotifier extends StateNotifier<List<ProjectFilter>> {
   static const String _boxName = 'saved_views';
   static const String _channelName = 'project_filters';
 
   RealtimeChannel? _channel;
+  final SupabaseClient _supabaseClient;
 
-  SavedViewsNotifier() : super([]) {
+  SavedViewsNotifier({required SupabaseClient supabaseClient})
+      : _supabaseClient = supabaseClient,
+        super([]) {
     _loadViews();
     syncFromSupabase();
     _initializeRealtime();
@@ -1392,7 +1469,8 @@ class SavedViewsNotifier extends StateNotifier<List<ProjectFilter>> {
       for (final key in box.keys) {
         final json = box.get(key);
         if (json != null && json is Map) {
-          final filter = ProjectFilter.fromJson(Map<String, dynamic>.from(json));
+          final filter =
+              ProjectFilter.fromJson(Map<String, dynamic>.from(json));
           if (filter.isSaved && filter.viewName != null) {
             views.add(filter);
           }
@@ -1420,11 +1498,10 @@ class SavedViewsNotifier extends StateNotifier<List<ProjectFilter>> {
 
   Future<void> syncFromSupabase() async {
     try {
-      final supabase = Supabase.instance.client;
-      final user = supabase.auth.currentUser;
+      final user = _supabaseClient.auth.currentUser;
       if (user == null) return;
 
-      final response = await supabase
+      final response = await _supabaseClient
           .from('user_views')
           .select('view_name, filter_data')
           .eq('user_id', user.id);
@@ -1433,14 +1510,15 @@ class SavedViewsNotifier extends StateNotifier<List<ProjectFilter>> {
       for (final row in response) {
         final filterData = row['filter_data'] as Map<String, dynamic>;
         final filter = ProjectFilter.fromJson(filterData);
-        final viewWithName = filter.copyWith(viewName: row['view_name'], isSaved: true);
+        final viewWithName =
+            filter.copyWith(viewName: row['view_name'], isSaved: true);
         remoteViews.add(viewWithName);
       }
 
       // Merge with local views (remote takes precedence)
-      final localViews = Map<String, ProjectFilter>.fromEntries(
-        state.where((v) => v.viewName != null).map((v) => MapEntry(v.viewName!, v))
-      );
+      final localViews = Map<String, ProjectFilter>.fromEntries(state
+          .where((v) => v.viewName != null)
+          .map((v) => MapEntry(v.viewName!, v)));
 
       for (final remoteView in remoteViews) {
         localViews[remoteView.viewName!] = remoteView;
@@ -1455,17 +1533,18 @@ class SavedViewsNotifier extends StateNotifier<List<ProjectFilter>> {
 
   Future<void> _initializeRealtime() async {
     try {
-      final supabase = Supabase.instance.client;
-      _channel = supabase.channel(_channelName);
+      _channel = _supabaseClient.channel(_channelName);
 
       // Listen for filter changes from other users
-      _channel!.onBroadcast(
-        event: 'filter_change',
-        callback: (payload, [_]) {
-          // This will trigger a refresh of saved views if needed
-          _handleRealtimeFilterChange(payload);
-        },
-      ).subscribe();
+      _channel!
+          .onBroadcast(
+            event: 'filter_change',
+            callback: (payload, [_]) {
+              // This will trigger a refresh of saved views if needed
+              _handleRealtimeFilterChange(payload);
+            },
+          )
+          .subscribe();
     } catch (e) {
       AppLogger.instance.e('Failed to initialize saved views realtime: $e');
     }
@@ -1485,11 +1564,10 @@ class SavedViewsNotifier extends StateNotifier<List<ProjectFilter>> {
 
   Future<void> _syncToSupabase(ProjectFilter filter) async {
     try {
-      final supabase = Supabase.instance.client;
-      final user = supabase.auth.currentUser;
+      final user = _supabaseClient.auth.currentUser;
       if (user == null || filter.viewName == null) return;
 
-      await supabase.from('user_views').upsert({
+      await _supabaseClient.from('user_views').upsert({
         'user_id': user.id,
         'view_name': filter.viewName,
         'filter_data': filter.toJson(),
@@ -1519,10 +1597,9 @@ class SavedViewsNotifier extends StateNotifier<List<ProjectFilter>> {
 
     // Sync deletion to Supabase
     try {
-      final supabase = Supabase.instance.client;
-      final user = supabase.auth.currentUser;
+      final user = _supabaseClient.auth.currentUser;
       if (user != null) {
-        await supabase
+        await _supabaseClient
             .from('user_views')
             .delete()
             .eq('user_id', user.id)
@@ -1533,12 +1610,12 @@ class SavedViewsNotifier extends StateNotifier<List<ProjectFilter>> {
     }
   }
 
-  Future<void> _broadcastViewChange(String changeType, {String? viewName}) async {
+  Future<void> _broadcastViewChange(String changeType,
+      {String? viewName}) async {
     if (_channel == null) return;
 
     try {
-      final supabase = Supabase.instance.client;
-      final user = supabase.auth.currentUser;
+      final user = _supabaseClient.auth.currentUser;
       if (user == null) return;
 
       await _channel!.sendBroadcastMessage(
@@ -1557,8 +1634,11 @@ class SavedViewsNotifier extends StateNotifier<List<ProjectFilter>> {
 }
 
 /// Provider for saved project views
-final savedProjectViewsProvider = StateNotifierProvider<SavedViewsNotifier, List<ProjectFilter>>(
-  (ref) => SavedViewsNotifier(),
+final savedProjectViewsProvider =
+    StateNotifierProvider<SavedViewsNotifier, List<ProjectFilter>>(
+  (ref) => SavedViewsNotifier(
+    supabaseClient: ref.read(pmaSupabaseClientProvider),
+  ),
 );
 
 /// Provider for dashboard views (only views marked for dashboard)

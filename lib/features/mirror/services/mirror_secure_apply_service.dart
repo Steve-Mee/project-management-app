@@ -222,7 +222,7 @@ class MirrorSecureApplyService {
     const eventApplyException = 'apply_exception';
     const eventApplyCompleted = 'apply_completed';
 
-    final actorUserId = _client.auth.currentUser?.id;
+    final actorUserId = supabaseClient.auth.currentUser?.id;
     final sourceFingerprint = _fingerprintFiles(files);
 
     await _writeApplyAuditEvent(
