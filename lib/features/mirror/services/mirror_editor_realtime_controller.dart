@@ -9,24 +9,23 @@ class MirrorEditorRealtimeController {
     required this.projectId,
     required this.taskId,
     required this.sessionKey,
-    this.supabaseClient,
+    required this.supabaseClient,
     MirrorRealtimeService? realtimeService,
     MirrorRealtimeEventSetDeduplicator? deduplicator,
-  }) : _realtimeService =
-           realtimeService ??
-           MirrorRealtimeService(
-             projectId: projectId,
-             taskId: taskId,
-             sessionKey: sessionKey,
-             supabaseClient: supabaseClient,
-           ),
-       _realtimeDeduplicator =
-           deduplicator ?? MirrorRealtimeEventSetDeduplicator();
+  })  : _realtimeService = realtimeService ??
+            MirrorRealtimeService(
+              projectId: projectId,
+              taskId: taskId,
+              sessionKey: sessionKey,
+              supabaseClient: supabaseClient,
+            ),
+        _realtimeDeduplicator =
+            deduplicator ?? MirrorRealtimeEventSetDeduplicator();
 
   final String projectId;
   final String taskId;
   final String sessionKey;
-  final SupabaseClient? supabaseClient;
+  final SupabaseClient supabaseClient;
   final MirrorRealtimeService _realtimeService;
   final MirrorRealtimeEventSetDeduplicator _realtimeDeduplicator;
 
@@ -63,7 +62,7 @@ class MirrorEditorRealtimeController {
 
   void dispose() {
     if (_aiOutputChannel != null) {
-      (supabaseClient ?? Supabase.instance.client).removeChannel(_aiOutputChannel!);
+      supabaseClient.removeChannel(_aiOutputChannel!);
     }
     _debugRealtimeSubscription?.cancel();
     _realtimeService.dispose();
@@ -74,14 +73,13 @@ class MirrorEditorRealtimeController {
     required void Function(List<String> lines) onFlush,
     required String Function(String status) statusLineLabel,
   }) {
-    final resolvedClient = supabaseClient ?? Supabase.instance.client;
-    final currentUserId = resolvedClient.auth.currentUser?.id;
+    final currentUserId = supabaseClient.auth.currentUser?.id;
     if (currentUserId == null || currentUserId.isEmpty) {
       return;
     }
 
     final topic = 'mirror_ai_sessions:$currentUserId:$projectId:$taskId';
-    final channel = resolvedClient.channel('mirror-ai-output-$topic');
+    final channel = supabaseClient.channel('mirror-ai-output-$topic');
 
     _aiOutputChannel = channel
         .onBroadcast(

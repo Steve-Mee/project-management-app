@@ -11,6 +11,7 @@ import '../ab_testing_service.dart';
 import 'mirror_feature_flag_provider.dart';
 import 'mirror_offline_cache_provider.dart';
 import 'mirror_premium_provider.dart';
+import 'supabase_client_provider.dart';
 export 'mirror_premium_provider.dart';
 
 class MirrorOfflineWarningKeys {
@@ -196,6 +197,14 @@ class MirrorNotifier extends Notifier<MirrorState> {
 
     await refreshPremiumFromMetadata();
   }
+
+  User? _currentSupabaseUserOrNull() {
+    try {
+      return ref.read(supabaseClientProvider).auth.currentUser;
+    } catch (_) {
+      return null;
+    }
+  }
 }
 
 final mirrorProvider =
@@ -207,7 +216,12 @@ final mirrorOfflineWarningProvider = StateProvider<String?>((ref) => null);
 
 final mirrorTeamModeVariantProvider = FutureProvider<String>((ref) async {
   final warningNotifier = ref.read(mirrorOfflineWarningProvider.notifier);
-  final user = _currentSupabaseUserOrNull();
+  User? user;
+  try {
+    user = ref.read(supabaseClientProvider).auth.currentUser;
+  } catch (_) {
+    user = null;
+  }
   final userId = user?.id ?? 'anonymous';
 
   try {
@@ -235,7 +249,12 @@ final mirrorTeamModeVariantProvider = FutureProvider<String>((ref) async {
 
 final mirrorRunnerModeVariantProvider = FutureProvider<String>((ref) async {
   final warningNotifier = ref.read(mirrorOfflineWarningProvider.notifier);
-  final user = _currentSupabaseUserOrNull();
+  User? user;
+  try {
+    user = ref.read(supabaseClientProvider).auth.currentUser;
+  } catch (_) {
+    user = null;
+  }
   final userId = user?.id ?? 'anonymous';
 
   try {
@@ -260,11 +279,3 @@ final mirrorRunnerModeVariantProvider = FutureProvider<String>((ref) async {
     return 'cloud';
   }
 });
-
-User? _currentSupabaseUserOrNull() {
-  try {
-    return Supabase.instance.client.auth.currentUser;
-  } catch (_) {
-    return null;
-  }
-}

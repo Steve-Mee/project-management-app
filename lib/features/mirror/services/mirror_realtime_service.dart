@@ -9,7 +9,7 @@ class MirrorRealtimeService {
     required this.projectId,
     required this.taskId,
     required this.sessionKey,
-    this.supabaseClient,
+    required this.supabaseClient,
     this.maxLiveOutputLines = 500,
     this.maxRealtimeCharsPerLine = 500,
     this.maxRealtimeLinesPerEvent = 50,
@@ -21,7 +21,7 @@ class MirrorRealtimeService {
   final String projectId;
   final String taskId;
   final String sessionKey;
-  final SupabaseClient? supabaseClient;
+  final SupabaseClient supabaseClient;
   final int maxLiveOutputLines;
   final int maxRealtimeCharsPerLine;
   final int maxRealtimeLinesPerEvent;
@@ -74,7 +74,8 @@ class MirrorRealtimeService {
           'sessionKey': sessionKey,
           'dedupKey': dedupKey,
           'updatedAt': updatedAt?.toIso8601String(),
-          'lastProcessedUpdatedAt': _lastProcessedRealtimeUpdatedAt?.toIso8601String(),
+          'lastProcessedUpdatedAt':
+              _lastProcessedRealtimeUpdatedAt?.toIso8601String(),
           'pendingLines': _pendingRealtimeLines.length,
         },
       );
@@ -176,8 +177,7 @@ class MirrorRealtimeService {
   bool _isRecordInRealtimeScope(Map<String, dynamic> record) {
     String? currentUserId;
     try {
-      final client = supabaseClient ?? Supabase.instance.client;
-      currentUserId = client.auth.currentUser?.id;
+      currentUserId = supabaseClient.auth.currentUser?.id;
     } catch (_) {
       return false;
     }
@@ -260,7 +260,8 @@ RealtimePayloadGuardResult guardRealtimeEventLines({
   }
 
   var wasTruncated = false;
-  final limit = lines.length > maxLinesPerEvent ? maxLinesPerEvent : lines.length;
+  final limit =
+      lines.length > maxLinesPerEvent ? maxLinesPerEvent : lines.length;
   if (lines.length > maxLinesPerEvent) {
     wasTruncated = true;
   }
@@ -320,7 +321,8 @@ RealtimePayloadGuardResult mergeRealtimeDebounceLinesWithCharCap({
       continue;
     }
 
-    final maxCharsForLine = remaining < maxCharsPerLine ? remaining : maxCharsPerLine;
+    final maxCharsForLine =
+        remaining < maxCharsPerLine ? remaining : maxCharsPerLine;
     if (maxCharsForLine > 0) {
       final truncatedLine = truncateRealtimeLine(line, maxCharsForLine);
       merged.add(truncatedLine);
@@ -336,9 +338,8 @@ RealtimePayloadGuardResult mergeRealtimeDebounceLinesWithCharCap({
       charsBeforeLast += merged[index].length;
     }
     final remainingForLast = maxTotalChars - charsBeforeLast;
-    final maxCharsForLast = remainingForLast < maxCharsPerLine
-        ? remainingForLast
-        : maxCharsPerLine;
+    final maxCharsForLast =
+        remainingForLast < maxCharsPerLine ? remainingForLast : maxCharsPerLine;
     merged[merged.length - 1] = ensureRealtimeTruncationSuffix(
       merged.last,
       maxCharsForLast,
@@ -373,7 +374,8 @@ String ensureRealtimeTruncationSuffix(String line, int maxCharsPerLine) {
         ? line
         : truncateRealtimeLine(line, maxCharsPerLine);
   }
-  return truncateRealtimeLine('$line $realtimeTruncationSuffix', maxCharsPerLine);
+  return truncateRealtimeLine(
+      '$line $realtimeTruncationSuffix', maxCharsPerLine);
 }
 
 DateTime? parseRealtimeRecordUpdatedAt(dynamic rawUpdatedAt) {
@@ -389,8 +391,9 @@ String buildRealtimeRecordDedupKey({
   required Map<String, dynamic> record,
   required List<String> outputLines,
 }) {
-  final eventId =
-      record['event_id']?.toString() ?? record['id']?.toString() ?? record['version_id']?.toString();
+  final eventId = record['event_id']?.toString() ??
+      record['id']?.toString() ??
+      record['version_id']?.toString();
   if (eventId != null && eventId.trim().isNotEmpty) {
     return 'event:$eventId';
   }
@@ -443,8 +446,7 @@ class MirrorRealtimeEventSetDeduplicator {
   }
 
   String? _buildSetKey(Map<String, dynamic> record) {
-    final rawEventId =
-        record['event_id']?.toString() ??
+    final rawEventId = record['event_id']?.toString() ??
         record['id']?.toString() ??
         record['version_id']?.toString();
 

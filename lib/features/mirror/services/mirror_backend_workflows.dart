@@ -1,4 +1,5 @@
 import '../mirror_signed_inputs_backend.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'mirror_audit_history_service.dart';
 import 'mirror_patch_service.dart';
 import 'mirror_prompt_builder_service.dart';
@@ -32,8 +33,6 @@ class MirrorBackendWorkflows {
   const MirrorBackendWorkflows();
 
   static const MirrorPatchService _patchService = MirrorPatchService();
-  static final MirrorSecureApplyService _secureApplyService =
-      MirrorSecureApplyService();
   static const MirrorAuditHistoryService _auditHistoryService =
       MirrorAuditHistoryService();
   static const MirrorPromptBuilderService _promptBuilderService =
@@ -177,12 +176,15 @@ class MirrorBackendWorkflows {
   }
 
   Future<ApplySecurityArtifacts> prepareSignedInputAndBackup({
+    required SupabaseClient client,
     required ProjectContext context,
     Duration signedUrlTtl = MirrorSecureApplyService.defaultSignedUrlTtl,
-    String signedInputBucket = MirrorSecureApplyService.defaultSignedInputBucket,
+    String signedInputBucket =
+        MirrorSecureApplyService.defaultSignedInputBucket,
     String backupBucket = MirrorSecureApplyService.defaultBackupBucket,
   }) {
-    return _secureApplyService.prepareSignedInputAndBackup(
+    final secureApplyService = MirrorSecureApplyService(supabaseClient: client);
+    return secureApplyService.prepareSignedInputAndBackup(
       projectId: context.projectId,
       taskId: context.taskId,
       files: context.files,
@@ -193,16 +195,19 @@ class MirrorBackendWorkflows {
   }
 
   Future<ApplyResult> secureApply({
+    required SupabaseClient client,
     required String prompt,
     required ProjectContext context,
     required String mode,
     required Future<ApplyResult> Function(ApplySecurityArtifacts artifacts)
         onApply,
     Duration signedUrlTtl = MirrorSecureApplyService.defaultSignedUrlTtl,
-    String signedInputBucket = MirrorSecureApplyService.defaultSignedInputBucket,
+    String signedInputBucket =
+        MirrorSecureApplyService.defaultSignedInputBucket,
     String backupBucket = MirrorSecureApplyService.defaultBackupBucket,
   }) async {
-    final result = await _secureApplyService.secureApply(
+    final secureApplyService = MirrorSecureApplyService(supabaseClient: client);
+    final result = await secureApplyService.secureApply(
       prompt: prompt,
       projectId: context.projectId,
       taskId: context.taskId,

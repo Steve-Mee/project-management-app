@@ -61,14 +61,9 @@ class MirrorSecureApplyResult {
 }
 
 class MirrorSecureApplyService {
-  MirrorSecureApplyService({this.supabaseClient});
+  MirrorSecureApplyService({required this.supabaseClient});
 
-  /// Optional injected client; falls back to [Supabase.instance.client] when
-  /// null so that existing const-free instantiation sites continue to work.
-  /// Pass an explicit client (or a mock) to improve testability.
-  final SupabaseClient? supabaseClient;
-
-  SupabaseClient get _client => supabaseClient ?? Supabase.instance.client;
+  final SupabaseClient supabaseClient;
 
   // Threat model: apply-artifact signed URLs can be replayed if leaked from
   // logs, browser history, or intermediary telemetry. Keep expiry short by
@@ -91,7 +86,7 @@ class MirrorSecureApplyService {
     String signedInputBucket = defaultSignedInputBucket,
     String backupBucket = defaultBackupBucket,
   }) async {
-    final client = _client;
+    final client = supabaseClient;
     final authUserId = client.auth.currentUser?.id;
     final backupId = _buildBackupId(projectId: projectId, taskId: taskId);
     final signedInputUrls = <String, String>{};
@@ -316,7 +311,8 @@ class MirrorSecureApplyService {
     return MirrorSecureApplyResult(
       success: false,
       appliedFiles: result.appliedFiles,
-      message: '${result.message ?? 'Apply failed.'} Backup ID: ${artifacts.backupId}',
+      message:
+          '${result.message ?? 'Apply failed.'} Backup ID: ${artifacts.backupId}',
     );
   }
 }

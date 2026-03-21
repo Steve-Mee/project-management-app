@@ -31,7 +31,7 @@ class MirrorVoicePromptBar extends StatefulWidget {
 
   /// Called with the trimmed draft text when the user explicitly presses
   /// "Apply to editor". The parent should insert the string into the session.
-  final void Function(String text) onApplyToEditor;
+  final Future<bool> Function(String text) onApplyToEditor;
 
   /// Optional: notified each time listening starts or stops.
   final void Function({required bool isListening})? onListeningChanged;
@@ -48,6 +48,7 @@ class MirrorVoicePromptBar extends StatefulWidget {
 class _MirrorVoicePromptBarState extends State<MirrorVoicePromptBar> {
   final stt.SpeechToText _speech = stt.SpeechToText();
   bool _isListening = false;
+  bool _isApplyingDraft = false;
   String _draft = '';
 
   AppLocalizations get _l10n => AppLocalizations.of(context)!;
@@ -111,11 +112,28 @@ class _MirrorVoicePromptBarState extends State<MirrorVoicePromptBar> {
 
   // ── Actions from the draft card ───────────────────────────────────────────
 
-  void _applyToEditor() {
+  Future<void> _applyToEditor() async {
+    if (_isApplyingDraft) {
+      return;
+    }
+
     final text = _draft.trim();
-    if (text.isEmpty) return;
-    widget.onApplyToEditor(text);
-    setState(() => _draft = '');
+    if (text.isEmpty) {
+      return;
+    }
+
+    setState(() => _isApplyingDraft = true);
+    final applied = await widget.onApplyToEditor(text);
+    if (!mounted) {
+      return;
+    }
+
+    setState(() {
+      _isApplyingDraft = false;
+      if (applied) {
+        _draft = '';
+      }
+    });
   }
 
   void _clearDraft() => setState(() => _draft = '');
@@ -136,7 +154,7 @@ class _MirrorVoicePromptBarState extends State<MirrorVoicePromptBar> {
           const SizedBox(height: 8),
           _VoiceDraftCard(
             draft: _draft,
-            isDisabled: widget.isDisabled,
+            isDisabled: widget.isDisabled || _isApplyingDraft,
             onApply: _applyToEditor,
             onClear: _clearDraft,
           ),
@@ -183,7 +201,7 @@ class _VoiceDraftCard extends StatelessWidget {
 
   final String draft;
   final bool isDisabled;
-  final VoidCallback onApply;
+  final Future<void> Function() onApply;
   final VoidCallback onClear;
 
   @override
@@ -207,7 +225,8 @@ class _VoiceDraftCard extends StatelessWidget {
               Icon(Icons.record_voice_over_outlined,
                   size: 16, color: cs.primary),
               const SizedBox(width: 6),
-              Text('Voice draft — review before applying', style: tt.labelLarge),
+              Text('Voice draft — review before applying',
+                  style: tt.labelLarge),
             ],
           ),
           const SizedBox(height: 6),

@@ -82,7 +82,7 @@ final mirrorBackendProvider = FutureProvider<MirrorComputeBackend>((ref) async {
     return ref.watch(mirrorGatewayBackendProvider);
   }
 
-  return PrivateGrpcBackend();
+  return PrivateGrpcBackend(client: ref.read(supabaseClientProvider));
 });
 
 class _MirrorDisabledBackend implements MirrorComputeBackend {

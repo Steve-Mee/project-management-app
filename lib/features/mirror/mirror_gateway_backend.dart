@@ -31,7 +31,7 @@ class MirrorGatewayBackend implements MirrorComputeBackend {
     MirrorObservabilityService? observabilityService,
     MirrorRetryPolicy? retryPolicy,
     this.onCompileValidated,
-  })  : _client = _resolveClient(client),
+  })  : _client = client,
         _httpClient = httpClient ?? http.Client(),
         _budgetService = budgetService,
         _observabilityService = observabilityService,
@@ -230,7 +230,21 @@ class MirrorGatewayBackend implements MirrorComputeBackend {
       );
     }
 
+    final resolvedClient = _client;
+    if (resolvedClient == null) {
+      return ApplyResult(
+        success: false,
+        message: _formatStructuredError(
+          family: _MirrorGatewayErrorFamily.config,
+          message:
+              'Mirror Gateway backend requires an injected Supabase client for secure apply.',
+          retryable: false,
+        ),
+      );
+    }
+
     return _mirrorWorkflows.secureApply(
+      client: resolvedClient,
       prompt: prompt,
       context: context,
       mode: mode,
@@ -887,18 +901,6 @@ class MirrorGatewayBackend implements MirrorComputeBackend {
       );
     }
     return configured;
-  }
-
-  static SupabaseClient? _resolveClient(SupabaseClient? client) {
-    if (client != null) {
-      return client;
-    }
-
-    try {
-      return Supabase.instance.client;
-    } catch (_) {
-      return null;
-    }
   }
 }
 

@@ -4,6 +4,7 @@ import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
 import 'package:grpc/grpc.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'grpc_generated/mirror.pbgrpc.dart';
 import 'mirror_signed_inputs_backend.dart';
@@ -17,6 +18,7 @@ const MirrorBackendWorkflows _mirrorWorkflows = MirrorBackendWorkflows();
 
 class PrivateGrpcBackend implements MirrorComputeBackend {
   PrivateGrpcBackend({
+    required this.client,
     this.host = '127.0.0.1',
     this.port = 50051,
     this.timeout = const Duration(seconds: 30),
@@ -25,6 +27,7 @@ class PrivateGrpcBackend implements MirrorComputeBackend {
     _enforceProductionTransportSecurity();
   }
 
+  final SupabaseClient client;
   final String host;
   final int port;
   final Duration timeout;
@@ -135,6 +138,7 @@ class PrivateGrpcBackend implements MirrorComputeBackend {
     String? compileFingerprint,
   }) async {
     return _mirrorWorkflows.secureApply(
+      client: client,
       prompt: prompt,
       context: context,
       mode: mode,

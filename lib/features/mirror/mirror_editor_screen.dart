@@ -19,6 +19,7 @@ import 'providers/mirror_editor_orchestration_provider.dart';
 import 'providers/mirror_templates_provider.dart';
 import 'services/mirror_editor_preflight_service.dart';
 import 'services/mirror_editor_realtime_controller.dart';
+import 'services/mirror_voice_draft_sanitizer.dart';
 import 'templates_gallery.dart';
 import 'widgets/monaco_editor_host.dart';
 
@@ -41,6 +42,8 @@ class MirrorEditorScreen extends ConsumerStatefulWidget {
 class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
   static const MirrorEditorPreflightService _preflightService =
       MirrorEditorPreflightService();
+  static const MirrorVoiceDraftSanitizer _voiceDraftSanitizer =
+      MirrorVoiceDraftSanitizer();
 
   late final Terminal _terminal;
   late final TerminalController _terminalController;
@@ -633,13 +636,126 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
     );
   }
 
-  void _applyVoiceDraftToEditor(String text) {
+  Future<bool> _applyVoiceDraftToEditor(String text) async {
+    final sanitizationResult = _voiceDraftSanitizer.sanitize(text);
+    if (!sanitizationResult.isAccepted ||
+        sanitizationResult.sanitizedText == null) {
+      _appendTerminalLine(
+        sanitizationResult.rejectionReason ??
+            'Voice draft blocked by safety policy.',
+      );
+      return false;
+    }
+
+    final sanitizedText = sanitizationResult.sanitizedText!;
     final sessionState = ref.read(mirrorSessionProvider(_sessionKey));
     final selectedFile = sessionState.selectedFile;
+    final confirmed = await _confirmVoiceInsert(
+      selectedFile: selectedFile,
+      sanitizedText: sanitizedText,
+    );
+    if (!confirmed) {
+      _appendTerminalLine('Voice draft insert canceled.');
+      return false;
+    }
+
     final existing = sessionState.files[selectedFile] ?? '';
     final separator = existing.endsWith('\n') || existing.isEmpty ? '' : '\n';
-    _sessionNotifier.updateSelectedFileContent('$existing$separator$text');
+    final updatedContent = '$existing$separator$sanitizedText';
+    _sessionNotifier.updateSelectedFileContent(updatedContent);
     _appendTerminalLine(_l10n.mirrorVoiceAppended(selectedFile));
+    _showVoiceInsertUndo(
+      selectedFile: selectedFile,
+      previousContent: existing,
+    );
+    return true;
+  }
+
+  Future<bool> _confirmVoiceInsert({
+    required String selectedFile,
+    required String sanitizedText,
+  }) async {
+    final decision = await showDialog<bool>(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Confirm voice insert'),
+          content: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                Text('Target file: $selectedFile'),
+                const SizedBox(height: 6),
+                Text('Characters: ${sanitizedText.length}'),
+                const SizedBox(height: 10),
+                const Text('Preview'),
+                const SizedBox(height: 6),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Theme.of(context).dividerColor),
+                  ),
+                  child: SelectableText(
+                    sanitizedText,
+                    maxLines: 8,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              child: const Text('Insert into editor'),
+            ),
+          ],
+        );
+      },
+    );
+
+    return decision == true;
+  }
+
+  void _showVoiceInsertUndo({
+    required String selectedFile,
+    required String previousContent,
+  }) {
+    if (!mounted) {
+      return;
+    }
+
+    final messenger = ScaffoldMessenger.of(context);
+    messenger
+      ..clearSnackBars()
+      ..showSnackBar(
+        SnackBar(
+          content: Text('Voice draft inserted into $selectedFile'),
+          behavior: SnackBarBehavior.floating,
+          action: SnackBarAction(
+            label: 'Undo',
+            onPressed: () {
+              if (!mounted) {
+                return;
+              }
+
+              final currentState = ref.read(mirrorSessionProvider(_sessionKey));
+              if (currentState.selectedFile != selectedFile) {
+                _sessionNotifier.selectFile(selectedFile);
+              }
+              _sessionNotifier.updateSelectedFileContent(previousContent);
+              _appendTerminalLine(
+                  'Voice draft insert undone for $selectedFile.');
+            },
+          ),
+        ),
+      );
   }
 
   void _applyTemplateToSelectedFile(MirrorTemplate template) {
