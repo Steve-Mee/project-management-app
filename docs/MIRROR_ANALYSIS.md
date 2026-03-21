@@ -17,7 +17,7 @@ Scope: volledige Mirror-implementatie in Supabase, Edge Functions, gRPC runners,
   - Er zit nog technische overlap in verantwoordelijkheden: patch-building/persisting gebeurt op meerdere lagen (backend workflows + editor orchestration), waardoor regressies rond preview/apply moeilijker traceerbaar worden.
   - De gebruikerservaring van voice->code is nog risicovol: transcript kan in de huidige flow relatief direct in editor-context terechtkomen; dit vraagt sterkere guardrails voor production UX.
   - Sommige maintainability-patronen zijn half-hybride: zowel provider-driven dependency injection als singleton fallback (`Supabase.instance.client`) worden gebruikt.
-  - Operationele hardening is grotendeels aanwezig, maar de observability-taxonomie (zelfde event voor compile/apply latency) kan strakker om productie-debugging te versnellen.
+  - Operationele hardening is grotendeels aanwezig; de observability-taxonomie voor compile/apply latency is inmiddels gescheiden naar operation-specifieke events, waardoor productie-debugging sneller en eenduidiger is. Restfocus ligt nu vooral op orchestratie-consolidatie en verdere gateway-modularisatie.
 - Overall score (1-10)
   - 8.6/10
 
@@ -148,3 +148,21 @@ Scope: volledige Mirror-implementatie in Supabase, Edge Functions, gRPC runners,
     - Vermindert event-ruis en helpt bij scherpere production dashboards.
   - Legacy fallback-branches die behavior dupliceren zonder unieke waarde
     - Verlaagt onderhoudslast en verkleint kans op inconsistent gedrag tussen cloud/private/offline paden.
+
+### 4. Voortgang & operationele risicomatrix (update 2026-03-21)
+- Status sinds baseline-analyse
+  - Afgerond: observability-taxonomie voor compile/apply latency is opgesplitst naar operation-specifieke events plus aggregate event.
+  - Afgerond: gateway modularisatie fase 1 (telemetry/metering extractie naar `supabase/functions/mirror-gateway/modules/telemetry.ts`).
+  - Afgerond: orchestrator ownership versimpeld; interactive run-coordinatie loopt direct via `MirrorRunFlowService` boundary.
+  - Afgerond: patch apply-result overlap tussen cloud/private backend gereduceerd via gedeelde helpers in `mirror_backend_workflows.dart`.
+  - Afgerond: Mirror premium entitlement DI is provider-gedreven gemaakt (geen singleton fallback in `MirrorPremiumService`).
+- Residuele risico's (actueel)
+  - Hoog: gateway-bestand blijft concern-zwaar totdat auth/idempotency/rate-limit/circuit-breaker/forwarding volledig modulair zijn uitgefaseerd.
+  - Middel: payload schema-validatie in edge gateway ontbreekt nog als expliciete centrale runtime-validator.
+  - Middel: operationele governance rond feature-flag toggles en redaction discipline blijft procesafhankelijk buiten code.
+  - Middel: multi-file patch review-UX is nog lineair; staged review ontbreekt nog voor grote changesets.
+  - Laag: compat-laag `mirror_editor_orchestration_service.dart` bestaat nog als deprecated adapter en kan later verwijderd worden.
+- Aanbevolen opvolging (korte termijn)
+  - Splits `supabase/functions/mirror-gateway/index.ts` verder in modulen: auth, idempotency, ratelimit, circuit-breaker, forwarding.
+  - Voeg centrale request-schema validatie toe voor compile/apply payloads met contracttests.
+  - Leg runbook-SLO's en incident-paden vast in een dedicated Mirror operations document met eigenaarschap per risico.
