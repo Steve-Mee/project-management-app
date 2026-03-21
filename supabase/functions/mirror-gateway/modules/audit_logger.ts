@@ -1,9 +1,11 @@
 // Audit logger: apply events and usage metering persistence.
 // Writes audit events and usage logs to Supabase with optional context handling.
 
+// @ts-ignore - ESM import for Supabase in Deno runtime
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import type { MirrorComputeRequest } from './request_validator.ts'
 
-type SupabaseClient = ReturnType<typeof import('https://esm.sh/@supabase/supabase-js@2').createClient>
+type SupabaseClient = ReturnType<typeof createClient>
 type MirrorUsageStatus = 'success' | 'failed' | 'rate_limited' | 'upstream_error'
 
 /**

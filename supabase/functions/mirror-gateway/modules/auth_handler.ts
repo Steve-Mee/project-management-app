@@ -1,7 +1,10 @@
 // Authentication and permission enforcement handler.
 // Validates user identity, Mirror permission, and cloud entitlement in isolation.
 
-type SupabaseClient = ReturnType<typeof import('https://esm.sh/@supabase/supabase-js@2').createClient>
+// @ts-ignore - ESM import for Supabase in Deno runtime
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+
+type SupabaseClient = ReturnType<typeof createClient>
 
 export interface AuthUser {
   id: string
@@ -201,7 +204,7 @@ export async function performFullAuthCheck(
 ): Promise<AuthCheckResult | AuthError> {
   // Step 1: Parse auth header
   const tokenOrError = parseAuthHeader(authHeader)
-  if ('kind' in tokenOrError) {
+  if (typeof tokenOrError !== 'string') {
     return tokenOrError
   }
 

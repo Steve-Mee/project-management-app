@@ -1,7 +1,10 @@
 // Rate limiter handler: per-user quota enforcement.
 // Tracks compile/apply request counts per minute and burst windows with weighted units.
 
-type SupabaseClient = ReturnType<typeof import('https://esm.sh/@supabase/supabase-js@2').createClient>
+// @ts-ignore - ESM import for Supabase in Deno runtime
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+
+type SupabaseClient = ReturnType<typeof createClient>
 
 const DEFAULT_GATEWAY_RATE_LIMIT_REQUESTS_PER_MINUTE = 10
 const DEFAULT_GATEWAY_RATE_LIMIT_BURST = 30
