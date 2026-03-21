@@ -9,11 +9,13 @@ import 'package:uuid/uuid.dart';
 
 import '../../core/config/app_config.dart';
 import 'mirror_signed_inputs_backend.dart';
+import 'services/mirror_backend_workflows.dart';
 import 'services/mirror_context_budget_service.dart';
 import 'services/mirror_observability_service.dart';
 import 'services/mirror_retry_policy.dart';
 
 const Uuid _uuid = Uuid();
+const MirrorBackendWorkflows _mirrorWorkflows = MirrorBackendWorkflows();
 
 class MirrorGatewayBackend implements MirrorComputeBackend {
   MirrorGatewayBackend({
@@ -228,7 +230,7 @@ class MirrorGatewayBackend implements MirrorComputeBackend {
       );
     }
 
-    return secureApply(
+    return _mirrorWorkflows.secureApply(
       prompt: prompt,
       context: context,
       mode: mode,
@@ -359,7 +361,7 @@ class MirrorGatewayBackend implements MirrorComputeBackend {
 
     final normalizedOutput = _normalizeGatewayOutput(raw.body!);
 
-    final patches = buildPatchesFromApplyPayload(
+    final patches = _mirrorWorkflows.buildPatchesFromApplyPayload(
       context: context,
       output: normalizedOutput,
     );
@@ -376,12 +378,12 @@ class MirrorGatewayBackend implements MirrorComputeBackend {
     }
 
     if (artifacts != null) {
-      final updatedFiles = applyPatchesToFiles(
+      final updatedFiles = _mirrorWorkflows.applyPatchesToFiles(
         files: context.files,
         patches: patches,
       );
 
-      await persistApplyToHive(
+      await _mirrorWorkflows.persistApplyToHive(
         context: context,
         mode: mode,
         prompt: prompt,

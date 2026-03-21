@@ -121,6 +121,8 @@ String computeCompileResultFingerprint({
 }
 
 extension MirrorPatchTools on MirrorComputeBackend {
+  // Compatibility API: retained to avoid breaking callsites while
+  // responsibilities are migrated toward dedicated workflow services.
   List<MirrorFilePatch> buildPatchesFromApplyPayload({
     required ProjectContext context,
     required String output,
@@ -196,6 +198,8 @@ extension MirrorPatchTools on MirrorComputeBackend {
 }
 
 extension MirrorApplySecurity on MirrorComputeBackend {
+  // Compatibility API: retained to avoid breaking callsites while
+  // responsibilities are migrated toward dedicated workflow services.
   Future<ApplySecurityArtifacts> prepareSignedInputAndBackup({
     required ProjectContext context,
     Duration signedUrlTtl = MirrorSecureApplyService.defaultSignedUrlTtl,
@@ -249,6 +253,8 @@ extension MirrorApplySecurity on MirrorComputeBackend {
 }
 
 extension MirrorPromptBuilder on MirrorComputeBackend {
+  // Compatibility API: retained to avoid breaking callsites while
+  // responsibilities are migrated toward dedicated workflow services.
   Future<String> buildFullContext({
     required String prompt,
     required ProjectContext context,

@@ -9,11 +9,17 @@ import '../../../core/providers/mirror_entitlement_provider.dart';
 import '../../../core/providers/mirror_session_provider.dart';
 import '../apply_dialog.dart';
 import '../mirror_signed_inputs_backend.dart';
-import 'mirror_orchestrator_service.dart';
+import '../providers/mirror_orchestrator_provider.dart';
+import 'mirror_backend_workflows.dart';
+import 'mirror_service_boundaries.dart';
 
-class MirrorEditorOrchestrationService {
+class MirrorEditorOrchestrationService
+    implements MirrorInteractiveRunCoordinator {
   const MirrorEditorOrchestrationService();
 
+  static const MirrorBackendWorkflows _workflows = MirrorBackendWorkflows();
+
+  @override
   Future<void> runCurrentFileInTerminal({
     required BuildContext context,
     required WidgetRef ref,
@@ -45,7 +51,10 @@ class MirrorEditorOrchestrationService {
 
     try {
       final backend = await ref.read(mirrorBackendProvider.future);
-      final orchestrator = MirrorOrchestratorService(backend: backend);
+      final orchestratorFactory = ref.read(
+        mirrorExecutionOrchestratorFactoryProvider,
+      );
+      final orchestrator = orchestratorFactory(backend);
 
       final originalFiles = Map<String, String>.from(sessionState.files);
       final executionContext = ProjectContext(
@@ -105,7 +114,7 @@ class MirrorEditorOrchestrationService {
       final compileContext = generatedPatches.isEmpty
           ? originalCompileContext
           : originalCompileContext.copyWith(
-              files: backend.applyPatchesToFiles(
+              files: _workflows.applyPatchesToFiles(
                 files: originalCompileContext.files,
                 patches: generatedPatches,
               ),
@@ -282,7 +291,7 @@ class MirrorEditorOrchestrationService {
     final normalizedCompileOutput = compileOutput?.trim() ?? '';
 
     if (normalizedCompileOutput.isNotEmpty) {
-      final patchesFromCompile = backend.buildPatchesFromApplyPayload(
+        final patchesFromCompile = _workflows.buildPatchesFromApplyPayload(
         context: context,
         output: normalizedCompileOutput,
         fallbackPath: selectedFile,
@@ -294,7 +303,7 @@ class MirrorEditorOrchestrationService {
 
     final normalizedGeneratedCode = generatedCode?.trim() ?? '';
     if (normalizedGeneratedCode.isNotEmpty) {
-      return backend.buildPatchesFromApplyPayload(
+      return _workflows.buildPatchesFromApplyPayload(
         context: context,
         output: normalizedGeneratedCode,
         fallbackPath: selectedFile,

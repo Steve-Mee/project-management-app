@@ -9,6 +9,7 @@ import 'package:pma_core/services/app_logger.dart';
 import '../../../core/providers/mirror_session_provider.dart';
 import '../mirror_signed_inputs_backend.dart';
 import 'mirror_outbox_replay_service.dart';
+import 'mirror_service_boundaries.dart';
 
 export 'mirror_outbox_replay_service.dart' show MirrorOutboxEntry;
 
@@ -28,7 +29,7 @@ class MirrorOrchestrationResult {
   final Object? error;
 }
 
-class MirrorOrchestratorService {
+class MirrorOrchestratorService implements MirrorExecutionOrchestrator {
   MirrorOrchestratorService({
     required MirrorComputeBackend backend,
     this.maxRetries = 2,
@@ -135,6 +136,7 @@ class MirrorOrchestratorService {
     }
   }
 
+  @override
   Future<GenerateResult> generate({
     required WidgetRef ref,
     required String sessionKey,
@@ -155,13 +157,11 @@ class MirrorOrchestratorService {
       operationName: 'generate',
       ref: ref,
       sessionKey: sessionKey,
-      operation: () {
-        return _backend.generate(
-          prompt: prompt,
-          context: context,
-          mode: mode,
-        );
-      },
+      operation: () => _runInteractiveGenerate(
+        prompt: prompt,
+        context: context,
+        mode: mode,
+      ),
       isSuccess: (GenerateResult value) => value.success,
       failureMessage: (GenerateResult value) =>
           value.message ?? value.diagnostics.join(' | '),
@@ -202,6 +202,7 @@ class MirrorOrchestratorService {
     return result;
   }
 
+  @override
   Future<CompileResult> compile({
     required WidgetRef ref,
     required String sessionKey,
@@ -222,13 +223,11 @@ class MirrorOrchestratorService {
       operationName: 'compile',
       ref: ref,
       sessionKey: sessionKey,
-      operation: () {
-        return _backend.compile(
-          prompt: prompt,
-          context: context,
-          mode: mode,
-        );
-      },
+      operation: () => _runInteractiveCompile(
+        prompt: prompt,
+        context: context,
+        mode: mode,
+      ),
       isSuccess: (CompileResult value) => value.success,
       failureMessage: (CompileResult value) => value.errors.join(' | '),
     );
@@ -267,6 +266,7 @@ class MirrorOrchestratorService {
     return result;
   }
 
+  @override
   Future<ApplyResult> apply({
     required WidgetRef ref,
     required String sessionKey,
@@ -288,14 +288,12 @@ class MirrorOrchestratorService {
       operationName: 'apply',
       ref: ref,
       sessionKey: sessionKey,
-      operation: () {
-        return _backend.apply(
-          prompt: prompt,
-          context: context,
-          mode: mode,
-          compileFingerprint: compileFingerprint,
-        );
-      },
+      operation: () => _runInteractiveApply(
+        prompt: prompt,
+        context: context,
+        mode: mode,
+        compileFingerprint: compileFingerprint,
+      ),
       isSuccess: (ApplyResult value) => value.success,
       failureMessage: (ApplyResult value) => value.message,
     );
@@ -461,46 +459,90 @@ class MirrorOrchestratorService {
   Future<MirrorOutboxOperationResult> Function(MirrorOutboxEntry entry)
       _createOutboxExecutor() {
     return (MirrorOutboxEntry entry) async {
-      switch (entry.operation) {
-        case 'generate':
-          final result = await _backend.generate(
-            prompt: entry.prompt,
-            context: entry.context,
-            mode: entry.mode,
-          );
-          return MirrorOutboxOperationResult(
-            success: result.success,
-            message: result.message ?? result.diagnostics.join(' | '),
-          );
-        case 'compile':
-          final result = await _backend.compile(
-            prompt: entry.prompt,
-            context: entry.context,
-            mode: entry.mode,
-          );
-          return MirrorOutboxOperationResult(
-            success: result.success,
-            message: result.errors.join(' | '),
-          );
-        case 'apply':
-          final compileFingerprint = entry.context.metadata.compileFingerprint;
-          final result = await _backend.apply(
-            prompt: entry.prompt,
-            context: entry.context,
-            mode: entry.mode,
-            compileFingerprint: compileFingerprint,
-          );
-          return MirrorOutboxOperationResult(
-            success: result.success,
-            message: result.message,
-          );
-        default:
-          return MirrorOutboxOperationResult(
-            success: false,
-            message: 'Unknown outbox operation: ${entry.operation}',
-          );
-      }
+      return _runReplayOperation(entry);
     };
+  }
+
+  Future<GenerateResult> _runInteractiveGenerate({
+    required String prompt,
+    required ProjectContext context,
+    required String mode,
+  }) {
+    return _backend.generate(
+      prompt: prompt,
+      context: context,
+      mode: mode,
+    );
+  }
+
+  Future<CompileResult> _runInteractiveCompile({
+    required String prompt,
+    required ProjectContext context,
+    required String mode,
+  }) {
+    return _backend.compile(
+      prompt: prompt,
+      context: context,
+      mode: mode,
+    );
+  }
+
+  Future<ApplyResult> _runInteractiveApply({
+    required String prompt,
+    required ProjectContext context,
+    required String mode,
+    String? compileFingerprint,
+  }) {
+    return _backend.apply(
+      prompt: prompt,
+      context: context,
+      mode: mode,
+      compileFingerprint: compileFingerprint,
+    );
+  }
+
+  Future<MirrorOutboxOperationResult> _runReplayOperation(
+    MirrorOutboxEntry entry,
+  ) async {
+    switch (entry.operation) {
+      case 'generate':
+        final result = await _backend.generate(
+          prompt: entry.prompt,
+          context: entry.context,
+          mode: entry.mode,
+        );
+        return MirrorOutboxOperationResult(
+          success: result.success,
+          message: result.message ?? result.diagnostics.join(' | '),
+        );
+      case 'compile':
+        final result = await _backend.compile(
+          prompt: entry.prompt,
+          context: entry.context,
+          mode: entry.mode,
+        );
+        return MirrorOutboxOperationResult(
+          success: result.success,
+          message: result.errors.join(' | '),
+        );
+      case 'apply':
+        final compileFingerprint = entry.context.metadata.compileFingerprint;
+        final result = await _backend.apply(
+          prompt: entry.prompt,
+          context: entry.context,
+          mode: entry.mode,
+          compileFingerprint: compileFingerprint,
+        );
+        return MirrorOutboxOperationResult(
+          success: result.success,
+          message: result.message,
+        );
+      default:
+        return MirrorOutboxOperationResult(
+          success: false,
+          message: 'Unknown outbox operation: ${entry.operation}',
+        );
+    }
   }
 
   Future<void> Function(MirrorOutboxEntry entry) _onOutboxReplaySuccess(

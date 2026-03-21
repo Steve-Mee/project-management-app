@@ -7,11 +7,13 @@ import 'package:grpc/grpc.dart';
 
 import 'grpc_generated/mirror.pbgrpc.dart';
 import 'mirror_signed_inputs_backend.dart';
+import 'services/mirror_backend_workflows.dart';
 
 const bool _isProductionGrpcRuntime =
     bool.fromEnvironment('dart.vm.product', defaultValue: false);
 const ChannelCredentials _insecureChannelCredentials =
     ChannelCredentials.insecure();
+const MirrorBackendWorkflows _mirrorWorkflows = MirrorBackendWorkflows();
 
 class PrivateGrpcBackend implements MirrorComputeBackend {
   PrivateGrpcBackend({
@@ -132,7 +134,7 @@ class PrivateGrpcBackend implements MirrorComputeBackend {
     required String mode,
     String? compileFingerprint,
   }) async {
-    return secureApply(
+    return _mirrorWorkflows.secureApply(
       prompt: prompt,
       context: context,
       mode: mode,
@@ -183,7 +185,7 @@ class PrivateGrpcBackend implements MirrorComputeBackend {
           );
         }
 
-        final patches = buildPatchesFromApplyPayload(
+        final patches = _mirrorWorkflows.buildPatchesFromApplyPayload(
           context: context,
           output: applyRpcResult.output!,
         );
@@ -195,12 +197,12 @@ class PrivateGrpcBackend implements MirrorComputeBackend {
           );
         }
 
-        final updatedFiles = applyPatchesToFiles(
+        final updatedFiles = _mirrorWorkflows.applyPatchesToFiles(
           files: context.files,
           patches: patches,
         );
 
-        await persistApplyToHive(
+        await _mirrorWorkflows.persistApplyToHive(
           context: context,
           mode: mode,
           prompt: prompt,
