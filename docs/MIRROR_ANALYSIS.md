@@ -208,3 +208,28 @@ The recommendations above have been executed in three coordinated PRs to address
 - Extract apply security-mode decision logic from gateway backend → orchestrator
 - Add gateway/runner operation runbook and threat model
 - Extend template staleness signaling in providers
+
+## Execution Checklist: State Hydration Hardening
+
+- [x] Leg één expliciete eigenaar vast voor user-facing Mirror state in [lib/core/providers/mirror_provider.dart](lib/core/providers/mirror_provider.dart)
+- [x] Vervang side-effectful variant hydration door pure snapshot- en resolverlogica in [lib/core/providers/mirror_state_resolver.dart](lib/core/providers/mirror_state_resolver.dart)
+- [x] Voeg generation guards toe zodat late async completions geen stale state meer kunnen overschrijven in [lib/core/providers/mirror_provider.dart](lib/core/providers/mirror_provider.dart)
+- [x] Maak `mirrorModeProvider` en `mirrorOfflineWarningProvider` afgeleide read-only providers op basis van de centrale mirror state in [lib/core/providers/mirror_provider.dart](lib/core/providers/mirror_provider.dart)
+- [x] Haal cross-provider warning writes uit de team- en runner-variant hydration in [lib/core/providers/mirror_provider.dart](lib/core/providers/mirror_provider.dart)
+- [x] Centraliseer mode resolution via één deterministische precedence-regel: requested mode → cached mode → feature flags → premium → runner variant in [lib/core/providers/mirror_state_resolver.dart](lib/core/providers/mirror_state_resolver.dart)
+- [x] Splits session bootstrap-merge uit naar een pure merge policy in [lib/core/providers/mirror_session_bootstrap.dart](lib/core/providers/mirror_session_bootstrap.dart)
+- [x] Vervang parallelle draft/repository writes door één guarded bootstrap run in [lib/core/providers/mirror_session_provider.dart](lib/core/providers/mirror_session_provider.dart)
+- [x] Stop met globale mode/warning mutaties vanuit session hydration in [lib/core/providers/mirror_session_provider.dart](lib/core/providers/mirror_session_provider.dart)
+- [x] Recompute context fingerprint pas na de definitieve bootstrap-merge in [lib/core/providers/mirror_session_provider.dart](lib/core/providers/mirror_session_provider.dart)
+- [x] Voeg pure unit tests toe voor hydration precedence en bootstrap merge ordering in [test/core/providers/mirror_state_resolver_test.dart](test/core/providers/mirror_state_resolver_test.dart) en [test/core/providers/mirror_session_bootstrap_test.dart](test/core/providers/mirror_session_bootstrap_test.dart)
+- [x] Voeg gerichte provider-level tests toe voor auth-switch, premium-switch en session-key invalidation met gecontroleerde async voltooiingsvolgorde
+- [x] Verplaats Mirror launch-initialisatie uit [lib/core/providers/ai_chat_provider.dart](lib/core/providers/ai_chat_provider.dart) naar een dedicated launch coordinator zodat launch sequencing niet meer verspreid blijft
+- [x] Maak hydration provenance zichtbaar in state of diagnostics (`source`, `fallbackReason`, `hydrationPhase`) voor eenvoudiger incidentanalyse en support
+
+## Changelog: State Hydration Hardening
+
+- Introduced deterministic hydration resolver and provenance metadata for Mirror core state.
+- Added generation-guarded async hydration to prevent stale completion overwrites.
+- Split session bootstrap merge policy into a pure helper with explicit phase/source outputs.
+- Added launch coordinator and reduced ai-chat launch provider to bridge behavior only.
+- Added targeted race-condition tests for auth-switch, premium refresh overlap, and session-key bootstrap isolation.

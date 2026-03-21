@@ -2,11 +2,8 @@
 library;
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:pma_core/auth/permissions.dart';
-import 'package:pma_core/providers/auth/auth_providers.dart';
 
-import 'mirror_feature_flag_provider.dart';
-import 'mirror_provider.dart';
+import '../../features/mirror/services/mirror_launch_coordinator.dart';
 
 class MirrorLaunchPayload {
   const MirrorLaunchPayload({
@@ -35,32 +32,16 @@ class AiChatBridgeNotifier extends Notifier<MirrorLaunchPayload?> {
     required String taskId,
     String preferredMode = 'private',
   }) async {
-    // Feature-flag gate: launch requests must be blocked when Mirror is disabled.
-    final mirrorEnabled = await resolveMirrorFeatureEnabled(ref);
-    if (!mirrorEnabled) {
+    final payload = await ref.read(mirrorLaunchCoordinatorProvider).openMirrorFromTask(
+          projectId: projectId,
+          taskId: taskId,
+          preferredMode: preferredMode,
+        );
+
+    if (payload == null) {
       state = null;
       return null;
     }
-
-    final canUseMirror = ref.read(
-      hasPermissionProvider(AppPermissions.useMirror),
-    );
-    if (!canUseMirror) {
-      return null;
-    }
-
-    final mirrorNotifier = ref.read(mirrorProvider.notifier);
-    final safeMode = preferredMode == 'cloud' ? 'cloud' : 'private';
-    await mirrorNotifier.setMode(safeMode);
-    await mirrorNotifier.refreshTeamModeVariant();
-
-    final payload = MirrorLaunchPayload(
-      projectId: projectId,
-      taskId: taskId,
-      mode: ref.read(mirrorModeProvider),
-      teamModeVariant: ref.read(mirrorTeamModeVariantProvider).valueOrNull ?? 'solo',
-      requestedAt: DateTime.now(),
-    );
 
     state = payload;
     return payload;

@@ -4,10 +4,9 @@ library;
 import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:pma_core/services/mirror_access_policy.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../ab_testing_service.dart';
+import 'mirror_state_resolver.dart';
 import 'mirror_feature_flag_provider.dart';
 import 'mirror_offline_cache_provider.dart';
 import 'mirror_premium_provider.dart';
@@ -36,6 +35,12 @@ class MirrorState {
     required this.teamModeVariant,
     this.runnerModeVariant = 'cloud',
     required this.offlineWarning,
+    this.hydrationPhase = MirrorHydrationPhase.hydrating,
+    this.modeSource = 'default',
+    this.premiumSource = MirrorValueSource.remote,
+    this.teamModeVariantSource = MirrorValueSource.defaultValue,
+    this.runnerModeVariantSource = MirrorValueSource.defaultValue,
+    this.fallbackReason,
   });
 
   final String mode;
@@ -43,6 +48,12 @@ class MirrorState {
   final String teamModeVariant;
   final String runnerModeVariant;
   final String? offlineWarning;
+  final MirrorHydrationPhase hydrationPhase;
+  final String modeSource;
+  final MirrorValueSource premiumSource;
+  final MirrorValueSource teamModeVariantSource;
+  final MirrorValueSource runnerModeVariantSource;
+  final String? fallbackReason;
 
   bool get isTeamMode => teamModeVariant == 'team';
   bool get hasOfflineWarning =>
@@ -54,6 +65,12 @@ class MirrorState {
     String? teamModeVariant,
     String? runnerModeVariant,
     String? offlineWarning,
+    MirrorHydrationPhase? hydrationPhase,
+    String? modeSource,
+    MirrorValueSource? premiumSource,
+    MirrorValueSource? teamModeVariantSource,
+    MirrorValueSource? runnerModeVariantSource,
+    String? fallbackReason,
     bool clearOfflineWarning = false,
   }) {
     return MirrorState(
@@ -63,166 +80,197 @@ class MirrorState {
       runnerModeVariant: runnerModeVariant ?? this.runnerModeVariant,
       offlineWarning:
           clearOfflineWarning ? null : (offlineWarning ?? this.offlineWarning),
+        hydrationPhase: hydrationPhase ?? this.hydrationPhase,
+        modeSource: modeSource ?? this.modeSource,
+        premiumSource: premiumSource ?? this.premiumSource,
+        teamModeVariantSource:
+          teamModeVariantSource ?? this.teamModeVariantSource,
+        runnerModeVariantSource:
+          runnerModeVariantSource ?? this.runnerModeVariantSource,
+        fallbackReason: clearOfflineWarning
+          ? null
+          : (fallbackReason ?? this.fallbackReason),
     );
   }
 }
 
 class MirrorNotifier extends Notifier<MirrorState> {
-  bool _cacheHydrated = false;
+  int _hydrationGeneration = 0;
+  bool _bootstrapStarted = false;
 
   @override
   MirrorState build() {
-    if (!_cacheHydrated) {
-      _cacheHydrated = true;
-      unawaited(_hydrateFromCache());
+    if (!_bootstrapStarted) {
+      _bootstrapStarted = true;
+      Future<void>.microtask(() {
+        unawaited(_refreshFromSources());
+      });
     }
 
-    final mode = ref.watch(mirrorModeProvider);
-    final isPremium = ref.watch(mirrorPremiumProvider).valueOrNull ?? false;
-    final teamModeVariant =
-        ref.watch(mirrorTeamModeVariantProvider).valueOrNull ?? 'solo';
-    final runnerModeVariant =
-        ref.watch(mirrorRunnerModeVariantProvider).valueOrNull ?? 'cloud';
-    final offlineWarning = ref.watch(mirrorOfflineWarningProvider);
-    return MirrorState(
-      mode: mode,
-      isPremium: isPremium,
-      teamModeVariant: teamModeVariant,
-      runnerModeVariant: runnerModeVariant,
-      offlineWarning: offlineWarning,
+    return const MirrorState(
+      mode: 'private',
+      isPremium: false,
+      teamModeVariant: 'solo',
+      runnerModeVariant: 'cloud',
+      offlineWarning: null,
+      hydrationPhase: MirrorHydrationPhase.hydrating,
     );
   }
 
   Future<void> setMode(String mode) async {
-    final isMirrorEnabled = await resolveMirrorFeatureEnabled(ref);
-    if (!isMirrorEnabled) {
-      ref.read(mirrorModeProvider.notifier).state = 'private';
-      ref.read(mirrorOfflineWarningProvider.notifier).state = null;
-      state = state.copyWith(
-        mode: 'private',
-        offlineWarning: null,
-      );
-      unawaited(MirrorOfflineCache.saveMode('private'));
-      return;
-    }
-
-    final hasPremium = await ref.read(mirrorPremiumProvider.future);
-    final runnerModeVariant =
-        await ref.read(mirrorRunnerModeVariantProvider.future);
-    final canUsePrivateMode = await resolveMirrorPrivateModeEnabled(ref);
-    final canUseCloudMode = await resolveMirrorCloudModeEnabled(ref);
-    final allowAdminBypass = await resolveMirrorAdminBypassEnabled(ref);
-    const policy = MirrorAccessPolicy();
-    final decision = policy.resolveRequestedMode(
+    await _refreshFromSources(
       requestedMode: mode,
-      isPremium: hasPremium,
-      runnerModeVariant: runnerModeVariant,
-      allowPrivateMode: canUsePrivateMode,
-      allowCloudMode: canUseCloudMode,
-      allowAdminBypass: allowAdminBypass,
+      persistEffectiveMode: true,
     );
-
-    ref.read(mirrorModeProvider.notifier).state = decision.effectiveMode;
-    ref.read(mirrorOfflineWarningProvider.notifier).state = decision.warning;
-    state = state.copyWith(
-      mode: decision.effectiveMode,
-      isPremium: hasPremium,
-      runnerModeVariant: runnerModeVariant,
-      offlineWarning: decision.warning,
-    );
-    unawaited(MirrorOfflineCache.saveMode(decision.effectiveMode));
   }
 
   Future<void> refreshPremiumFromMetadata() async {
-    final previousPremium = state.isPremium;
     ref.invalidate(mirrorPremiumProvider);
-    final isPremium = await ref.read(mirrorPremiumProvider.future);
-    state = state.copyWith(isPremium: isPremium);
+    ref.invalidate(mirrorPremiumSnapshotProvider);
+    await _refreshFromSources(
+      requestedMode: state.mode,
+      persistEffectiveMode: true,
+    );
+  }
+
+  Future<void> refreshTeamModeVariant() async {
+    ref.invalidate(mirrorTeamModeVariantSnapshotProvider);
+    await _refreshFromSources(requestedMode: state.mode);
+  }
+
+  Future<void> refreshRunnerModeVariant() async {
+    ref.invalidate(mirrorRunnerModeVariantSnapshotProvider);
+    await _refreshFromSources(requestedMode: state.mode);
+  }
+
+  void clearOfflineWarning() {
+    state = state.copyWith(clearOfflineWarning: true);
+  }
+
+  Future<void> _refreshFromSources({
+    String? requestedMode,
+    bool persistEffectiveMode = false,
+  }) async {
+    final generation = ++_hydrationGeneration;
+    state = state.copyWith(hydrationPhase: MirrorHydrationPhase.hydrating);
+    final userId = ref.read(currentMirrorUserIdProvider);
+
+    await MirrorOfflineCache.invalidateOnAuthChange(currentUserId: userId);
+    if (!_isCurrentGeneration(generation)) {
+      return;
+    }
+
+    final previousPremium = state.isPremium;
+    final isPremium = await ref.read(mirrorPremiumSnapshotProvider.future);
+    if (!_isCurrentGeneration(generation)) {
+      return;
+    }
 
     await MirrorOfflineCache.invalidateOnPremiumChange(
       previousPremium: previousPremium,
       currentPremium: isPremium,
     );
-
-    if (!isPremium && state.mode == 'cloud') {
-      ref.read(mirrorModeProvider.notifier).state = 'private';
-      state = state.copyWith(
-        mode: 'private',
-        offlineWarning: MirrorOfflineWarningKeys.cloudModeRequiresPremium,
-      );
-      unawaited(MirrorOfflineCache.saveMode('private'));
+    if (!_isCurrentGeneration(generation)) {
+      return;
     }
-  }
-
-  Future<void> refreshTeamModeVariant() async {
-    ref.invalidate(mirrorTeamModeVariantProvider);
-    final teamModeVariant =
-        await ref.read(mirrorTeamModeVariantProvider.future);
-    state = state.copyWith(teamModeVariant: teamModeVariant);
-  }
-
-  Future<void> refreshRunnerModeVariant() async {
-    ref.invalidate(mirrorRunnerModeVariantProvider);
-    final runnerModeVariant =
-        await ref.read(mirrorRunnerModeVariantProvider.future);
-    state = state.copyWith(runnerModeVariant: runnerModeVariant);
-  }
-
-  void clearOfflineWarning() {
-    ref.read(mirrorOfflineWarningProvider.notifier).state = null;
-    state = state.copyWith(clearOfflineWarning: true);
-  }
-
-  Future<void> _hydrateFromCache() async {
-    final user = _currentSupabaseUserOrNull();
-    final userId = user?.id ?? 'anonymous';
-
-    await MirrorOfflineCache.invalidateOnAuthChange(currentUserId: userId);
 
     final cachedMode = await MirrorOfflineCache.getMode();
-    if (cachedMode == 'private' || cachedMode == 'cloud') {
-      ref.read(mirrorModeProvider.notifier).state = cachedMode!;
+    if (!_isCurrentGeneration(generation)) {
+      return;
     }
 
-    final cachedVariant = await MirrorOfflineCache.getTeamModeVariant(userId);
-    if (cachedVariant != null) {
-      state = state.copyWith(teamModeVariant: cachedVariant);
+    final featureGateFuture = ref.read(mirrorFeatureGateSnapshotProvider.future);
+    final teamVariantFuture =
+        ref.read(mirrorTeamModeVariantSnapshotProvider.future);
+    final runnerVariantFuture =
+        ref.read(mirrorRunnerModeVariantSnapshotProvider.future);
+
+    final featureSnapshot = await featureGateFuture;
+    if (!_isCurrentGeneration(generation)) {
+      return;
     }
 
-    final cachedRunnerVariant =
-        await MirrorOfflineCache.getRunnerModeVariant(userId);
-    if (cachedRunnerVariant != null) {
-      state = state.copyWith(runnerModeVariant: cachedRunnerVariant);
+    final teamVariant = await teamVariantFuture;
+    if (!_isCurrentGeneration(generation)) {
+      return;
     }
 
-    await refreshPremiumFromMetadata();
+    final runnerVariant = await runnerVariantFuture;
+    if (!_isCurrentGeneration(generation)) {
+      return;
+    }
+
+    final resolved = resolveMirrorHydration(
+      MirrorHydrationSnapshot(
+        requestedMode: requestedMode,
+        cachedMode: cachedMode,
+        isPremium: isPremium,
+        teamModeVariant: teamVariant,
+        runnerModeVariant: runnerVariant,
+        featureGates: featureSnapshot,
+      ),
+    );
+
+    state = state.copyWith(
+      mode: resolved.mode,
+      isPremium: resolved.isPremium,
+      teamModeVariant: resolved.teamModeVariant,
+      runnerModeVariant: resolved.runnerModeVariant,
+      offlineWarning: resolved.offlineWarning,
+      hydrationPhase: resolved.provenance.phase,
+      modeSource: resolved.provenance.modeSource,
+      premiumSource: resolved.provenance.premiumSource,
+      teamModeVariantSource: resolved.provenance.teamModeVariantSource,
+      runnerModeVariantSource: resolved.provenance.runnerModeVariantSource,
+      fallbackReason: resolved.provenance.fallbackReason,
+    );
+
+    if (persistEffectiveMode) {
+      unawaited(MirrorOfflineCache.saveMode(resolved.mode));
+    }
   }
 
-  User? _currentSupabaseUserOrNull() {
-    try {
-      return ref.read(supabaseClientProvider).auth.currentUser;
-    } catch (_) {
-      return null;
-    }
+  bool _isCurrentGeneration(int generation) {
+    return generation == _hydrationGeneration;
   }
 }
 
 final mirrorProvider =
     NotifierProvider<MirrorNotifier, MirrorState>(MirrorNotifier.new);
 
-final mirrorModeProvider = StateProvider<String>((ref) => 'private');
+final mirrorModeProvider = Provider<String>((ref) {
+  return ref.watch(mirrorProvider).mode;
+});
 
-final mirrorOfflineWarningProvider = StateProvider<String?>((ref) => null);
+final mirrorOfflineWarningProvider = Provider<String?>((ref) {
+  return ref.watch(mirrorProvider).offlineWarning;
+});
 
-final mirrorTeamModeVariantProvider = FutureProvider<String>((ref) async {
-  final warningNotifier = ref.read(mirrorOfflineWarningProvider.notifier);
-  User? user;
+final currentMirrorUserIdProvider = Provider<String>((ref) {
   try {
-    user = ref.read(supabaseClientProvider).auth.currentUser;
+    return ref.read(supabaseClientProvider).auth.currentUser?.id ?? 'anonymous';
   } catch (_) {
-    user = null;
+    return 'anonymous';
   }
-  final userId = user?.id ?? 'anonymous';
+});
+
+final mirrorPremiumSnapshotProvider = FutureProvider<bool>((ref) async {
+  return ref.read(mirrorPremiumProvider.future);
+});
+
+final mirrorFeatureGateSnapshotProvider =
+    FutureProvider<MirrorFeatureGateSnapshot>((ref) async {
+  return MirrorFeatureGateSnapshot(
+    mirrorEnabled: await resolveMirrorFeatureEnabled(ref),
+    allowPrivateMode: await resolveMirrorPrivateModeEnabled(ref),
+    allowCloudMode: await resolveMirrorCloudModeEnabled(ref),
+    allowAdminBypass: await resolveMirrorAdminBypassEnabled(ref),
+  );
+});
+
+final mirrorTeamModeVariantSnapshotProvider =
+    FutureProvider<MirrorVariantSnapshot>((ref) async {
+  final userId = _resolveCurrentMirrorUserId(ref);
 
   try {
     final variant = await ABTestingService.instance.assignVariant(
@@ -232,30 +280,36 @@ final mirrorTeamModeVariantProvider = FutureProvider<String>((ref) async {
     ).timeout(const Duration(seconds: 3));
 
     await MirrorOfflineCache.saveTeamModeVariant(userId, variant);
-    warningNotifier.state = null;
-    return variant;
+    return MirrorVariantSnapshot(
+      value: variant,
+      source: MirrorValueSource.remote,
+    );
   } catch (_) {
     final cached = await MirrorOfflineCache.getTeamModeVariant(userId);
     if (cached != null) {
-      warningNotifier.state =
-          MirrorOfflineWarningKeys.teamVariantLoadedFromCache;
-      return cached;
+      return MirrorVariantSnapshot(
+        value: cached,
+        source: MirrorValueSource.cache,
+        warningKey: MirrorOfflineWarningKeys.teamVariantLoadedFromCache,
+      );
     }
 
-    warningNotifier.state = MirrorOfflineWarningKeys.teamVariantFallbackSolo;
-    return 'solo';
+    return const MirrorVariantSnapshot(
+      value: 'solo',
+      source: MirrorValueSource.fallback,
+      warningKey: MirrorOfflineWarningKeys.teamVariantFallbackSolo,
+    );
   }
 });
 
-final mirrorRunnerModeVariantProvider = FutureProvider<String>((ref) async {
-  final warningNotifier = ref.read(mirrorOfflineWarningProvider.notifier);
-  User? user;
-  try {
-    user = ref.read(supabaseClientProvider).auth.currentUser;
-  } catch (_) {
-    user = null;
-  }
-  final userId = user?.id ?? 'anonymous';
+final mirrorTeamModeVariantProvider = FutureProvider<String>((ref) async {
+  final snapshot = await ref.watch(mirrorTeamModeVariantSnapshotProvider.future);
+  return snapshot.value;
+});
+
+final mirrorRunnerModeVariantSnapshotProvider =
+    FutureProvider<MirrorVariantSnapshot>((ref) async {
+  final userId = _resolveCurrentMirrorUserId(ref);
 
   try {
     final variant = await ABTestingService.instance.assignVariant(
@@ -265,17 +319,34 @@ final mirrorRunnerModeVariantProvider = FutureProvider<String>((ref) async {
     ).timeout(const Duration(seconds: 3));
 
     await MirrorOfflineCache.saveRunnerModeVariant(userId, variant);
-    warningNotifier.state = null;
-    return variant;
+    return MirrorVariantSnapshot(
+      value: variant,
+      source: MirrorValueSource.remote,
+    );
   } catch (_) {
     final cached = await MirrorOfflineCache.getRunnerModeVariant(userId);
     if (cached != null) {
-      warningNotifier.state =
-          MirrorOfflineWarningKeys.runnerVariantLoadedFromCache;
-      return cached;
+      return MirrorVariantSnapshot(
+        value: cached,
+        source: MirrorValueSource.cache,
+        warningKey: MirrorOfflineWarningKeys.runnerVariantLoadedFromCache,
+      );
     }
 
-    warningNotifier.state = MirrorOfflineWarningKeys.runnerVariantFallbackCloud;
-    return 'cloud';
+    return const MirrorVariantSnapshot(
+      value: 'cloud',
+      source: MirrorValueSource.fallback,
+      warningKey: MirrorOfflineWarningKeys.runnerVariantFallbackCloud,
+    );
   }
 });
+
+final mirrorRunnerModeVariantProvider = FutureProvider<String>((ref) async {
+  final snapshot =
+      await ref.watch(mirrorRunnerModeVariantSnapshotProvider.future);
+  return snapshot.value;
+});
+
+String _resolveCurrentMirrorUserId(Ref ref) {
+  return ref.read(currentMirrorUserIdProvider);
+}
