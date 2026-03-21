@@ -49,6 +49,60 @@ export async function writeMirrorUsageLog({
   }
 }
 
+// ---------------------------------------------------------------------------
+// Request pipeline log helpers (inline in index.ts previously)
+// ---------------------------------------------------------------------------
+
+export interface LogRequestForwardedPayload {
+  requestId: string
+  traceId: string
+  idempotencyKey: string
+  action: string
+  mode: string
+  targetUrl: string
+}
+
+export function logRequestForwarded(details: LogRequestForwardedPayload): void {
+  console.info('mirror-gateway forwarding request', details)
+}
+
+export interface LogRateLimitDecisionPayload {
+  requestId: string
+  action: string
+  allowed: boolean
+  reason?: string
+}
+
+export function logRateLimitDecision(details: LogRateLimitDecisionPayload): void {
+  console.info('mirror-gateway rate limit decision', details)
+}
+
+export interface LogCircuitBreakerDecisionPayload {
+  requestId: string
+  action: string
+  allowed: boolean
+  reason: string
+}
+
+export function logCircuitBreakerDecision(details: LogCircuitBreakerDecisionPayload): void {
+  console.info('mirror-gateway circuit breaker decision', details)
+}
+
+export interface LogUpstreamFailurePayload {
+  requestId: string
+  failureClass: string
+  status: number | null
+  retryable: boolean
+}
+
+export function logUpstreamFailure(details: LogUpstreamFailurePayload): void {
+  console.warn('mirror-gateway upstream failure', details)
+}
+
+// ---------------------------------------------------------------------------
+// Usage log write helpers (DB writes)
+// ---------------------------------------------------------------------------
+
 export async function writeMirrorUsageLogIfReady({
   supabase,
   userId,

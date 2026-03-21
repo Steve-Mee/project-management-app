@@ -7,7 +7,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { buildCorsHeaders } from '../_shared/cors.ts'
 
 // Modules
-import { buildStructuredError, errorResponse, buildAuditErrorDetails } from './modules/error_contract.ts'
+import { buildStructuredError, errorResponse, buildAuditErrorDetails, classifyForwardStatus, classifyForwardIdempotencyStatus } from './modules/error_contract.ts'
 import {
   resolveActionFromPath,
   resolveIdempotencyKey,
@@ -21,6 +21,7 @@ import * as rateLimiterHandler from './modules/rate_limiter_handler.ts'
 import * as circuitBreakerHandler from './modules/circuit_breaker_handler.ts'
 import * as auditLogger from './modules/audit_logger.ts'
 import * as requestForwarding from './modules/request_forwarding.ts'
+import * as telemetry from './modules/telemetry.ts'
 
 declare const Deno: {
   serve: (handler: (req: Request) => Response | Promise<Response>) => void
@@ -36,49 +37,173 @@ const circuitBreakerState: circuitBreakerHandler.CircuitBreakerState = {
   halfOpenProbeActive: false,
 }
 
-function logIdempotencyContractOnColdStart(): void {
-  console.info('mirror-gateway cold start: idempotency contract verified')
-}
+console.info('mirror-gateway cold start: idempotency contract verified')
 
-function logRequestForwarded(details: {
+type SupabaseClient = ReturnType<typeof createClient>
+
+async function handleRateLimitRejection({
+  req,
+  supabase,
+  userId,
+  normalized,
+  action,
+  requestId,
+  traceId,
+  idempotencyKey,
+  idempotencyRequestHash,
+  retryAfterSeconds,
+  contextStartedAtMs,
+}: {
+  req: Request
+  supabase: SupabaseClient
+  userId: string
+  normalized: requestValidator.MirrorComputeRequest
+  action: 'compile' | 'apply'
   requestId: string
   traceId: string
   idempotencyKey: string
-  action: string
-  mode: string
-  targetUrl: string
-}): void {
-  console.info('mirror-gateway forwarding request', details)
+  idempotencyRequestHash: string
+  retryAfterSeconds: number
+  contextStartedAtMs: number | null
+}): Promise<Response> {
+  const rateLimitError = buildStructuredError({
+    code: 'rate_limited',
+    message: 'Mirror gateway rate limit exceeded',
+    retryable: true,
+    requestId,
+    traceId,
+    idempotencyKey,
+    details: { retryAfterSeconds },
+    stage: 'rate_limit',
+  })
+  try {
+    await idempotencyHandler.finalizeIdempotencyKey({
+      supabase,
+      userId,
+      action,
+      idempotencyKey,
+      requestId,
+      requestHash: idempotencyRequestHash,
+      status: 'failed',
+      responseStatus: 429,
+      responseBody: JSON.stringify({ success: false, error: rateLimitError }),
+      responseContentType: 'application/json',
+    })
+  } catch (error) {
+    console.error('idempotency finalize failed:', error)
+  }
+  await auditLogger.writeMirrorUsageLogIfReady({
+    supabase,
+    userId,
+    projectId: normalized.projectId,
+    taskId: normalized.taskId,
+    mode: normalized.mode,
+    action,
+    status: 'rate_limited',
+    requestId,
+    idempotencyKey,
+    startedAtMs: contextStartedAtMs,
+  })
+  return new Response(JSON.stringify({ success: false, error: rateLimitError }), {
+    status: 429,
+    headers: {
+      ...buildCorsHeaders(req),
+      'Content-Type': 'application/json',
+      'Retry-After': String(retryAfterSeconds),
+      'x-request-id': requestId,
+      'x-trace-id': traceId,
+      'x-idempotency-key': idempotencyKey,
+    },
+  })
 }
 
-function logRateLimitDecision(details: {
+async function handleCircuitBreakerRejection({
+  req,
+  supabase,
+  userId,
+  normalized,
+  action,
+  requestId,
+  traceId,
+  idempotencyKey,
+  idempotencyRequestHash,
+  retryAfterSeconds,
+  contextStartedAtMs,
+}: {
+  req: Request
+  supabase: SupabaseClient
+  userId: string
+  normalized: requestValidator.MirrorComputeRequest
+  action: 'compile' | 'apply'
   requestId: string
-  action: string
-  allowed: boolean
-  reason?: string
-}): void {
-  console.info('mirror-gateway rate limit decision', details)
+  traceId: string
+  idempotencyKey: string
+  idempotencyRequestHash: string
+  retryAfterSeconds: number
+  contextStartedAtMs: number | null
+}): Promise<Response> {
+  const breakerError = buildStructuredError({
+    code: 'upstream_error',
+    message: 'Upstream temporarily unavailable (circuit breaker open)',
+    retryable: true,
+    requestId,
+    traceId,
+    idempotencyKey,
+    details: { reason: 'circuit_breaker_open', retryAfterSeconds },
+    stage: 'circuit_breaker',
+  })
+  try {
+    await idempotencyHandler.finalizeIdempotencyKey({
+      supabase,
+      userId,
+      action,
+      idempotencyKey,
+      requestId,
+      requestHash: idempotencyRequestHash,
+      status: 'failed',
+      responseStatus: 503,
+      responseBody: JSON.stringify({ success: false, error: breakerError }),
+      responseContentType: 'application/json',
+    })
+  } catch (error) {
+    console.error('idempotency finalize failed:', error)
+  }
+  if (action === 'apply') {
+    await auditLogger.writeApplyAuditEvent({
+      supabase,
+      userId,
+      normalized,
+      requestId,
+      idempotencyKey,
+      event: 'apply_failed',
+      success: false,
+      details: buildAuditErrorDetails(breakerError),
+    })
+  }
+  await auditLogger.writeMirrorUsageLogIfReady({
+    supabase,
+    userId,
+    projectId: normalized.projectId,
+    taskId: normalized.taskId,
+    mode: normalized.mode,
+    action,
+    status: 'upstream_error',
+    requestId,
+    idempotencyKey,
+    startedAtMs: contextStartedAtMs,
+  })
+  return new Response(JSON.stringify({ success: false, error: breakerError }), {
+    status: 503,
+    headers: {
+      ...buildCorsHeaders(req),
+      'Content-Type': 'application/json',
+      'Retry-After': String(retryAfterSeconds),
+      'x-request-id': requestId,
+      'x-trace-id': traceId,
+      'x-idempotency-key': idempotencyKey,
+    },
+  })
 }
-
-function logCircuitBreakerDecision(details: {
-  requestId: string
-  action: string
-  allowed: boolean
-  reason: string
-}): void {
-  console.info('mirror-gateway circuit breaker decision', details)
-}
-
-function logUpstreamFailure(details: {
-  requestId: string
-  failureClass: string
-  status: number | null
-  retryable: boolean
-}): void {
-  console.warn('mirror-gateway upstream failure', details)
-}
-
-logIdempotencyContractOnColdStart()
 
 // @ts-ignore - Deno global
 Deno.serve(async (req: Request) => {
@@ -231,8 +356,9 @@ Deno.serve(async (req: Request) => {
       throw error
     }
 
-    // Handle idempotency results
-    if (idempotencyClaim.kind === 'conflict') {
+    // Handle idempotency early exits (conflict, in_progress, replay)
+    const idempotencyEarlyExit = idempotencyHandler.resolveIdempotencyEarlyExit(idempotencyClaim, action)
+    if (idempotencyEarlyExit) {
       await auditLogger.writeMirrorUsageLogIfReady({
         supabase,
         userId: user.id,
@@ -240,92 +366,43 @@ Deno.serve(async (req: Request) => {
         taskId: normalized.taskId,
         mode: normalized.mode,
         action,
-        status: 'failed',
+        status: idempotencyEarlyExit.usageStatus,
         requestId,
         idempotencyKey,
         startedAtMs: contextStartedAtMs,
       })
+      if (idempotencyEarlyExit.isReplay) {
+        return new Response(idempotencyEarlyExit.cachedBody, {
+          status: idempotencyEarlyExit.cachedStatus,
+          headers: {
+            ...buildCorsHeaders(req),
+            'Content-Type': idempotencyEarlyExit.cachedContentType,
+            'x-request-id': requestId,
+            'x-trace-id': traceId,
+            'x-idempotency-key': idempotencyKey,
+            'x-idempotency-replay': 'true',
+          },
+        })
+      }
       return errorResponse(
         req,
         buildStructuredError({
-          code: 'bad_request',
-          message: 'Idempotency key reuse with different payload is not allowed',
-          retryable: false,
+          code: idempotencyEarlyExit.errorCode,
+          message: idempotencyEarlyExit.message,
+          retryable: idempotencyEarlyExit.retryable,
           requestId,
           traceId,
           idempotencyKey,
-          details: { action, priorRequestId: idempotencyClaim.record?.request_id },
+          details: idempotencyEarlyExit.details,
           stage: 'idempotency',
         }),
-        409,
+        idempotencyEarlyExit.httpStatus,
       )
-    }
-
-    if (idempotencyClaim.kind === 'in_progress') {
-      await auditLogger.writeMirrorUsageLogIfReady({
-        supabase,
-        userId: user.id,
-        projectId: normalized.projectId,
-        taskId: normalized.taskId,
-        mode: normalized.mode,
-        action,
-        status: 'failed',
-        requestId,
-        idempotencyKey,
-        startedAtMs: contextStartedAtMs,
-      })
-      return errorResponse(
-        req,
-        buildStructuredError({
-          code: 'bad_request',
-          message: 'A request with this idempotency key is already processing',
-          retryable: true,
-          requestId,
-          traceId,
-          idempotencyKey,
-          details: { action, priorRequestId: idempotencyClaim.record?.request_id },
-          stage: 'idempotency',
-        }),
-        409,
-      )
-    }
-
-    if (idempotencyClaim.kind === 'replay' && idempotencyClaim.record) {
-      const cachedStatus = idempotencyClaim.record.response_status ?? 200
-      const cachedBody =
-        idempotencyClaim.record.response_body ??
-        JSON.stringify({ success: false, error: 'idempotency_record_missing_response' })
-      const cachedContentType = idempotencyClaim.record.response_content_type ?? 'application/json'
-
-      await auditLogger.writeMirrorUsageLogIfReady({
-        supabase,
-        userId: user.id,
-        projectId: normalized.projectId,
-        taskId: normalized.taskId,
-        mode: normalized.mode,
-        action,
-        status: cachedStatus >= 200 && cachedStatus < 400 ? 'success' : 'failed',
-        requestId,
-        idempotencyKey,
-        startedAtMs: contextStartedAtMs,
-      })
-
-      return new Response(cachedBody, {
-        status: cachedStatus,
-        headers: {
-          ...buildCorsHeaders(req),
-          'Content-Type': cachedContentType,
-          'x-request-id': requestId,
-          'x-trace-id': traceId,
-          'x-idempotency-key': idempotencyKey,
-          'x-idempotency-replay': 'true',
-        },
-      })
     }
 
     // === STEP 4: RATE LIMIT CHECK ===
     const rateLimitCheck = await rateLimiterHandler.checkPerUserRateLimit(supabase, user.id, action)
-    logRateLimitDecision({
+    telemetry.logRateLimitDecision({
       requestId,
       action,
       allowed: rateLimitCheck.allowed,
@@ -333,67 +410,17 @@ Deno.serve(async (req: Request) => {
     })
 
     if (!rateLimitCheck.allowed) {
-      const retryAfterSeconds = rateLimitCheck.retryAfterSeconds ?? 60
-      const rateLimitError = buildStructuredError({
-        code: 'rate_limited',
-        message: 'Mirror gateway rate limit exceeded',
-        retryable: true,
-        requestId,
-        traceId,
-        idempotencyKey,
-        details: {
-          reason: rateLimitCheck.reason,
-          retryAfterSeconds,
-        },
-        stage: 'rate_limit',
-      })
-
-      try {
-        await idempotencyHandler.finalizeIdempotencyKey({
-          supabase,
-          userId: user.id,
-          action,
-          idempotencyKey,
-          requestId,
-          requestHash: idempotencyRequestHash,
-          status: 'failed',
-          responseStatus: 429,
-          responseBody: JSON.stringify({ success: false, error: rateLimitError }),
-          responseContentType: 'application/json',
-        })
-      } catch (error) {
-        console.error('idempotency finalize failed:', error)
-      }
-
-      await auditLogger.writeMirrorUsageLogIfReady({
-        supabase,
-        userId: user.id,
-        projectId: normalized.projectId,
-        taskId: normalized.taskId,
-        mode: normalized.mode,
-        action,
-        status: 'rate_limited',
-        requestId,
-        idempotencyKey,
-        startedAtMs: contextStartedAtMs,
-      })
-
-      return new Response(JSON.stringify({ success: false, error: rateLimitError }), {
-        status: 429,
-        headers: {
-          ...buildCorsHeaders(req),
-          'Content-Type': 'application/json',
-          'Retry-After': String(retryAfterSeconds),
-          'x-request-id': requestId,
-          'x-trace-id': traceId,
-          'x-idempotency-key': idempotencyKey,
-        },
+      return handleRateLimitRejection({
+        req, supabase, userId: user.id, normalized, action,
+        requestId, traceId, idempotencyKey, idempotencyRequestHash,
+        retryAfterSeconds: rateLimitCheck.retryAfterSeconds ?? 60,
+        contextStartedAtMs,
       })
     }
 
     // === STEP 5: CIRCUIT BREAKER CHECK ===
     const circuitBreakerDecision = circuitBreakerHandler.evaluateCircuitBreakerAllowance(circuitBreakerState)
-    logCircuitBreakerDecision({
+    telemetry.logCircuitBreakerDecision({
       requestId,
       action,
       allowed: circuitBreakerDecision.allowed,
@@ -401,71 +428,11 @@ Deno.serve(async (req: Request) => {
     })
 
     if (!circuitBreakerDecision.allowed) {
-      const retryAfterSeconds = circuitBreakerDecision.retryAfterSeconds ?? 5
-      const breakerError = buildStructuredError({
-        code: 'upstream_error',
-        message: 'Upstream temporarily unavailable (circuit breaker open)',
-        retryable: true,
-        requestId,
-        traceId,
-        idempotencyKey,
-        details: { reason: 'circuit_breaker_open', retryAfterSeconds },
-        stage: 'circuit_breaker',
-      })
-
-      try {
-        await idempotencyHandler.finalizeIdempotencyKey({
-          supabase,
-          userId: user.id,
-          action,
-          idempotencyKey,
-          requestId,
-          requestHash: idempotencyRequestHash,
-          status: 'failed',
-          responseStatus: 503,
-          responseBody: JSON.stringify({ success: false, error: breakerError }),
-          responseContentType: 'application/json',
-        })
-      } catch (error) {
-        console.error('idempotency finalize failed:', error)
-      }
-
-      if (action === 'apply') {
-        await auditLogger.writeApplyAuditEvent({
-          supabase,
-          userId: user.id,
-          normalized,
-          requestId,
-          idempotencyKey,
-          event: 'apply_failed',
-          success: false,
-          details: buildAuditErrorDetails(breakerError),
-        })
-      }
-
-      await auditLogger.writeMirrorUsageLogIfReady({
-        supabase,
-        userId: user.id,
-        projectId: normalized.projectId,
-        taskId: normalized.taskId,
-        mode: normalized.mode,
-        action,
-        status: 'upstream_error',
-        requestId,
-        idempotencyKey,
-        startedAtMs: contextStartedAtMs,
-      })
-
-      return new Response(JSON.stringify({ success: false, error: breakerError }), {
-        status: 503,
-        headers: {
-          ...buildCorsHeaders(req),
-          'Content-Type': 'application/json',
-          'Retry-After': String(retryAfterSeconds),
-          'x-request-id': requestId,
-          'x-trace-id': traceId,
-          'x-idempotency-key': idempotencyKey,
-        },
+      return handleCircuitBreakerRejection({
+        req, supabase, userId: user.id, normalized, action,
+        requestId, traceId, idempotencyKey, idempotencyRequestHash,
+        retryAfterSeconds: circuitBreakerDecision.retryAfterSeconds ?? 5,
+        contextStartedAtMs,
       })
     }
 
@@ -495,7 +462,7 @@ Deno.serve(async (req: Request) => {
     )
 
     const targetUrl = requestForwarding.resolveForwardEndpoint(normalized.mode, action)
-    logRequestForwarded({
+    telemetry.logRequestForwarded({
       requestId,
       traceId,
       idempotencyKey,
@@ -516,7 +483,7 @@ Deno.serve(async (req: Request) => {
 
     // === STEP 9: HANDLE UPSTREAM RESPONSE ===
     if (forwardResult.failureClass) {
-      logUpstreamFailure({
+      telemetry.logUpstreamFailure({
         requestId,
         failureClass: forwardResult.failureClass,
         status: forwardResult.status,
@@ -536,7 +503,7 @@ Deno.serve(async (req: Request) => {
         idempotencyKey,
         requestId,
         requestHash: idempotencyRequestHash,
-        status: forwardResult.status >= 200 && forwardResult.status < 400 ? 'completed' : 'failed',
+        status: classifyForwardIdempotencyStatus(forwardResult.status),
         responseStatus: forwardResult.status,
         responseBody: forwardResult.body,
         responseContentType: forwardResult.contentType,
@@ -545,7 +512,7 @@ Deno.serve(async (req: Request) => {
       console.error('idempotency finalize failed:', error)
     }
 
-    const usageStatus = forwardResult.status >= 200 && forwardResult.status < 400 ? 'success' : 'failed'
+    const usageStatus = classifyForwardStatus(forwardResult.status)
     await auditLogger.writeMirrorUsageLogIfReady({
       supabase,
       userId: user.id,

@@ -381,6 +381,84 @@ export async function claimIdempotencyKey({
   return { kind: 'claimed' }
 }
 
+// ---------------------------------------------------------------------------
+// Early-exit resolution (conflict / in_progress / replay)
+// ---------------------------------------------------------------------------
+
+export type IdempotencyUsageStatus = 'success' | 'failed'
+
+export interface IdempotencyEarlyExitError {
+  usageStatus: IdempotencyUsageStatus
+  isReplay: false
+  httpStatus: number
+  errorCode: string
+  message: string
+  retryable: boolean
+  details: Record<string, unknown>
+}
+
+export interface IdempotencyEarlyExitReplay {
+  usageStatus: IdempotencyUsageStatus
+  isReplay: true
+  cachedStatus: number
+  cachedBody: string
+  cachedContentType: string
+}
+
+export type IdempotencyEarlyExitResult = IdempotencyEarlyExitError | IdempotencyEarlyExitReplay
+
+/**
+ * Resolve idempotency claim to a structured early-exit descriptor.
+ * Returns null when the claim is fresh ('claimed') and execution may continue.
+ * index.ts consumes this to collapse conflict/in_progress/replay into one handler block.
+ */
+export function resolveIdempotencyEarlyExit(
+  claim: IdempotencyClaimResult,
+  action: string,
+): IdempotencyEarlyExitResult | null {
+  if (claim.kind === 'claimed') return null
+
+  if (claim.kind === 'conflict') {
+    return {
+      usageStatus: 'failed',
+      isReplay: false,
+      httpStatus: 409,
+      errorCode: 'bad_request',
+      message: 'Idempotency key reuse with different payload is not allowed',
+      retryable: false,
+      details: { action, priorRequestId: claim.record?.request_id },
+    }
+  }
+
+  if (claim.kind === 'in_progress') {
+    return {
+      usageStatus: 'failed',
+      isReplay: false,
+      httpStatus: 409,
+      errorCode: 'bad_request',
+      message: 'A request with this idempotency key is already processing',
+      retryable: true,
+      details: { action, priorRequestId: claim.record?.request_id },
+    }
+  }
+
+  if (claim.kind === 'replay' && claim.record) {
+    const cachedStatus = claim.record.response_status ?? 200
+    const cachedBody =
+      claim.record.response_body ??
+      JSON.stringify({ success: false, error: 'idempotency_record_missing_response' })
+    return {
+      usageStatus: cachedStatus >= 200 && cachedStatus < 400 ? 'success' : 'failed',
+      isReplay: true,
+      cachedStatus,
+      cachedBody,
+      cachedContentType: claim.record.response_content_type ?? 'application/json',
+    }
+  }
+
+  return null
+}
+
 /**
  * Finalize idempotency key with response details.
  * Transitions from 'processing' to 'completed' or 'failed'.

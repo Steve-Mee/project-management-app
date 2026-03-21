@@ -107,3 +107,19 @@ export function buildAuditErrorDetails(
     ...extra,
   }
 }
+
+/**
+ * Classify an upstream HTTP status code as success or failure.
+ * 2xx–3xx = success; everything else = failure.
+ */
+export function classifyForwardStatus(status: number): 'success' | 'failed' {
+  return status >= 200 && status < 400 ? 'success' : 'failed'
+}
+
+/**
+ * Classify an upstream HTTP status code for idempotency record state.
+ * 2xx–3xx = completed; everything else = failed.
+ */
+export function classifyForwardIdempotencyStatus(status: number): 'completed' | 'failed' {
+  return status >= 200 && status < 400 ? 'completed' : 'failed'
+}
