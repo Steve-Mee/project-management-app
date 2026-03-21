@@ -24,7 +24,7 @@
 
 ### Zwakke punten
 
-- **`private_grpc_backend.dart` is de gRPC-implementatie**: de `PrivateGrpcBackend` beheert private gRPC-transport. Cloud-routing loopt via `MirrorGatewayBackend` → `FLY_MIRROR_COMPUTE_ENDPOINT`.
+- **`private_grpc_backend.dart` is de gRPC-implementatie**: de `PrivateGrpcBackend` beheert private gRPC-transport. Cloud-routing loopt via `MirrorGatewayBackend`; opslag-artefacten landen in de canonieke buckets `mirror-signed-inputs` en `mirror-backups`.
 - **Geen go_router-route voor `MirrorEditorScreen`**: navigatie is puur imperatief (`Navigator.push`), waardoor deep links via URL ontbreken. Er is een `initialRoute.contains('mirror')` check in `projects_initializer.dart` maar geen gedeclareerde route.
 - **Dubbele model-klassen**: `ApplySecurityArtifacts` in `mirror_signed_inputs_backend.dart` en `MirrorSecureApplyArtifacts` in `mirror_secure_apply_service.dart` zijn inhoudelijk identiek; hetzelfde voor `ApplyUploadFailure` / `MirrorSecureApplyUploadFailure`.
 - **Overlappende verantwoordelijkheden**: `MirrorEditorRunService` doet een budget-preflight-check en delegeert dan naar `MirrorEditorOrchestrationService`, die zelf ook file-validaties uitvoert. Gedeelde schermen tussen twee servicelagen.
@@ -292,7 +292,7 @@ Een mature, goed-beveiligde implementatie met uitzonderlijk sterke integriteits-
 |---|---------|---------------------|-------|
 | D1 | `lib/features/mirror/mirror_signed_inputs_backend.dart` (+ `mirror_secure_apply_service.dart`) | Elimineer `ApplySecurityArtifacts` / `ApplyUploadFailure` / `ApplyUploadFailureCode` duplicate model-klassen. Kies één definitie (recommend: `mirror_secure_apply_service.dart`) en laat `mirror_signed_inputs_backend.dart` ernaar verwijzen. | Twee identieke klassen met verschillende namen verhogen cognitieve last en veroorzaken merge-fouten. |
 | D2 | `lib/core/providers/ai_chat_provider.dart` | Verwijder de zinloze `ref.read(aiChatProvider)` aanroep in `openMirrorFromTask()` als die geen side-effect heeft. | Dead code / verborgen side-effect zonder documentatie. |
-| D3 | ~~Opgelost~~: `cloud_fly_backend.dart` / `CloudFlyBackend` verwijzingen zijn verwijderd uit docs en code. `PrivateGrpcBackend` (`private_grpc_backend.dart`) is de correcte gRPC-implementatie. | — | Naming drift volledig opgeruimd. |
+| D3 | ~~Opgelost~~: documentatie en code gebruiken nu uitsluitend `MirrorGatewayBackend` en `PrivateGrpcBackend` voor Mirror-transport. | — | Naming drift volledig opgeruimd. |
 | D4 | `lib/features/mirror/widgets/monaco_editor_host_stub.dart` | Overweeg dit stub-bestand te verwijderen als het nergens geïmporteerd wordt (enkel `monaco_editor_host.dart` barrel + `_io` + `_web` zijn in gebruik). | Dode code verhoogt navigatiekosten. |
 | D5 | `lib/features/mirror/services/mirror_editor_run_service.dart` | De budget-preflight dupliceert `MirrorEditorOrchestrationService`. Na refactoring (W1) kan `MirrorEditorRunService` worden omgezet tot een thin wrapper of verwijderd ten gunste van directe aanroep van `MirrorEditorOrchestrationService`. | Overtollige laag met gedeelde verantwoordelijkheid. |
 

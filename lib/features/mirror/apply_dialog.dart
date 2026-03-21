@@ -62,6 +62,7 @@ class ApplyDialog extends StatefulWidget {
 
 class _ApplyDialogState extends State<ApplyDialog> {
   static const MirrorDiffService _diffService = MirrorDiffService();
+  static const int _unifiedDiffContextLines = 3;
   bool _acceptRisk = false;
 
   @override
@@ -73,6 +74,7 @@ class _ApplyDialogState extends State<ApplyDialog> {
       oldLabel: 'a/${widget.title}',
       newLabel: 'b/${widget.title}',
       noDiffText: l10n.mirrorApplyNoDiff,
+      contextLines: _unifiedDiffContextLines,
     );
 
     return AlertDialog(
@@ -156,7 +158,6 @@ class _ApplyDialogState extends State<ApplyDialog> {
       ],
     );
   }
-
 }
 
 class _BranchInfoCard extends StatelessWidget {

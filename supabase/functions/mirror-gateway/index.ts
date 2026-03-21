@@ -199,7 +199,7 @@ async function hasCloudMirrorAccess(
 }
 
 function resolveForwardEndpoint(mode: 'private' | 'cloud', action: 'compile' | 'apply'): string {
-  const key = mode === 'private' ? 'PRIVATE_COMPUTE_ENDPOINT' : 'FLY_MIRROR_COMPUTE_ENDPOINT'
+  const key = mode === 'private' ? 'PRIVATE_COMPUTE_ENDPOINT' : 'FLY_MIRROR_BACKEND_ENDPOINT'
   const configured = Deno.env.get(key)?.trim()
   if (!configured) {
     throw new Error(`missing_endpoint_env:${key}`)
@@ -503,6 +503,41 @@ async function writeMirrorUsageLog({
   if (error) {
     console.error('mirror-gateway usage metering write failed:', error.message)
   }
+}
+
+async function writeMirrorUsageLogIfReady({
+  supabase,
+  userId,
+  normalized,
+  action,
+  status,
+  requestId,
+  idempotencyKey,
+  startedAtMs,
+}: {
+  supabase: ReturnType<typeof createClient> | null
+  userId: string | null
+  normalized: MirrorComputeRequest | null
+  action: 'compile' | 'apply'
+  status: MirrorUsageStatus
+  requestId: string
+  idempotencyKey: string
+  startedAtMs: number | null
+}): Promise<void> {
+  if (!supabase || !userId || !normalized || startedAtMs == null) {
+    return
+  }
+
+  await writeMirrorUsageLog({
+    supabase,
+    userId,
+    normalized,
+    action,
+    status,
+    requestId,
+    idempotencyKey,
+    startedAtMs,
+  })
 }
 
 function idempotencyTtlSeconds(): number {
@@ -1013,6 +1048,10 @@ Deno.serve(async (req: Request) => {
   const traceId = resolveTraceId(req, requestId)
   const idempotencyKey = resolveIdempotencyKey(req)
   const action = resolveActionFromPath(new URL(req.url).pathname)
+  let usageSupabase: ReturnType<typeof createClient> | null = null
+  let usageUserId: string | null = null
+  let usageNormalized: MirrorComputeRequest | null = null
+  let usageStartedAtMs: number | null = null
 
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: buildCorsHeaders(req) })
@@ -1085,6 +1124,7 @@ Deno.serve(async (req: Request) => {
     const supabase = createClient(supabaseUrl, supabaseAnonKey, {
       global: { headers: { Authorization: authHeader } },
     })
+    usageSupabase = supabase
 
     const {
       data: { user },
@@ -1105,6 +1145,7 @@ Deno.serve(async (req: Request) => {
         401,
       )
     }
+    usageUserId = user.id
 
     let rawBody: Partial<MirrorComputeRequest>
     try {
@@ -1159,6 +1200,8 @@ Deno.serve(async (req: Request) => {
       )
     }
     const startedAtMs = Date.now()
+    usageNormalized = normalized
+    usageStartedAtMs = startedAtMs
 
     let canUseMirror = false
     try {
@@ -1860,6 +1903,16 @@ Deno.serve(async (req: Request) => {
       (error.message.startsWith('missing_endpoint_env:') ||
         error.message.startsWith('unsupported_action_path_combination:'))
     ) {
+      await writeMirrorUsageLogIfReady({
+        supabase: usageSupabase,
+        userId: usageUserId,
+        normalized: usageNormalized,
+        action: action ?? 'compile',
+        status: 'failed',
+        requestId,
+        idempotencyKey,
+        startedAtMs: usageStartedAtMs,
+      })
       return errorResponse(req,
         buildStructuredError({
           code: 'config_error',
@@ -1875,6 +1928,16 @@ Deno.serve(async (req: Request) => {
     }
 
     console.error('mirror-gateway forwarding error:', error)
+    await writeMirrorUsageLogIfReady({
+      supabase: usageSupabase,
+      userId: usageUserId,
+      normalized: usageNormalized,
+      action: action ?? 'compile',
+      status: 'failed',
+      requestId,
+      idempotencyKey,
+      startedAtMs: usageStartedAtMs,
+    })
     return errorResponse(req,
       buildStructuredError({
         code: 'internal_error',

@@ -1233,7 +1233,7 @@
   "@mirrorApplyBranchTip": {
     "description": "Tip text in the branch advice card encouraging branch-based workflow."
   },
-  "mirrorApplyBranchTipWithBranch": "Conseil : envisagez la branche suggeree \"{branch}\" comme recommandation pour une revue plus sure et un retour arriere simplifie.",
+  "mirrorApplyBranchTipWithBranch": "Conseil uniquement : envisagez la branche suggeree \"{branch}\" comme recommandation pour une revue plus sure et un retour arriere simplifie.",
   "@mirrorApplyBranchTipWithBranch": {
     "description": "Tip text in the branch advice card with the suggested branch name.",
     "placeholders": {

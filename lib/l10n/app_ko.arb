@@ -1233,7 +1233,7 @@
   "@mirrorApplyBranchTip": {
     "description": "Tip text in the branch advice card encouraging branch-based workflow."
   },
-  "mirrorApplyBranchTipWithBranch": "안내: 제안된 브랜치 \"{branch}\"는 더 안전한 검토와 쉬운 롤백을 위한 권장 사항입니다(조언 전용).",
+  "mirrorApplyBranchTipWithBranch": "조언 전용: 제안된 브랜치 \"{branch}\"는 더 안전한 검토와 쉬운 롤백을 위한 권장 사항입니다.",
   "@mirrorApplyBranchTipWithBranch": {
     "description": "Tip text in the branch advice card with the suggested branch name.",
     "placeholders": {

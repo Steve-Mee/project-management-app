@@ -1,7 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pma_core/services/mirror_access_policy.dart';
-import 'package:project_management_app/core/providers/mirror_provider.dart';
+import 'package:project_management_app/core/providers/mirror_offline_cache_provider.dart';
 
 class _TestMirrorNotifier extends MirrorNotifier {
   @override

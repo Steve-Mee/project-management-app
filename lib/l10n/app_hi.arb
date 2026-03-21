@@ -1233,7 +1233,7 @@
   "@mirrorApplyBranchTip": {
     "description": "Tip text in the branch advice card encouraging branch-based workflow."
   },
-  "mirrorApplyBranchTipWithBranch": "सलाह: सुझाई गई शाखा \"{branch}\" को केवल सुझाव मानें ताकि समीक्षा अधिक सुरक्षित रहे और रोलबैक आसान हो।",
+  "mirrorApplyBranchTipWithBranch": "केवल सलाह: सुझाई गई शाखा \"{branch}\" को सुझाव मानें ताकि समीक्षा अधिक सुरक्षित रहे और रोलबैक आसान हो।",
   "@mirrorApplyBranchTipWithBranch": {
     "description": "Tip text in the branch advice card with the suggested branch name.",
     "placeholders": {

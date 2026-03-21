@@ -2443,7 +2443,7 @@
   "@mirrorApplyBranchTip": {
     "description": "Tip text in the branch advice card encouraging branch-based workflow."
   },
-  "mirrorApplyBranchTipWithBranch": "Advice only: consider using the suggested branch \"{branch}\" for safer review and simpler rollback.",
+  "mirrorApplyBranchTipWithBranch": "Advice only: consider using the suggested branch \"{branch}\" for safer review and simpler rollback. Mirror will not create or switch branches for you.",
   "@mirrorApplyBranchTipWithBranch": {
     "description": "Tip text in the branch advice card with the suggested branch name.",
     "placeholders": {
