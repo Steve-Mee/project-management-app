@@ -333,6 +333,7 @@ const IDEMPOTENCY_ALLOWED_STATUSES = ['processing', 'completed', 'failed'] as co
 const DEFAULT_GATEWAY_RATE_LIMIT_REQUESTS_PER_MINUTE = 10
 const DEFAULT_GATEWAY_RATE_LIMIT_BURST = 30
 const DEFAULT_GATEWAY_RATE_LIMIT_BURST_WINDOW_SECONDS = 180
+const RATE_LIMIT_COUNTABLE_STATUSES = ['processing', 'completed'] as const
 
 interface PerUserRateLimitCheckResult {
   allowed: boolean
@@ -341,6 +342,15 @@ interface PerUserRateLimitCheckResult {
   minuteCount: number
   burstCount: number
 }
+
+type UpstreamFailureClass =
+  | 'request_timeout'
+  | 'transport_error'
+  | 'upstream_timeout'
+  | 'upstream_rate_limited'
+  | 'upstream_client_error'
+  | 'upstream_server_error'
+  | 'upstream_unknown_error'
 
 function logIdempotencyStatusContractOnColdStart(): void {
   const allowsProcessing = IDEMPOTENCY_ALLOWED_STATUSES.includes('processing')
@@ -918,6 +928,98 @@ function gatewayRateLimitBurstWindowSeconds(): number {
   )
 }
 
+function classifyUpstreamStatusFailure(status: number): UpstreamFailureClass {
+  if (status === 408 || status === 504) {
+    return 'upstream_timeout'
+  }
+
+  if (status === 429) {
+    return 'upstream_rate_limited'
+  }
+
+  if (status >= 400 && status < 500) {
+    return 'upstream_client_error'
+  }
+
+  if (status >= 500) {
+    return 'upstream_server_error'
+  }
+
+  return 'upstream_unknown_error'
+}
+
+function logRateLimitDecision({
+  requestId,
+  traceId,
+  userId,
+  allowed,
+  reason,
+  minuteCount,
+  burstCount,
+  minuteLimit,
+  burstLimit,
+  burstWindowSeconds,
+}: {
+  requestId: string
+  traceId: string
+  userId: string
+  allowed: boolean
+  reason?: PerUserRateLimitCheckResult['reason']
+  minuteCount: number
+  burstCount: number
+  minuteLimit: number
+  burstLimit: number
+  burstWindowSeconds: number
+}): void {
+  console.info('mirror-gateway rate limit decision', {
+    requestId,
+    traceId,
+    userId,
+    allowed,
+    reason: reason ?? null,
+    observedRequestsLastMinute: minuteCount,
+    observedRequestsInBurstWindow: burstCount,
+    maxRequestsPerMinute: minuteLimit,
+    burstLimit,
+    burstWindowSeconds,
+    countableStatuses: RATE_LIMIT_COUNTABLE_STATUSES,
+  })
+}
+
+function logUpstreamFailureEvent({
+  requestId,
+  traceId,
+  action,
+  mode,
+  failureClass,
+  status,
+  retryable,
+  stage,
+  details,
+}: {
+  requestId: string
+  traceId: string
+  action: 'compile' | 'apply'
+  mode: 'private' | 'cloud'
+  failureClass: UpstreamFailureClass
+  status: number | null
+  retryable: boolean
+  stage: string
+  details?: unknown
+}): void {
+  console.warn('mirror-gateway upstream failure', {
+    requestId,
+    traceId,
+    action,
+    mode,
+    failureClass,
+    upstreamStatus: status,
+    retryable,
+    stage,
+    details,
+  })
+}
+
 async function checkPerUserRateLimit(
   supabase: ReturnType<typeof createClient>,
   userId: string,
@@ -926,6 +1028,7 @@ async function checkPerUserRateLimit(
   const burstLimit = gatewayRateLimitBurst()
   const burstWindowSeconds = gatewayRateLimitBurstWindowSeconds()
 
+  const nowIso = new Date().toISOString()
   const oneMinuteAgo = new Date(Date.now() - 60 * 1000).toISOString()
   const burstWindowStart = new Date(Date.now() - burstWindowSeconds * 1000).toISOString()
 
@@ -933,6 +1036,8 @@ async function checkPerUserRateLimit(
     .from('mirror_request_idempotency')
     .select('*', { head: true, count: 'exact' })
     .eq('user_id', userId)
+    .in('status', [...RATE_LIMIT_COUNTABLE_STATUSES])
+    .gt('expires_at', nowIso)
     .gte('created_at', oneMinuteAgo)
 
   if (minuteError) {
@@ -943,6 +1048,8 @@ async function checkPerUserRateLimit(
     .from('mirror_request_idempotency')
     .select('*', { head: true, count: 'exact' })
     .eq('user_id', userId)
+    .in('status', [...RATE_LIMIT_COUNTABLE_STATUSES])
+    .gt('expires_at', nowIso)
     .gte('created_at', burstWindowStart)
 
   if (burstError) {
@@ -1488,10 +1595,23 @@ Deno.serve(async (req: Request) => {
       throw error
     }
 
+    const minuteLimit = gatewayRateLimitRequestsPerMinute()
+    const burstLimit = gatewayRateLimitBurst()
+    const burstWindowSeconds = gatewayRateLimitBurstWindowSeconds()
+    logRateLimitDecision({
+      requestId,
+      traceId,
+      userId: user.id,
+      allowed: rateLimitCheck.allowed,
+      reason: rateLimitCheck.reason,
+      minuteCount: rateLimitCheck.minuteCount,
+      burstCount: rateLimitCheck.burstCount,
+      minuteLimit,
+      burstLimit,
+      burstWindowSeconds,
+    })
+
     if (!rateLimitCheck.allowed) {
-      const minuteLimit = gatewayRateLimitRequestsPerMinute()
-      const burstLimit = gatewayRateLimitBurst()
-      const burstWindowSeconds = gatewayRateLimitBurstWindowSeconds()
       const retryAfterSeconds = rateLimitCheck.retryAfterSeconds ?? 60
 
       const rateLimitError = buildStructuredError({
@@ -1642,6 +1762,17 @@ Deno.serve(async (req: Request) => {
           idempotencyKey,
           stage: 'forward',
         })
+        logUpstreamFailureEvent({
+          requestId,
+          traceId,
+          action,
+          mode: normalized.mode,
+          failureClass: 'request_timeout',
+          status: null,
+          retryable: true,
+          stage: 'forward',
+          details: { reason: 'abort_signal_timeout' },
+        })
         try {
           await finalizeIdempotencyKey({
             supabase,
@@ -1702,6 +1833,17 @@ Deno.serve(async (req: Request) => {
         details: String(error),
         stage: 'forward',
       })
+      logUpstreamFailureEvent({
+        requestId,
+        traceId,
+        action,
+        mode: normalized.mode,
+        failureClass: 'transport_error',
+        status: null,
+        retryable: true,
+        stage: 'forward',
+        details: String(error),
+      })
 
       try {
         await finalizeIdempotencyKey({
@@ -1759,6 +1901,7 @@ Deno.serve(async (req: Request) => {
     const upstreamBody = await upstreamResponse.text()
 
     if (!upstreamResponse.ok) {
+      const upstreamFailureClass = classifyUpstreamStatusFailure(upstreamResponse.status)
       const upstreamStatusError = buildStructuredError({
         code: 'upstream_error',
         message: `Upstream /${action} returned a non-success status`,
@@ -1775,6 +1918,17 @@ Deno.serve(async (req: Request) => {
         },
         upstreamStatus: upstreamResponse.status,
         stage: 'upstream',
+      })
+      logUpstreamFailureEvent({
+        requestId,
+        traceId,
+        action,
+        mode: normalized.mode,
+        failureClass: upstreamFailureClass,
+        status: upstreamResponse.status,
+        retryable: upstreamStatusError.retryable,
+        stage: 'upstream',
+        details: { responseBodyBytes: new TextEncoder().encode(upstreamBody).length },
       })
 
       try {
