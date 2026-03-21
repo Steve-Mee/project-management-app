@@ -48,6 +48,7 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
   bool _isPermissionRevoked = false;
   bool _isRealtimeControllerDisposed = false;
   _MirrorStructuredError? _lastStructuredError;
+  String _voiceDraft = '';
 
   String get _sessionKey => '${widget.projectId}::${widget.taskId}';
 
@@ -189,8 +190,20 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
                             ? _l10n.mirrorRetryButton
                             : _l10n.mirrorRunLabel),
                   ),
+                  const SizedBox(width: 8),
+                  OutlinedButton.icon(
+                    onPressed: _voiceDraft.trim().isEmpty || _isRunInProgress
+                        ? null
+                        : _insertVoiceDraftIntoCode,
+                    icon: const Icon(Icons.subdirectory_arrow_right),
+                    label: const Text('Insert voice draft'),
+                  ),
                 ],
               ),
+              if (_voiceDraft.trim().isNotEmpty) ...<Widget>[
+                const SizedBox(height: 8),
+                _buildVoiceDraftCard(context),
+              ],
               if (_lastStructuredError?.retryable == true) ...<Widget>[
                 const SizedBox(height: 8),
                 _buildRetryFeedbackCard(context, _lastStructuredError!),
@@ -562,18 +575,10 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
         }
 
         setState(() {
-          final sessionState = ref.read(mirrorSessionProvider(_sessionKey));
-          final selectedFile = sessionState.selectedFile;
-          final existing = sessionState.files[selectedFile] ?? '';
-          final separator =
-              existing.endsWith('\n') || existing.isEmpty ? '' : '\n';
-          _sessionNotifier
-              .updateSelectedFileContent('$existing$separator$recognized');
+          _voiceDraft = recognized;
         });
 
-        final selectedFile =
-            ref.read(mirrorSessionProvider(_sessionKey)).selectedFile;
-        _appendTerminalLine(_l10n.mirrorVoiceAppended(selectedFile));
+        _appendTerminalLine('Voice draft updated. Review and insert when ready.');
 
         if (result.finalResult) {
           setState(() {
@@ -706,6 +711,75 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
     if (announceStop) {
       _appendTerminalLine(_l10n.mirrorVoiceStopped);
     }
+  }
+
+  void _insertVoiceDraftIntoCode() {
+    final draft = _voiceDraft.trim();
+    if (draft.isEmpty) {
+      return;
+    }
+
+    final sessionState = ref.read(mirrorSessionProvider(_sessionKey));
+    final selectedFile = sessionState.selectedFile;
+    final existing = sessionState.files[selectedFile] ?? '';
+    final separator = existing.endsWith('\n') || existing.isEmpty ? '' : '\n';
+    _sessionNotifier.updateSelectedFileContent('$existing$separator$draft');
+
+    setState(() {
+      _voiceDraft = '';
+    });
+
+    _appendTerminalLine(_l10n.mirrorVoiceAppended(selectedFile));
+  }
+
+  Widget _buildVoiceDraftCard(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(
+          color: Theme.of(context).colorScheme.outlineVariant,
+        ),
+        color: Theme.of(context).colorScheme.surfaceContainerLow,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Text(
+            'Voice draft preview',
+            style: Theme.of(context).textTheme.labelLarge,
+          ),
+          const SizedBox(height: 6),
+          Text(
+            _voiceDraft,
+            style: Theme.of(context).textTheme.bodyMedium,
+            maxLines: 4,
+            overflow: TextOverflow.ellipsis,
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: <Widget>[
+              FilledButton.tonalIcon(
+                onPressed: _isRunInProgress ? null : _insertVoiceDraftIntoCode,
+                icon: const Icon(Icons.subdirectory_arrow_right),
+                label: const Text('Insert into code'),
+              ),
+              const SizedBox(width: 8),
+              TextButton.icon(
+                onPressed: () {
+                  setState(() {
+                    _voiceDraft = '';
+                  });
+                },
+                icon: const Icon(Icons.clear),
+                label: const Text('Clear'),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
   }
 
   void _applyTemplateToSelectedFile(MirrorTemplate template) {
