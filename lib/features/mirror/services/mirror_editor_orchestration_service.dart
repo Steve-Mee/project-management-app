@@ -1,6 +1,3 @@
-import 'dart:convert';
-
-import 'package:crypto/crypto.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -11,6 +8,7 @@ import '../apply_dialog.dart';
 import '../mirror_signed_inputs_backend.dart';
 import '../providers/mirror_orchestrator_provider.dart';
 import 'mirror_backend_workflows.dart';
+import 'mirror_preview_metadata_service.dart';
 import 'mirror_service_boundaries.dart';
 
 class MirrorEditorOrchestrationService
@@ -18,6 +16,8 @@ class MirrorEditorOrchestrationService
   const MirrorEditorOrchestrationService();
 
   static const MirrorBackendWorkflows _workflows = MirrorBackendWorkflows();
+  static const MirrorPreviewMetadataService _previewMetadataService =
+      MirrorPreviewMetadataService();
 
   @override
   Future<void> runCurrentFileInTerminal({
@@ -121,15 +121,8 @@ class MirrorEditorOrchestrationService
             );
 
       final compileContextFingerprint =
-          _computeContextFingerprint(compileContext.files);
-      
-      // Build apply metadata with compile snapshot fingerprint.
-      // Contract enforcement: 'previewContextFingerprint': compileContextFingerprint
-      final applyMetadata = Map<String, dynamic>.from(
-        compileContext.metadata.toJson(),
-      );
-      applyMetadata['previewContextFingerprint'] = compileContextFingerprint;
-      
+          _previewMetadataService.computeContextFingerprint(compileContext.files);
+
       final compileContextForPreviewAndApply = compileContext.copyWith(
         files: Map<String, String>.from(compileContext.files),
         metadata: compileContext.metadata.copyWith(
@@ -174,7 +167,8 @@ class MirrorEditorOrchestrationService
         mode: selectedMode,
         output: compileOutput,
       );
-      final previewServerVersionToken = _normalizeServerVersionToken(
+      final previewServerVersionToken =
+          _previewMetadataService.normalizeServerVersionToken(
         compileResult.serverVersionToken,
       );
 
@@ -232,7 +226,7 @@ class MirrorEditorOrchestrationService
       appendTerminalLine(l10n.mirrorStepApplySent);
       // Contract: applyContext carries metadata with compile fingerprint
       // Note: metadata: Map<String, dynamic>.from(compileContextForPreviewAndApply.metadata.toJson())
-      final builtApplyMetadata = _buildApplyMetadata(
+      final builtApplyMetadata = _previewMetadataService.buildApplyMetadata(
         metadata: compileContextForPreviewAndApply.metadata,
         previewServerVersionToken: previewServerVersionToken,
         previewCompileFingerprint: compileFingerprint,
@@ -367,85 +361,5 @@ class MirrorEditorOrchestrationService
     messenger.showSnackBar(
       SnackBar(content: Text(message)),
     );
-  }
-
-  ProjectContextMetadata _buildApplyMetadata({
-    required ProjectContextMetadata metadata,
-    required String? previewServerVersionToken,
-    required String previewCompileFingerprint,
-    required String previewCompileOutput,
-  }) {
-    final previewCompileOutputSha256 =
-        sha256.convert(utf8.encode(previewCompileOutput)).toString();
-
-    if (previewServerVersionToken == null) {
-      return metadata.copyWith(
-        previewCompileFingerprint: previewCompileFingerprint,
-        previewCompileOutputSha256: previewCompileOutputSha256,
-        previewReuseRequested: false,
-        previewReuseStrategy: ProjectContextPreviewReuseStrategy.none,
-      );
-    }
-
-    final reusePayload = _buildPreviewReusePayload(
-      serverVersionToken: previewServerVersionToken,
-      compileFingerprint: previewCompileFingerprint,
-      compileOutput: previewCompileOutput,
-    );
-
-    return metadata.copyWith(
-      previewCompileFingerprint: previewCompileFingerprint,
-      previewCompileOutputSha256: previewCompileOutputSha256,
-      previewReuseRequested: true,
-      previewReuseStrategy:
-          ProjectContextPreviewReuseStrategy.serverVersionToken,
-      previewServerVersionToken: previewServerVersionToken,
-      previewArtifactPath: previewServerVersionToken,
-      previewReusePayload: reusePayload,
-    );
-  }
-
-  ProjectContextPreviewReusePayload _buildPreviewReusePayload({
-    required String serverVersionToken,
-    required String compileFingerprint,
-    required String compileOutput,
-  }) {
-    const maxInlinePreviewChars = 64 * 1024;
-    final normalizedOutput = compileOutput.trim();
-    final inlineOutput = normalizedOutput.length <= maxInlinePreviewChars
-        ? normalizedOutput
-        : normalizedOutput.substring(0, maxInlinePreviewChars);
-
-    return ProjectContextPreviewReusePayload(
-      token: serverVersionToken,
-      fingerprint: compileFingerprint,
-      outputSha256: sha256.convert(utf8.encode(normalizedOutput)).toString(),
-      inlineOutput: inlineOutput,
-      inlineOutputTruncated: normalizedOutput.length > maxInlinePreviewChars,
-    );
-  }
-
-  String? _normalizeServerVersionToken(String? rawToken) {
-    final token = rawToken?.trim();
-    if (token == null || token.isEmpty) {
-      return null;
-    }
-    return token;
-  }
-
-  String _computeContextFingerprint(Map<String, String> files) {
-    final entries = files.entries.toList()
-      ..sort((a, b) => a.key.compareTo(b.key));
-
-    final buffer = StringBuffer();
-    for (final entry in entries) {
-      buffer
-        ..write(entry.key)
-        ..write('::')
-        ..write(entry.value)
-        ..write('\n');
-    }
-
-    return sha256.convert(utf8.encode(buffer.toString())).toString();
   }
 }

@@ -1,5 +1,6 @@
 // ARCHITECTURE LOCK: Mirror Gateway = thin proxy only. Compute always on Fly.io or local runner.
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:meta/meta.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../core/providers/supabase_client_provider.dart';
@@ -15,9 +16,12 @@ final mirrorTemplatesCacheProvider =
 final mirrorTemplatesObservabilityProvider =
     Provider<MirrorObservabilityService>((ref) => const MirrorObservabilityService());
 
+final mirrorTemplatesSupabaseClientProvider =
+    Provider<SupabaseClient>((ref) => ref.read(supabaseClientProvider));
+
 final mirrorTemplatesProvider =
     FutureProvider<List<MirrorTemplate>>((ref) async {
-  final client = ref.read(supabaseClientProvider);
+  final client = ref.read(mirrorTemplatesSupabaseClientProvider);
   final persistentCache = ref.read(mirrorTemplatesCacheProvider);
   final observability = ref.read(mirrorTemplatesObservabilityProvider);
   final now = DateTime.now().toUtc();
@@ -145,4 +149,26 @@ class _TemplatesCacheSnapshot {
 
 class _MirrorTemplatesMemoryCache {
   static _TemplatesCacheSnapshot? snapshot;
+}
+
+/// Resets the in-process template memory cache.
+/// FOR TESTING ONLY — never call from production code.
+@visibleForTesting
+void debugResetMirrorTemplatesMemoryCache() {
+  _MirrorTemplatesMemoryCache.snapshot = null;
+}
+
+/// Seeds the in-process template memory cache with a specific snapshot.
+/// FOR TESTING ONLY — never call from production code.
+@visibleForTesting
+void debugSetMirrorTemplatesMemoryCache({
+  required List<MirrorTemplate> templates,
+  required String serverVersion,
+  required DateTime fetchedAtUtc,
+}) {
+  _MirrorTemplatesMemoryCache.snapshot = _TemplatesCacheSnapshot(
+    templates: templates,
+    serverVersion: serverVersion,
+    fetchedAtUtc: fetchedAtUtc,
+  );
 }

@@ -6,17 +6,19 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pma_core/auth/permissions.dart';
 import 'package:pma_core/providers/auth/auth_providers.dart';
-import 'package:speech_to_text/speech_to_text.dart' as stt;
 import 'package:xterm/xterm.dart';
+import 'widgets/mirror_voice_prompt_bar.dart';
 import '../../generated/app_localizations.dart';
 
+import '../../core/providers/mirror_entitlement_provider.dart';
 import '../../core/providers/mirror_session_provider.dart';
 import '../../core/providers/mirror_provider.dart';
 import '../../core/providers/supabase_client_provider.dart';
 import 'models/mirror_template.dart';
+import 'providers/mirror_editor_orchestration_provider.dart';
 import 'providers/mirror_templates_provider.dart';
+import 'services/mirror_editor_preflight_service.dart';
 import 'services/mirror_editor_realtime_controller.dart';
-import 'services/mirror_editor_run_service.dart';
 import 'templates_gallery.dart';
 import 'widgets/monaco_editor_host.dart';
 
@@ -37,11 +39,12 @@ class MirrorEditorScreen extends ConsumerStatefulWidget {
 }
 
 class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
+  static const MirrorEditorPreflightService _preflightService =
+      MirrorEditorPreflightService();
+
   late final Terminal _terminal;
   late final TerminalController _terminalController;
-  late final stt.SpeechToText _speechToText;
   late final MirrorEditorRealtimeController _realtimeController;
-  late final MirrorEditorRunService _runService;
   late final ProviderSubscription<bool> _mirrorPermissionSubscription;
   final ScrollController _liveOutputScrollController = ScrollController();
   bool _isListening = false;
@@ -49,7 +52,6 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
   bool _isPermissionRevoked = false;
   bool _isRealtimeControllerDisposed = false;
   _MirrorStructuredError? _lastStructuredError;
-  String _voiceDraft = '';
 
   String get _sessionKey => '${widget.projectId}::${widget.taskId}';
 
@@ -66,14 +68,12 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
     );
     _terminal = Terminal(maxLines: 1000);
     _terminalController = TerminalController();
-    _speechToText = stt.SpeechToText();
     _realtimeController = MirrorEditorRealtimeController(
       projectId: widget.projectId,
       taskId: widget.taskId,
       sessionKey: _sessionKey,
       supabaseClient: ref.read(supabaseClientProvider),
     );
-    _runService = const MirrorEditorRunService();
     _mirrorPermissionSubscription = ref.listenManual<bool>(
       hasPermissionProvider(AppPermissions.useMirror),
       (bool? previous, bool next) {
@@ -105,8 +105,6 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
 
   @override
   void dispose() {
-    unawaited(_speechToText.stop());
-    unawaited(_speechToText.cancel());
     _mirrorPermissionSubscription.close();
     _disposeRealtimeController();
     _liveOutputScrollController.dispose();
@@ -123,9 +121,9 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
       return _buildPermissionRevokedState(context, l10n);
     }
 
-    final mirrorState = ref.watch(mirrorProvider);
+    final selectedMode = ref.watch(mirrorModeProvider);
     final sessionState = ref.watch(mirrorSessionProvider(_sessionKey));
-    final isPremium = mirrorState.isPremium;
+    final isPremium = ref.watch(mirrorPremiumProvider).valueOrNull ?? false;
 
     return Scaffold(
       appBar: AppBar(
@@ -144,7 +142,7 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
             children: <Widget>[
               _ModeSelector(
                 l10n: _l10n,
-                mode: mirrorState.mode,
+                mode: selectedMode,
                 isPremium: isPremium,
                 isEnabled: !_isRunInProgress,
                 onModeChanged: (String mode) {
@@ -162,50 +160,36 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
                 style: Theme.of(context).textTheme.bodySmall,
               ),
               const SizedBox(height: 8),
-              Row(
-                children: <Widget>[
-                  FilledButton.tonalIcon(
-                    onPressed: _toggleVoiceInput,
-                    icon: Icon(_isListening ? Icons.mic : Icons.mic_none),
-                    label: Text(_isListening
-                        ? _l10n.mirrorListeningLabel
-                        : _l10n.mirrorVoiceInputLabel),
-                  ),
-                  const SizedBox(width: 8),
-                  OutlinedButton.icon(
-                    onPressed:
-                        _isRunInProgress ? null : _runCurrentFileInTerminal,
-                    icon: _isRunInProgress
-                        ? const SizedBox(
-                            width: 16,
-                            height: 16,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : Icon(
-                            _lastStructuredError?.retryable == true
-                                ? Icons.refresh
-                                : Icons.play_arrow,
-                          ),
-                    label: Text(_isRunInProgress
-                        ? _l10n.mirrorRunningLabel
-                        : _lastStructuredError?.retryable == true
-                            ? _l10n.mirrorRetryButton
-                            : _l10n.mirrorRunLabel),
-                  ),
-                  const SizedBox(width: 8),
-                  OutlinedButton.icon(
-                    onPressed: _voiceDraft.trim().isEmpty || _isRunInProgress
-                        ? null
-                        : _insertVoiceDraftIntoCode,
-                    icon: const Icon(Icons.subdirectory_arrow_right),
-                    label: const Text('Insert voice draft'),
-                  ),
-                ],
+              MirrorVoicePromptBar(
+                isDisabled: _isRunInProgress,
+                onApplyToEditor: _applyVoiceDraftToEditor,
+                onStatusMessage: _appendTerminalLine,
+                onListeningChanged: ({required bool isListening}) {
+                  setState(() => _isListening = isListening);
+                },
               ),
-              if (_voiceDraft.trim().isNotEmpty) ...<Widget>[
-                const SizedBox(height: 8),
-                _buildVoiceDraftCard(context),
-              ],
+              const SizedBox(height: 8),
+              OutlinedButton.icon(
+                onPressed: _isRunInProgress || _isListening
+                    ? null
+                    : _runCurrentFileInTerminal,
+                icon: _isRunInProgress
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : Icon(
+                        _lastStructuredError?.retryable == true
+                            ? Icons.refresh
+                            : Icons.play_arrow,
+                      ),
+                label: Text(_isRunInProgress
+                    ? _l10n.mirrorRunningLabel
+                    : _lastStructuredError?.retryable == true
+                        ? _l10n.mirrorRetryButton
+                        : _l10n.mirrorRunLabel),
+              ),
               if (_lastStructuredError?.retryable == true) ...<Widget>[
                 const SizedBox(height: 8),
                 _buildRetryFeedbackCard(context, _lastStructuredError!),
@@ -279,8 +263,6 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
     _appendTerminalLine(_l10n.mirrorPermissionRevokedTerminal);
 
     _disposeRealtimeController();
-    unawaited(_speechToText.stop());
-    unawaited(_speechToText.cancel());
     ref.invalidate(mirrorSessionProvider(_sessionKey));
 
     if (!mounted) {
@@ -549,58 +531,7 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
     });
   }
 
-  Future<void> _toggleVoiceInput() async {
-    if (_isListening) {
-      await _stopVoiceInput();
-      return;
-    }
-
-    final available = await _speechToText.initialize();
-    if (!available) {
-      _appendTerminalLine(_l10n.mirrorVoiceUnavailableTerminal);
-      return;
-    }
-
-    setState(() {
-      _isListening = true;
-    });
-    _appendTerminalLine(_l10n.mirrorVoiceStarted);
-
-    await _speechToText.listen(
-      onResult: (result) {
-        if (!mounted) {
-          return;
-        }
-        final recognized = result.recognizedWords.trim();
-        if (recognized.isEmpty) {
-          return;
-        }
-
-        setState(() {
-          _voiceDraft = recognized;
-        });
-
-        _appendTerminalLine('Voice draft updated. Review and insert when ready.');
-
-        if (result.finalResult) {
-          setState(() {
-            _isListening = false;
-          });
-        }
-      },
-      onSoundLevelChange: (_) {},
-      // ignore: deprecated_member_use
-      cancelOnError: true,
-      // ignore: deprecated_member_use
-      listenMode: stt.ListenMode.dictation,
-    );
-  }
-
   Future<void> _openTemplatesGallery() async {
-    if (_isListening) {
-      await _stopVoiceInput(announceStop: false);
-    }
-
     if (!mounted) {
       return;
     }
@@ -702,86 +633,13 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
     );
   }
 
-  Future<void> _stopVoiceInput({bool announceStop = true}) async {
-    await _speechToText.stop();
-    if (!mounted) {
-      return;
-    }
-    setState(() {
-      _isListening = false;
-    });
-    if (announceStop) {
-      _appendTerminalLine(_l10n.mirrorVoiceStopped);
-    }
-  }
-
-  void _insertVoiceDraftIntoCode() {
-    final draft = _voiceDraft.trim();
-    if (draft.isEmpty) {
-      return;
-    }
-
+  void _applyVoiceDraftToEditor(String text) {
     final sessionState = ref.read(mirrorSessionProvider(_sessionKey));
     final selectedFile = sessionState.selectedFile;
     final existing = sessionState.files[selectedFile] ?? '';
     final separator = existing.endsWith('\n') || existing.isEmpty ? '' : '\n';
-    _sessionNotifier.updateSelectedFileContent('$existing$separator$draft');
-
-    setState(() {
-      _voiceDraft = '';
-    });
-
+    _sessionNotifier.updateSelectedFileContent('$existing$separator$text');
     _appendTerminalLine(_l10n.mirrorVoiceAppended(selectedFile));
-  }
-
-  Widget _buildVoiceDraftCard(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(10),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(
-          color: Theme.of(context).colorScheme.outlineVariant,
-        ),
-        color: Theme.of(context).colorScheme.surfaceContainerLow,
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          Text(
-            'Voice draft preview',
-            style: Theme.of(context).textTheme.labelLarge,
-          ),
-          const SizedBox(height: 6),
-          Text(
-            _voiceDraft,
-            style: Theme.of(context).textTheme.bodyMedium,
-            maxLines: 4,
-            overflow: TextOverflow.ellipsis,
-          ),
-          const SizedBox(height: 8),
-          Row(
-            children: <Widget>[
-              FilledButton.tonalIcon(
-                onPressed: _isRunInProgress ? null : _insertVoiceDraftIntoCode,
-                icon: const Icon(Icons.subdirectory_arrow_right),
-                label: const Text('Insert into code'),
-              ),
-              const SizedBox(width: 8),
-              TextButton.icon(
-                onPressed: () {
-                  setState(() {
-                    _voiceDraft = '';
-                  });
-                },
-                icon: const Icon(Icons.clear),
-                label: const Text('Clear'),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
   }
 
   void _applyTemplateToSelectedFile(MirrorTemplate template) {
@@ -819,38 +677,51 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
   }
 
   void _runCurrentFileInTerminal() {
+    if (_isRunInProgress) {
+      return;
+    }
+
+    final preflightState = ref.read(mirrorSessionProvider(_sessionKey));
+    final budgetService = ref.read(mirrorContextBudgetServiceProvider);
+    final budgetMessage = _preflightService.buildBudgetPreflightMessage(
+      budgetService: budgetService,
+      projectId: widget.projectId,
+      taskId: widget.taskId,
+      files: preflightState.files,
+    );
+    if (budgetMessage != null) {
+      _appendTerminalLine(budgetMessage);
+    }
+
     final beforeState = ref.read(mirrorSessionProvider(_sessionKey));
     final beforeTerminalCount = beforeState.terminalLog.length;
 
     setState(() {
       _lastStructuredError = null;
+      _isRunInProgress = true;
     });
 
-    _runService
+    final coordinator = ref.read(mirrorInteractiveRunCoordinatorProvider);
+    coordinator
         .runCurrentFileInTerminal(
       context: context,
       ref: ref,
       projectId: widget.projectId,
       taskId: widget.taskId,
-      selectedMode: ref.read(mirrorProvider).mode,
+      selectedMode: ref.read(mirrorModeProvider),
       sessionKey: _sessionKey,
       l10n: _l10n,
-      isRunInProgress: _isRunInProgress,
       isMounted: () => mounted,
-      setRunInProgress: (bool inProgress) {
-        if (!mounted) {
-          return;
-        }
-        setState(() {
-          _isRunInProgress = inProgress;
-        });
-      },
       appendTerminalLine: _appendTerminalLine,
     )
         .then((_) {
       if (!mounted) {
         return;
       }
+
+      setState(() {
+        _isRunInProgress = false;
+      });
 
       final afterState = ref.read(mirrorSessionProvider(_sessionKey));
       final recentTerminalLines = afterState.terminalLog
@@ -874,6 +745,13 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
           _lastStructuredError = null;
         });
       }
+    }).catchError((_) {
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _isRunInProgress = false;
+      });
     });
   }
 

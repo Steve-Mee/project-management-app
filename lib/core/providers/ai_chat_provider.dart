@@ -3,7 +3,6 @@ library;
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pma_core/auth/permissions.dart';
-import 'package:pma_core/providers/ai_providers.dart' show aiChatProvider;
 import 'package:pma_core/providers/auth/auth_providers.dart';
 
 import 'mirror_feature_flag_provider.dart';
@@ -50,19 +49,16 @@ class AiChatBridgeNotifier extends Notifier<MirrorLaunchPayload?> {
       return null;
     }
 
-    ref.read(aiChatProvider);
-
     final mirrorNotifier = ref.read(mirrorProvider.notifier);
     final safeMode = preferredMode == 'cloud' ? 'cloud' : 'private';
     await mirrorNotifier.setMode(safeMode);
     await mirrorNotifier.refreshTeamModeVariant();
 
-    final mirrorState = ref.read(mirrorProvider);
     final payload = MirrorLaunchPayload(
       projectId: projectId,
       taskId: taskId,
-      mode: mirrorState.mode,
-      teamModeVariant: mirrorState.teamModeVariant,
+      mode: ref.read(mirrorModeProvider),
+      teamModeVariant: ref.read(mirrorTeamModeVariantProvider).valueOrNull ?? 'solo',
       requestedAt: DateTime.now(),
     );
 

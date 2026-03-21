@@ -1,0 +1,63 @@
+name: Mirror gRPC Contract
+
+'on':
+  pull_request:
+    paths:
+      - server/mirror-shared/proto/mirror.proto
+      - lib/features/mirror/grpc_generated/**
+      - .github/workflows/mirror-grpc-contract.yml
+      - tool/generate_mirror_grpc.ps1
+  push:
+    branches:
+      - main
+      - develop
+    paths:
+      - server/mirror-shared/proto/mirror.proto
+      - lib/features/mirror/grpc_generated/**
+      - .github/workflows/mirror-grpc-contract.yml
+      - tool/generate_mirror_grpc.ps1
+
+permissions:
+  contents: read
+
+jobs:
+  verify-mirror-grpc-generated:
+    name: verify-mirror-grpc-generated
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Dart
+        uses: dart-lang/setup-dart@v1
+
+      - name: Install protoc
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y protobuf-compiler
+
+      - name: Activate protoc Dart plugin
+        run: dart pub global activate protoc_plugin
+
+      - name: Regenerate Mirror gRPC Dart files
+        shell: bash
+        run: |
+          set -euo pipefail
+          export PATH="$HOME/.pub-cache/bin:$PATH"
+          protoc \
+            --proto_path=server/mirror-shared/proto \
+            --dart_out=grpc:lib/features/mirror/grpc_generated \
+            server/mirror-shared/proto/mirror.proto
+
+      - name: Verify generated files are committed
+        shell: bash
+        run: |
+          set -euo pipefail
+          if ! git diff --quiet -- lib/features/mirror/grpc_generated; then
+            echo "Mirror gRPC generated files are out of date."
+            echo "Please run code generation and commit the updated files:"
+            echo "  protoc --proto_path=server/mirror-shared/proto --dart_out=grpc:lib/features/mirror/grpc_generated server/mirror-shared/proto/mirror.proto"
+            git --no-pager diff -- lib/features/mirror/grpc_generated
+            exit 1
+          fi

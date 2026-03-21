@@ -2,7 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pma_core/auth/permissions.dart';
 import 'package:pma_core/providers/auth/auth_providers.dart';
 
-import 'mirror_feature_flag_provider.dart';
+import '../../../core/providers/mirror_feature_flag_provider.dart';
 
 /// Result of the central Mirror route/deeplink guard.
 ///

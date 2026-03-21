@@ -8,6 +8,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:window_manager/window_manager.dart';
 import 'package:pma_core/auth/permissions.dart';
+import 'mirror_route_intent.dart';
 import '../generated/app_localizations.dart';
 import '../features/dashboard/dashboard_screen.dart' deferred as dashboard_feature;
 import '../features/project/project_screen.dart' deferred as project_feature;
@@ -76,6 +77,10 @@ class AppRoutes {
   /// Builds the concrete path for a Mirror editor deeplink.
   static String mirrorEditorPath(String projectId, String taskId) =>
       '/mirror/$projectId/$taskId';
+
+    /// Parses a platform route/deeplink into a typed Mirror intent.
+    static MirrorRouteIntent? parseMirrorEditorIntent(String routeName) =>
+      tryParseMirrorRouteIntent(routeName);
 
   // Private constructor to prevent instantiation
   AppRoutes._();
@@ -212,8 +217,7 @@ class AppRoutes {
             ),
           ],
         ),
-      ],
-      
+
         // Mirror editor route — full-screen, outside the shell (no nav rail).
         GoRoute(
           path: mirrorEditor,

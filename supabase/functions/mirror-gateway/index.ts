@@ -307,11 +307,25 @@ function normalizeArtifactIds(request: MirrorComputeRequest): string[] {
   if (signedInputUrls && typeof signedInputUrls === 'object') {
     for (const value of Object.values(signedInputUrls)) {
       if (typeof value === 'string' && value.trim().length > 0) {
-        ids.add(value.trim())
+        ids.add(normalizeArtifactId(value.trim()))
       }
     }
   }
   return Array.from(ids)
+}
+
+function normalizeArtifactId(rawValue: string): string {
+  if (!rawValue.startsWith('http://') && !rawValue.startsWith('https://')) {
+    return rawValue
+  }
+
+  try {
+    const parsed = new URL(rawValue)
+    return `${parsed.origin}${parsed.pathname}`
+  } catch {
+    const queryIndex = rawValue.indexOf('?')
+    return queryIndex >= 0 ? rawValue.slice(0, queryIndex) : rawValue
+  }
 }
 
 function normalizeUuidOrNull(value: string | undefined, fallback: string): string {
@@ -333,14 +347,36 @@ const IDEMPOTENCY_ALLOWED_STATUSES = ['processing', 'completed', 'failed'] as co
 const DEFAULT_GATEWAY_RATE_LIMIT_REQUESTS_PER_MINUTE = 10
 const DEFAULT_GATEWAY_RATE_LIMIT_BURST = 30
 const DEFAULT_GATEWAY_RATE_LIMIT_BURST_WINDOW_SECONDS = 180
+const DEFAULT_GATEWAY_RATE_LIMIT_ACTION_WEIGHT_COMPILE = 1
+const DEFAULT_GATEWAY_RATE_LIMIT_ACTION_WEIGHT_APPLY = 2
+const DEFAULT_GATEWAY_RATE_LIMIT_WEIGHTED_UNITS_PER_MINUTE = 20
+const DEFAULT_GATEWAY_RATE_LIMIT_WEIGHTED_UNITS_BURST = 50
 const RATE_LIMIT_COUNTABLE_STATUSES = ['processing', 'completed'] as const
+const DEFAULT_GATEWAY_CIRCUIT_BREAKER_FAILURE_THRESHOLD = 5
+const DEFAULT_GATEWAY_CIRCUIT_BREAKER_OPEN_SECONDS = 30
+
+interface UpstreamCircuitBreakerState {
+  consecutiveFailures: number
+  openUntilMs: number | null
+  halfOpenProbeActive: boolean
+}
+
+const upstreamCircuitBreakerState: UpstreamCircuitBreakerState = {
+  consecutiveFailures: 0,
+  openUntilMs: null,
+  halfOpenProbeActive: false,
+}
 
 interface PerUserRateLimitCheckResult {
   allowed: boolean
-  reason?: 'minute_rate' | 'burst_quota'
+  reason?: 'minute_rate' | 'burst_quota' | 'weighted_minute' | 'weighted_burst'
   retryAfterSeconds?: number
   minuteCount: number
   burstCount: number
+  weightedMinuteUnits: number
+  weightedBurstUnits: number
+  weightedMinuteLimit: number
+  weightedBurstLimit: number
 }
 
 type UpstreamFailureClass =
@@ -910,6 +946,15 @@ function parsePositiveIntegerEnv(key: string, fallback: number): number {
   return fallback
 }
 
+function parsePositiveNumberEnv(key: string, fallback: number): number {
+  const raw = Deno.env.get(key)
+  const parsed = raw ? Number.parseFloat(raw) : Number.NaN
+  if (Number.isFinite(parsed) && parsed > 0) {
+    return parsed
+  }
+  return fallback
+}
+
 function gatewayRateLimitRequestsPerMinute(): number {
   return parsePositiveIntegerEnv(
     'MIRROR_GATEWAY_RATE_LIMIT_REQUESTS_PER_MINUTE',
@@ -925,6 +970,46 @@ function gatewayRateLimitBurstWindowSeconds(): number {
   return parsePositiveIntegerEnv(
     'MIRROR_GATEWAY_RATE_LIMIT_BURST_WINDOW_SECONDS',
     DEFAULT_GATEWAY_RATE_LIMIT_BURST_WINDOW_SECONDS,
+  )
+}
+
+function gatewayRateLimitActionWeight(action: 'compile' | 'apply'): number {
+  return action === 'apply'
+    ? parsePositiveNumberEnv(
+        'MIRROR_GATEWAY_RATE_LIMIT_ACTION_WEIGHT_APPLY',
+        DEFAULT_GATEWAY_RATE_LIMIT_ACTION_WEIGHT_APPLY,
+      )
+    : parsePositiveNumberEnv(
+        'MIRROR_GATEWAY_RATE_LIMIT_ACTION_WEIGHT_COMPILE',
+        DEFAULT_GATEWAY_RATE_LIMIT_ACTION_WEIGHT_COMPILE,
+      )
+}
+
+function gatewayRateLimitWeightedUnitsPerMinute(): number {
+  return parsePositiveNumberEnv(
+    'MIRROR_GATEWAY_RATE_LIMIT_WEIGHTED_UNITS_PER_MINUTE',
+    DEFAULT_GATEWAY_RATE_LIMIT_WEIGHTED_UNITS_PER_MINUTE,
+  )
+}
+
+function gatewayRateLimitWeightedUnitsBurst(): number {
+  return parsePositiveNumberEnv(
+    'MIRROR_GATEWAY_RATE_LIMIT_WEIGHTED_UNITS_BURST',
+    DEFAULT_GATEWAY_RATE_LIMIT_WEIGHTED_UNITS_BURST,
+  )
+}
+
+function gatewayCircuitBreakerFailureThreshold(): number {
+  return parsePositiveIntegerEnv(
+    'MIRROR_GATEWAY_CIRCUIT_BREAKER_FAILURE_THRESHOLD',
+    DEFAULT_GATEWAY_CIRCUIT_BREAKER_FAILURE_THRESHOLD,
+  )
+}
+
+function gatewayCircuitBreakerOpenSeconds(): number {
+  return parsePositiveIntegerEnv(
+    'MIRROR_GATEWAY_CIRCUIT_BREAKER_OPEN_SECONDS',
+    DEFAULT_GATEWAY_CIRCUIT_BREAKER_OPEN_SECONDS,
   )
 }
 
@@ -952,38 +1037,146 @@ function logRateLimitDecision({
   requestId,
   traceId,
   userId,
+  action,
   allowed,
   reason,
   minuteCount,
   burstCount,
   minuteLimit,
   burstLimit,
+  weightedMinuteUnits,
+  weightedBurstUnits,
+  weightedMinuteLimit,
+  weightedBurstLimit,
+  actionWeight,
   burstWindowSeconds,
+  minuteWindowStart,
+  burstWindowStart,
+  evaluatedAt,
 }: {
   requestId: string
   traceId: string
   userId: string
+  action: 'compile' | 'apply'
   allowed: boolean
   reason?: PerUserRateLimitCheckResult['reason']
   minuteCount: number
   burstCount: number
   minuteLimit: number
   burstLimit: number
+  weightedMinuteUnits: number
+  weightedBurstUnits: number
+  weightedMinuteLimit: number
+  weightedBurstLimit: number
+  actionWeight: number
   burstWindowSeconds: number
+  minuteWindowStart: string
+  burstWindowStart: string
+  evaluatedAt: string
 }): void {
   console.info('mirror-gateway rate limit decision', {
     requestId,
     traceId,
     userId,
+    action,
     allowed,
     reason: reason ?? null,
+    evaluatedAt,
+    minuteWindowStart,
+    burstWindowStart,
     observedRequestsLastMinute: minuteCount,
     observedRequestsInBurstWindow: burstCount,
+    weightedUnitsLastMinute: weightedMinuteUnits,
+    weightedUnitsInBurstWindow: weightedBurstUnits,
+    actionWeight,
     maxRequestsPerMinute: minuteLimit,
     burstLimit,
+    weightedUnitsPerMinuteLimit: weightedMinuteLimit,
+    weightedBurstLimit,
     burstWindowSeconds,
     countableStatuses: RATE_LIMIT_COUNTABLE_STATUSES,
   })
+}
+
+function logCircuitBreakerDecision({
+  requestId,
+  traceId,
+  action,
+  mode,
+  allowed,
+  reason,
+  retryAfterSeconds,
+}: {
+  requestId: string
+  traceId: string
+  action: 'compile' | 'apply'
+  mode: 'private' | 'cloud'
+  allowed: boolean
+  reason: 'closed' | 'half_open_probe' | 'open'
+  retryAfterSeconds?: number
+}): void {
+  console.info('mirror-gateway circuit breaker decision', {
+    requestId,
+    traceId,
+    action,
+    mode,
+    allowed,
+    reason,
+    retryAfterSeconds: retryAfterSeconds ?? null,
+    consecutiveFailures: upstreamCircuitBreakerState.consecutiveFailures,
+    openUntilMs: upstreamCircuitBreakerState.openUntilMs,
+    halfOpenProbeActive: upstreamCircuitBreakerState.halfOpenProbeActive,
+  })
+}
+
+function redactPotentialSecretString(value: string): string {
+  const clipped = value.length > 2048 ? `${value.slice(0, 2048)}...[truncated]` : value
+  if (clipped.startsWith('http://') || clipped.startsWith('https://')) {
+    try {
+      const parsed = new URL(clipped)
+      return `${parsed.origin}${parsed.pathname}?[redacted]`
+    } catch {
+      const queryIndex = clipped.indexOf('?')
+      return queryIndex >= 0 ? `${clipped.slice(0, queryIndex)}?[redacted]` : clipped
+    }
+  }
+  return clipped
+}
+
+function redactForObservability(value: unknown, depth = 0): unknown {
+  if (depth > 5) {
+    return '[redacted-depth-limit]'
+  }
+
+  if (typeof value === 'string') {
+    return redactPotentialSecretString(value)
+  }
+
+  if (Array.isArray(value)) {
+    return value.map((entry) => redactForObservability(entry, depth + 1))
+  }
+
+  if (!value || typeof value !== 'object') {
+    return value
+  }
+
+  const sensitiveKeyPattern = /(authorization|token|signed|secret|password|url)/i
+  const output: Record<string, unknown> = {}
+  for (const [key, nested] of Object.entries(value as Record<string, unknown>)) {
+    output[key] = sensitiveKeyPattern.test(key)
+      ? '[redacted]'
+      : redactForObservability(nested, depth + 1)
+  }
+  return output
+}
+
+function sanitizeUpstreamBodyForErrorDetails(upstreamBody: string): unknown {
+  try {
+    const parsed = JSON.parse(upstreamBody)
+    return redactForObservability(parsed)
+  } catch {
+    return redactPotentialSecretString(upstreamBody)
+  }
 }
 
 function logUpstreamFailureEvent({
@@ -1016,13 +1209,14 @@ function logUpstreamFailureEvent({
     upstreamStatus: status,
     retryable,
     stage,
-    details,
+    details: redactForObservability(details),
   })
 }
 
 async function checkPerUserRateLimit(
   supabase: ReturnType<typeof createClient>,
   userId: string,
+  action: 'compile' | 'apply',
 ): Promise<PerUserRateLimitCheckResult> {
   const minuteLimit = gatewayRateLimitRequestsPerMinute()
   const burstLimit = gatewayRateLimitBurst()
@@ -1032,32 +1226,68 @@ async function checkPerUserRateLimit(
   const oneMinuteAgo = new Date(Date.now() - 60 * 1000).toISOString()
   const burstWindowStart = new Date(Date.now() - burstWindowSeconds * 1000).toISOString()
 
-  const { count: minuteCount, error: minuteError } = await supabase
-    .from('mirror_request_idempotency')
-    .select('*', { head: true, count: 'exact' })
-    .eq('user_id', userId)
-    .in('status', [...RATE_LIMIT_COUNTABLE_STATUSES])
-    .gt('expires_at', nowIso)
-    .gte('created_at', oneMinuteAgo)
+  const [minuteCount, burstCount] = await Promise.all([
+    countRateLimitRequestsInWindow({
+      supabase,
+      userId,
+      action,
+      nowIso,
+      windowStartIso: oneMinuteAgo,
+      errorCode: 'rate_limit_minute_check_failed',
+    }),
+    countRateLimitRequestsInWindow({
+      supabase,
+      userId,
+      action,
+      nowIso,
+      windowStartIso: burstWindowStart,
+      errorCode: 'rate_limit_burst_check_failed',
+    }),
+  ])
 
-  if (minuteError) {
-    throw new Error(`rate_limit_minute_check_failed:${minuteError.message}`)
-  }
+  const [minuteCompileCount, minuteApplyCount, burstCompileCount, burstApplyCount] = await Promise.all([
+    countRateLimitRequestsInWindow({
+      supabase,
+      userId,
+      action: 'compile',
+      nowIso,
+      windowStartIso: oneMinuteAgo,
+      errorCode: 'rate_limit_weighted_minute_compile_check_failed',
+    }),
+    countRateLimitRequestsInWindow({
+      supabase,
+      userId,
+      action: 'apply',
+      nowIso,
+      windowStartIso: oneMinuteAgo,
+      errorCode: 'rate_limit_weighted_minute_apply_check_failed',
+    }),
+    countRateLimitRequestsInWindow({
+      supabase,
+      userId,
+      action: 'compile',
+      nowIso,
+      windowStartIso: burstWindowStart,
+      errorCode: 'rate_limit_weighted_burst_compile_check_failed',
+    }),
+    countRateLimitRequestsInWindow({
+      supabase,
+      userId,
+      action: 'apply',
+      nowIso,
+      windowStartIso: burstWindowStart,
+      errorCode: 'rate_limit_weighted_burst_apply_check_failed',
+    }),
+  ])
 
-  const { count: burstCount, error: burstError } = await supabase
-    .from('mirror_request_idempotency')
-    .select('*', { head: true, count: 'exact' })
-    .eq('user_id', userId)
-    .in('status', [...RATE_LIMIT_COUNTABLE_STATUSES])
-    .gt('expires_at', nowIso)
-    .gte('created_at', burstWindowStart)
-
-  if (burstError) {
-    throw new Error(`rate_limit_burst_check_failed:${burstError.message}`)
-  }
-
-  const safeMinuteCount = minuteCount ?? 0
-  const safeBurstCount = burstCount ?? 0
+  const safeMinuteCount = minuteCount
+  const safeBurstCount = burstCount
+  const compileWeight = gatewayRateLimitActionWeight('compile')
+  const applyWeight = gatewayRateLimitActionWeight('apply')
+  const weightedMinuteLimit = gatewayRateLimitWeightedUnitsPerMinute()
+  const weightedBurstLimit = gatewayRateLimitWeightedUnitsBurst()
+  const weightedMinuteUnits = minuteCompileCount * compileWeight + minuteApplyCount * applyWeight
+  const weightedBurstUnits = burstCompileCount * compileWeight + burstApplyCount * applyWeight
 
   if (safeMinuteCount >= minuteLimit) {
     return {
@@ -1066,6 +1296,10 @@ async function checkPerUserRateLimit(
       retryAfterSeconds: 60,
       minuteCount: safeMinuteCount,
       burstCount: safeBurstCount,
+      weightedMinuteUnits,
+      weightedBurstUnits,
+      weightedMinuteLimit,
+      weightedBurstLimit,
     }
   }
 
@@ -1076,6 +1310,38 @@ async function checkPerUserRateLimit(
       retryAfterSeconds: burstWindowSeconds,
       minuteCount: safeMinuteCount,
       burstCount: safeBurstCount,
+      weightedMinuteUnits,
+      weightedBurstUnits,
+      weightedMinuteLimit,
+      weightedBurstLimit,
+    }
+  }
+
+  if (weightedMinuteUnits >= weightedMinuteLimit) {
+    return {
+      allowed: false,
+      reason: 'weighted_minute',
+      retryAfterSeconds: 60,
+      minuteCount: safeMinuteCount,
+      burstCount: safeBurstCount,
+      weightedMinuteUnits,
+      weightedBurstUnits,
+      weightedMinuteLimit,
+      weightedBurstLimit,
+    }
+  }
+
+  if (weightedBurstUnits >= weightedBurstLimit) {
+    return {
+      allowed: false,
+      reason: 'weighted_burst',
+      retryAfterSeconds: burstWindowSeconds,
+      minuteCount: safeMinuteCount,
+      burstCount: safeBurstCount,
+      weightedMinuteUnits,
+      weightedBurstUnits,
+      weightedMinuteLimit,
+      weightedBurstLimit,
     }
   }
 
@@ -1083,6 +1349,101 @@ async function checkPerUserRateLimit(
     allowed: true,
     minuteCount: safeMinuteCount,
     burstCount: safeBurstCount,
+    weightedMinuteUnits,
+    weightedBurstUnits,
+    weightedMinuteLimit,
+    weightedBurstLimit,
+  }
+}
+
+async function countRateLimitRequestsInWindow({
+  supabase,
+  userId,
+  action,
+  nowIso,
+  windowStartIso,
+  errorCode,
+}: {
+  supabase: ReturnType<typeof createClient>
+  userId: string
+  action: 'compile' | 'apply'
+  nowIso: string
+  windowStartIso: string
+  errorCode: string
+}): Promise<number> {
+  const { count, error } = await supabase
+    .from('mirror_request_idempotency')
+    .select('*', { head: true, count: 'exact' })
+    .eq('user_id', userId)
+    .eq('action', action)
+    .in('status', [...RATE_LIMIT_COUNTABLE_STATUSES])
+    .gt('expires_at', nowIso)
+    .gte('created_at', windowStartIso)
+
+  if (error) {
+    throw new Error(`${errorCode}:${error.message}`)
+  }
+
+  return count ?? 0
+}
+
+function evaluateCircuitBreakerAllowance(): {
+  allowed: boolean
+  reason: 'closed' | 'half_open_probe' | 'open'
+  retryAfterSeconds?: number
+} {
+  const now = Date.now()
+  const openUntil = upstreamCircuitBreakerState.openUntilMs
+  if (openUntil != null && openUntil > now) {
+    return {
+      allowed: false,
+      reason: 'open',
+      retryAfterSeconds: Math.max(1, Math.ceil((openUntil - now) / 1000)),
+    }
+  }
+
+  if (openUntil != null && openUntil <= now) {
+    if (upstreamCircuitBreakerState.halfOpenProbeActive) {
+      return {
+        allowed: false,
+        reason: 'open',
+        retryAfterSeconds: 1,
+      }
+    }
+    upstreamCircuitBreakerState.halfOpenProbeActive = true
+    return {
+      allowed: true,
+      reason: 'half_open_probe',
+    }
+  }
+
+  return {
+    allowed: true,
+    reason: 'closed',
+  }
+}
+
+function registerUpstreamSuccess(): void {
+  upstreamCircuitBreakerState.consecutiveFailures = 0
+  upstreamCircuitBreakerState.openUntilMs = null
+  upstreamCircuitBreakerState.halfOpenProbeActive = false
+}
+
+function registerUpstreamFailure(): void {
+  const threshold = gatewayCircuitBreakerFailureThreshold()
+  const openSeconds = gatewayCircuitBreakerOpenSeconds()
+  const now = Date.now()
+
+  if (upstreamCircuitBreakerState.halfOpenProbeActive) {
+    upstreamCircuitBreakerState.openUntilMs = now + openSeconds * 1000
+    upstreamCircuitBreakerState.halfOpenProbeActive = false
+    upstreamCircuitBreakerState.consecutiveFailures = threshold
+    return
+  }
+
+  upstreamCircuitBreakerState.consecutiveFailures += 1
+  if (upstreamCircuitBreakerState.consecutiveFailures >= threshold) {
+    upstreamCircuitBreakerState.openUntilMs = now + openSeconds * 1000
   }
 }
 
@@ -1565,7 +1926,7 @@ Deno.serve(async (req: Request) => {
 
     let rateLimitCheck: PerUserRateLimitCheckResult
     try {
-      rateLimitCheck = await checkPerUserRateLimit(supabase, user.id)
+      rateLimitCheck = await checkPerUserRateLimit(supabase, user.id, action)
     } catch (error) {
       if (error instanceof Error && error.message.startsWith('rate_limit_')) {
         await writeMirrorUsageLog({
@@ -1597,18 +1958,30 @@ Deno.serve(async (req: Request) => {
 
     const minuteLimit = gatewayRateLimitRequestsPerMinute()
     const burstLimit = gatewayRateLimitBurst()
+    const weightedMinuteLimit = gatewayRateLimitWeightedUnitsPerMinute()
+    const weightedBurstLimit = gatewayRateLimitWeightedUnitsBurst()
+    const actionWeight = gatewayRateLimitActionWeight(action)
     const burstWindowSeconds = gatewayRateLimitBurstWindowSeconds()
     logRateLimitDecision({
       requestId,
       traceId,
       userId: user.id,
+      action,
       allowed: rateLimitCheck.allowed,
       reason: rateLimitCheck.reason,
       minuteCount: rateLimitCheck.minuteCount,
       burstCount: rateLimitCheck.burstCount,
       minuteLimit,
       burstLimit,
+      weightedMinuteUnits: rateLimitCheck.weightedMinuteUnits,
+      weightedBurstUnits: rateLimitCheck.weightedBurstUnits,
+      weightedMinuteLimit,
+      weightedBurstLimit,
+      actionWeight,
       burstWindowSeconds,
+      minuteWindowStart: new Date(Date.now() - 60 * 1000).toISOString(),
+      burstWindowStart: new Date(Date.now() - burstWindowSeconds * 1000).toISOString(),
+      evaluatedAt: new Date().toISOString(),
     })
 
     if (!rateLimitCheck.allowed) {
@@ -1625,6 +1998,11 @@ Deno.serve(async (req: Request) => {
           reason: rateLimitCheck.reason,
           maxRequestsPerMinute: minuteLimit,
           burstLimit,
+          actionWeight,
+          weightedUnitsLastMinute: rateLimitCheck.weightedMinuteUnits,
+          weightedUnitsInBurstWindow: rateLimitCheck.weightedBurstUnits,
+          weightedUnitsPerMinuteLimit: weightedMinuteLimit,
+          weightedBurstLimit,
           burstWindowSeconds,
           observedRequestsLastMinute: rateLimitCheck.minuteCount,
           observedRequestsInBurstWindow: rateLimitCheck.burstCount,
@@ -1680,6 +2058,95 @@ Deno.serve(async (req: Request) => {
     }
 
     const targetUrl = resolveForwardEndpoint(normalized.mode, action)
+    const circuitBreakerDecision = evaluateCircuitBreakerAllowance()
+    logCircuitBreakerDecision({
+      requestId,
+      traceId,
+      action,
+      mode: normalized.mode,
+      allowed: circuitBreakerDecision.allowed,
+      reason: circuitBreakerDecision.reason,
+      retryAfterSeconds: circuitBreakerDecision.retryAfterSeconds,
+    })
+
+    if (!circuitBreakerDecision.allowed) {
+      const retryAfterSeconds = circuitBreakerDecision.retryAfterSeconds ?? 5
+      const breakerError = buildStructuredError({
+        code: 'upstream_error',
+        message: 'Upstream temporarily unavailable (circuit breaker open)',
+        retryable: true,
+        requestId,
+        traceId,
+        idempotencyKey,
+        details: {
+          reason: 'circuit_breaker_open',
+          retryAfterSeconds,
+        },
+        stage: 'circuit_breaker',
+      })
+
+      try {
+        await finalizeIdempotencyKey({
+          supabase,
+          userId: user.id,
+          action,
+          idempotencyKey,
+          requestId,
+          requestHash: idempotencyRequestHash,
+          status: 'failed',
+          responseStatus: 503,
+          responseBody: JSON.stringify({
+            success: false,
+            error: breakerError,
+          }),
+          responseContentType: 'application/json',
+        })
+      } catch (idempotencyError) {
+        console.error('mirror-gateway idempotency finalize failed:', idempotencyError)
+      }
+
+      if (action === 'apply') {
+        await writeApplyAuditEvent({
+          supabase,
+          userId: user.id,
+          normalized,
+          requestId,
+          idempotencyKey,
+          event: 'apply_failed',
+          success: false,
+          details: buildAuditErrorDetails(breakerError),
+        })
+      }
+
+      await writeMirrorUsageLog({
+        supabase,
+        userId: user.id,
+        normalized,
+        action,
+        status: 'upstream_error',
+        requestId,
+        idempotencyKey,
+        startedAtMs,
+      })
+
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: breakerError,
+        }),
+        {
+          status: 503,
+          headers: {
+            ...buildCorsHeaders(req),
+            'Content-Type': 'application/json',
+            'Retry-After': String(retryAfterSeconds),
+            'x-request-id': requestId,
+            'x-trace-id': traceId,
+            'x-idempotency-key': idempotencyKey,
+          },
+        },
+      )
+    }
 
     if (action === 'apply') {
       await writeApplyAuditEvent({
@@ -1753,6 +2220,7 @@ Deno.serve(async (req: Request) => {
     } catch (error) {
       clearTimeout(timeout)
       if (error instanceof DOMException && error.name === 'AbortError') {
+        registerUpstreamFailure()
         const timeoutError = buildStructuredError({
           code: 'timeout',
           message: `Upstream /${action} request timed out`,
@@ -1823,6 +2291,7 @@ Deno.serve(async (req: Request) => {
         )
       }
 
+      registerUpstreamFailure()
       const upstreamTransportError = buildStructuredError({
         code: 'upstream_error',
         message: `Failed to reach upstream /${action} endpoint`,
@@ -1902,6 +2371,14 @@ Deno.serve(async (req: Request) => {
 
     if (!upstreamResponse.ok) {
       const upstreamFailureClass = classifyUpstreamStatusFailure(upstreamResponse.status)
+      if (
+        upstreamFailureClass === 'upstream_timeout' ||
+        upstreamFailureClass === 'upstream_rate_limited' ||
+        upstreamFailureClass === 'upstream_server_error' ||
+        upstreamFailureClass === 'upstream_unknown_error'
+      ) {
+        registerUpstreamFailure()
+      }
       const upstreamStatusError = buildStructuredError({
         code: 'upstream_error',
         message: `Upstream /${action} returned a non-success status`,
@@ -1914,7 +2391,7 @@ Deno.serve(async (req: Request) => {
         idempotencyKey,
         details: {
           status: upstreamResponse.status,
-          body: upstreamBody,
+          body: sanitizeUpstreamBodyForErrorDetails(upstreamBody),
         },
         upstreamStatus: upstreamResponse.status,
         stage: 'upstream',
@@ -1978,6 +2455,8 @@ Deno.serve(async (req: Request) => {
         upstreamResponse.status,
       )
     }
+
+    registerUpstreamSuccess()
 
     try {
       await finalizeIdempotencyKey({

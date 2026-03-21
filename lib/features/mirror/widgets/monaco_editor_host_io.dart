@@ -227,8 +227,24 @@ class _MonacoEditorHostState extends State<MonacoEditorHost> {
                 ),
               ),
             ),
-            child: const Text(
-              'Limited desktop editor mode active. Monaco features are temporarily unavailable.',
+            child: Row(
+              children: <Widget>[
+                const Expanded(
+                  child: Text(
+                    'Limited desktop editor mode active. Monaco features are temporarily unavailable.',
+                  ),
+                ),
+                const SizedBox(width: 8),
+                OutlinedButton.icon(
+                  onPressed: () {
+                    setState(() {
+                      _allowDesktopLimitedEditor = false;
+                    });
+                  },
+                  icon: const Icon(Icons.restore),
+                  label: const Text('Restore studio editor'),
+                ),
+              ],
             ),
           ),
           Expanded(child: _buildMobileFallback()),

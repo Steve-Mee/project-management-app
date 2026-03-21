@@ -76,7 +76,7 @@ class MirrorSecureApplyService {
   static const Duration defaultSignedUrlTtl = Duration(
     seconds: int.fromEnvironment(
       'MIRROR_APPLY_ARTIFACTS_SIGNED_URL_TTL_SECONDS',
-      defaultValue: 300,
+      defaultValue: 120,
     ),
   );
 

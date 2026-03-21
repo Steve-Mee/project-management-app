@@ -8,6 +8,7 @@ import 'package:pma_core/services/app_logger.dart';
 
 import '../../../core/providers/mirror_session_provider.dart';
 import '../mirror_signed_inputs_backend.dart';
+import 'mirror_orchestrator_execution_paths.dart';
 import 'mirror_outbox_replay_service.dart';
 import 'mirror_service_boundaries.dart';
 
@@ -34,9 +35,14 @@ class MirrorOrchestratorService implements MirrorExecutionOrchestrator {
     required MirrorComputeBackend backend,
     this.maxRetries = 2,
     this.initialBackoff = const Duration(milliseconds: 250),
-  }) : _backend = backend;
+    MirrorInteractiveExecutionPath? interactivePath,
+    MirrorReplayExecutionPath? replayPath,
+  })  : _interactivePath =
+            interactivePath ?? MirrorInteractiveExecutionPath(backend: backend),
+        _replayPath = replayPath ?? MirrorReplayExecutionPath(backend: backend);
 
-  final MirrorComputeBackend _backend;
+  final MirrorInteractiveExecutionPath _interactivePath;
+  final MirrorReplayExecutionPath _replayPath;
   final int maxRetries;
   final Duration initialBackoff;
   MirrorOutboxReplayService? _outboxReplayService;
@@ -157,7 +163,7 @@ class MirrorOrchestratorService implements MirrorExecutionOrchestrator {
       operationName: 'generate',
       ref: ref,
       sessionKey: sessionKey,
-      operation: () => _runInteractiveGenerate(
+      operation: () => _interactivePath.generate(
         prompt: prompt,
         context: context,
         mode: mode,
@@ -223,7 +229,7 @@ class MirrorOrchestratorService implements MirrorExecutionOrchestrator {
       operationName: 'compile',
       ref: ref,
       sessionKey: sessionKey,
-      operation: () => _runInteractiveCompile(
+      operation: () => _interactivePath.compile(
         prompt: prompt,
         context: context,
         mode: mode,
@@ -288,7 +294,7 @@ class MirrorOrchestratorService implements MirrorExecutionOrchestrator {
       operationName: 'apply',
       ref: ref,
       sessionKey: sessionKey,
-      operation: () => _runInteractiveApply(
+      operation: () => _interactivePath.apply(
         prompt: prompt,
         context: context,
         mode: mode,
@@ -436,7 +442,13 @@ class MirrorOrchestratorService implements MirrorExecutionOrchestrator {
     String? terminalLine,
     String? liveLine,
   }) {
-    final notifier = ref.read(mirrorSessionProvider(sessionKey).notifier);
+    MirrorSessionNotifier notifier;
+    try {
+      notifier = ref.read(mirrorSessionProvider(sessionKey).notifier);
+    } catch (_) {
+      // The provider container can already be disposed in tests or app tear-down.
+      return;
+    }
 
     if (terminalLine != null && terminalLine.trim().isNotEmpty) {
       notifier.appendTerminalLine(terminalLine);
@@ -459,90 +471,8 @@ class MirrorOrchestratorService implements MirrorExecutionOrchestrator {
   Future<MirrorOutboxOperationResult> Function(MirrorOutboxEntry entry)
       _createOutboxExecutor() {
     return (MirrorOutboxEntry entry) async {
-      return _runReplayOperation(entry);
+      return _replayPath.execute(entry);
     };
-  }
-
-  Future<GenerateResult> _runInteractiveGenerate({
-    required String prompt,
-    required ProjectContext context,
-    required String mode,
-  }) {
-    return _backend.generate(
-      prompt: prompt,
-      context: context,
-      mode: mode,
-    );
-  }
-
-  Future<CompileResult> _runInteractiveCompile({
-    required String prompt,
-    required ProjectContext context,
-    required String mode,
-  }) {
-    return _backend.compile(
-      prompt: prompt,
-      context: context,
-      mode: mode,
-    );
-  }
-
-  Future<ApplyResult> _runInteractiveApply({
-    required String prompt,
-    required ProjectContext context,
-    required String mode,
-    String? compileFingerprint,
-  }) {
-    return _backend.apply(
-      prompt: prompt,
-      context: context,
-      mode: mode,
-      compileFingerprint: compileFingerprint,
-    );
-  }
-
-  Future<MirrorOutboxOperationResult> _runReplayOperation(
-    MirrorOutboxEntry entry,
-  ) async {
-    switch (entry.operation) {
-      case 'generate':
-        final result = await _backend.generate(
-          prompt: entry.prompt,
-          context: entry.context,
-          mode: entry.mode,
-        );
-        return MirrorOutboxOperationResult(
-          success: result.success,
-          message: result.message ?? result.diagnostics.join(' | '),
-        );
-      case 'compile':
-        final result = await _backend.compile(
-          prompt: entry.prompt,
-          context: entry.context,
-          mode: entry.mode,
-        );
-        return MirrorOutboxOperationResult(
-          success: result.success,
-          message: result.errors.join(' | '),
-        );
-      case 'apply':
-        final compileFingerprint = entry.context.metadata.compileFingerprint;
-        final result = await _backend.apply(
-          prompt: entry.prompt,
-          context: entry.context,
-          mode: entry.mode,
-          compileFingerprint: compileFingerprint,
-        );
-        return MirrorOutboxOperationResult(
-          success: result.success,
-          message: result.message,
-        );
-      default:
-        return MirrorOutboxOperationResult(
-          success: false,
-          message: 'Unknown outbox operation: ${entry.operation}',
-        );
-    }
   }
 
   Future<void> Function(MirrorOutboxEntry entry) _onOutboxReplaySuccess(
@@ -552,11 +482,15 @@ class MirrorOrchestratorService implements MirrorExecutionOrchestrator {
       if (entry.operation != 'apply') {
         return;
       }
-      await _refreshTaskAndSubTaskCaches(
-        ref: ref,
-        context: entry.context,
-        sessionKey: entry.sessionKey,
-      );
+      try {
+        await _refreshTaskAndSubTaskCaches(
+          ref: ref,
+          context: entry.context,
+          sessionKey: entry.sessionKey,
+        );
+      } catch (_) {
+        // Ignore late replay callbacks when provider scope is already disposed.
+      }
     };
   }
 

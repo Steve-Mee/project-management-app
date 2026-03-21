@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pma_core/repository/hive_initializer.dart' as core_hive;
 
+import 'package:project_management_app/core/mirror_route_intent.dart';
 import 'package:project_management_app/features/mirror/providers/mirror_route_guard_provider.dart';
 
 class ProjectsInitializer extends ConsumerWidget {
@@ -16,8 +17,8 @@ class ProjectsInitializer extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final initialRoute = WidgetsBinding
         .instance.platformDispatcher.defaultRouteName
-        .toLowerCase();
-    final mirrorRequested = initialRoute.contains('mirror');
+        .trim();
+    final mirrorRequested = isMirrorRouteIntent(initialRoute);
 
     if (mirrorRequested) {
       // Guard is enforced inside the GoRoute builder via mirrorRouteGuardProvider.

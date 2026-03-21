@@ -124,17 +124,41 @@ class MirrorSessionNotifier
       const MirrorDraftCacheService();
   Timer? _draftPersistTimer;
   String? _activeSessionKey;
+  String _lastMode = 'private';
+  String? _lastOfflineWarningKey;
 
   @override
   MirrorSessionState build(String sessionKey) {
     _activeSessionKey = sessionKey;
+    _lastMode = ref.read(mirrorModeProvider);
+    _lastOfflineWarningKey = ref.read(mirrorOfflineWarningProvider);
+
+    ref.listen<String>(mirrorModeProvider, (_, String next) {
+      _lastMode = next;
+    });
+    ref.listen<String?>(mirrorOfflineWarningProvider, (_, String? next) {
+      _lastOfflineWarningKey = next;
+    });
 
     ref.onDispose(() {
       _draftPersistTimer?.cancel();
       _draftPersistTimer = null;
       final activeKey = _activeSessionKey;
-      if (activeKey != null) {
-        unawaited(_persistDraftNow(activeKey));
+      if (activeKey != null && state.files.isNotEmpty) {
+        final files = Map<String, String>.of(state.files);
+        final selectedFile = state.selectedFile;
+        final contextFingerprint =
+            state.contextFingerprint ?? _computeContextFingerprint(files);
+        final contextVersion = state.contextVersion ?? _draftContextVersion;
+        unawaited(_draftCacheService.writeDraft(
+          sessionKey: activeKey,
+          files: files,
+          selectedFile: selectedFile,
+          mode: _lastMode,
+          offlineWarningKey: _lastOfflineWarningKey,
+          contextFingerprint: contextFingerprint,
+          contextVersion: contextVersion,
+        ));
       }
     });
 
@@ -438,8 +462,8 @@ class MirrorSessionNotifier
         sessionKey: sessionKey,
         files: state.files,
         selectedFile: state.selectedFile,
-        mode: ref.read(mirrorModeProvider),
-        offlineWarningKey: ref.read(mirrorOfflineWarningProvider),
+        mode: _lastMode,
+        offlineWarningKey: _lastOfflineWarningKey,
         contextFingerprint:
             state.contextFingerprint ?? _computeContextFingerprint(state.files),
         contextVersion: state.contextVersion ?? _draftContextVersion,
