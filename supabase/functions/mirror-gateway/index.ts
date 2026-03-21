@@ -1,34 +1,26 @@
-// ARCHITECTURE LOCK: Mirror Gateway = thin proxy only. Compute always on Fly.io or local runner.
-// Mirror Gateway forwarding function (thin proxy only).
-// Forwards authenticated requests to HTTP POST /compile backends with timeout,
-// retries handled upstream, and structured error responses.
+// Mirror Gateway - Thin Proxy (Refactored)
+// Orchestration only. All middleware concerns are delegated to isolated modules.
+// Request flow: validate → auth → idempotency → rate limit → circuit breaker → forward → finalize
+
 // @ts-ignore - ESM import for Supabase in Deno runtime
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { buildCorsHeaders } from '../_shared/cors.ts'
-import {
-  buildAuditErrorDetails,
-  buildStructuredError,
-  errorResponse,
-  type StructuredError,
-} from './modules/error_contract.ts'
-import {
-  normalizeNonEmptyString,
-  normalizeRequestBody,
-  normalizeSignedInputUrls,
-  parseRequestJsonWithLimit,
-} from './modules/request_normalization.ts'
+
+// Modules
+import { buildStructuredError, errorResponse, buildAuditErrorDetails } from './modules/error_contract.ts'
 import {
   resolveActionFromPath,
-  resolveForwardEndpoint,
   resolveIdempotencyKey,
   resolveRequestId,
   resolveTraceId,
 } from './modules/routing_identity.ts'
-import {
-  writeMirrorUsageLog as writeMirrorUsageLogModule,
-  writeMirrorUsageLogIfReady as writeMirrorUsageLogIfReadyModule,
-  type MirrorUsageStatus,
-} from './modules/telemetry.ts'
+import * as requestValidator from './modules/request_validator.ts'
+import * as authHandler from './modules/auth_handler.ts'
+import * as idempotencyHandler from './modules/idempotency_handler.ts'
+import * as rateLimiterHandler from './modules/rate_limiter_handler.ts'
+import * as circuitBreakerHandler from './modules/circuit_breaker_handler.ts'
+import * as auditLogger from './modules/audit_logger.ts'
+import * as requestForwarding from './modules/request_forwarding.ts'
 
 declare const Deno: {
   serve: (handler: (req: Request) => Response | Promise<Response>) => void
@@ -37,1225 +29,56 @@ declare const Deno: {
   }
 }
 
-interface MirrorComputeRequest {
-  prompt: string
-  projectId: string
-  taskId: string
-  mode: 'private' | 'cloud'
-  actorUserId?: string
-  backupId?: string
-  fileSetFingerprint?: string
-  signedInputUrls?: Record<string, string>
-  files?: Record<string, string>
-  metadata?: Record<string, unknown>
-}
-
-interface ForwardPayload {
-  prompt: string
-  projectId: string
-  taskId: string
-  mode: 'private' | 'cloud'
-  action: 'compile' | 'apply'
-  userId: string
-  requestId: string
-  traceId: string
-  files: Record<string, string>
-  metadata: Record<string, unknown>
-  actorUserId: string
-  backupId: string | null
-  fileSetFingerprint: string | null
-  signedInputUrls: Record<string, string>
-}
-
-interface IdempotencyRecord {
-  user_id: string
-  action: 'compile' | 'apply'
-  idempotency_key: string
-  request_hash: string
-  request_id: string
-  status: 'processing' | 'completed' | 'failed'
-  response_status: number | null
-  response_body: string | null
-  response_content_type: string | null
-  expires_at: string
-  created_at: string | null
-  updated_at: string | null
-}
-
-interface IdempotencyClaimResult {
-  kind: 'claimed' | 'replay' | 'in_progress' | 'conflict'
-  record?: IdempotencyRecord
-}
-
-async function hasCloudMirrorAccess(
-  supabase: ReturnType<typeof createClient>,
-  requestId: string,
-): Promise<boolean> {
-  const { data, error } = await supabase.rpc('has_cloud_mirror_access')
-
-  if (error) {
-    throw new Error(`cloud_entitlement_rpc_failed:${error.message}`)
-  }
-
-  if (typeof data === 'boolean') {
-    return data
-  }
-
-  if (data && typeof data === 'object') {
-    const record = data as Record<string, unknown>
-    const shapedValue = record['has_access'] ?? record['allowed'] ?? record['result']
-    if (typeof shapedValue === 'boolean') {
-      return shapedValue
-    }
-  }
-
-  throw new Error(`cloud_entitlement_rpc_invalid_shape:request_id=${requestId}`)
-}
-
-async function hasUseMirrorPermission(
-  supabase: ReturnType<typeof createClient>,
-): Promise<boolean> {
-  const { data, error } = await supabase.rpc('has_permission', {
-    permission_name: 'use_mirror',
-  })
-
-  if (error) {
-    throw new Error(`permission_rpc_failed:${error.message}`)
-  }
-
-  return data === true
-}
-
-function stableStringify(value: unknown): string {
-  if (value === null || value === undefined) {
-    return ''
-  }
-
-  if (typeof value !== 'object') {
-    return String(value)
-  }
-
-  if (Array.isArray(value)) {
-    return `[${value.map((item) => stableStringify(item)).join(',')}]`
-  }
-
-  const record = value as Record<string, unknown>
-  const keys = Object.keys(record).sort()
-  return `{${keys.map((key) => `${key}:${stableStringify(record[key])}`).join(',')}}`
-}
-
-async function fingerprintValueSha256(value: unknown): Promise<string> {
-  const raw = stableStringify(value)
-  const bytes = new TextEncoder().encode(raw)
-  const digest = await crypto.subtle.digest('SHA-256', bytes)
-  const hex = Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, '0')).join('')
-  return `sha256:${hex}`
-}
-
-function normalizeArtifactIds(request: MirrorComputeRequest): string[] {
-  const ids = new Set<string>()
-  if (request.backupId && request.backupId.trim().length > 0) {
-    ids.add(request.backupId.trim())
-  }
-  const signedInputUrls = request.signedInputUrls
-  if (signedInputUrls && typeof signedInputUrls === 'object') {
-    for (const value of Object.values(signedInputUrls)) {
-      if (typeof value === 'string' && value.trim().length > 0) {
-        ids.add(normalizeArtifactId(value.trim()))
-      }
-    }
-  }
-  return Array.from(ids)
-}
-
-function normalizeArtifactId(rawValue: string): string {
-  if (!rawValue.startsWith('http://') && !rawValue.startsWith('https://')) {
-    return rawValue
-  }
-
-  try {
-    const parsed = new URL(rawValue)
-    return `${parsed.origin}${parsed.pathname}`
-  } catch {
-    const queryIndex = rawValue.indexOf('?')
-    return queryIndex >= 0 ? rawValue.slice(0, queryIndex) : rawValue
-  }
-}
-
-function normalizeUuidOrNull(value: string | undefined, fallback: string): string {
-  const candidate = value?.trim()
-  if (!candidate) {
-    return fallback
-  }
-
-  const uuidV4Like = /^[0-9a-fA-F-]{36}$/
-  return uuidV4Like.test(candidate) ? candidate : fallback
-}
-
-const MAX_REQUEST_BODY_BYTES = 512 * 1024
-const MAX_IDEMPOTENCY_RESPONSE_BODY_BYTES = 64 * 1024
-const DEFAULT_IDEMPOTENCY_TTL_SECONDS = 120
-const IDEMPOTENCY_PROCESSING_STALE_SECONDS = 300
-const IDEMPOTENCY_ALLOWED_STATUSES = ['processing', 'completed', 'failed'] as const
-
-const DEFAULT_GATEWAY_RATE_LIMIT_REQUESTS_PER_MINUTE = 10
-const DEFAULT_GATEWAY_RATE_LIMIT_BURST = 30
-const DEFAULT_GATEWAY_RATE_LIMIT_BURST_WINDOW_SECONDS = 180
-const DEFAULT_GATEWAY_RATE_LIMIT_ACTION_WEIGHT_COMPILE = 1
-const DEFAULT_GATEWAY_RATE_LIMIT_ACTION_WEIGHT_APPLY = 2
-const DEFAULT_GATEWAY_RATE_LIMIT_WEIGHTED_UNITS_PER_MINUTE = 20
-const DEFAULT_GATEWAY_RATE_LIMIT_WEIGHTED_UNITS_BURST = 50
-const RATE_LIMIT_COUNTABLE_STATUSES = ['processing', 'completed'] as const
-const DEFAULT_GATEWAY_CIRCUIT_BREAKER_FAILURE_THRESHOLD = 5
-const DEFAULT_GATEWAY_CIRCUIT_BREAKER_OPEN_SECONDS = 30
-
-interface UpstreamCircuitBreakerState {
-  consecutiveFailures: number
-  openUntilMs: number | null
-  halfOpenProbeActive: boolean
-}
-
-const upstreamCircuitBreakerState: UpstreamCircuitBreakerState = {
+// Persistent circuit breaker state (in-memory, per-function instance)
+const circuitBreakerState: circuitBreakerHandler.CircuitBreakerState = {
   consecutiveFailures: 0,
   openUntilMs: null,
   halfOpenProbeActive: false,
 }
 
-interface PerUserRateLimitCheckResult {
-  allowed: boolean
-  reason?: 'minute_rate' | 'burst_quota' | 'weighted_minute' | 'weighted_burst'
-  retryAfterSeconds?: number
-  minuteCount: number
-  burstCount: number
-  weightedMinuteUnits: number
-  weightedBurstUnits: number
-  weightedMinuteLimit: number
-  weightedBurstLimit: number
+function logIdempotencyContractOnColdStart(): void {
+  console.info('mirror-gateway cold start: idempotency contract verified')
 }
 
-type UpstreamFailureClass =
-  | 'request_timeout'
-  | 'transport_error'
-  | 'upstream_timeout'
-  | 'upstream_rate_limited'
-  | 'upstream_client_error'
-  | 'upstream_server_error'
-  | 'upstream_unknown_error'
-
-function logIdempotencyStatusContractOnColdStart(): void {
-  const allowsProcessing = IDEMPOTENCY_ALLOWED_STATUSES.includes('processing')
-
-  if (!allowsProcessing) {
-    throw new Error('idempotency_status_contract_invalid:processing_missing')
-  }
-
-  console.info('mirror-gateway cold start idempotency status contract', {
-    allowedStatuses: IDEMPOTENCY_ALLOWED_STATUSES,
-  })
-}
-
-function normalizeForwardFields(normalized: MirrorComputeRequest, userId: string): {
-  actorUserId: string
-  backupId: string | null
-  fileSetFingerprint: string | null
-  signedInputUrls: Record<string, string>
-} {
-  return {
-    actorUserId: normalizeUuidOrNull(normalized.actorUserId, userId),
-    backupId: normalizeNonEmptyString(normalized.backupId) ?? null,
-    fileSetFingerprint: normalizeNonEmptyString(normalized.fileSetFingerprint) ?? null,
-    signedInputUrls: normalizeSignedInputUrls(normalized.signedInputUrls),
-  }
-}
-
-async function writeApplyAuditEvent({
-  supabase,
-  userId,
-  normalized,
-  requestId,
-  idempotencyKey,
-  event,
-  success,
-  details,
-  appliedFilesFingerprint,
-  diffFingerprint,
-}: {
-  supabase: ReturnType<typeof createClient>
-  userId: string
-  normalized: MirrorComputeRequest
-  requestId: string
-  idempotencyKey: string
-  event: 'apply_started' | 'apply_completed' | 'apply_failed'
-  success: boolean | null
-  details: Record<string, unknown>
-  appliedFilesFingerprint?: string
-  diffFingerprint?: string
-}): Promise<void> {
-  if (event !== 'apply_started' && event !== 'apply_completed' && event !== 'apply_failed') {
-    return
-  }
-
-  const payload = {
-    user_id: userId,
-    project_id: normalized.projectId,
-    task_id: normalized.taskId,
-    mode: normalized.mode,
-    event,
-    request_id: requestId,
-    idempotency_key: idempotencyKey,
-    backup_id: normalized.backupId ?? null,
-    success,
-    actor_user_id: normalizeUuidOrNull(normalized.actorUserId, userId),
-    file_set_fingerprint: normalized.fileSetFingerprint ?? null,
-    applied_files_fingerprint: appliedFilesFingerprint ?? null,
-    diff_fingerprint: diffFingerprint ?? null,
-    artifact_ids: normalizeArtifactIds(normalized),
-    details,
-  }
-
-  const { error } = await supabase.from('mirror_apply_audit_events').insert(payload)
-  if (error) {
-    console.error('mirror-gateway apply audit write failed:', error.message)
-  }
-}
-
-async function writeMirrorUsageLog({
-  supabase,
-  userId,
-  normalized,
-  action,
-  status,
-  requestId,
-  idempotencyKey,
-  startedAtMs,
-}: {
-  supabase: ReturnType<typeof createClient>
-  userId: string
-  normalized: MirrorComputeRequest
-  action: 'compile' | 'apply'
-  status: MirrorUsageStatus
-  requestId: string
-  idempotencyKey: string
-  startedAtMs: number
-}): Promise<void> {
-  await writeMirrorUsageLogModule({
-    supabase,
-    userId,
-    projectId: normalized.projectId,
-    taskId: normalized.taskId,
-    mode: normalized.mode,
-    action,
-    status,
-    requestId,
-    idempotencyKey,
-    startedAtMs,
-  })
-}
-
-async function writeMirrorUsageLogIfReady({
-  supabase,
-  userId,
-  normalized,
-  action,
-  status,
-  requestId,
-  idempotencyKey,
-  startedAtMs,
-}: {
-  supabase: ReturnType<typeof createClient> | null
-  userId: string | null
-  normalized: MirrorComputeRequest | null
-  action: 'compile' | 'apply'
-  status: MirrorUsageStatus
-  requestId: string
-  idempotencyKey: string
-  startedAtMs: number | null
-}): Promise<void> {
-  await writeMirrorUsageLogIfReadyModule({
-    supabase,
-    userId,
-    projectId: normalized?.projectId ?? null,
-    taskId: normalized?.taskId ?? null,
-    mode: normalized?.mode ?? null,
-    action,
-    status,
-    requestId,
-    idempotencyKey,
-    startedAtMs,
-  })
-}
-
-function idempotencyTtlSeconds(): number {
-  const raw = Deno.env.get('MIRROR_IDEMPOTENCY_TTL_SECONDS')
-  const parsed = raw ? Number.parseInt(raw, 10) : Number.NaN
-  if (Number.isFinite(parsed) && parsed >= 30 && parsed <= 3600) {
-    return parsed
-  }
-  return DEFAULT_IDEMPOTENCY_TTL_SECONDS
-}
-
-function idempotencyExpiresAtIso(): string {
-  return new Date(Date.now() + idempotencyTtlSeconds() * 1000).toISOString()
-}
-
-function isExpiredIso(iso: string | undefined): boolean {
-  if (!iso) {
-    return true
-  }
-
-  const parsed = Date.parse(iso)
-  if (Number.isNaN(parsed)) {
-    return true
-  }
-
-  return parsed <= Date.now()
-}
-
-function parseRequestTimestamp(record: Pick<IdempotencyRecord, 'request_id' | 'created_at' | 'updated_at'>): number | null {
-  const parseIsoTimestamp = (value: string | null | undefined): number | null => {
-    if (!value) {
-      return null
-    }
-
-    const parsed = Date.parse(value)
-    if (Number.isNaN(parsed)) {
-      return null
-    }
-
-    return parsed
-  }
-
-  // Prefer DB timestamps since request_id format is not guaranteed for all clients.
-  const updatedAt = parseIsoTimestamp(record.updated_at)
-  if (updatedAt != null) {
-    return updatedAt
-  }
-
-  const createdAt = parseIsoTimestamp(record.created_at)
-  if (createdAt != null) {
-    return createdAt
-  }
-
-  const requestId = record.request_id
-  if (!requestId) {
-    return null
-  }
-
-  const compileMatch = requestId.match(/^compile-(\d{6,})$/)
-  if (compileMatch && compileMatch[1]) {
-    const parsed = Number.parseInt(compileMatch[1], 10)
-    if (Number.isFinite(parsed)) {
-      // compile request_id was generated using microseconds.
-      return Math.floor(parsed / 1000)
-    }
-  }
-
-  const gatewayMatch = requestId.match(/^gateway-([0-9a-z]+)-/)
-  if (gatewayMatch && gatewayMatch[1]) {
-    const parsed = Number.parseInt(gatewayMatch[1], 36)
-    if (Number.isFinite(parsed)) {
-      // gateway request_id embeds Date.now().toString(36).
-      return parsed
-    }
-  }
-
-  return null
-}
-
-function isProcessingClaimStale(record: IdempotencyRecord): boolean {
-  if (record.status !== 'processing') {
-    return false
-  }
-
-  const timestamp = parseRequestTimestamp(record)
-  if (timestamp == null) {
-    return false
-  }
-
-  return Date.now() - timestamp > IDEMPOTENCY_PROCESSING_STALE_SECONDS * 1000
-}
-
-async function resetIdempotencyKeyClaim({
-  supabase,
-  userId,
-  action,
-  idempotencyKey,
-  requestHash,
-  requestId,
-}: {
-  supabase: ReturnType<typeof createClient>
-  userId: string
-  action: 'compile' | 'apply'
-  idempotencyKey: string
-  requestHash: string
-  requestId: string
-}): Promise<boolean> {
-  const { data, error } = await supabase
-    .from('mirror_request_idempotency')
-    .update({
-      request_hash: requestHash,
-      request_id: requestId,
-      status: 'processing',
-      response_status: null,
-      response_body: null,
-      response_content_type: null,
-      expires_at: idempotencyExpiresAtIso(),
-    })
-    .eq('user_id', userId)
-    .eq('action', action)
-    .eq('idempotency_key', idempotencyKey)
-    .select('request_id')
-
-  if (error) {
-    throw new Error(`idempotency_reset_failed:${error.message}`)
-  }
-
-  return Array.isArray(data) && data.length > 0
-}
-
-function normalizeResponseBodyForStore(rawBody: string): string {
-  const bytes = new TextEncoder().encode(rawBody)
-  if (bytes.length <= MAX_IDEMPOTENCY_RESPONSE_BODY_BYTES) {
-    return rawBody
-  }
-
-  const clipped = bytes.slice(0, MAX_IDEMPOTENCY_RESPONSE_BODY_BYTES)
-  return new TextDecoder().decode(clipped)
-}
-
-async function buildIdempotencyRequestHash(
-  userId: string,
-  action: 'compile' | 'apply',
-  normalized: MirrorComputeRequest,
-): Promise<string> {
-  return fingerprintValueSha256({
-    userId,
-    action,
-    mode: normalized.mode,
-    projectId: normalized.projectId,
-    taskId: normalized.taskId,
-    prompt: normalized.prompt,
-    files: normalized.files ?? {},
-    metadata: normalized.metadata ?? {},
-    actorUserId: normalized.actorUserId ?? null,
-    backupId: normalized.backupId ?? null,
-    fileSetFingerprint: normalized.fileSetFingerprint ?? null,
-    signedInputUrls: normalizeSignedInputUrls(normalized.signedInputUrls),
-  })
-}
-
-async function claimIdempotencyKey({
-  supabase,
-  userId,
-  action,
-  idempotencyKey,
-  requestHash,
-  requestId,
-}: {
-  supabase: ReturnType<typeof createClient>
-  userId: string
-  action: 'compile' | 'apply'
-  idempotencyKey: string
-  requestHash: string
-  requestId: string
-}): Promise<IdempotencyClaimResult> {
-  const { data: existing, error: selectError } = await supabase
-    .from('mirror_request_idempotency')
-    .select(
-      'user_id,action,idempotency_key,request_hash,request_id,status,response_status,response_body,response_content_type,expires_at,created_at,updated_at',
-    )
-    .eq('user_id', userId)
-    .eq('action', action)
-    .eq('idempotency_key', idempotencyKey)
-    .maybeSingle<IdempotencyRecord>()
-
-  if (selectError) {
-    throw new Error(`idempotency_select_failed:${selectError.message}`)
-  }
-
-  if (existing) {
-    const expired = isExpiredIso(existing.expires_at)
-    const staleProcessing = isProcessingClaimStale(existing)
-
-    if (existing.request_hash !== requestHash) {
-      if (expired || staleProcessing) {
-        await resetIdempotencyKeyClaim({
-          supabase,
-          userId,
-          action,
-          idempotencyKey,
-          requestHash,
-          requestId,
-        })
-        return { kind: 'claimed' }
-      }
-
-      return { kind: 'conflict', record: existing }
-    }
-
-    if ((existing.status === 'completed' || existing.status === 'failed') && !expired) {
-      return { kind: 'replay', record: existing }
-    }
-
-    if (!expired && existing.status === 'processing' && !staleProcessing) {
-      return { kind: 'in_progress', record: existing }
-    }
-
-    await resetIdempotencyKeyClaim({
-      supabase,
-      userId,
-      action,
-      idempotencyKey,
-      requestHash,
-      requestId,
-    })
-    return { kind: 'claimed' }
-  }
-
-  const { error: insertError } = await supabase.from('mirror_request_idempotency').insert({
-    user_id: userId,
-    action,
-    idempotency_key: idempotencyKey,
-    request_hash: requestHash,
-    request_id: requestId,
-    status: 'processing',
-    expires_at: idempotencyExpiresAtIso(),
-  })
-
-  if (insertError) {
-    const message = insertError.message.toLowerCase()
-    if (message.includes('duplicate') || message.includes('unique')) {
-      const { data: raceWinner, error: raceSelectError } = await supabase
-        .from('mirror_request_idempotency')
-        .select(
-          'user_id,action,idempotency_key,request_hash,request_id,status,response_status,response_body,response_content_type,expires_at,created_at,updated_at',
-        )
-        .eq('user_id', userId)
-        .eq('action', action)
-        .eq('idempotency_key', idempotencyKey)
-        .maybeSingle<IdempotencyRecord>()
-
-      if (raceSelectError) {
-        throw new Error(`idempotency_select_failed:${raceSelectError.message}`)
-      }
-
-      if (raceWinner) {
-        const expired = isExpiredIso(raceWinner.expires_at)
-        const staleProcessing = isProcessingClaimStale(raceWinner)
-
-        if (raceWinner.request_hash !== requestHash) {
-          if (expired || staleProcessing) {
-            await resetIdempotencyKeyClaim({
-              supabase,
-              userId,
-              action,
-              idempotencyKey,
-              requestHash,
-              requestId,
-            })
-            return { kind: 'claimed' }
-          }
-
-          return { kind: 'conflict', record: raceWinner }
-        }
-
-        if ((raceWinner.status === 'completed' || raceWinner.status === 'failed') && !expired) {
-          return { kind: 'replay', record: raceWinner }
-        }
-
-        if (!expired && raceWinner.status === 'processing' && !staleProcessing) {
-          return { kind: 'in_progress', record: raceWinner }
-        }
-
-        await resetIdempotencyKeyClaim({
-          supabase,
-          userId,
-          action,
-          idempotencyKey,
-          requestHash,
-          requestId,
-        })
-        return { kind: 'claimed' }
-      }
-    }
-
-    throw new Error(`idempotency_insert_failed:${insertError.message}`)
-  }
-
-  return { kind: 'claimed' }
-}
-
-async function finalizeIdempotencyKey({
-  supabase,
-  userId,
-  action,
-  idempotencyKey,
-  requestId,
-  requestHash,
-  status,
-  responseStatus,
-  responseBody,
-  responseContentType,
-}: {
-  supabase: ReturnType<typeof createClient>
-  userId: string
-  action: 'compile' | 'apply'
-  idempotencyKey: string
-  requestId: string
-  requestHash: string
-  status: 'completed' | 'failed'
-  responseStatus: number
-  responseBody: string
-  responseContentType: string
-}): Promise<void> {
-  const { data, error } = await supabase
-    .from('mirror_request_idempotency')
-    .update({
-      status,
-      request_id: requestId,
-      request_hash: requestHash,
-      response_status: responseStatus,
-      response_body: normalizeResponseBodyForStore(responseBody),
-      response_content_type: responseContentType,
-      expires_at: idempotencyExpiresAtIso(),
-    })
-    .eq('user_id', userId)
-    .eq('action', action)
-    .eq('idempotency_key', idempotencyKey)
-    .eq('request_id', requestId)
-    .eq('request_hash', requestHash)
-    .eq('status', 'processing')
-    .select('request_id')
-
-  if (error) {
-    throw new Error(`idempotency_update_failed:${error.message}`)
-  }
-
-  if (!Array.isArray(data) || data.length === 0) {
-    throw new Error('idempotency_update_conflict:no_matching_processing_claim')
-  }
-}
-
-function parsePositiveIntegerEnv(key: string, fallback: number): number {
-  const raw = Deno.env.get(key)
-  const parsed = raw ? Number.parseInt(raw, 10) : Number.NaN
-  if (Number.isFinite(parsed) && parsed > 0) {
-    return parsed
-  }
-  return fallback
-}
-
-function parsePositiveNumberEnv(key: string, fallback: number): number {
-  const raw = Deno.env.get(key)
-  const parsed = raw ? Number.parseFloat(raw) : Number.NaN
-  if (Number.isFinite(parsed) && parsed > 0) {
-    return parsed
-  }
-  return fallback
-}
-
-function gatewayRateLimitRequestsPerMinute(): number {
-  return parsePositiveIntegerEnv(
-    'MIRROR_GATEWAY_RATE_LIMIT_REQUESTS_PER_MINUTE',
-    DEFAULT_GATEWAY_RATE_LIMIT_REQUESTS_PER_MINUTE,
-  )
-}
-
-function gatewayRateLimitBurst(): number {
-  return parsePositiveIntegerEnv('MIRROR_GATEWAY_RATE_LIMIT_BURST', DEFAULT_GATEWAY_RATE_LIMIT_BURST)
-}
-
-function gatewayRateLimitBurstWindowSeconds(): number {
-  return parsePositiveIntegerEnv(
-    'MIRROR_GATEWAY_RATE_LIMIT_BURST_WINDOW_SECONDS',
-    DEFAULT_GATEWAY_RATE_LIMIT_BURST_WINDOW_SECONDS,
-  )
-}
-
-function gatewayRateLimitActionWeight(action: 'compile' | 'apply'): number {
-  return action === 'apply'
-    ? parsePositiveNumberEnv(
-        'MIRROR_GATEWAY_RATE_LIMIT_ACTION_WEIGHT_APPLY',
-        DEFAULT_GATEWAY_RATE_LIMIT_ACTION_WEIGHT_APPLY,
-      )
-    : parsePositiveNumberEnv(
-        'MIRROR_GATEWAY_RATE_LIMIT_ACTION_WEIGHT_COMPILE',
-        DEFAULT_GATEWAY_RATE_LIMIT_ACTION_WEIGHT_COMPILE,
-      )
-}
-
-function gatewayRateLimitWeightedUnitsPerMinute(): number {
-  return parsePositiveNumberEnv(
-    'MIRROR_GATEWAY_RATE_LIMIT_WEIGHTED_UNITS_PER_MINUTE',
-    DEFAULT_GATEWAY_RATE_LIMIT_WEIGHTED_UNITS_PER_MINUTE,
-  )
-}
-
-function gatewayRateLimitWeightedUnitsBurst(): number {
-  return parsePositiveNumberEnv(
-    'MIRROR_GATEWAY_RATE_LIMIT_WEIGHTED_UNITS_BURST',
-    DEFAULT_GATEWAY_RATE_LIMIT_WEIGHTED_UNITS_BURST,
-  )
-}
-
-function gatewayCircuitBreakerFailureThreshold(): number {
-  return parsePositiveIntegerEnv(
-    'MIRROR_GATEWAY_CIRCUIT_BREAKER_FAILURE_THRESHOLD',
-    DEFAULT_GATEWAY_CIRCUIT_BREAKER_FAILURE_THRESHOLD,
-  )
-}
-
-function gatewayCircuitBreakerOpenSeconds(): number {
-  return parsePositiveIntegerEnv(
-    'MIRROR_GATEWAY_CIRCUIT_BREAKER_OPEN_SECONDS',
-    DEFAULT_GATEWAY_CIRCUIT_BREAKER_OPEN_SECONDS,
-  )
-}
-
-function classifyUpstreamStatusFailure(status: number): UpstreamFailureClass {
-  if (status === 408 || status === 504) {
-    return 'upstream_timeout'
-  }
-
-  if (status === 429) {
-    return 'upstream_rate_limited'
-  }
-
-  if (status >= 400 && status < 500) {
-    return 'upstream_client_error'
-  }
-
-  if (status >= 500) {
-    return 'upstream_server_error'
-  }
-
-  return 'upstream_unknown_error'
-}
-
-function logRateLimitDecision({
-  requestId,
-  traceId,
-  userId,
-  action,
-  allowed,
-  reason,
-  minuteCount,
-  burstCount,
-  minuteLimit,
-  burstLimit,
-  weightedMinuteUnits,
-  weightedBurstUnits,
-  weightedMinuteLimit,
-  weightedBurstLimit,
-  actionWeight,
-  burstWindowSeconds,
-  minuteWindowStart,
-  burstWindowStart,
-  evaluatedAt,
-}: {
+function logRequestForwarded(details: {
   requestId: string
   traceId: string
-  userId: string
-  action: 'compile' | 'apply'
-  allowed: boolean
-  reason?: PerUserRateLimitCheckResult['reason']
-  minuteCount: number
-  burstCount: number
-  minuteLimit: number
-  burstLimit: number
-  weightedMinuteUnits: number
-  weightedBurstUnits: number
-  weightedMinuteLimit: number
-  weightedBurstLimit: number
-  actionWeight: number
-  burstWindowSeconds: number
-  minuteWindowStart: string
-  burstWindowStart: string
-  evaluatedAt: string
+  idempotencyKey: string
+  action: string
+  mode: string
+  targetUrl: string
 }): void {
-  console.info('mirror-gateway rate limit decision', {
-    requestId,
-    traceId,
-    userId,
-    action,
-    allowed,
-    reason: reason ?? null,
-    evaluatedAt,
-    minuteWindowStart,
-    burstWindowStart,
-    observedRequestsLastMinute: minuteCount,
-    observedRequestsInBurstWindow: burstCount,
-    weightedUnitsLastMinute: weightedMinuteUnits,
-    weightedUnitsInBurstWindow: weightedBurstUnits,
-    actionWeight,
-    maxRequestsPerMinute: minuteLimit,
-    burstLimit,
-    weightedUnitsPerMinuteLimit: weightedMinuteLimit,
-    weightedBurstLimit,
-    burstWindowSeconds,
-    countableStatuses: RATE_LIMIT_COUNTABLE_STATUSES,
-  })
+  console.info('mirror-gateway forwarding request', details)
 }
 
-function logCircuitBreakerDecision({
-  requestId,
-  traceId,
-  action,
-  mode,
-  allowed,
-  reason,
-  retryAfterSeconds,
-}: {
+function logRateLimitDecision(details: {
   requestId: string
-  traceId: string
-  action: 'compile' | 'apply'
-  mode: 'private' | 'cloud'
+  action: string
   allowed: boolean
-  reason: 'closed' | 'half_open_probe' | 'open'
-  retryAfterSeconds?: number
+  reason?: string
 }): void {
-  console.info('mirror-gateway circuit breaker decision', {
-    requestId,
-    traceId,
-    action,
-    mode,
-    allowed,
-    reason,
-    retryAfterSeconds: retryAfterSeconds ?? null,
-    consecutiveFailures: upstreamCircuitBreakerState.consecutiveFailures,
-    openUntilMs: upstreamCircuitBreakerState.openUntilMs,
-    halfOpenProbeActive: upstreamCircuitBreakerState.halfOpenProbeActive,
-  })
+  console.info('mirror-gateway rate limit decision', details)
 }
 
-function redactPotentialSecretString(value: string): string {
-  const clipped = value.length > 2048 ? `${value.slice(0, 2048)}...[truncated]` : value
-  if (clipped.startsWith('http://') || clipped.startsWith('https://')) {
-    try {
-      const parsed = new URL(clipped)
-      return `${parsed.origin}${parsed.pathname}?[redacted]`
-    } catch {
-      const queryIndex = clipped.indexOf('?')
-      return queryIndex >= 0 ? `${clipped.slice(0, queryIndex)}?[redacted]` : clipped
-    }
-  }
-  return clipped
-}
-
-function redactForObservability(value: unknown, depth = 0): unknown {
-  if (depth > 5) {
-    return '[redacted-depth-limit]'
-  }
-
-  if (typeof value === 'string') {
-    return redactPotentialSecretString(value)
-  }
-
-  if (Array.isArray(value)) {
-    return value.map((entry) => redactForObservability(entry, depth + 1))
-  }
-
-  if (!value || typeof value !== 'object') {
-    return value
-  }
-
-  const sensitiveKeyPattern = /(authorization|token|signed|secret|password|url)/i
-  const output: Record<string, unknown> = {}
-  for (const [key, nested] of Object.entries(value as Record<string, unknown>)) {
-    output[key] = sensitiveKeyPattern.test(key)
-      ? '[redacted]'
-      : redactForObservability(nested, depth + 1)
-  }
-  return output
-}
-
-function sanitizeUpstreamBodyForErrorDetails(upstreamBody: string): unknown {
-  try {
-    const parsed = JSON.parse(upstreamBody)
-    return redactForObservability(parsed)
-  } catch {
-    return redactPotentialSecretString(upstreamBody)
-  }
-}
-
-function logUpstreamFailureEvent({
-  requestId,
-  traceId,
-  action,
-  mode,
-  failureClass,
-  status,
-  retryable,
-  stage,
-  details,
-}: {
+function logCircuitBreakerDecision(details: {
   requestId: string
-  traceId: string
-  action: 'compile' | 'apply'
-  mode: 'private' | 'cloud'
-  failureClass: UpstreamFailureClass
+  action: string
+  allowed: boolean
+  reason: string
+}): void {
+  console.info('mirror-gateway circuit breaker decision', details)
+}
+
+function logUpstreamFailure(details: {
+  requestId: string
+  failureClass: string
   status: number | null
   retryable: boolean
-  stage: string
-  details?: unknown
 }): void {
-  console.warn('mirror-gateway upstream failure', {
-    requestId,
-    traceId,
-    action,
-    mode,
-    failureClass,
-    upstreamStatus: status,
-    retryable,
-    stage,
-    details: redactForObservability(details),
-  })
+  console.warn('mirror-gateway upstream failure', details)
 }
 
-async function checkPerUserRateLimit(
-  supabase: ReturnType<typeof createClient>,
-  userId: string,
-  action: 'compile' | 'apply',
-): Promise<PerUserRateLimitCheckResult> {
-  const minuteLimit = gatewayRateLimitRequestsPerMinute()
-  const burstLimit = gatewayRateLimitBurst()
-  const burstWindowSeconds = gatewayRateLimitBurstWindowSeconds()
-
-  const nowIso = new Date().toISOString()
-  const oneMinuteAgo = new Date(Date.now() - 60 * 1000).toISOString()
-  const burstWindowStart = new Date(Date.now() - burstWindowSeconds * 1000).toISOString()
-
-  const [minuteCount, burstCount] = await Promise.all([
-    countRateLimitRequestsInWindow({
-      supabase,
-      userId,
-      action,
-      nowIso,
-      windowStartIso: oneMinuteAgo,
-      errorCode: 'rate_limit_minute_check_failed',
-    }),
-    countRateLimitRequestsInWindow({
-      supabase,
-      userId,
-      action,
-      nowIso,
-      windowStartIso: burstWindowStart,
-      errorCode: 'rate_limit_burst_check_failed',
-    }),
-  ])
-
-  const [minuteCompileCount, minuteApplyCount, burstCompileCount, burstApplyCount] = await Promise.all([
-    countRateLimitRequestsInWindow({
-      supabase,
-      userId,
-      action: 'compile',
-      nowIso,
-      windowStartIso: oneMinuteAgo,
-      errorCode: 'rate_limit_weighted_minute_compile_check_failed',
-    }),
-    countRateLimitRequestsInWindow({
-      supabase,
-      userId,
-      action: 'apply',
-      nowIso,
-      windowStartIso: oneMinuteAgo,
-      errorCode: 'rate_limit_weighted_minute_apply_check_failed',
-    }),
-    countRateLimitRequestsInWindow({
-      supabase,
-      userId,
-      action: 'compile',
-      nowIso,
-      windowStartIso: burstWindowStart,
-      errorCode: 'rate_limit_weighted_burst_compile_check_failed',
-    }),
-    countRateLimitRequestsInWindow({
-      supabase,
-      userId,
-      action: 'apply',
-      nowIso,
-      windowStartIso: burstWindowStart,
-      errorCode: 'rate_limit_weighted_burst_apply_check_failed',
-    }),
-  ])
-
-  const safeMinuteCount = minuteCount
-  const safeBurstCount = burstCount
-  const compileWeight = gatewayRateLimitActionWeight('compile')
-  const applyWeight = gatewayRateLimitActionWeight('apply')
-  const weightedMinuteLimit = gatewayRateLimitWeightedUnitsPerMinute()
-  const weightedBurstLimit = gatewayRateLimitWeightedUnitsBurst()
-  const weightedMinuteUnits = minuteCompileCount * compileWeight + minuteApplyCount * applyWeight
-  const weightedBurstUnits = burstCompileCount * compileWeight + burstApplyCount * applyWeight
-
-  if (safeMinuteCount >= minuteLimit) {
-    return {
-      allowed: false,
-      reason: 'minute_rate',
-      retryAfterSeconds: 60,
-      minuteCount: safeMinuteCount,
-      burstCount: safeBurstCount,
-      weightedMinuteUnits,
-      weightedBurstUnits,
-      weightedMinuteLimit,
-      weightedBurstLimit,
-    }
-  }
-
-  if (safeBurstCount >= burstLimit) {
-    return {
-      allowed: false,
-      reason: 'burst_quota',
-      retryAfterSeconds: burstWindowSeconds,
-      minuteCount: safeMinuteCount,
-      burstCount: safeBurstCount,
-      weightedMinuteUnits,
-      weightedBurstUnits,
-      weightedMinuteLimit,
-      weightedBurstLimit,
-    }
-  }
-
-  if (weightedMinuteUnits >= weightedMinuteLimit) {
-    return {
-      allowed: false,
-      reason: 'weighted_minute',
-      retryAfterSeconds: 60,
-      minuteCount: safeMinuteCount,
-      burstCount: safeBurstCount,
-      weightedMinuteUnits,
-      weightedBurstUnits,
-      weightedMinuteLimit,
-      weightedBurstLimit,
-    }
-  }
-
-  if (weightedBurstUnits >= weightedBurstLimit) {
-    return {
-      allowed: false,
-      reason: 'weighted_burst',
-      retryAfterSeconds: burstWindowSeconds,
-      minuteCount: safeMinuteCount,
-      burstCount: safeBurstCount,
-      weightedMinuteUnits,
-      weightedBurstUnits,
-      weightedMinuteLimit,
-      weightedBurstLimit,
-    }
-  }
-
-  return {
-    allowed: true,
-    minuteCount: safeMinuteCount,
-    burstCount: safeBurstCount,
-    weightedMinuteUnits,
-    weightedBurstUnits,
-    weightedMinuteLimit,
-    weightedBurstLimit,
-  }
-}
-
-async function countRateLimitRequestsInWindow({
-  supabase,
-  userId,
-  action,
-  nowIso,
-  windowStartIso,
-  errorCode,
-}: {
-  supabase: ReturnType<typeof createClient>
-  userId: string
-  action: 'compile' | 'apply'
-  nowIso: string
-  windowStartIso: string
-  errorCode: string
-}): Promise<number> {
-  const { count, error } = await supabase
-    .from('mirror_request_idempotency')
-    .select('*', { head: true, count: 'exact' })
-    .eq('user_id', userId)
-    .eq('action', action)
-    .in('status', [...RATE_LIMIT_COUNTABLE_STATUSES])
-    .gt('expires_at', nowIso)
-    .gte('created_at', windowStartIso)
-
-  if (error) {
-    throw new Error(`${errorCode}:${error.message}`)
-  }
-
-  return count ?? 0
-}
-
-function evaluateCircuitBreakerAllowance(): {
-  allowed: boolean
-  reason: 'closed' | 'half_open_probe' | 'open'
-  retryAfterSeconds?: number
-} {
-  const now = Date.now()
-  const openUntil = upstreamCircuitBreakerState.openUntilMs
-  if (openUntil != null && openUntil > now) {
-    return {
-      allowed: false,
-      reason: 'open',
-      retryAfterSeconds: Math.max(1, Math.ceil((openUntil - now) / 1000)),
-    }
-  }
-
-  if (openUntil != null && openUntil <= now) {
-    if (upstreamCircuitBreakerState.halfOpenProbeActive) {
-      return {
-        allowed: false,
-        reason: 'open',
-        retryAfterSeconds: 1,
-      }
-    }
-    upstreamCircuitBreakerState.halfOpenProbeActive = true
-    return {
-      allowed: true,
-      reason: 'half_open_probe',
-    }
-  }
-
-  return {
-    allowed: true,
-    reason: 'closed',
-  }
-}
-
-function registerUpstreamSuccess(): void {
-  upstreamCircuitBreakerState.consecutiveFailures = 0
-  upstreamCircuitBreakerState.openUntilMs = null
-  upstreamCircuitBreakerState.halfOpenProbeActive = false
-}
-
-function registerUpstreamFailure(): void {
-  const threshold = gatewayCircuitBreakerFailureThreshold()
-  const openSeconds = gatewayCircuitBreakerOpenSeconds()
-  const now = Date.now()
-
-  if (upstreamCircuitBreakerState.halfOpenProbeActive) {
-    upstreamCircuitBreakerState.openUntilMs = now + openSeconds * 1000
-    upstreamCircuitBreakerState.halfOpenProbeActive = false
-    upstreamCircuitBreakerState.consecutiveFailures = threshold
-    return
-  }
-
-  upstreamCircuitBreakerState.consecutiveFailures += 1
-  if (upstreamCircuitBreakerState.consecutiveFailures >= threshold) {
-    upstreamCircuitBreakerState.openUntilMs = now + openSeconds * 1000
-  }
-}
-
-function timeoutMs(): number {
-  const raw = Deno.env.get('MIRROR_FORWARD_TIMEOUT_MS')
-  const parsed = raw ? Number.parseInt(raw, 10) : Number.NaN
-  if (Number.isFinite(parsed) && parsed >= 1000) {
-    return parsed
-  }
-  return 20000
-}
-
-logIdempotencyStatusContractOnColdStart()
+logIdempotencyContractOnColdStart()
 
 // @ts-ignore - Deno global
 Deno.serve(async (req: Request) => {
@@ -1263,17 +86,21 @@ Deno.serve(async (req: Request) => {
   const traceId = resolveTraceId(req, requestId)
   const idempotencyKey = resolveIdempotencyKey(req)
   const action = resolveActionFromPath(new URL(req.url).pathname)
-  let usageSupabase: ReturnType<typeof createClient> | null = null
-  let usageUserId: string | null = null
-  let usageNormalized: MirrorComputeRequest | null = null
-  let usageStartedAtMs: number | null = null
 
+  // Track context for deferred logging
+  let contextUser: string | null = null
+  let contextNormalized: requestValidator.MirrorComputeRequest | null = null
+  let contextStartedAtMs: number | null = null
+
+  // --- CORS PREFLIGHT ---
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: buildCorsHeaders(req) })
   }
 
+  // --- METHOD VALIDATION ---
   if (req.method !== 'POST') {
-    return errorResponse(req,
+    return errorResponse(
+      req,
       buildStructuredError({
         code: 'method_not_allowed',
         message: 'Method not allowed',
@@ -1287,8 +114,10 @@ Deno.serve(async (req: Request) => {
     )
   }
 
+  // --- ROUTE VALIDATION ---
   if (!action) {
-    return errorResponse(req,
+    return errorResponse(
+      req,
       buildStructuredError({
         code: 'bad_request',
         message: 'Invalid route. Use /compile or /apply.',
@@ -1303,26 +132,24 @@ Deno.serve(async (req: Request) => {
   }
 
   try {
-    const authHeader = req.headers.get('Authorization')
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return errorResponse(req,
-        buildStructuredError({
-          code: 'unauthorized',
-          message: 'Missing or invalid authorization header',
-          retryable: false,
-          requestId,
-          traceId,
-          idempotencyKey,
-          stage: 'authentication',
-        }),
-        401,
-      )
+    // === STEP 1: REQUEST VALIDATION ===
+    const validationResult = await requestValidator.validateAndParseRequest(req)
+    if ('kind' in validationResult) {
+      return errorResponse(req, buildStructuredError(validationResult), validationResult.statusCode)
     }
 
+    const normalized = validationResult.normalized
+    contextNormalized = normalized
+    contextStartedAtMs = Date.now()
+
+    // === STEP 2: AUTHENTICATION & PERMISSIONS ===
+    const authHeader = req.headers.get('Authorization')
     const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? ''
     const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY') ?? ''
+
     if (!supabaseUrl || !supabaseAnonKey) {
-      return errorResponse(req,
+      return errorResponse(
+        req,
         buildStructuredError({
           code: 'internal_error',
           message: 'Supabase environment is not configured',
@@ -1337,214 +164,34 @@ Deno.serve(async (req: Request) => {
     }
 
     const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-      global: { headers: { Authorization: authHeader } },
+      global: { headers: { Authorization: authHeader ?? '' } },
     })
-    usageSupabase = supabase
 
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser()
-
-    if (authError || !user) {
-      return errorResponse(req,
-        buildStructuredError({
-          code: 'unauthorized',
-          message: 'Unauthorized',
-          retryable: false,
-          requestId,
-          traceId,
-          idempotencyKey,
-          stage: 'authentication',
-        }),
-        401,
-      )
-    }
-    usageUserId = user.id
-
-    let rawBody: Partial<MirrorComputeRequest>
-    try {
-      rawBody = await parseRequestJsonWithLimit(req, MAX_REQUEST_BODY_BYTES)
-    } catch (error) {
-      if (error instanceof Error && error.message.startsWith('payload_too_large:')) {
-        return errorResponse(req,
-          buildStructuredError({
-            code: 'payload_too_large',
-            message: `Request body exceeds ${MAX_REQUEST_BODY_BYTES} bytes limit`,
-            retryable: false,
-            requestId,
-            traceId,
-            idempotencyKey,
-            stage: 'request_validation',
-          }),
-          413,
-        )
-      }
-
-      if (error instanceof Error && error.message === 'bad_json') {
-        return errorResponse(req,
-          buildStructuredError({
-            code: 'bad_request',
-            message: 'Invalid JSON body',
-            retryable: false,
-            requestId,
-            traceId,
-            idempotencyKey,
-            stage: 'request_validation',
-          }),
-          400,
-        )
-      }
-
-      throw error
-    }
-
-    const normalized = normalizeRequestBody(rawBody)
-    if (!normalized) {
-      return errorResponse(req,
-        buildStructuredError({
-          code: 'bad_request',
-          message: 'Missing or invalid fields: prompt, projectId, taskId, mode',
-          retryable: false,
-          requestId,
-          traceId,
-          idempotencyKey,
-          stage: 'request_validation',
-        }),
-        400,
-      )
-    }
-    const startedAtMs = Date.now()
-    usageNormalized = normalized
-    usageStartedAtMs = startedAtMs
-
-    let canUseMirror = false
-    try {
-      canUseMirror = await hasUseMirrorPermission(supabase)
-    } catch (error) {
-      await writeMirrorUsageLog({
+    const authResult = await authHandler.performFullAuthCheck(supabase, authHeader, normalized.mode, requestId)
+    if ('kind' in authResult) {
+      await auditLogger.writeMirrorUsageLogIfReady({
         supabase,
-        userId: user.id,
-        normalized,
+        userId: contextUser,
+        projectId: normalized.projectId,
+        taskId: normalized.taskId,
+        mode: normalized.mode,
         action,
         status: 'failed',
         requestId,
         idempotencyKey,
-        startedAtMs,
+        startedAtMs: contextStartedAtMs,
       })
-      return errorResponse(req,
-        buildStructuredError({
-          code: 'unauthorized',
-          message: 'Mirror permission check failed',
-          retryable: false,
-          requestId,
-          traceId,
-          idempotencyKey,
-          details: String(error),
-          stage: 'authorization',
-        }),
-        403,
-      )
+      return errorResponse(req, buildStructuredError(authResult), authResult.statusCode)
     }
 
-    if (!canUseMirror) {
-      await writeMirrorUsageLog({
-        supabase,
-        userId: user.id,
-        normalized,
-        action,
-        status: 'failed',
-        requestId,
-        idempotencyKey,
-        startedAtMs,
-      })
-      return errorResponse(req,
-        buildStructuredError({
-          code: 'unauthorized',
-          message: 'Insufficient permissions: use_mirror required',
-          retryable: false,
-          requestId,
-          traceId,
-          idempotencyKey,
-          stage: 'authorization',
-        }),
-        403,
-      )
-    }
+    const user = authResult.user
+    contextUser = user.id
 
-    if (normalized.mode === 'cloud') {
-      let hasCloudEntitlement = false
-      try {
-        hasCloudEntitlement = await hasCloudMirrorAccess(supabase, requestId)
-      } catch (error) {
-        await writeMirrorUsageLog({
-          supabase,
-          userId: user.id,
-          normalized,
-          action,
-          status: 'failed',
-          requestId,
-          idempotencyKey,
-          startedAtMs,
-        })
-        return errorResponse(req,
-          buildStructuredError({
-            code: 'forbidden',
-            message: 'Cloud Mirror mode requires successful cloud entitlement verification',
-            retryable: false,
-            requestId,
-            traceId,
-            idempotencyKey,
-            details: {
-              mode: normalized.mode,
-              entitlement: 'cloud_mirror_access',
-              reason: 'rpc_failed',
-              cause: String(error),
-              authority: 'rpc_only',
-              environment: (Deno.env.get('SUPABASE_ENV') ?? 'unknown').trim() || 'unknown',
-            },
-            stage: 'authorization',
-          }),
-          403,
-        )
-      }
-
-      if (!hasCloudEntitlement) {
-        await writeMirrorUsageLog({
-          supabase,
-          userId: user.id,
-          normalized,
-          action,
-          status: 'failed',
-          requestId,
-          idempotencyKey,
-          startedAtMs,
-        })
-        return errorResponse(req,
-          buildStructuredError({
-            code: 'forbidden',
-            message: 'Cloud Mirror mode requires an active premium cloud entitlement',
-            retryable: false,
-            requestId,
-            traceId,
-            idempotencyKey,
-            details: {
-              mode: normalized.mode,
-              entitlement: 'cloud_mirror_access',
-              reason: 'rpc_false',
-              authority: 'rpc_only',
-            },
-            stage: 'authorization',
-          }),
-          403,
-        )
-      }
-    }
-
-    const idempotencyRequestHash = await buildIdempotencyRequestHash(user.id, action, normalized)
-    let idempotencyClaim: IdempotencyClaimResult
+    // === STEP 3: IDEMPOTENCY CLAIM ===
+    const idempotencyRequestHash = await idempotencyHandler.buildIdempotencyRequestHash(user.id, action, normalized)
+    let idempotencyClaim: idempotencyHandler.IdempotencyClaimResult
     try {
-      idempotencyClaim = await claimIdempotencyKey({
+      idempotencyClaim = await idempotencyHandler.claimIdempotencyKey({
         supabase,
         userId: user.id,
         action,
@@ -1554,17 +201,20 @@ Deno.serve(async (req: Request) => {
       })
     } catch (error) {
       if (error instanceof Error && error.message.startsWith('idempotency_')) {
-        await writeMirrorUsageLog({
+        await auditLogger.writeMirrorUsageLogIfReady({
           supabase,
           userId: user.id,
-          normalized,
+          projectId: normalized.projectId,
+          taskId: normalized.taskId,
+          mode: normalized.mode,
           action,
           status: 'failed',
           requestId,
           idempotencyKey,
-          startedAtMs,
+          startedAtMs: contextStartedAtMs,
         })
-        return errorResponse(req,
+        return errorResponse(
+          req,
           buildStructuredError({
             code: 'config_error',
             message: 'Idempotency storage is unavailable',
@@ -1581,18 +231,22 @@ Deno.serve(async (req: Request) => {
       throw error
     }
 
+    // Handle idempotency results
     if (idempotencyClaim.kind === 'conflict') {
-      await writeMirrorUsageLog({
+      await auditLogger.writeMirrorUsageLogIfReady({
         supabase,
         userId: user.id,
-        normalized,
+        projectId: normalized.projectId,
+        taskId: normalized.taskId,
+        mode: normalized.mode,
         action,
         status: 'failed',
         requestId,
         idempotencyKey,
-        startedAtMs,
+        startedAtMs: contextStartedAtMs,
       })
-      return errorResponse(req,
+      return errorResponse(
+        req,
         buildStructuredError({
           code: 'bad_request',
           message: 'Idempotency key reuse with different payload is not allowed',
@@ -1600,10 +254,7 @@ Deno.serve(async (req: Request) => {
           requestId,
           traceId,
           idempotencyKey,
-          details: {
-            action,
-            priorRequestId: idempotencyClaim.record?.request_id,
-          },
+          details: { action, priorRequestId: idempotencyClaim.record?.request_id },
           stage: 'idempotency',
         }),
         409,
@@ -1611,17 +262,20 @@ Deno.serve(async (req: Request) => {
     }
 
     if (idempotencyClaim.kind === 'in_progress') {
-      await writeMirrorUsageLog({
+      await auditLogger.writeMirrorUsageLogIfReady({
         supabase,
         userId: user.id,
-        normalized,
+        projectId: normalized.projectId,
+        taskId: normalized.taskId,
+        mode: normalized.mode,
         action,
         status: 'failed',
         requestId,
         idempotencyKey,
-        startedAtMs,
+        startedAtMs: contextStartedAtMs,
       })
-      return errorResponse(req,
+      return errorResponse(
+        req,
         buildStructuredError({
           code: 'bad_request',
           message: 'A request with this idempotency key is already processing',
@@ -1629,10 +283,7 @@ Deno.serve(async (req: Request) => {
           requestId,
           traceId,
           idempotencyKey,
-          details: {
-            action,
-            priorRequestId: idempotencyClaim.record?.request_id,
-          },
+          details: { action, priorRequestId: idempotencyClaim.record?.request_id },
           stage: 'idempotency',
         }),
         409,
@@ -1644,18 +295,19 @@ Deno.serve(async (req: Request) => {
       const cachedBody =
         idempotencyClaim.record.response_body ??
         JSON.stringify({ success: false, error: 'idempotency_record_missing_response' })
-      const cachedContentType =
-        idempotencyClaim.record.response_content_type ?? 'application/json'
+      const cachedContentType = idempotencyClaim.record.response_content_type ?? 'application/json'
 
-      await writeMirrorUsageLog({
+      await auditLogger.writeMirrorUsageLogIfReady({
         supabase,
         userId: user.id,
-        normalized,
+        projectId: normalized.projectId,
+        taskId: normalized.taskId,
+        mode: normalized.mode,
         action,
         status: cachedStatus >= 200 && cachedStatus < 400 ? 'success' : 'failed',
         requestId,
         idempotencyKey,
-        startedAtMs,
+        startedAtMs: contextStartedAtMs,
       })
 
       return new Response(cachedBody, {
@@ -1671,69 +323,17 @@ Deno.serve(async (req: Request) => {
       })
     }
 
-    let rateLimitCheck: PerUserRateLimitCheckResult
-    try {
-      rateLimitCheck = await checkPerUserRateLimit(supabase, user.id, action)
-    } catch (error) {
-      if (error instanceof Error && error.message.startsWith('rate_limit_')) {
-        await writeMirrorUsageLog({
-          supabase,
-          userId: user.id,
-          normalized,
-          action,
-          status: 'failed',
-          requestId,
-          idempotencyKey,
-          startedAtMs,
-        })
-        return errorResponse(req,
-          buildStructuredError({
-            code: 'config_error',
-            message: 'Rate limit check is unavailable',
-            retryable: true,
-            requestId,
-            traceId,
-            idempotencyKey,
-            details: error.message,
-            stage: 'rate_limit',
-          }),
-          500,
-        )
-      }
-      throw error
-    }
-
-    const minuteLimit = gatewayRateLimitRequestsPerMinute()
-    const burstLimit = gatewayRateLimitBurst()
-    const weightedMinuteLimit = gatewayRateLimitWeightedUnitsPerMinute()
-    const weightedBurstLimit = gatewayRateLimitWeightedUnitsBurst()
-    const actionWeight = gatewayRateLimitActionWeight(action)
-    const burstWindowSeconds = gatewayRateLimitBurstWindowSeconds()
+    // === STEP 4: RATE LIMIT CHECK ===
+    const rateLimitCheck = await rateLimiterHandler.checkPerUserRateLimit(supabase, user.id, action)
     logRateLimitDecision({
       requestId,
-      traceId,
-      userId: user.id,
       action,
       allowed: rateLimitCheck.allowed,
       reason: rateLimitCheck.reason,
-      minuteCount: rateLimitCheck.minuteCount,
-      burstCount: rateLimitCheck.burstCount,
-      minuteLimit,
-      burstLimit,
-      weightedMinuteUnits: rateLimitCheck.weightedMinuteUnits,
-      weightedBurstUnits: rateLimitCheck.weightedBurstUnits,
-      weightedMinuteLimit,
-      weightedBurstLimit,
-      actionWeight,
-      burstWindowSeconds,
-      minuteWindowStart: new Date(Date.now() - 60 * 1000).toISOString(),
-      burstWindowStart: new Date(Date.now() - burstWindowSeconds * 1000).toISOString(),
-      evaluatedAt: new Date().toISOString(),
     })
 
     if (!rateLimitCheck.allowed) {
       const retryAfterSeconds = rateLimitCheck.retryAfterSeconds ?? 60
-
       const rateLimitError = buildStructuredError({
         code: 'rate_limited',
         message: 'Mirror gateway rate limit exceeded',
@@ -1743,28 +343,13 @@ Deno.serve(async (req: Request) => {
         idempotencyKey,
         details: {
           reason: rateLimitCheck.reason,
-          maxRequestsPerMinute: minuteLimit,
-          burstLimit,
-          actionWeight,
-          weightedUnitsLastMinute: rateLimitCheck.weightedMinuteUnits,
-          weightedUnitsInBurstWindow: rateLimitCheck.weightedBurstUnits,
-          weightedUnitsPerMinuteLimit: weightedMinuteLimit,
-          weightedBurstLimit,
-          burstWindowSeconds,
-          observedRequestsLastMinute: rateLimitCheck.minuteCount,
-          observedRequestsInBurstWindow: rateLimitCheck.burstCount,
           retryAfterSeconds,
         },
         stage: 'rate_limit',
       })
 
-      const rateLimitBody = {
-        success: false,
-        error: rateLimitError,
-      }
-
       try {
-        await finalizeIdempotencyKey({
+        await idempotencyHandler.finalizeIdempotencyKey({
           supabase,
           userId: user.id,
           action,
@@ -1773,25 +358,27 @@ Deno.serve(async (req: Request) => {
           requestHash: idempotencyRequestHash,
           status: 'failed',
           responseStatus: 429,
-          responseBody: JSON.stringify(rateLimitBody),
+          responseBody: JSON.stringify({ success: false, error: rateLimitError }),
           responseContentType: 'application/json',
         })
-      } catch (idempotencyError) {
-        console.error('mirror-gateway idempotency finalize failed:', idempotencyError)
+      } catch (error) {
+        console.error('idempotency finalize failed:', error)
       }
 
-      await writeMirrorUsageLog({
+      await auditLogger.writeMirrorUsageLogIfReady({
         supabase,
         userId: user.id,
-        normalized,
+        projectId: normalized.projectId,
+        taskId: normalized.taskId,
+        mode: normalized.mode,
         action,
         status: 'rate_limited',
         requestId,
         idempotencyKey,
-        startedAtMs,
+        startedAtMs: contextStartedAtMs,
       })
 
-      return new Response(JSON.stringify(rateLimitBody), {
+      return new Response(JSON.stringify({ success: false, error: rateLimitError }), {
         status: 429,
         headers: {
           ...buildCorsHeaders(req),
@@ -1804,16 +391,13 @@ Deno.serve(async (req: Request) => {
       })
     }
 
-    const targetUrl = resolveForwardEndpoint(normalized.mode, action)
-    const circuitBreakerDecision = evaluateCircuitBreakerAllowance()
+    // === STEP 5: CIRCUIT BREAKER CHECK ===
+    const circuitBreakerDecision = circuitBreakerHandler.evaluateCircuitBreakerAllowance(circuitBreakerState)
     logCircuitBreakerDecision({
       requestId,
-      traceId,
       action,
-      mode: normalized.mode,
       allowed: circuitBreakerDecision.allowed,
       reason: circuitBreakerDecision.reason,
-      retryAfterSeconds: circuitBreakerDecision.retryAfterSeconds,
     })
 
     if (!circuitBreakerDecision.allowed) {
@@ -1825,15 +409,12 @@ Deno.serve(async (req: Request) => {
         requestId,
         traceId,
         idempotencyKey,
-        details: {
-          reason: 'circuit_breaker_open',
-          retryAfterSeconds,
-        },
+        details: { reason: 'circuit_breaker_open', retryAfterSeconds },
         stage: 'circuit_breaker',
       })
 
       try {
-        await finalizeIdempotencyKey({
+        await idempotencyHandler.finalizeIdempotencyKey({
           supabase,
           userId: user.id,
           action,
@@ -1842,18 +423,15 @@ Deno.serve(async (req: Request) => {
           requestHash: idempotencyRequestHash,
           status: 'failed',
           responseStatus: 503,
-          responseBody: JSON.stringify({
-            success: false,
-            error: breakerError,
-          }),
+          responseBody: JSON.stringify({ success: false, error: breakerError }),
           responseContentType: 'application/json',
         })
-      } catch (idempotencyError) {
-        console.error('mirror-gateway idempotency finalize failed:', idempotencyError)
+      } catch (error) {
+        console.error('idempotency finalize failed:', error)
       }
 
       if (action === 'apply') {
-        await writeApplyAuditEvent({
+        await auditLogger.writeApplyAuditEvent({
           supabase,
           userId: user.id,
           normalized,
@@ -1865,38 +443,35 @@ Deno.serve(async (req: Request) => {
         })
       }
 
-      await writeMirrorUsageLog({
+      await auditLogger.writeMirrorUsageLogIfReady({
         supabase,
         userId: user.id,
-        normalized,
+        projectId: normalized.projectId,
+        taskId: normalized.taskId,
+        mode: normalized.mode,
         action,
         status: 'upstream_error',
         requestId,
         idempotencyKey,
-        startedAtMs,
+        startedAtMs: contextStartedAtMs,
       })
 
-      return new Response(
-        JSON.stringify({
-          success: false,
-          error: breakerError,
-        }),
-        {
-          status: 503,
-          headers: {
-            ...buildCorsHeaders(req),
-            'Content-Type': 'application/json',
-            'Retry-After': String(retryAfterSeconds),
-            'x-request-id': requestId,
-            'x-trace-id': traceId,
-            'x-idempotency-key': idempotencyKey,
-          },
+      return new Response(JSON.stringify({ success: false, error: breakerError }), {
+        status: 503,
+        headers: {
+          ...buildCorsHeaders(req),
+          'Content-Type': 'application/json',
+          'Retry-After': String(retryAfterSeconds),
+          'x-request-id': requestId,
+          'x-trace-id': traceId,
+          'x-idempotency-key': idempotencyKey,
         },
-      )
+      })
     }
 
+    // === STEP 6: WRITE APPLY AUDIT (started) ===
     if (action === 'apply') {
-      await writeApplyAuditEvent({
+      await auditLogger.writeApplyAuditEvent({
         supabase,
         userId: user.id,
         normalized,
@@ -1904,433 +479,130 @@ Deno.serve(async (req: Request) => {
         idempotencyKey,
         event: 'apply_started',
         success: null,
-        details: {
-          source: 'mirror_gateway',
-          filesCount: Object.keys(normalized.files ?? {}).length,
-        },
+        details: { source: 'mirror_gateway', filesCount: Object.keys(normalized.files ?? {}).length },
       })
     }
 
-    const normalizedForwardFields = normalizeForwardFields(normalized, user.id)
-    const forwardMetadata: Record<string, unknown> = {
-      ...(normalized.metadata ?? {}),
-      requestId,
-      traceId,
-    }
-
-    const payload: ForwardPayload = {
-      prompt: normalized.prompt,
-      projectId: normalized.projectId,
-      taskId: normalized.taskId,
-      mode: normalized.mode,
+    // === STEP 7: BUILD FORWARD PAYLOAD ===
+    const forwardFields = requestValidator.normalizeForwardFields(normalized, user.id)
+    const forwardPayload = requestValidator.buildForwardPayload(
+      normalized,
+      user.id,
       action,
-      userId: user.id,
-      files: normalized.files ?? {},
-      metadata: forwardMetadata,
       requestId,
       traceId,
-      actorUserId: normalizedForwardFields.actorUserId,
-      backupId: normalizedForwardFields.backupId,
-      fileSetFingerprint: normalizedForwardFields.fileSetFingerprint,
-      signedInputUrls: normalizedForwardFields.signedInputUrls,
-    }
+      forwardFields,
+    )
 
-    const controller = new AbortController()
-    const timeout = setTimeout(() => controller.abort(), timeoutMs())
-
-    console.info('mirror-gateway forwarding request', {
+    const targetUrl = requestForwarding.resolveForwardEndpoint(normalized.mode, action)
+    logRequestForwarded({
       requestId,
       traceId,
       idempotencyKey,
       action,
       mode: normalized.mode,
       targetUrl,
-      projectId: normalized.projectId,
-      taskId: normalized.taskId,
     })
 
-    let upstreamResponse: Response
-    try {
-      upstreamResponse = await fetch(targetUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: authHeader,
-          'x-user-id': user.id,
-          'x-request-id': requestId,
-          'x-trace-id': traceId,
-          'x-idempotency-key': idempotencyKey,
-        },
-        body: JSON.stringify(payload),
-        signal: controller.signal,
-      })
-    } catch (error) {
-      clearTimeout(timeout)
-      if (error instanceof DOMException && error.name === 'AbortError') {
-        registerUpstreamFailure()
-        const timeoutError = buildStructuredError({
-          code: 'timeout',
-          message: `Upstream /${action} request timed out`,
-          retryable: true,
-          requestId,
-          traceId,
-          idempotencyKey,
-          stage: 'forward',
-        })
-        logUpstreamFailureEvent({
-          requestId,
-          traceId,
-          action,
-          mode: normalized.mode,
-          failureClass: 'request_timeout',
-          status: null,
-          retryable: true,
-          stage: 'forward',
-          details: { reason: 'abort_signal_timeout' },
-        })
-        try {
-          await finalizeIdempotencyKey({
-            supabase,
-            userId: user.id,
-            action,
-            idempotencyKey,
-            requestId,
-            requestHash: idempotencyRequestHash,
-            status: 'failed',
-            responseStatus: 504,
-            responseBody: JSON.stringify({
-              success: false,
-              error: timeoutError,
-            }),
-            responseContentType: 'application/json',
-          })
-        } catch (idempotencyError) {
-          console.error('mirror-gateway idempotency finalize failed:', idempotencyError)
-        }
+    // === STEP 8: FORWARD TO UPSTREAM ===
+    const forwardResult = await requestForwarding.forwardToUpstream({
+      targetUrl,
+      payload: forwardPayload,
+      authHeader: req.headers.get('Authorization') ?? '',
+      requestId,
+      traceId,
+      idempotencyKey,
+    })
 
-        if (action === 'apply') {
-          await writeApplyAuditEvent({
-            supabase,
-            userId: user.id,
-            normalized,
-            requestId,
-            idempotencyKey,
-            event: 'apply_failed',
-            success: false,
-            details: buildAuditErrorDetails(timeoutError),
-          })
-        }
-
-        await writeMirrorUsageLog({
-          supabase,
-          userId: user.id,
-          normalized,
-          action,
-          status: 'timeout',
-          requestId,
-          idempotencyKey,
-          startedAtMs,
-        })
-
-        return errorResponse(req,
-          timeoutError,
-          504,
-        )
-      }
-
-      registerUpstreamFailure()
-      const upstreamTransportError = buildStructuredError({
-        code: 'upstream_error',
-        message: `Failed to reach upstream /${action} endpoint`,
-        retryable: true,
+    // === STEP 9: HANDLE UPSTREAM RESPONSE ===
+    if (forwardResult.failureClass) {
+      logUpstreamFailure({
         requestId,
-        traceId,
-        idempotencyKey,
-        details: String(error),
-        stage: 'forward',
+        failureClass: forwardResult.failureClass,
+        status: forwardResult.status,
+        retryable: forwardResult.retryable,
       })
-      logUpstreamFailureEvent({
-        requestId,
-        traceId,
-        action,
-        mode: normalized.mode,
-        failureClass: 'transport_error',
-        status: null,
-        retryable: true,
-        stage: 'forward',
-        details: String(error),
-      })
-
-      try {
-        await finalizeIdempotencyKey({
-          supabase,
-          userId: user.id,
-          action,
-          idempotencyKey,
-          requestId,
-          requestHash: idempotencyRequestHash,
-          status: 'failed',
-          responseStatus: 502,
-          responseBody: JSON.stringify({
-            success: false,
-              error: upstreamTransportError,
-          }),
-          responseContentType: 'application/json',
-        })
-      } catch (idempotencyError) {
-        console.error('mirror-gateway idempotency finalize failed:', idempotencyError)
-      }
-
-      if (action === 'apply') {
-        await writeApplyAuditEvent({
-          supabase,
-          userId: user.id,
-          normalized,
-          requestId,
-          idempotencyKey,
-          event: 'apply_failed',
-          success: false,
-          details: buildAuditErrorDetails(upstreamTransportError),
-        })
-      }
-
-      await writeMirrorUsageLog({
-        supabase,
-        userId: user.id,
-        normalized,
-        action,
-        status: 'upstream_error',
-        requestId,
-        idempotencyKey,
-        startedAtMs,
-      })
-
-      return errorResponse(req,
-        upstreamTransportError,
-        502,
-      )
-    } finally {
-      clearTimeout(timeout)
+      circuitBreakerHandler.registerUpstreamFailure(circuitBreakerState)
+    } else {
+      circuitBreakerHandler.registerUpstreamSuccess(circuitBreakerState)
     }
 
-    const contentType = upstreamResponse.headers.get('content-type') ?? 'application/json'
-    const upstreamBody = await upstreamResponse.text()
-
-    if (!upstreamResponse.ok) {
-      const upstreamFailureClass = classifyUpstreamStatusFailure(upstreamResponse.status)
-      if (
-        upstreamFailureClass === 'upstream_timeout' ||
-        upstreamFailureClass === 'upstream_rate_limited' ||
-        upstreamFailureClass === 'upstream_server_error' ||
-        upstreamFailureClass === 'upstream_unknown_error'
-      ) {
-        registerUpstreamFailure()
-      }
-      const upstreamStatusError = buildStructuredError({
-        code: 'upstream_error',
-        message: `Upstream /${action} returned a non-success status`,
-        retryable:
-          upstreamResponse.status === 408 ||
-          upstreamResponse.status === 429 ||
-          upstreamResponse.status >= 500,
-        requestId,
-        traceId,
-        idempotencyKey,
-        details: {
-          status: upstreamResponse.status,
-          body: sanitizeUpstreamBodyForErrorDetails(upstreamBody),
-        },
-        upstreamStatus: upstreamResponse.status,
-        stage: 'upstream',
-      })
-      logUpstreamFailureEvent({
-        requestId,
-        traceId,
-        action,
-        mode: normalized.mode,
-        failureClass: upstreamFailureClass,
-        status: upstreamResponse.status,
-        retryable: upstreamStatusError.retryable,
-        stage: 'upstream',
-        details: { responseBodyBytes: new TextEncoder().encode(upstreamBody).length },
-      })
-
-      try {
-        await finalizeIdempotencyKey({
-          supabase,
-          userId: user.id,
-          action,
-          idempotencyKey,
-          requestId,
-          requestHash: idempotencyRequestHash,
-          status: 'failed',
-          responseStatus: upstreamResponse.status,
-          responseBody: upstreamBody,
-          responseContentType: contentType,
-        })
-      } catch (idempotencyError) {
-        console.error('mirror-gateway idempotency finalize failed:', idempotencyError)
-      }
-
-      if (action === 'apply') {
-        await writeApplyAuditEvent({
-          supabase,
-          userId: user.id,
-          normalized,
-          requestId,
-          idempotencyKey,
-          event: 'apply_failed',
-          success: false,
-          details: buildAuditErrorDetails(upstreamStatusError),
-          diffFingerprint: await fingerprintValueSha256(upstreamBody),
-        })
-      }
-
-      await writeMirrorUsageLog({
-        supabase,
-        userId: user.id,
-        normalized,
-        action,
-        status: 'upstream_error',
-        requestId,
-        idempotencyKey,
-        startedAtMs,
-      })
-
-      return errorResponse(req,
-        upstreamStatusError,
-        upstreamResponse.status,
-      )
-    }
-
-    registerUpstreamSuccess()
-
+    // === STEP 10: FINALIZE IDEMPOTENCY & LOG ===
     try {
-      await finalizeIdempotencyKey({
+      await idempotencyHandler.finalizeIdempotencyKey({
         supabase,
         userId: user.id,
         action,
         idempotencyKey,
         requestId,
         requestHash: idempotencyRequestHash,
-        status: 'completed',
-        responseStatus: upstreamResponse.status,
-        responseBody: upstreamBody,
-        responseContentType: contentType,
+        status: forwardResult.status >= 200 && forwardResult.status < 400 ? 'completed' : 'failed',
+        responseStatus: forwardResult.status,
+        responseBody: forwardResult.body,
+        responseContentType: forwardResult.contentType,
       })
-    } catch (idempotencyError) {
-      console.error('mirror-gateway idempotency finalize failed:', idempotencyError)
+    } catch (error) {
+      console.error('idempotency finalize failed:', error)
     }
 
-    if (action === 'apply') {
-      let appliedFilesFingerprint: string | undefined
-      try {
-        const parsed = JSON.parse(upstreamBody)
-        const files = parsed?.files
-        if (files && typeof files === 'object') {
-          appliedFilesFingerprint = await fingerprintValueSha256(
-            Object.keys(files as Record<string, unknown>).sort(),
-          )
-        }
-      } catch (_) {
-        // Keep fallback fingerprint below.
-      }
-
-      if (!appliedFilesFingerprint) {
-        appliedFilesFingerprint = await fingerprintValueSha256(upstreamBody)
-      }
-
-      await writeApplyAuditEvent({
-        supabase,
-        userId: user.id,
-        normalized,
-        requestId,
-        idempotencyKey,
-        event: 'apply_completed',
-        success: true,
-        details: {
-          status: upstreamResponse.status,
-        },
-        appliedFilesFingerprint,
-        diffFingerprint: await fingerprintValueSha256(upstreamBody),
-      })
-    }
-
-    await writeMirrorUsageLog({
+    const usageStatus = forwardResult.status >= 200 && forwardResult.status < 400 ? 'success' : 'failed'
+    await auditLogger.writeMirrorUsageLogIfReady({
       supabase,
       userId: user.id,
-      normalized,
+      projectId: normalized.projectId,
+      taskId: normalized.taskId,
+      mode: normalized.mode,
       action,
-      status: 'success',
+      status: usageStatus,
       requestId,
       idempotencyKey,
-      startedAtMs,
+      startedAtMs: contextStartedAtMs,
     })
 
-    return new Response(upstreamBody, {
-      status: upstreamResponse.status,
+    // === RETURN RESPONSE ===
+    return new Response(forwardResult.body, {
+      status: forwardResult.status,
       headers: {
         ...buildCorsHeaders(req),
-        'Content-Type': contentType,
-        'x-request-id': requestId,
-        'x-trace-id': traceId,
-        'x-idempotency-key': idempotencyKey,
+        'Content-Type': forwardResult.contentType,
+        ...requestForwarding.buildForwardResponseHeaders(requestId, traceId, idempotencyKey, false),
       },
     })
   } catch (error) {
-    if (
-      error instanceof Error &&
-      (error.message.startsWith('missing_endpoint_env:') ||
-        error.message.startsWith('unsupported_action_path_combination:'))
-    ) {
-      await writeMirrorUsageLogIfReady({
-        supabase: usageSupabase,
-        userId: usageUserId,
-        normalized: usageNormalized,
-        action: action ?? 'compile',
-        status: 'failed',
-        requestId,
-        idempotencyKey,
-        startedAtMs: usageStartedAtMs,
-      })
-      return errorResponse(req,
-        buildStructuredError({
-          code: 'config_error',
-          message: error.message,
-          retryable: false,
-          requestId,
-          traceId,
-          idempotencyKey,
-          stage: 'configuration',
-        }),
-        500,
-      )
-    }
+    console.error('mirror-gateway unhandled error:', error)
 
-    console.error('mirror-gateway forwarding error:', error)
-    await writeMirrorUsageLogIfReady({
-      supabase: usageSupabase,
-      userId: usageUserId,
-      normalized: usageNormalized,
-      action: action ?? 'compile',
+    await auditLogger.writeMirrorUsageLogIfReady({
+      supabase: null,
+      userId: contextUser,
+      projectId: contextNormalized?.projectId ?? null,
+      taskId: contextNormalized?.taskId ?? null,
+      mode: contextNormalized?.mode ?? null,
+      action,
       status: 'failed',
       requestId,
       idempotencyKey,
-      startedAtMs: usageStartedAtMs,
+      startedAtMs: contextStartedAtMs,
     })
-    return errorResponse(req,
-      buildStructuredError({
-        code: 'internal_error',
-        message: 'Internal server error',
-        retryable: false,
-        requestId,
-        traceId,
-        idempotencyKey,
-        details: String(error),
-        stage: 'internal',
+
+    return new Response(
+      JSON.stringify({
+        success: false,
+        error: {
+          code: 'internal_error',
+          message: 'Internal server error',
+          requestId,
+        },
       }),
-      500,
+      {
+        status: 500,
+        headers: {
+          ...buildCorsHeaders(req),
+          'Content-Type': 'application/json',
+          'x-request-id': requestId,
+          'x-trace-id': traceId,
+          'x-idempotency-key': idempotencyKey,
+        },
+      },
     )
   }
 })
-
