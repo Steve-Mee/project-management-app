@@ -1,0 +1,66 @@
+# Mirror Handbook
+
+Mirror is the in-app assisted coding and execution workflow for the Project Management App. It combines a Flutter editor experience, provider-managed access control, a thin proxy gateway, cloud or local runner execution, offline resilience, and audited apply flows.
+
+This handbook is the single entry point for Mirror documentation. Use it to navigate the system from first-use guidance through architecture, security, operations, and incident recovery.
+
+## Quick Start
+
+1. Start with [usage.md](usage.md) for the user workflow and expected product behavior.
+2. Read [architecture.md](architecture.md) for the runtime design, service boundaries, and architecture lock.
+3. Review [security.md](security.md) for RLS, entitlement, signed artifact protection, and replay controls.
+4. Use [operations.md](operations.md) for deployment, monitoring, rollback, and incident response.
+5. Keep [troubleshooting.md](troubleshooting.md) available for diagnosis and recovery.
+
+## Table Of Contents
+
+### Core Guides
+
+- [usage.md](usage.md)
+- [architecture.md](architecture.md)
+- [security.md](security.md)
+- [offline-first.md](offline-first.md)
+- [operations.md](operations.md)
+- [production-readiness.md](production-readiness.md)
+
+### Implementation References
+
+- [contracts.md](contracts.md)
+- [feature-flags.md](feature-flags.md)
+- [glossary.md](glossary.md)
+
+### Support And Recovery
+
+- [troubleshooting.md](troubleshooting.md)
+
+## Recommended Reading Paths
+
+### For Users And Support
+
+- [usage.md](usage.md)
+- [troubleshooting.md](troubleshooting.md)
+- [glossary.md](glossary.md)
+
+### For Flutter And Backend Engineers
+
+- [architecture.md](architecture.md)
+- [contracts.md](contracts.md)
+- [security.md](security.md)
+- [feature-flags.md](feature-flags.md)
+- [offline-first.md](offline-first.md)
+
+### For SRE And Release Owners
+
+- [operations.md](operations.md)
+- [production-readiness.md](production-readiness.md)
+- [security.md](security.md)
+- [troubleshooting.md](troubleshooting.md)
+
+## Documentation Conventions
+
+- Use the canonical names `MirrorGatewayBackend`, `PrivateGrpcBackend`, `mirror-signed-inputs`, and `mirror-backups`.
+- Treat `supabase/functions/mirror-gateway` as a thin proxy only. Mirror compute runs on cloud or local runner services, never in the edge function.
+- Use this handbook as the active reference. Historical material is retained under [archive/README.md](archive/README.md) for traceability only.
+
+Last updated: 2026-03-21  
+Version note: Mirror handbook baseline index for the consolidated `/docs` structure.

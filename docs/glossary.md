@@ -1,0 +1,24 @@
+# Glossary
+
+- Mirror: in-app assisted coding and apply workflow.
+- MirrorGatewayBackend: canonical Dart cloud backend implementation for Mirror transport.
+- PrivateGrpcBackend: canonical Dart local backend implementation.
+- Mirror Gateway (`mirror-gateway`): Supabase Edge Function proxy for auth, idempotency, and forwarding.
+- Cloud Runner: service executing compile/apply operations in cloud environment.
+- Local Runner: service executing compile/apply operations in local environment.
+- Idempotency key: unique operation key preventing duplicate side effects.
+- Stale claim recovery: takeover logic for idempotency rows left in `processing` state.
+- RLS (Row-Level Security): PostgreSQL policy framework restricting row access by identity.
+- Entitlement: user access decision based on permission and subscription state.
+- Feature flag: runtime switch controlling feature availability or variant.
+- Draft cache: local persisted work-in-progress state.
+- Outbox: queued offline operations awaiting replay.
+- Replay engine: service replaying queued operations with retry policy.
+- `mirror-signed-inputs`: canonical bucket for signed input artifacts.
+- `mirror-backups`: canonical bucket for backup artifacts.
+- `ai_sessions`: table storing Mirror session lifecycle state.
+- `mirror_apply_audit_events`: table storing apply audit records and fingerprints.
+- `mirror_request_idempotency`: table storing idempotency claims and response cache data.
+- Correlation ID (`x-request-id`, `x-trace-id`): identifiers for tracing requests across systems.
+- Canary rollout: staged traffic ramp used for safe deployment validation.
+- SLO (Service Level Objective): reliability target used for operational gating.
