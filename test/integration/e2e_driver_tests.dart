@@ -1,8 +1,11 @@
+@TestOn('vm')
+library;
+
 import 'package:flutter_driver/flutter_driver.dart';
 import 'package:test/test.dart';
 
 void main() {
-  group('E2E', () {
+  group('e2e_driver', () {
     late FlutterDriver driver;
 
     setUpAll(() async {
@@ -13,7 +16,7 @@ void main() {
       await driver.close();
     });
 
-    test('Login and navigate to dashboard', () async {
+    test('login_then_dashboard_navigation', () async {
       await driver.waitFor(find.byValueKey('login_username'));
       await driver.tap(find.byValueKey('login_username'));
       await driver.enterText('test');

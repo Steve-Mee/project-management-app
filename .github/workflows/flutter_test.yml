@@ -45,7 +45,7 @@ jobs:
         run: flutter test --coverage --exclude-tags=golden
 
       - name: Run pma_core tests
-        run: flutter test packages/pma_core/test
+        run: flutter test test/unit/pma_core
 
       - name: Build web
         run: flutter build web --release
