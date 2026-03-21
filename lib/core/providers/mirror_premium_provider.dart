@@ -4,9 +4,12 @@ library;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../services/mirror_premium_service.dart';
+import 'supabase_client_provider.dart';
 
 final mirrorPremiumServiceProvider = Provider<MirrorPremiumService>((ref) {
-  return MirrorPremiumService();
+  return MirrorPremiumService(
+    client: ref.read(supabaseClientProvider),
+  );
 });
 
 final mirrorPremiumProvider = FutureProvider<bool>((ref) async {

@@ -5,11 +5,11 @@ import '../../../generated/app_localizations.dart';
 import 'mirror_run_flow_service.dart';
 import 'mirror_service_boundaries.dart';
 
+@Deprecated('Use MirrorRunFlowService via mirrorInteractiveRunCoordinatorProvider')
 class MirrorEditorOrchestrationService
-    implements MirrorInteractiveRunCoordinator {
+  extends MirrorRunFlowService
+  implements MirrorInteractiveRunCoordinator {
   const MirrorEditorOrchestrationService();
-
-  static const MirrorRunFlowService _runFlowService = MirrorRunFlowService();
 
   @override
   Future<void> runCurrentFileInTerminal({
@@ -23,7 +23,7 @@ class MirrorEditorOrchestrationService
     required bool Function() isMounted,
     required void Function(String line) appendTerminalLine,
   }) async {
-    return _runFlowService.run(
+    return super.runCurrentFileInTerminal(
       context: context,
       ref: ref,
       projectId: projectId,

@@ -175,6 +175,28 @@ class MirrorBackendWorkflows {
     );
   }
 
+  ApplyResult buildNoPatchApplyFailure({
+    String? message,
+  }) {
+    return ApplyResult(
+      success: false,
+      message: message ?? 'Apply failed: no patchable changes returned.',
+    );
+  }
+
+  ApplyResult buildApplySuccessResult({
+    required List<MirrorFilePatch> patches,
+    String? backupId,
+  }) {
+    return ApplyResult(
+      success: true,
+      appliedFiles: patches.map((patch) => patch.path).toSet().toList(),
+      message: backupId == null || backupId.trim().isEmpty
+          ? 'Applied ${patches.length} patch(es).'
+          : 'Applied ${patches.length} patch(es) with backup $backupId.',
+    );
+  }
+
   Future<ApplySecurityArtifacts> prepareSignedInputAndBackup({
     required SupabaseClient client,
     required ProjectContext context,

@@ -9,8 +9,9 @@ import '../mirror_signed_inputs_backend.dart';
 import '../providers/mirror_orchestrator_provider.dart';
 import 'mirror_patch_pipeline_service.dart';
 import 'mirror_preview_metadata_service.dart';
+import 'mirror_service_boundaries.dart';
 
-class MirrorRunFlowService {
+class MirrorRunFlowService implements MirrorInteractiveRunCoordinator {
   const MirrorRunFlowService();
 
   static const MirrorPatchPipelineService _patchPipelineService =
@@ -18,7 +19,8 @@ class MirrorRunFlowService {
   static const MirrorPreviewMetadataService _previewMetadataService =
       MirrorPreviewMetadataService();
 
-  Future<void> run({
+  @override
+  Future<void> runCurrentFileInTerminal({
     required BuildContext context,
     required WidgetRef ref,
     required String projectId,
@@ -244,6 +246,30 @@ class MirrorRunFlowService {
       }
       _showSnackBar(messenger, l10n.mirrorRunCrashed(error.toString()));
     }
+  }
+
+  Future<void> run({
+    required BuildContext context,
+    required WidgetRef ref,
+    required String projectId,
+    required String taskId,
+    required String selectedMode,
+    required String sessionKey,
+    required AppLocalizations l10n,
+    required bool Function() isMounted,
+    required void Function(String line) appendTerminalLine,
+  }) {
+    return runCurrentFileInTerminal(
+      context: context,
+      ref: ref,
+      projectId: projectId,
+      taskId: taskId,
+      selectedMode: selectedMode,
+      sessionKey: sessionKey,
+      l10n: l10n,
+      isMounted: isMounted,
+      appendTerminalLine: appendTerminalLine,
+    );
   }
 
   void _applyPreviewPatchesToSession({

@@ -195,8 +195,7 @@ class PrivateGrpcBackend implements MirrorComputeBackend {
         );
 
         if (patches.isEmpty) {
-          return const ApplyResult(
-            success: false,
+          return _mirrorWorkflows.buildNoPatchApplyFailure(
             message: 'Apply failed: no patchable changes returned.',
           );
         }
@@ -216,11 +215,9 @@ class PrivateGrpcBackend implements MirrorComputeBackend {
           updatedFiles: updatedFiles,
         );
 
-        return ApplyResult(
-          success: true,
-          appliedFiles: patches.map((patch) => patch.path).toSet().toList(),
-          message:
-              'Applied ${patches.length} patch(es) with backup ${artifacts.backupId}.',
+        return _mirrorWorkflows.buildApplySuccessResult(
+          patches: patches,
+          backupId: artifacts.backupId,
         );
       },
     );

@@ -14,22 +14,6 @@ import 'mirror_service_boundaries.dart';
 
 export 'mirror_outbox_replay_service.dart' show MirrorOutboxEntry;
 
-class MirrorOrchestrationResult {
-  const MirrorOrchestrationResult({
-    required this.success,
-    this.generateResult,
-    this.compileResult,
-    this.applyResult,
-    this.error,
-  });
-
-  final bool success;
-  final GenerateResult? generateResult;
-  final CompileResult? compileResult;
-  final ApplyResult? applyResult;
-  final Object? error;
-}
-
 class MirrorOrchestratorService implements MirrorExecutionOrchestrator {
   MirrorOrchestratorService({
     required MirrorComputeBackend backend,
@@ -50,97 +34,6 @@ class MirrorOrchestratorService implements MirrorExecutionOrchestrator {
 
   List<MirrorOutboxEntry> get queuedOutboxEntries =>
       _outboxReplayService?.queuedEntries ?? const <MirrorOutboxEntry>[];
-
-  Future<MirrorOrchestrationResult> runGenerateCompileApply({
-    required WidgetRef ref,
-    required String sessionKey,
-    required String prompt,
-    required ProjectContext context,
-    required String mode,
-  }) async {
-    GenerateResult? generateResult;
-    CompileResult? compileResult;
-    ApplyResult? applyResult;
-
-    try {
-      await _replayQueuedWork(ref, reason: 'pre_orchestration');
-
-      generateResult = await generate(
-        ref: ref,
-        sessionKey: sessionKey,
-        prompt: prompt,
-        context: context,
-        mode: mode,
-      );
-
-      if (!generateResult.success) {
-        return MirrorOrchestrationResult(
-          success: false,
-          generateResult: generateResult,
-        );
-      }
-
-      compileResult = await compile(
-        ref: ref,
-        sessionKey: sessionKey,
-        prompt: prompt,
-        context: context,
-        mode: mode,
-      );
-
-      if (!compileResult.success) {
-        return MirrorOrchestrationResult(
-          success: false,
-          generateResult: generateResult,
-          compileResult: compileResult,
-        );
-      }
-
-      applyResult = await apply(
-        ref: ref,
-        sessionKey: sessionKey,
-        prompt: prompt,
-        context: context,
-        mode: mode,
-      );
-
-      if (!applyResult.success) {
-        return MirrorOrchestrationResult(
-          success: false,
-          generateResult: generateResult,
-          compileResult: compileResult,
-          applyResult: applyResult,
-        );
-      }
-
-      _emitStatus(
-        ref,
-        sessionKey,
-        terminalLine: 'Mirror orchestration completed successfully.',
-      );
-
-      return MirrorOrchestrationResult(
-        success: true,
-        generateResult: generateResult,
-        compileResult: compileResult,
-        applyResult: applyResult,
-      );
-    } catch (error) {
-      _emitStatus(
-        ref,
-        sessionKey,
-        terminalLine: 'Mirror orchestration failed: $error',
-        liveLine: 'Error: $error',
-      );
-      return MirrorOrchestrationResult(
-        success: false,
-        generateResult: generateResult,
-        compileResult: compileResult,
-        applyResult: applyResult,
-        error: error,
-      );
-    }
-  }
 
   @override
   Future<GenerateResult> generate({

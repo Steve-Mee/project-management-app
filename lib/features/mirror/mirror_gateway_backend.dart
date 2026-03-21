@@ -381,8 +381,7 @@ class MirrorGatewayBackend implements MirrorComputeBackend {
     );
 
     if (patches.isEmpty) {
-      return ApplyResult(
-        success: false,
+      return _mirrorWorkflows.buildNoPatchApplyFailure(
         message: _formatStructuredError(
           family: _MirrorGatewayErrorFamily.validation,
           message: 'Apply failed: no patchable changes returned.',
@@ -408,12 +407,9 @@ class MirrorGatewayBackend implements MirrorComputeBackend {
       );
     }
 
-    return ApplyResult(
-      success: true,
-      appliedFiles: patches.map((patch) => patch.path).toSet().toList(),
-      message: artifacts == null
-          ? 'Applied ${patches.length} patch(es).'
-          : 'Applied ${patches.length} patch(es) with backup ${artifacts.backupId}.',
+    return _mirrorWorkflows.buildApplySuccessResult(
+      patches: patches,
+      backupId: artifacts?.backupId,
     );
   }
 

@@ -17,7 +17,7 @@ class MirrorPremiumService {
     bool? outboxFailClosedOnEncryptionError,
     bool? productionMode,
     bool autoRefreshOnEntitlementChange = true,
-  })  : _client = _resolveClient(client),
+  })  : _client = client,
         _productionMode =
             productionMode ?? const bool.fromEnvironment('dart.vm.product'),
         _outboxFailClosedOnEncryptionError =
@@ -251,17 +251,6 @@ class MirrorPremiumService {
     return _premiumLevels.contains(normalizedFallback);
   }
 
-  static SupabaseClient? _resolveClient(SupabaseClient? client) {
-    if (client != null) {
-      return client;
-    }
-
-    try {
-      return Supabase.instance.client;
-    } catch (_) {
-      return null;
-    }
-  }
 }
 
 class _PremiumCacheEntry {

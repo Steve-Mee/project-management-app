@@ -24,6 +24,11 @@ import {
   resolveRequestId,
   resolveTraceId,
 } from './modules/routing_identity.ts'
+import {
+  writeMirrorUsageLog as writeMirrorUsageLogModule,
+  writeMirrorUsageLogIfReady as writeMirrorUsageLogIfReadyModule,
+  type MirrorUsageStatus,
+} from './modules/telemetry.ts'
 
 declare const Deno: {
   serve: (handler: (req: Request) => Response | Promise<Response>) => void
@@ -81,8 +86,6 @@ interface IdempotencyClaimResult {
   kind: 'claimed' | 'replay' | 'in_progress' | 'conflict'
   record?: IdempotencyRecord
 }
-
-type MirrorUsageStatus = 'success' | 'failed' | 'rate_limited' | 'timeout' | 'upstream_error'
 
 async function hasCloudMirrorAccess(
   supabase: ReturnType<typeof createClient>,
@@ -335,22 +338,18 @@ async function writeMirrorUsageLog({
   idempotencyKey: string
   startedAtMs: number
 }): Promise<void> {
-  const payload = {
-    user_id: userId,
-    project_id: normalized.projectId,
-    task_id: normalized.taskId,
+  await writeMirrorUsageLogModule({
+    supabase,
+    userId,
+    projectId: normalized.projectId,
+    taskId: normalized.taskId,
     mode: normalized.mode,
     action,
-    duration_ms: Math.max(0, Date.now() - startedAtMs),
     status,
-    request_id: requestId,
-    idempotency_key: idempotencyKey,
-  }
-
-  const { error } = await supabase.from('mirror_usage_logs').insert(payload)
-  if (error) {
-    console.error('mirror-gateway usage metering write failed:', error.message)
-  }
+    requestId,
+    idempotencyKey,
+    startedAtMs,
+  })
 }
 
 async function writeMirrorUsageLogIfReady({
@@ -372,14 +371,12 @@ async function writeMirrorUsageLogIfReady({
   idempotencyKey: string
   startedAtMs: number | null
 }): Promise<void> {
-  if (!supabase || !userId || !normalized || startedAtMs == null) {
-    return
-  }
-
-  await writeMirrorUsageLog({
+  await writeMirrorUsageLogIfReadyModule({
     supabase,
     userId,
-    normalized,
+    projectId: normalized?.projectId ?? null,
+    taskId: normalized?.taskId ?? null,
+    mode: normalized?.mode ?? null,
     action,
     status,
     requestId,
