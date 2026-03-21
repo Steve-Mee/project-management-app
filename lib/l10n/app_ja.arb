@@ -1233,7 +1233,7 @@
   "@mirrorApplyBranchTip": {
     "description": "Tip text in the branch advice card encouraging branch-based workflow."
   },
-  "mirrorApplyBranchTipWithBranch": "ヒント: 安全なレビューと簡単なロールバックのため、提案ブランチ「{branch}」を使ってください。",
+  "mirrorApplyBranchTipWithBranch": "ヒント: 提案ブランチ「{branch}」は、より安全なレビューと簡単なロールバックのための推奨です（助言のみ）。",
   "@mirrorApplyBranchTipWithBranch": {
     "description": "Tip text in the branch advice card with the suggested branch name.",
     "placeholders": {

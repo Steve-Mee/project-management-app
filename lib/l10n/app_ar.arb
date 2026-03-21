@@ -1233,7 +1233,7 @@
   "@mirrorApplyBranchTip": {
     "description": "Tip text in the branch advice card encouraging branch-based workflow."
   },
-  "mirrorApplyBranchTipWithBranch": "نصيحة: استخدم الفرع المقترح \"{branch}\" لمراجعة آمنة وتراجع أسهل.",
+  "mirrorApplyBranchTipWithBranch": "نصيحة: اعتبر الفرع المقترح \"{branch}\" توصية فقط لمراجعة أكثر أمانا وتراجع أسهل.",
   "@mirrorApplyBranchTipWithBranch": {
     "description": "Tip text in the branch advice card with the suggested branch name.",
     "placeholders": {

@@ -5,9 +5,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../generated/app_localizations.dart';
-import '../../../core/providers/mirror_provider.dart';
+import '../../../core/providers/mirror_entitlement_provider.dart';
 import '../../../core/providers/mirror_session_provider.dart';
 import '../apply_dialog.dart';
+import '../mirror_compute_backend.dart';
 import 'mirror_orchestrator_service.dart';
 
 class MirrorEditorOrchestrationService {

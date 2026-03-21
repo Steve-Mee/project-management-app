@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../core/providers/mirror_provider.dart';
+import '../../../core/providers/mirror_entitlement_provider.dart';
 import '../../../core/providers/mirror_session_provider.dart';
 import '../../../generated/app_localizations.dart';
+import '../mirror_compute_backend.dart';
 import '../providers/mirror_editor_orchestration_provider.dart';
 
 class MirrorEditorRunService {

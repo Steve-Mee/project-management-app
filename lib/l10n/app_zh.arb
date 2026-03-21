@@ -1229,7 +1229,7 @@
   "@mirrorApplyBranchTip": {
     "description": "Tip text in the branch advice card encouraging branch-based workflow."
   },
-  "mirrorApplyBranchTipWithBranch": "提示：请使用建议分支“{branch}”，以便安全审查并轻松回滚。",
+  "mirrorApplyBranchTipWithBranch": "提示：建议使用推荐分支“{branch}”进行更安全的审查和更简单的回滚（仅供建议）。",
   "@mirrorApplyBranchTipWithBranch": {
     "description": "Tip text in the branch advice card with the suggested branch name.",
     "placeholders": {

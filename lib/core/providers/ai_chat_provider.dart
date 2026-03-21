@@ -6,7 +6,8 @@ import 'package:pma_core/auth/permissions.dart';
 import 'package:pma_core/providers/ai_providers.dart' show aiChatProvider;
 import 'package:pma_core/providers/auth/auth_providers.dart';
 
-import 'mirror_provider.dart';
+import 'mirror_feature_flag_provider.dart';
+import 'mirror_offline_cache_provider.dart';
 
 class MirrorLaunchPayload {
   const MirrorLaunchPayload({
@@ -35,8 +36,10 @@ class AiChatBridgeNotifier extends Notifier<MirrorLaunchPayload?> {
     required String taskId,
     String preferredMode = 'private',
   }) async {
-    final mirrorEnabled = await _isMirrorFeatureEnabled();
+    // Feature-flag gate: launch requests must be blocked when Mirror is disabled.
+    final mirrorEnabled = await resolveMirrorFeatureEnabled(ref);
     if (!mirrorEnabled) {
+      state = null;
       return null;
     }
 
@@ -69,10 +72,6 @@ class AiChatBridgeNotifier extends Notifier<MirrorLaunchPayload?> {
 
   void clearMirrorLaunchRequest() {
     state = null;
-  }
-
-  Future<bool> _isMirrorFeatureEnabled() async {
-    return resolveMirrorFeatureEnabled(ref);
   }
 }
 

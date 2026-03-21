@@ -17,7 +17,7 @@ import 'services/mirror_editor_realtime_controller.dart';
 import 'services/mirror_editor_run_service.dart';
 import 'templates_gallery.dart';
 import 'widgets/monaco_editor_host.dart';
-import '../../core/providers/mirror_provider.dart';
+import '../../core/providers/mirror_offline_cache_provider.dart';
 
 class MirrorEditorScreen extends ConsumerStatefulWidget {
   const MirrorEditorScreen({

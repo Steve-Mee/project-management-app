@@ -1164,6 +1164,16 @@ Deno.serve(async (req: Request) => {
     try {
       canUseMirror = await hasUseMirrorPermission(supabase)
     } catch (error) {
+      await writeMirrorUsageLog({
+        supabase,
+        userId: user.id,
+        normalized,
+        action,
+        status: 'failed',
+        requestId,
+        idempotencyKey,
+        startedAtMs,
+      })
       return errorResponse(req,
         buildStructuredError({
           code: 'unauthorized',
@@ -1180,6 +1190,16 @@ Deno.serve(async (req: Request) => {
     }
 
     if (!canUseMirror) {
+      await writeMirrorUsageLog({
+        supabase,
+        userId: user.id,
+        normalized,
+        action,
+        status: 'failed',
+        requestId,
+        idempotencyKey,
+        startedAtMs,
+      })
       return errorResponse(req,
         buildStructuredError({
           code: 'unauthorized',
@@ -1199,6 +1219,16 @@ Deno.serve(async (req: Request) => {
       try {
         hasCloudEntitlement = await hasCloudMirrorAccess(supabase, requestId)
       } catch (error) {
+        await writeMirrorUsageLog({
+          supabase,
+          userId: user.id,
+          normalized,
+          action,
+          status: 'failed',
+          requestId,
+          idempotencyKey,
+          startedAtMs,
+        })
         return errorResponse(req,
           buildStructuredError({
             code: 'forbidden',
@@ -1222,6 +1252,16 @@ Deno.serve(async (req: Request) => {
       }
 
       if (!hasCloudEntitlement) {
+        await writeMirrorUsageLog({
+          supabase,
+          userId: user.id,
+          normalized,
+          action,
+          status: 'failed',
+          requestId,
+          idempotencyKey,
+          startedAtMs,
+        })
         return errorResponse(req,
           buildStructuredError({
             code: 'forbidden',
@@ -1256,6 +1296,16 @@ Deno.serve(async (req: Request) => {
       })
     } catch (error) {
       if (error instanceof Error && error.message.startsWith('idempotency_')) {
+        await writeMirrorUsageLog({
+          supabase,
+          userId: user.id,
+          normalized,
+          action,
+          status: 'failed',
+          requestId,
+          idempotencyKey,
+          startedAtMs,
+        })
         return errorResponse(req,
           buildStructuredError({
             code: 'config_error',
@@ -1368,6 +1418,16 @@ Deno.serve(async (req: Request) => {
       rateLimitCheck = await checkPerUserRateLimit(supabase, user.id)
     } catch (error) {
       if (error instanceof Error && error.message.startsWith('rate_limit_')) {
+        await writeMirrorUsageLog({
+          supabase,
+          userId: user.id,
+          normalized,
+          action,
+          status: 'failed',
+          requestId,
+          idempotencyKey,
+          startedAtMs,
+        })
         return errorResponse(req,
           buildStructuredError({
             code: 'config_error',

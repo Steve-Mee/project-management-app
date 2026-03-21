@@ -70,8 +70,8 @@ class _ApplyDialogState extends State<ApplyDialog> {
     final diffLines = _diffService.buildUnifiedDiffLines(
       oldText: widget.originalContent,
       newText: widget.updatedContent,
-      oldLabel: 'a/${widget.currentBranch}:${widget.title}',
-      newLabel: 'b/${widget.suggestedBranch}:${widget.title}',
+      oldLabel: 'a/${widget.title}',
+      newLabel: 'b/${widget.title}',
       noDiffText: l10n.mirrorApplyNoDiff,
     );
 

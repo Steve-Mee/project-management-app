@@ -43,7 +43,7 @@
   - `lib/features/mirror/mirror_gateway_backend.dart` is inhoudelijk degelijk. Het bouwt request traces, gebruikt retry policy, context-budgeting, fingerprintvalidatie en secure-apply-artifacts. Bovendien wordt `compileFingerprint` na preview wel degelijk berekend en via callback/session-state vastgelegd.
   - `lib/features/mirror/private_grpc_backend.dart` is beter dan een eerste indruk doet vermoeden. De class sluit gRPC-channels in `finally` netjes af en blokkeert insecure transport in release/productieruntime. De bekende channel-leak-kritiek is dus niet meer van toepassing op de huidige code.
   - Zwak punt: de private gRPC-backend heeft nog geen first-class configuratielaag. `host`, `port` en `credentials` zitten in constructor defaults, terwijl `mirrorBackendProvider` simpelweg `PrivateGrpcBackend()` aanmaakt. Dat maakt rollout per environment minder transparant dan nodig.
-  - Zwak punt: de codebase kent geen expliciete `EdgeFunctionBackend` of `CloudFlyBackend` class. In de praktijk is de cloud-implementatie `MirrorGatewayBackend`. Dat is functioneel prima, maar conceptueel wijkt het af van de verhaallijn in de featurebeschrijving.
+  - Zwak punt: de documentatie gebruikte eerder verouderde aliasnamen waar de code nu expliciet `MirrorGatewayBackend` en `PrivateGrpcBackend` hanteert. Functioneel klopt de implementatie, maar de verhaallijn moet terminologisch volledig gelijklopen.
   - Zwak punt: de proto gebruikt `metadata_json` als string. Dat is pragmatisch, maar verliest typeveiligheid en maakt client/server drift subtieler.
   - Conclusie: backendarchitectuur en beveiliging zijn sterk; configuratie-explicietheid en adapternaamgeving kunnen beter.
 - Dart/Flutter core & providers laag
@@ -150,7 +150,7 @@
     - De huidige default `currentBranch = 'main'` kan weg zolang er geen echte branch-resolutie is. Dit voorkomt misleidende UX.
   - “Deep links” als term in Mirror-documentatie waar alleen imperative navigation bestaat
     - Deze formulering kan weg of moet worden vervangen door “entry points vanuit task/project UI”, omdat dit de werkelijke implementatie is.
-  - Eventuele verwijzingen naar niet-bestaande concrete backends zoals `CloudFlyBackend` of `EdgeFunctionBackend`
-    - Deze kunnen weg uit de documentatie tenzij er echt aparte adapterklassen worden toegevoegd. In de huidige code zijn de concrete Dart-backends `MirrorGatewayBackend` en `PrivateGrpcBackend`.
+  - Eventuele verwijzingen naar verouderde backend-aliasen
+    - Deze moeten weg uit de documentatie tenzij er echt aparte adapterklassen worden toegevoegd. In de huidige code zijn de concrete Dart-backends `MirrorGatewayBackend` en `PrivateGrpcBackend`.
   - Overmatig stellige production-complete bewoording in `docs/mirror-production-readiness-checklist.md`
     - Niet omdat de feature zwak is, maar omdat de repo beter is gebaat bij auditbare, reproduceerbare claims dan bij reeds-afgevinkte release-taal.
