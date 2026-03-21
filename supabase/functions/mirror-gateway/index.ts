@@ -5,6 +5,25 @@
 // @ts-ignore - ESM import for Supabase in Deno runtime
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { buildCorsHeaders } from '../_shared/cors.ts'
+import {
+  buildAuditErrorDetails,
+  buildStructuredError,
+  errorResponse,
+  type StructuredError,
+} from './modules/error_contract.ts'
+import {
+  normalizeNonEmptyString,
+  normalizeRequestBody,
+  normalizeSignedInputUrls,
+  parseRequestJsonWithLimit,
+} from './modules/request_normalization.ts'
+import {
+  resolveActionFromPath,
+  resolveForwardEndpoint,
+  resolveIdempotencyKey,
+  resolveRequestId,
+  resolveTraceId,
+} from './modules/routing_identity.ts'
 
 declare const Deno: {
   serve: (handler: (req: Request) => Response | Promise<Response>) => void
@@ -43,29 +62,6 @@ interface ForwardPayload {
   signedInputUrls: Record<string, string>
 }
 
-interface StructuredError {
-  code:
-    | 'bad_request'
-    | 'payload_too_large'
-    | 'unauthorized'
-    | 'forbidden'
-    | 'method_not_allowed'
-    | 'config_error'
-    | 'timeout'
-    | 'upstream_error'
-    | 'rate_limited'
-    | 'internal_error'
-  message: string
-  retryable: boolean
-  requestId: string
-  traceId: string
-  idempotencyKey?: string
-  error_family: 'client' | 'auth' | 'config' | 'timeout' | 'upstream' | 'rate_limit' | 'internal'
-  upstream_status: number | null
-  stage: string
-  details?: unknown
-}
-
 interface IdempotencyRecord {
   user_id: string
   action: 'compile' | 'apply'
@@ -87,91 +83,6 @@ interface IdempotencyClaimResult {
 }
 
 type MirrorUsageStatus = 'success' | 'failed' | 'rate_limited' | 'timeout' | 'upstream_error'
-
-function jsonResponse(req: Request, body: unknown, status = 200): Response {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { ...buildCorsHeaders(req), 'Content-Type': 'application/json' },
-  })
-}
-
-function errorResponse(req: Request, error: StructuredError, status: number): Response {
-  return jsonResponse(req, { success: false, error }, status)
-}
-
-function resolveErrorFamily(
-  code: StructuredError['code'],
-): StructuredError['error_family'] {
-  switch (code) {
-    case 'bad_request':
-    case 'payload_too_large':
-    case 'method_not_allowed':
-      return 'client'
-    case 'unauthorized':
-    case 'forbidden':
-      return 'auth'
-    case 'config_error':
-      return 'config'
-    case 'timeout':
-      return 'timeout'
-    case 'upstream_error':
-      return 'upstream'
-    case 'rate_limited':
-      return 'rate_limit'
-    case 'internal_error':
-      return 'internal'
-  }
-}
-
-function buildStructuredError({
-  code,
-  message,
-  retryable,
-  requestId,
-  traceId,
-  idempotencyKey,
-  details,
-  upstreamStatus = null,
-  stage,
-}: {
-  code: StructuredError['code']
-  message: string
-  retryable: boolean
-  requestId: string
-  traceId: string
-  idempotencyKey?: string
-  details?: unknown
-  upstreamStatus?: number | null
-  stage: string
-}): StructuredError {
-  return {
-    code,
-    message,
-    retryable,
-    requestId,
-    traceId,
-    idempotencyKey,
-    error_family: resolveErrorFamily(code),
-    upstream_status: upstreamStatus,
-    stage,
-    details,
-  }
-}
-
-function buildAuditErrorDetails(
-  error: StructuredError,
-  extra: Record<string, unknown> = {},
-): Record<string, unknown> {
-  return {
-    code: error.code,
-    message: error.message,
-    error_family: error.error_family,
-    upstream_status: error.upstream_status,
-    stage: error.stage,
-    ...(error.details === undefined ? {} : { details: error.details }),
-    ...extra,
-  }
-}
 
 async function hasCloudMirrorAccess(
   supabase: ReturnType<typeof createClient>,
@@ -198,28 +109,6 @@ async function hasCloudMirrorAccess(
   throw new Error(`cloud_entitlement_rpc_invalid_shape:request_id=${requestId}`)
 }
 
-function resolveForwardEndpoint(mode: 'private' | 'cloud', action: 'compile' | 'apply'): string {
-  const key = mode === 'private' ? 'PRIVATE_COMPUTE_ENDPOINT' : 'FLY_MIRROR_BACKEND_ENDPOINT'
-  const configured = Deno.env.get(key)?.trim()
-  if (!configured) {
-    throw new Error(`missing_endpoint_env:${key}`)
-  }
-
-  const normalized = configured.replace(/\/$/, '')
-  const actionSuffixMatch = normalized.match(/\/(compile|apply)$/i)
-  if (actionSuffixMatch) {
-    const configuredAction = actionSuffixMatch[1]?.toLowerCase() as 'compile' | 'apply'
-    if (configuredAction !== action) {
-      throw new Error(
-        `unsupported_action_path_combination:${key}:${configuredAction}->${action}`,
-      )
-    }
-    return normalized
-  }
-
-  return `${normalized}/${action}`
-}
-
 async function hasUseMirrorPermission(
   supabase: ReturnType<typeof createClient>,
 ): Promise<boolean> {
@@ -232,44 +121,6 @@ async function hasUseMirrorPermission(
   }
 
   return data === true
-}
-
-function resolveActionFromPath(pathname: string): 'compile' | 'apply' | null {
-  const normalized = pathname.toLowerCase()
-
-  if (normalized.endsWith('/compile')) {
-    return 'compile'
-  }
-
-  if (normalized.endsWith('/apply')) {
-    return 'apply'
-  }
-
-  return null
-}
-
-function resolveIdempotencyKey(req: Request): string {
-  const key = req.headers.get('x-idempotency-key') ?? req.headers.get('idempotency-key')
-  if (key && key.trim().length > 0) {
-    return key.trim()
-  }
-  return crypto.randomUUID()
-}
-
-function resolveRequestId(req: Request): string {
-  const direct = req.headers.get('x-request-id') ?? req.headers.get('request-id')
-  if (direct && direct.trim().length > 0) {
-    return direct.trim()
-  }
-  return `gateway-${Date.now().toString(36)}-${crypto.randomUUID()}`
-}
-
-function resolveTraceId(req: Request, requestId: string): string {
-  const direct = req.headers.get('x-trace-id') ?? req.headers.get('trace-id')
-  if (direct && direct.trim().length > 0) {
-    return direct.trim()
-  }
-  return `trace-${requestId}`
 }
 
 function stableStringify(value: unknown): string {
@@ -398,55 +249,6 @@ function logIdempotencyStatusContractOnColdStart(): void {
   console.info('mirror-gateway cold start idempotency status contract', {
     allowedStatuses: IDEMPOTENCY_ALLOWED_STATUSES,
   })
-}
-
-function normalizeNonEmptyString(value: unknown): string | undefined {
-  if (typeof value !== 'string') {
-    return undefined
-  }
-
-  const normalized = value.trim()
-  return normalized.length > 0 ? normalized : undefined
-}
-
-function normalizeSignedInputUrls(value: unknown): Record<string, string> {
-  if (!value || typeof value !== 'object') {
-    return {}
-  }
-
-  const normalizedEntries: Array<[string, string]> = []
-  for (const [rawKey, rawValue] of Object.entries(value as Record<string, unknown>)) {
-    const key = normalizeNonEmptyString(rawKey)
-    const url = normalizeNonEmptyString(rawValue)
-    if (key && url) {
-      normalizedEntries.push([key, url])
-    }
-  }
-
-  normalizedEntries.sort((a, b) => a[0].localeCompare(b[0]))
-  return Object.fromEntries(normalizedEntries)
-}
-
-async function parseRequestJsonWithLimit(req: Request): Promise<Partial<MirrorComputeRequest>> {
-  const contentLength = req.headers.get('content-length')
-  if (contentLength) {
-    const parsedLength = Number.parseInt(contentLength, 10)
-    if (Number.isFinite(parsedLength) && parsedLength > MAX_REQUEST_BODY_BYTES) {
-      throw new Error('payload_too_large:header')
-    }
-  }
-
-  const rawBody = await req.text()
-  const bodyBytes = new TextEncoder().encode(rawBody).length
-  if (bodyBytes > MAX_REQUEST_BODY_BYTES) {
-    throw new Error('payload_too_large:body')
-  }
-
-  try {
-    return JSON.parse(rawBody) as Partial<MirrorComputeRequest>
-  } catch {
-    throw new Error('bad_json')
-  }
 }
 
 function normalizeForwardFields(normalized: MirrorComputeRequest, userId: string): {
@@ -1456,58 +1258,6 @@ function timeoutMs(): number {
   return 20000
 }
 
-function normalizeRequestBody(body: Partial<MirrorComputeRequest>): MirrorComputeRequest | null {
-  const {
-    prompt,
-    projectId,
-    taskId,
-    mode,
-    files,
-    metadata,
-    actorUserId,
-    backupId,
-    fileSetFingerprint,
-    signedInputUrls,
-  } = body
-  const normalizedPrompt = normalizeNonEmptyString(prompt)
-  const normalizedProjectId = normalizeNonEmptyString(projectId)
-  const normalizedTaskId = normalizeNonEmptyString(taskId)
-
-  if (!normalizedPrompt || !normalizedProjectId || !normalizedTaskId || !mode) {
-    return null
-  }
-  if (mode !== 'private' && mode !== 'cloud') {
-    return null
-  }
-
-  const safeFiles: Record<string, string> = {}
-  if (files && typeof files === 'object') {
-    for (const [rawPath, rawContent] of Object.entries(files)) {
-      if (typeof rawPath === 'string' && typeof rawContent === 'string') {
-        const path = rawPath.trim()
-        if (path.length > 0) {
-          safeFiles[path] = rawContent
-        }
-      }
-    }
-  }
-
-  const safeMetadata = metadata && typeof metadata === 'object' ? metadata : {}
-
-  return {
-    prompt: normalizedPrompt,
-    projectId: normalizedProjectId,
-    taskId: normalizedTaskId,
-    mode,
-    actorUserId: normalizeNonEmptyString(actorUserId),
-    backupId: normalizeNonEmptyString(backupId),
-    fileSetFingerprint: normalizeNonEmptyString(fileSetFingerprint),
-    signedInputUrls: normalizeSignedInputUrls(signedInputUrls),
-    files: safeFiles,
-    metadata: safeMetadata,
-  }
-}
-
 logIdempotencyStatusContractOnColdStart()
 
 // @ts-ignore - Deno global
@@ -1617,7 +1367,7 @@ Deno.serve(async (req: Request) => {
 
     let rawBody: Partial<MirrorComputeRequest>
     try {
-      rawBody = await parseRequestJsonWithLimit(req)
+      rawBody = await parseRequestJsonWithLimit(req, MAX_REQUEST_BODY_BYTES)
     } catch (error) {
       if (error instanceof Error && error.message.startsWith('payload_too_large:')) {
         return errorResponse(req,

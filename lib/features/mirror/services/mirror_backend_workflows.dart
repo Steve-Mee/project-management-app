@@ -4,6 +4,28 @@ import 'mirror_patch_service.dart';
 import 'mirror_prompt_builder_service.dart';
 import 'mirror_secure_apply_service.dart';
 
+class MirrorSessionPatchMutation {
+  const MirrorSessionPatchMutation({
+    required this.path,
+    required this.content,
+    required this.requiresUpsert,
+  });
+
+  final String path;
+  final String content;
+  final bool requiresUpsert;
+}
+
+class MirrorSessionPatchPlan {
+  const MirrorSessionPatchPlan({
+    required this.mutations,
+    required this.restoreTarget,
+  });
+
+  final List<MirrorSessionPatchMutation> mutations;
+  final String restoreTarget;
+}
+
 /// PR2 workflow service: keeps cross-cutting Mirror backend behaviors in one
 /// place so transports/backends remain focused on IO and protocol mapping.
 class MirrorBackendWorkflows {
@@ -41,6 +63,42 @@ class MirrorBackendWorkflows {
         .toList(growable: false);
   }
 
+  /// Canonical preview-patch derivation used by UI run flows.
+  ///
+  /// Resolution order:
+  /// 1) compile output
+  /// 2) generated code fallback
+  List<MirrorFilePatch> buildPreviewPatches({
+    required ProjectContext context,
+    required String selectedFile,
+    String? compileOutput,
+    String? generatedCode,
+  }) {
+    final normalizedCompileOutput = compileOutput?.trim() ?? '';
+
+    if (normalizedCompileOutput.isNotEmpty) {
+      final patchesFromCompile = buildPatchesFromApplyPayload(
+        context: context,
+        output: normalizedCompileOutput,
+        fallbackPath: selectedFile,
+      );
+      if (patchesFromCompile.isNotEmpty) {
+        return patchesFromCompile;
+      }
+    }
+
+    final normalizedGeneratedCode = generatedCode?.trim() ?? '';
+    if (normalizedGeneratedCode.isNotEmpty) {
+      return buildPatchesFromApplyPayload(
+        context: context,
+        output: normalizedGeneratedCode,
+        fallbackPath: selectedFile,
+      );
+    }
+
+    return const <MirrorFilePatch>[];
+  }
+
   Map<String, String> applyPatchesToFiles({
     required Map<String, String> files,
     required List<MirrorFilePatch> patches,
@@ -59,6 +117,32 @@ class MirrorBackendWorkflows {
     return _patchService.applyPatchesToFiles(
       files: files,
       patches: servicePatches,
+    );
+  }
+
+  MirrorSessionPatchPlan buildSessionPatchPlan({
+    required Map<String, String> currentFiles,
+    required String previousSelected,
+    required String fallbackSelectedFile,
+    required List<MirrorFilePatch> patches,
+  }) {
+    final mutations = patches
+        .map(
+          (patch) => MirrorSessionPatchMutation(
+            path: patch.path,
+            content: patch.updatedContent,
+            requiresUpsert: !currentFiles.containsKey(patch.path),
+          ),
+        )
+        .toList(growable: false);
+
+    final restoreTarget = currentFiles.containsKey(previousSelected)
+        ? previousSelected
+        : fallbackSelectedFile;
+
+    return MirrorSessionPatchPlan(
+      mutations: mutations,
+      restoreTarget: restoreTarget,
     );
   }
 

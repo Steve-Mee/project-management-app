@@ -101,7 +101,7 @@ class MirrorRunFlowService {
         );
       }
 
-      final generatedPatches = _buildPreviewPatches(
+      final generatedPatches = _workflows.buildPreviewPatches(
         context: executionContext,
         selectedFile: selectedFile,
         compileOutput: generateResult.code,
@@ -177,7 +177,7 @@ class MirrorRunFlowService {
       }
 
       appendTerminalLine(l10n.mirrorStepPreviewBuilding);
-      final patches = _buildPreviewPatches(
+      final patches = _workflows.buildPreviewPatches(
         context: compileContextForPreviewAndApply,
         selectedFile: selectedFile,
         compileOutput: compileOutput,
@@ -271,37 +271,6 @@ class MirrorRunFlowService {
     }
   }
 
-  List<MirrorFilePatch> _buildPreviewPatches({
-    required ProjectContext context,
-    required String selectedFile,
-    required String? compileOutput,
-    required String? generatedCode,
-  }) {
-    final normalizedCompileOutput = compileOutput?.trim() ?? '';
-
-    if (normalizedCompileOutput.isNotEmpty) {
-      final patchesFromCompile = _workflows.buildPatchesFromApplyPayload(
-        context: context,
-        output: normalizedCompileOutput,
-        fallbackPath: selectedFile,
-      );
-      if (patchesFromCompile.isNotEmpty) {
-        return patchesFromCompile;
-      }
-    }
-
-    final normalizedGeneratedCode = generatedCode?.trim() ?? '';
-    if (normalizedGeneratedCode.isNotEmpty) {
-      return _workflows.buildPatchesFromApplyPayload(
-        context: context,
-        output: normalizedGeneratedCode,
-        fallbackPath: selectedFile,
-      );
-    }
-
-    return const <MirrorFilePatch>[];
-  }
-
   void _applyPreviewPatchesToSession({
     required WidgetRef ref,
     required MirrorSessionNotifier sessionNotifier,
@@ -311,31 +280,28 @@ class MirrorRunFlowService {
   }) {
     final previousSelected =
         ref.read(mirrorSessionProvider(sessionKey)).selectedFile;
+    final currentFiles = ref.read(mirrorSessionProvider(sessionKey)).files;
+    final patchPlan = _workflows.buildSessionPatchPlan(
+      currentFiles: currentFiles,
+      previousSelected: previousSelected,
+      fallbackSelectedFile: fallbackSelectedFile,
+      patches: patches,
+    );
 
-    for (final patch in patches) {
-      final existsInSession = ref
-          .read(mirrorSessionProvider(sessionKey))
-          .files
-          .containsKey(patch.path);
-      if (!existsInSession) {
+    for (final mutation in patchPlan.mutations) {
+      if (mutation.requiresUpsert) {
         sessionNotifier.upsertFileContent(
-          path: patch.path,
-          content: patch.updatedContent,
+          path: mutation.path,
+          content: mutation.content,
         );
         continue;
       }
 
-      sessionNotifier.selectFile(patch.path);
-      sessionNotifier.updateSelectedFileContent(patch.updatedContent);
+      sessionNotifier.selectFile(mutation.path);
+      sessionNotifier.updateSelectedFileContent(mutation.content);
     }
 
-    final restoreTarget = ref
-            .read(mirrorSessionProvider(sessionKey))
-            .files
-            .containsKey(previousSelected)
-        ? previousSelected
-        : fallbackSelectedFile;
-    sessionNotifier.selectFile(restoreTarget);
+    sessionNotifier.selectFile(patchPlan.restoreTarget);
   }
 
   String? _firstNonEmpty(String? first, String? second) {
