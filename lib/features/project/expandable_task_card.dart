@@ -8,8 +8,9 @@ import 'package:pma_core/services/sub_task_generation_service.dart';
 import 'package:pma_core/models/task_model.dart';
 import 'package:pma_core/models/sub_task_model.dart';
 import 'package:project_management_app/features/project/task_help_dialog.dart';
+import 'package:go_router/go_router.dart';
 import 'package:project_management_app/core/providers/ai_chat_provider.dart';
-import 'package:project_management_app/features/mirror/mirror_editor_screen.dart';
+import 'package:project_management_app/core/routes.dart';
 
 /// Expandable task card with sub-tasks and assignment functionality
 class ExpandableTaskCard extends ConsumerStatefulWidget {
@@ -295,13 +296,8 @@ class _ExpandableTaskCardState extends ConsumerState<ExpandableTaskCard> {
       return;
     }
 
-    await Navigator.of(context).push(
-      MaterialPageRoute<void>(
-        builder: (_) => MirrorEditorScreen(
-          projectId: payload.projectId,
-          taskId: payload.taskId,
-        ),
-      ),
+    context.push(
+      AppRoutes.mirrorEditorPath(payload.projectId, payload.taskId),
     );
   }
 

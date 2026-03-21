@@ -21,6 +21,8 @@ import 'package:pma_core/widgets/offline_indicator.dart';
 import 'package:pma_core/core/widgets.dart';
 import 'package:pma_core/providers/auth/auth_providers.dart';
 import 'package:pma_core/providers/theme_providers.dart';
+import '../features/mirror/mirror_editor_screen.dart';
+import '../features/mirror/providers/mirror_route_guard_provider.dart';
 
 part 'routes.freezed.dart';
 
@@ -69,6 +71,11 @@ class AppRoutes {
   static const String projectMembers = '/projects/:id/members';
   static const String admin = '/admin';
   static const String featureFlagsAdmin = '/admin/feature-flags';
+  static const String mirrorEditor = '/mirror/:projectId/:taskId';
+
+  /// Builds the concrete path for a Mirror editor deeplink.
+  static String mirrorEditorPath(String projectId, String taskId) =>
+      '/mirror/$projectId/$taskId';
 
   // Private constructor to prevent instantiation
   AppRoutes._();
@@ -82,6 +89,8 @@ class AppRoutes {
       
       // Route definitions
       routes: [
+        // Mirror editor — registered at top level so it exists outside the
+        // shell and the GoRoute below can close it with the OS back button.
         // Dashboard/Home route
         ShellRoute(
           builder: (context, state, child) {
@@ -205,6 +214,74 @@ class AppRoutes {
         ),
       ],
       
+        // Mirror editor route — full-screen, outside the shell (no nav rail).
+        GoRoute(
+          path: mirrorEditor,
+          name: 'mirror-editor',
+          builder: (context, state) {
+            final projectId =
+                state.pathParameters['projectId'] ?? '';
+            final taskId = state.pathParameters['taskId'] ?? '';
+
+            return Consumer(
+              builder: (context, ref, _) {
+                final guardAsync = ref.watch(mirrorRouteGuardProvider);
+                return guardAsync.when(
+                  loading: () => const Scaffold(
+                    body: Center(child: CircularProgressIndicator()),
+                  ),
+                  error: (_, __) => Scaffold(
+                    appBar: AppBar(),
+                    body: const Center(
+                      child: Text('Mirror is currently unavailable.'),
+                    ),
+                  ),
+                  data: (guard) {
+                    switch (guard) {
+                      case MirrorRouteGuardResult.allowed:
+                        if (projectId.isEmpty || taskId.isEmpty) {
+                          return Scaffold(
+                            appBar: AppBar(),
+                            body: const Center(
+                              child: Text(
+                                'Invalid Mirror link: missing project or task.',
+                              ),
+                            ),
+                          );
+                        }
+                        return MirrorEditorScreen(
+                          projectId: projectId,
+                          taskId: taskId,
+                        );
+                      case MirrorRouteGuardResult.featureDisabled:
+                        return Scaffold(
+                          appBar: AppBar(),
+                          body: const Center(
+                            child: Text('Mirror is currently disabled.'),
+                          ),
+                        );
+                      case MirrorRouteGuardResult.permissionDenied:
+                        return Scaffold(
+                          appBar: AppBar(),
+                          body: const Center(
+                            child: Text(
+                              'You do not have access to Mirror.',
+                            ),
+                          ),
+                        );
+                      case MirrorRouteGuardResult.loading:
+                        return const Scaffold(
+                          body: Center(child: CircularProgressIndicator()),
+                        );
+                    }
+                  },
+                );
+              },
+            );
+          },
+        ),
+      ],
+
       // Error route handler
       errorBuilder: (context, state) => Scaffold(
         appBar: OfflineIndicatorAppBar(

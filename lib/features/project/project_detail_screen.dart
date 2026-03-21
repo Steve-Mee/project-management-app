@@ -14,8 +14,9 @@ import 'package:project_management_app/features/project/expandable_task_card.dar
 import 'package:project_management_app/features/project/project_chat.dart';
 import 'package:project_management_app/features/project/task_help_dialog.dart';
 import 'package:project_management_app/features/project/requirements_icon_list_view.dart';
+import 'package:go_router/go_router.dart';
 import 'package:project_management_app/core/providers/ai_chat_provider.dart';
-import 'package:project_management_app/features/mirror/mirror_editor_screen.dart';
+import 'package:project_management_app/core/routes.dart';
 
 // Caching integrated: projectByIdProvider uses a 5-minute TTL cache.
 
@@ -333,13 +334,8 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen>
       return;
     }
 
-    await Navigator.of(context).push(
-      MaterialPageRoute<void>(
-        builder: (_) => MirrorEditorScreen(
-          projectId: payload.projectId,
-          taskId: payload.taskId,
-        ),
-      ),
+    context.push(
+      AppRoutes.mirrorEditorPath(payload.projectId, payload.taskId),
     );
   }
 
