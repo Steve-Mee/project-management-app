@@ -5,6 +5,7 @@ import 'package:pma_core/services/cloud_sync_service.dart';
 import 'package:pma_core/providers/connectivity/connectivity_providers.dart';
 import 'package:pma_core/repository/i_dashboard_repository.dart';
 import 'package:pma_core/services/app_logger.dart';
+import 'package:pma_core/core/providers/supabase_client_provider.dart';
 import 'package:pma_core/models/project_model.dart';
 import 'package:pma_core/providers/project/project_providers.dart';
 import 'package:pma_core/providers/dashboard/dashboard_providers.dart';
@@ -24,10 +25,15 @@ class SyncStatus {
   });
 
   factory SyncStatus.idle() => const SyncStatus(status: 'idle');
-  factory SyncStatus.syncing({String? message}) => SyncStatus(status: 'syncing', message: message);
+  factory SyncStatus.syncing({String? message}) =>
+      SyncStatus(status: 'syncing', message: message);
   factory SyncStatus.success({DateTime? lastSync, int? projectsSynced}) =>
-      SyncStatus(status: 'success', lastSync: lastSync, projectsSynced: projectsSynced);
-  factory SyncStatus.error(String message) => SyncStatus(status: 'error', message: message);
+      SyncStatus(
+          status: 'success',
+          lastSync: lastSync,
+          projectsSynced: projectsSynced);
+  factory SyncStatus.error(String message) =>
+      SyncStatus(status: 'error', message: message);
   factory SyncStatus.offline() => const SyncStatus(status: 'offline');
 }
 
@@ -41,7 +47,8 @@ class SyncNotifier extends StateNotifier<AsyncValue<SyncStatus>> {
   SyncNotifier(this._ref)
       : _projectRepository = _ref.read(projectRepositoryProvider),
         _dashboardRepository = _ref.read(dashboardRepositoryProvider),
-        _cloudSyncService = CloudSyncService(),
+        _cloudSyncService = CloudSyncService(
+            supabaseClient: _ref.read(pmaSupabaseClientProvider)),
         super(AsyncValue.data(SyncStatus.idle())) {
     // Listen to connectivity changes and auto-sync when online
     _ref.listen(connectivityProvider, (previous, next) {
@@ -73,22 +80,26 @@ class SyncNotifier extends StateNotifier<AsyncValue<SyncStatus>> {
       await _syncProjectDifferences(local, remote);
     } catch (e) {
       // New remote project, add to local
-      await _projectRepository.updateProject(remote.id, remote, userId: 'realtime-sync');
+      await _projectRepository.updateProject(remote.id, remote,
+          userId: 'realtime-sync');
       return;
     }
   }
 
   /// Sync differences between local and remote projects
-  Future<void> _syncProjectDifferences(ProjectModel local, ProjectModel remote) async {
+  Future<void> _syncProjectDifferences(
+      ProjectModel local, ProjectModel remote) async {
     final remoteTime = remote.lastUpdated;
     final localTime = local.lastUpdated;
 
     if (remoteTime.isAfter(localTime)) {
       // Remote is newer, download
-      await _projectRepository.updateProject(remote.id, remote, userId: 'realtime-sync');
+      await _projectRepository.updateProject(remote.id, remote,
+          userId: 'realtime-sync');
     } else if (localTime.isAfter(remoteTime)) {
       // Local is newer, upload to resolve conflict
-      await _cloudSyncService.syncProjectUpdate(remote.id, metadata: local.toJson());
+      await _cloudSyncService.syncProjectUpdate(remote.id,
+          metadata: local.toJson());
     }
     // If equal, no action needed
   }
@@ -168,7 +179,8 @@ class SyncNotifier extends StateNotifier<AsyncValue<SyncStatus>> {
 }
 
 /// Provider for sync operations
-final syncProvider = StateNotifierProvider<SyncNotifier, AsyncValue<SyncStatus>>((ref) {
+final syncProvider =
+    StateNotifierProvider<SyncNotifier, AsyncValue<SyncStatus>>((ref) {
   return SyncNotifier(ref);
 });
 

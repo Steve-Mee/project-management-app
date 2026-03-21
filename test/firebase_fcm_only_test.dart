@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pma_core/providers/sync/sync_providers.dart';
 import 'package:pma_core/services/cloud_sync_service.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -12,10 +13,12 @@ void main() {
       final mainFile = File('lib/main.dart');
       final source = await mainFile.readAsString();
 
-      expect(source, contains("import 'package:firebase_core/firebase_core.dart';"));
+      expect(source,
+          contains("import 'package:firebase_core/firebase_core.dart';"));
       expect(
         source,
-        contains("import 'package:firebase_messaging/firebase_messaging.dart';"),
+        contains(
+            "import 'package:firebase_messaging/firebase_messaging.dart';"),
       );
       expect(source, contains('await Firebase.initializeApp();'));
       expect(
@@ -38,12 +41,15 @@ void main() {
         'lib/core/services/notification_service.dart',
         'packages/pma_core/lib/services/notification_service.dart',
       ];
-      final file = candidatePaths
-          .map(File.new)
-          .firstWhere((f) => f.existsSync(), orElse: () => File(candidatePaths.first));
+      final file = candidatePaths.map(File.new).firstWhere(
+          (f) => f.existsSync(),
+          orElse: () => File(candidatePaths.first));
       final source = await file.readAsString();
 
-      expect(source, contains("import 'package:firebase_messaging/firebase_messaging.dart';"));
+      expect(
+          source,
+          contains(
+              "import 'package:firebase_messaging/firebase_messaging.dart';"));
       expect(source, contains('await _messaging.setAutoInitEnabled(true);'));
       expect(source, contains('await _messaging.requestPermission('));
       expect(source, isNot(contains('FlutterLocalNotificationsPlugin')));
@@ -56,8 +62,10 @@ void main() {
     });
 
     test('cloud sync service still exposes Supabase stream API', () {
-      final service = CloudSyncService();
-      expect(service.getProjectsStream, isA<Stream<List<Map<String, dynamic>>> Function()>());
+      final service =
+          CloudSyncService(supabaseClient: Supabase.instance.client);
+      expect(service.getProjectsStream,
+          isA<Stream<List<Map<String, dynamic>>> Function()>());
     });
   });
 }

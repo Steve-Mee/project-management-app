@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:pma_core/core/providers/supabase_client_provider.dart';
 import 'package:pma_core/services/app_logger.dart';
 import 'package:pma_core/services/cloud_sync_service.dart';
 
@@ -99,7 +100,8 @@ class OfflineStatusNotifier extends Notifier<OfflineStatusState> {
 
   @override
   OfflineStatusState build() {
-    _cloudSyncService = CloudSyncService();
+    _cloudSyncService =
+        CloudSyncService(supabaseClient: ref.read(pmaSupabaseClientProvider));
     _startConnectivityListener();
 
     ref.onDispose(() {
@@ -157,9 +159,8 @@ class OfflineStatusNotifier extends Notifier<OfflineStatusState> {
 
   void _startConnectivityListener() {
     Connectivity().checkConnectivity().then(_handleConnectivityResults);
-    _connectivitySubscription = Connectivity()
-        .onConnectivityChanged
-        .listen(_handleConnectivityResults);
+    _connectivitySubscription =
+        Connectivity().onConnectivityChanged.listen(_handleConnectivityResults);
   }
 
   void _handleConnectivityResults(List<ConnectivityResult> results) {

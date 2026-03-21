@@ -23,26 +23,42 @@ class HiveProjectRepository implements IProjectRepository {
     r'[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$',
   );
   late Box<Map<dynamic, dynamic>> _projectsBox;
-  final CloudSyncService _cloudSync;
+  final CloudSyncService? _cloudSync;
   final ProjectMembersService _membersService;
   final AnalyticsService? _analyticsService;
+  final SupabaseClient? _supabaseClient;
   final bool _isTestMode;
 
   /// Helper class for data mapping operations
   final _ProjectDataMapper _dataMapper = _ProjectDataMapper();
 
   /// Helper class for Supabase sync operations
-  final _ProjectSyncManager _syncManager = _ProjectSyncManager();
+  late final _ProjectSyncManager _syncManager;
 
   HiveProjectRepository({
+    SupabaseClient? supabaseClient,
     CloudSyncService? cloudSync,
     ProjectMembersService? membersService,
     AnalyticsService? analyticsService,
     bool isTestMode = false,
-  })  : _cloudSync = cloudSync ?? CloudSyncService(),
+  })  : _supabaseClient = supabaseClient,
+        _cloudSync = cloudSync ??
+            (supabaseClient != null
+                ? CloudSyncService(supabaseClient: supabaseClient)
+                : null),
         _membersService = membersService ?? ProjectMembersService(),
-      _analyticsService = analyticsService,
-        _isTestMode = isTestMode;
+        _analyticsService = analyticsService,
+        _isTestMode = isTestMode {
+    _syncManager = _ProjectSyncManager(_cloudSync);
+  }
+
+  SupabaseClient get _supabase {
+    if (_supabaseClient != null) {
+      return _supabaseClient!;
+    }
+    throw StateError(
+        'HiveProjectRepository requires an injected SupabaseClient.');
+  }
 
   /// Initialize Hive and open the projects box
   Future<void> initialize({String? testPath}) async {
@@ -59,8 +75,7 @@ class HiveProjectRepository implements IProjectRepository {
       if (_projectsBox.isOpen) {
         return;
       }
-    } catch (_) {
-    }
+    } catch (_) {}
 
     if (Hive.isBoxOpen(_boxName)) {
       _projectsBox = Hive.box<Map<dynamic, dynamic>>(_boxName);
@@ -94,7 +109,8 @@ class HiveProjectRepository implements IProjectRepository {
     ProjectModel project,
     String storageKey,
   ) async {
-    if (_isTestMode || (_isValidUuid(project.id) && !project.id.startsWith('project_'))) {
+    if (_isTestMode ||
+        (_isValidUuid(project.id) && !project.id.startsWith('project_'))) {
       return project;
     }
 
@@ -117,7 +133,8 @@ class HiveProjectRepository implements IProjectRepository {
   }) async {
     await _ensureProjectsBoxReady();
     var resolved = project;
-    if (!_isTestMode && (!_isValidUuid(project.id) || project.id.startsWith('project_'))) {
+    if (!_isTestMode &&
+        (!_isValidUuid(project.id) || project.id.startsWith('project_'))) {
       final newId = _uuid.v4();
       resolved = _withNewId(project, newId);
       AppLogger.instance.i(
@@ -137,8 +154,7 @@ class HiveProjectRepository implements IProjectRepository {
       return;
     }
 
-    final analytics =
-        _analyticsService ?? SupabaseAnalyticsService(Supabase.instance.client);
+    final analytics = _analyticsService ?? SupabaseAnalyticsService(_supabase);
     await analytics.logEvent(
       AnalyticsEventName.projectCreated,
       parameters: {
@@ -148,7 +164,7 @@ class HiveProjectRepository implements IProjectRepository {
       },
     );
 
-    final currentUser = Supabase.instance.client.auth.currentUser;
+    final currentUser = _supabase.auth.currentUser;
     if (currentUser == null) {
       throw Exception('User not logged in');
     }
@@ -171,7 +187,8 @@ class HiveProjectRepository implements IProjectRepository {
       for (final entry in entries) {
         final projectData = Map<String, dynamic>.from(entry.value);
         var project = _dataMapper.fromJson(projectData);
-        if (!_isTestMode && (!_isValidUuid(project.id) || project.id.startsWith('project_'))) {
+        if (!_isTestMode &&
+            (!_isValidUuid(project.id) || project.id.startsWith('project_'))) {
           project = _withNewId(project, _uuid.v4());
           _projectsBox.delete(entry.key);
           _projectsBox.put(project.id, project.toJson());
@@ -208,7 +225,8 @@ class HiveProjectRepository implements IProjectRepository {
       // Keep pagination deterministic across implementations and runtimes.
       // Primary: name (case-insensitive), Secondary: id.
       filtered.sort((a, b) {
-        final nameCompare = a.name.toLowerCase().compareTo(b.name.toLowerCase());
+        final nameCompare =
+            a.name.toLowerCase().compareTo(b.name.toLowerCase());
         if (nameCompare != 0) {
           return nameCompare;
         }
@@ -221,7 +239,8 @@ class HiveProjectRepository implements IProjectRepository {
 
       return filtered.skip(startIndex).take(limit).toList();
     } catch (e, s) {
-      AppLogger.instance.e('Error in getProjectsPaginated', error: e, stackTrace: s);
+      AppLogger.instance
+          .e('Error in getProjectsPaginated', error: e, stackTrace: s);
       rethrow;
     }
   }
@@ -246,7 +265,8 @@ class HiveProjectRepository implements IProjectRepository {
   /// - ownerId
   /// - requiredTags / sortBy / sortAscending / viewMode
   @override
-  Future<List<ProjectModel>> getFilteredProjects(models.ProjectFilter filter, {List<ProjectFilterConditions> extraConditions = const []}) async {
+  Future<List<ProjectModel>> getFilteredProjects(models.ProjectFilter filter,
+      {List<ProjectFilterConditions> extraConditions = const []}) async {
     var projects = _applyProjectFilter(await getAllProjects(), filter);
 
     for (final cond in extraConditions) {
@@ -318,7 +338,8 @@ class HiveProjectRepository implements IProjectRepository {
     }
     final projectData = Map<String, dynamic>.from(data);
     var project = _dataMapper.fromJson(projectData);
-    if (!_isTestMode && (!_isValidUuid(project.id) || project.id.startsWith('project_'))) {
+    if (!_isTestMode &&
+        (!_isValidUuid(project.id) || project.id.startsWith('project_'))) {
       project = _withNewId(project, _uuid.v4());
       _projectsBox.delete(id);
       _projectsBox.put(project.id, project.toJson());
@@ -344,7 +365,7 @@ class HiveProjectRepository implements IProjectRepository {
         var project = _dataMapper.fromJson(projectData);
         project = await _ensureValidId(project, projectId);
         final resolvedId = project.id;
-        
+
         // Create updated project with new progress
         final updatedProject = ProjectModel(
           id: project.id,
@@ -356,7 +377,7 @@ class HiveProjectRepository implements IProjectRepository {
           sharedUsers: project.sharedUsers,
           sharedGroups: project.sharedGroups,
         );
-        
+
         await _projectsBox.put(resolvedId, updatedProject.toJson());
         AppLogger.userAction(
           'User updated project progress for ${updatedProject.name}',
@@ -365,10 +386,11 @@ class HiveProjectRepository implements IProjectRepository {
             'progress': newProgress,
           },
         );
-        
+
         // Skip Supabase sync in test mode
         if (!_isTestMode) {
-          await _syncManager.syncProjectUpdate(resolvedId, userId: userId, metadata: metadata);
+          await _syncManager.syncProjectUpdate(resolvedId,
+              userId: userId, metadata: metadata);
         }
       }
     } catch (e) {
@@ -412,7 +434,8 @@ class HiveProjectRepository implements IProjectRepository {
             'projectId': resolvedId,
           },
         );
-        await _syncManager.syncProjectUpdate(resolvedId, userId: userId, metadata: metadata);
+        await _syncManager.syncProjectUpdate(resolvedId,
+            userId: userId, metadata: metadata);
       }
     } catch (e) {
       AppLogger.instance.e('Error updating project directory path', error: e);
@@ -458,7 +481,8 @@ class HiveProjectRepository implements IProjectRepository {
             'projectId': resolvedId,
           },
         );
-        await _syncManager.syncProjectUpdate(resolvedId, userId: userId, metadata: metadata);
+        await _syncManager.syncProjectUpdate(resolvedId,
+            userId: userId, metadata: metadata);
       }
     } catch (e) {
       AppLogger.instance.e('Error updating project plan JSON', error: e);
@@ -523,7 +547,8 @@ class HiveProjectRepository implements IProjectRepository {
             'projectId': resolvedId,
           },
         );
-        await _syncManager.syncProjectUpdate(resolvedId, userId: userId, metadata: metadata);
+        await _syncManager.syncProjectUpdate(resolvedId,
+            userId: userId, metadata: metadata);
       }
     } catch (e) {
       AppLogger.instance.e('Error updating project with history', error: e);
@@ -553,7 +578,7 @@ class HiveProjectRepository implements IProjectRepository {
             'projectId': resolvedId,
           },
         );
-        
+
         // Skip Supabase sync in test mode
         if (!_isTestMode) {
           await _syncManager.syncProjectDelete(resolvedId);
@@ -567,10 +592,10 @@ class HiveProjectRepository implements IProjectRepository {
           'projectId': projectId,
         },
       );
-      
+
       // Skip Supabase sync in test mode
       if (!_isTestMode) {
-        await _cloudSync.syncProjectDelete(
+        await _cloudSync?.syncProjectDelete(
           projectId,
           userId: userId,
           metadata: metadata,
@@ -625,7 +650,8 @@ class HiveProjectRepository implements IProjectRepository {
           'member': trimmed,
         },
       );
-      await _syncManager.syncProjectUpdate(projectId, userId: userId, metadata: metadata);
+      await _syncManager.syncProjectUpdate(projectId,
+          userId: userId, metadata: metadata);
     } catch (e) {
       AppLogger.instance.e('Error sharing project $projectId', error: e);
       rethrow;
@@ -673,9 +699,11 @@ class HiveProjectRepository implements IProjectRepository {
           'member': trimmed,
         },
       );
-      await _syncManager.syncProjectUpdate(projectId, userId: userId, metadata: metadata);
+      await _syncManager.syncProjectUpdate(projectId,
+          userId: userId, metadata: metadata);
     } catch (e) {
-      AppLogger.instance.e('Error removing shared user on $projectId', error: e);
+      AppLogger.instance
+          .e('Error removing shared user on $projectId', error: e);
       rethrow;
     }
   }
@@ -723,7 +751,8 @@ class HiveProjectRepository implements IProjectRepository {
           'groupId': trimmed,
         },
       );
-      await _syncManager.syncProjectUpdate(projectId, userId: userId, metadata: metadata);
+      await _syncManager.syncProjectUpdate(projectId,
+          userId: userId, metadata: metadata);
     } catch (e) {
       AppLogger.instance.e('Error sharing project group $projectId', error: e);
       rethrow;
@@ -771,7 +800,8 @@ class HiveProjectRepository implements IProjectRepository {
           'groupId': trimmed,
         },
       );
-      await _syncManager.syncProjectUpdate(projectId, userId: userId, metadata: metadata);
+      await _syncManager.syncProjectUpdate(projectId,
+          userId: userId, metadata: metadata);
     } catch (e) {
       AppLogger.instance.e(
         'Error removing shared group on $projectId',
@@ -808,13 +838,13 @@ class HiveProjectRepository implements IProjectRepository {
       throw Exception('Invalid role: $newRole');
     }
 
-    final currentUser = Supabase.instance.client.auth.currentUser;
+    final currentUser = _supabase.auth.currentUser;
     if (currentUser == null) {
       throw Exception('User not logged in');
     }
 
     // Check if current user has permission (owner/admin)
-    final membership = await Supabase.instance.client
+    final membership = await _supabase
         .from('project_members')
         .select('role')
         .eq('project_id', projectId)
@@ -827,7 +857,7 @@ class HiveProjectRepository implements IProjectRepository {
 
     // Prevent demoting the last owner
     if (newRole != 'owner') {
-      final owners = await Supabase.instance.client
+      final owners = await _supabase
           .from('project_members')
           .select('user_id')
           .eq('project_id', projectId)
@@ -838,7 +868,7 @@ class HiveProjectRepository implements IProjectRepository {
       }
     }
 
-    await Supabase.instance.client
+    await _supabase
         .from('project_members')
         .update({'role': newRole})
         .eq('project_id', projectId)
@@ -847,7 +877,12 @@ class HiveProjectRepository implements IProjectRepository {
     await _syncManager.syncProjectUpdate(
       projectId,
       userId: userId,
-      metadata: {...?metadata, 'action': 'change_member_role', 'target_user': targetUserId, 'new_role': newRole},
+      metadata: {
+        ...?metadata,
+        'action': 'change_member_role',
+        'target_user': targetUserId,
+        'new_role': newRole
+      },
     );
   }
 
@@ -858,13 +893,13 @@ class HiveProjectRepository implements IProjectRepository {
     String? userId,
     Map<String, Object?>? metadata,
   }) async {
-    final currentUser = Supabase.instance.client.auth.currentUser;
+    final currentUser = _supabase.auth.currentUser;
     if (currentUser == null) {
       throw Exception('User not logged in');
     }
 
     // Check if current user has permission (owner/admin)
-    final membership = await Supabase.instance.client
+    final membership = await _supabase
         .from('project_members')
         .select('role')
         .eq('project_id', projectId)
@@ -876,7 +911,7 @@ class HiveProjectRepository implements IProjectRepository {
     }
 
     // Prevent removing the last owner
-    final targetMembership = await Supabase.instance.client
+    final targetMembership = await _supabase
         .from('project_members')
         .select('role')
         .eq('project_id', projectId)
@@ -884,7 +919,7 @@ class HiveProjectRepository implements IProjectRepository {
         .single();
 
     if (targetMembership['role'] == 'owner') {
-      final owners = await Supabase.instance.client
+      final owners = await _supabase
           .from('project_members')
           .select('user_id')
           .eq('project_id', projectId)
@@ -895,7 +930,7 @@ class HiveProjectRepository implements IProjectRepository {
       }
     }
 
-    await Supabase.instance.client
+    await _supabase
         .from('project_members')
         .delete()
         .eq('project_id', projectId)
@@ -904,7 +939,11 @@ class HiveProjectRepository implements IProjectRepository {
     await _syncManager.syncProjectUpdate(
       projectId,
       userId: userId,
-      metadata: {...?metadata, 'action': 'remove_member', 'target_user': targetUserId},
+      metadata: {
+        ...?metadata,
+        'action': 'remove_member',
+        'target_user': targetUserId
+      },
     );
   }
 
@@ -935,7 +974,7 @@ class HiveProjectRepository implements IProjectRepository {
 
     try {
       // Fetch remote project from Supabase
-      final supabase = Supabase.instance.client;
+      final supabase = _supabase;
       final remoteResponse = await supabase
           .from('projects')
           .select()
@@ -963,7 +1002,8 @@ class HiveProjectRepository implements IProjectRepository {
       if (remoteTime.isAfter(localTime)) {
         // Remote is newer, download
         await updateProject(projectId, remoteProject, userId: 'sync-download');
-        AppLogger.instance.i('Downloaded remote changes for project $projectId');
+        AppLogger.instance
+            .i('Downloaded remote changes for project $projectId');
       } else if (localTime.isAfter(remoteTime)) {
         // Local is newer, upload
         await _syncManager.syncProjectUpdate(projectId, metadata: {
@@ -978,7 +1018,8 @@ class HiveProjectRepository implements IProjectRepository {
         AppLogger.instance.d('Project $projectId is in sync');
       }
     } catch (e) {
-      AppLogger.instance.w('Failed bidirectional sync for project $projectId', error: e);
+      AppLogger.instance
+          .w('Failed bidirectional sync for project $projectId', error: e);
       rethrow;
     }
   }
@@ -1005,9 +1046,7 @@ class HiveProjectRepository implements IProjectRepository {
   @override
   Stream<List<ProjectModel>> watchProjectChanges(String projectId) {
     return _syncManager.getProjectsStream().map((changes) {
-      return changes
-          .where((change) => change.id == projectId)
-          .toList();
+      return changes.where((change) => change.id == projectId).toList();
     });
   }
 
@@ -1028,10 +1067,12 @@ class HiveProjectRepository implements IProjectRepository {
     final remoteTime = _getLastUpdated(remote);
 
     if (remoteTime.isAfter(localTime)) {
-      AppLogger.instance.i('Resolved conflict for ${local.id}: remote wins (remote: $remoteTime, local: $localTime)');
+      AppLogger.instance.i(
+          'Resolved conflict for ${local.id}: remote wins (remote: $remoteTime, local: $localTime)');
       return remote;
     } else {
-      AppLogger.instance.i('Resolved conflict for ${local.id}: local wins (remote: $remoteTime, local: $localTime)');
+      AppLogger.instance.i(
+          'Resolved conflict for ${local.id}: local wins (remote: $remoteTime, local: $localTime)');
       return local;
     }
   }
@@ -1078,9 +1119,7 @@ class _ProjectDataMapper {
 
   /// Convert list of project models to JSON
   List<Map<String, dynamic>> toJsonList(List<ProjectModel> projects) {
-    return projects
-        .map((project) => project.toJson())
-        .toList();
+    return projects.map((project) => project.toJson()).toList();
   }
 
   /// Validate project data structure
@@ -1091,26 +1130,38 @@ class _ProjectDataMapper {
 
 /// Helper class for Supabase sync operations
 class _ProjectSyncManager {
-  final CloudSyncService _cloudSync = CloudSyncService();
+  _ProjectSyncManager(this._cloudSync);
+
+  final CloudSyncService? _cloudSync;
 
   /// Create project on remote server
-  Future<void> syncProjectCreate(String projectId, {String? userId, Map<String, Object?>? metadata}) async {
-    await _cloudSync.syncProjectCreate(projectId, userId: userId, metadata: metadata);
+  Future<void> syncProjectCreate(String projectId,
+      {String? userId, Map<String, Object?>? metadata}) async {
+    await _cloudSync?.syncProjectCreate(projectId,
+        userId: userId, metadata: metadata);
   }
 
   /// Update project on remote server
-  Future<void> syncProjectUpdate(String projectId, {String? userId, Map<String, Object?>? metadata}) async {
-    await _cloudSync.syncProjectUpdate(projectId, userId: userId, metadata: metadata);
+  Future<void> syncProjectUpdate(String projectId,
+      {String? userId, Map<String, Object?>? metadata}) async {
+    await _cloudSync?.syncProjectUpdate(projectId,
+        userId: userId, metadata: metadata);
   }
 
   /// Delete project from remote server
-  Future<void> syncProjectDelete(String projectId, {String? userId, Map<String, Object?>? metadata}) async {
-    await _cloudSync.syncProjectDelete(projectId, userId: userId, metadata: metadata);
+  Future<void> syncProjectDelete(String projectId,
+      {String? userId, Map<String, Object?>? metadata}) async {
+    await _cloudSync?.syncProjectDelete(projectId,
+        userId: userId, metadata: metadata);
   }
 
   /// Get projects stream from remote server
   Stream<List<ProjectModel>> getProjectsStream() {
-    return _cloudSync.getProjectsStream().map((changes) {
+    final cloudSync = _cloudSync;
+    if (cloudSync == null) {
+      return const Stream<List<ProjectModel>>.empty();
+    }
+    return cloudSync.getProjectsStream().map((changes) {
       final mapped = <ProjectModel>[];
       for (final change in changes) {
         final id = change['id'];

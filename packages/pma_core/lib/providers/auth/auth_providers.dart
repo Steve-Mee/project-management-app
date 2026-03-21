@@ -17,6 +17,7 @@ import 'package:pma_core/services/recaptcha_service.dart';
 import 'package:pma_core/auth/permissions.dart';
 import 'package:pma_core/core/config/ai_config.dart' as ai_config;
 import 'package:pma_core/core/config/app_config.dart';
+import 'package:pma_core/core/providers/supabase_client_provider.dart';
 import 'package:pma_core/core/feature_flags/feature_flag_resolver.dart';
 import 'package:pma_core/core/providers/feature_flag_provider.dart';
 import 'package:pma_core/services/supabase_connection_diagnostics.dart';
@@ -32,7 +33,8 @@ class RateLimitExceededException implements Exception {
   RateLimitExceededException(this.backoffDuration);
 
   @override
-  String toString() => 'Rate limit exceeded. Try again in ${backoffDuration.inSeconds} seconds.';
+  String toString() =>
+      'Rate limit exceeded. Try again in ${backoffDuration.inSeconds} seconds.';
 }
 
 /// Custom exception for captcha required
@@ -56,14 +58,16 @@ final authRepositoryProvider = Provider<IAuthRepository>((ref) {
 
 /// Provider for SettingsRepository
 /// Initializes the repository on first access
-final settingsRepositoryProvider = FutureProvider<HiveSettingsRepository>((ref) async {
+final settingsRepositoryProvider =
+    FutureProvider<HiveSettingsRepository>((ref) async {
   final repository = HiveSettingsRepository();
   await repository.initialize();
   return repository;
 });
 
 /// Provider for LoginRateLimiter
-final loginRateLimiterProvider = Provider<LoginRateLimiter>((ref) => LoginRateLimiter.instance);
+final loginRateLimiterProvider =
+    Provider<LoginRateLimiter>((ref) => LoginRateLimiter.instance);
 
 /// Provider for RecaptchaService
 final recaptchaServiceProvider = FutureProvider<RecaptchaService>((ref) async {
@@ -109,16 +113,16 @@ class AuthState {
 }
 
 /// Filter parameters for user search and filtering operations.
-/// 
+///
 /// This immutable class encapsulates all filtering criteria that can be applied
 /// to user collections. All fields are optional and null values indicate no filtering
 /// on that criterion.
-/// 
+///
 /// Used by [filteredUsersProvider] family provider for client-side filtering.
 class UsersFilter {
   /// Optional search query to filter users by username (case-insensitive substring match).
   final String? searchQuery;
-  
+
   /// Optional role ID to filter users by their assigned role.
   final String? role;
 
@@ -146,17 +150,21 @@ class UsersFilter {
 /// Notifier for authentication with robust error handling
 /// Fully integrated with backend repository per .github/issues/050-auth-backend-integration.md
 class AuthNotifier extends AsyncNotifier<AuthState> {
-  final CloudSyncService _cloudSync = CloudSyncService();
+  late final CloudSyncService _cloudSync;
   final LocalAuthentication _localAuth = LocalAuthentication();
   final FlutterSecureStorage _secureStorage = const FlutterSecureStorage();
   late Box<List<DateTime>> attemptsBox;
   bool _listening = false;
 
+  SupabaseClient get _supabase => ref.read(pmaSupabaseClientProvider);
+
   @override
   Future<AuthState> build() async {
+    _cloudSync = CloudSyncService(supabaseClient: _supabase);
+
     if (!_listening) {
       _listening = true;
-      Supabase.instance.client.auth.onAuthStateChange.listen((event) async {
+      _supabase.auth.onAuthStateChange.listen((event) async {
         if (event.event == AuthChangeEvent.tokenRefreshed) {
           AppLogger.event('auth_session_refreshed');
         }
@@ -171,7 +179,7 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
   }
 
   Future<AuthState> _checkInitialAuthState() async {
-    final current = Supabase.instance.client.auth.currentUser;
+    final current = _supabase.auth.currentUser;
     if (current != null) {
       return await _createAuthenticatedState(current);
     }
@@ -198,7 +206,7 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
     // Fetch subscription level from database
     String? subscriptionLevel;
     try {
-      final supabase = Supabase.instance.client;
+      final supabase = _supabase;
       final subscriptionData = await supabase
           .from('subscriptions')
           .select('level')
@@ -209,7 +217,8 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
       subscriptionLevel = subscriptionData['level'] as String?;
     } catch (e) {
       // If no subscription found or error, user is free tier
-      AppLogger.debug('No active subscription found for user', params: {'userId': user.id});
+      AppLogger.debug('No active subscription found for user',
+          params: {'userId': user.id});
     }
 
     // Persist subscription level in settings for offline access
@@ -236,7 +245,10 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
 
   /// Login with error handling and persistent rate limiting
   /// Uses backend authentication per .github/issues/050-auth-backend-integration.md
-  Future<bool> login(String username, String password, {bool enableAutoLogin = false, bool skipCaptchaCheck = false, String? captchaToken}) async {
+  Future<bool> login(String username, String password,
+      {bool enableAutoLogin = false,
+      bool skipCaptchaCheck = false,
+      String? captchaToken}) async {
     final limiter = ref.read(loginRateLimiterProvider);
 
     // Check rate limiting
@@ -244,7 +256,11 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
     final captchaRequired = await limiter.shouldRequireCaptcha(username);
     final backoffDuration = await limiter.getBackoffDuration(username);
     if (backoffDuration != null) {
-      AppLogger.event('rate_limit_triggered', params: {'email': username, 'backoff_seconds': backoffDuration.inSeconds, 'timestamp': DateTime.now().toIso8601String()});
+      AppLogger.event('rate_limit_triggered', params: {
+        'email': username,
+        'backoff_seconds': backoffDuration.inSeconds,
+        'timestamp': DateTime.now().toIso8601String()
+      });
       throw RateLimitExceededException(backoffDuration);
     }
 
@@ -252,11 +268,18 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
     if (!skipCaptchaCheck && captchaRequired) {
       final recaptchaService = await ref.read(recaptchaServiceProvider.future);
       final token = await recaptchaService.getRecaptchaToken();
-      AppLogger.event('captcha_attempt', params: {'email': username, 'attempts': attemptCount, 'timestamp': DateTime.now().toIso8601String(), 'has_token': token != null});
+      AppLogger.event('captcha_attempt', params: {
+        'email': username,
+        'attempts': attemptCount,
+        'timestamp': DateTime.now().toIso8601String(),
+        'has_token': token != null
+      });
       if (token == null) {
         // Could not get captcha token, fail the login
-        AppLogger.event('captcha_failed', params: {'email': username, 'attempts': attemptCount});
-        state = AsyncValue.data(state.value!.copyWith(error: 'Captcha verification failed. Please try again.'));
+        AppLogger.event('captcha_failed',
+            params: {'email': username, 'attempts': attemptCount});
+        state = AsyncValue.data(state.value!
+            .copyWith(error: 'Captcha verification failed. Please try again.'));
         return false;
       }
       // Use the token for login
@@ -264,30 +287,32 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
     }
 
     try {
-      await Supabase.instance.client.auth.signInWithPassword(
+      await _supabase.auth.signInWithPassword(
         email: username.trim(),
         password: password,
         captchaToken: captchaToken,
       );
 
-      final session = Supabase.instance.client.auth.currentSession;
+      final session = _supabase.auth.currentSession;
       final token = session?.accessToken;
       if (token != null) {
         try {
           final payloadBase64 = token.split('.')[1];
-          final payloadJson = utf8.decode(base64Url.decode(base64Url.normalize(payloadBase64)));
+          final payloadJson =
+              utf8.decode(base64Url.decode(base64Url.normalize(payloadBase64)));
           AppLogger.instance.d('JWT payload after login: $payloadJson');
         } catch (e) {
           AppLogger.instance.e('JWT decode failed', error: e);
         }
       }
 
-      final user = Supabase.instance.client.auth.currentUser;
+      final user = _supabase.auth.currentUser;
       if (user != null) {
         final userEmail = user.email ?? user.id;
         final IAuthRepository repo = ref.read(authRepositoryProvider);
         final localUser = repo.getUserByUsername(userEmail);
-        final role = localUser != null ? repo.getRoleById(localUser.roleId) : null;
+        final role =
+            localUser != null ? repo.getRoleById(localUser.roleId) : null;
 
         state = AsyncValue.data(await _createAuthenticatedState(user));
 
@@ -300,7 +325,8 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
         // Update auto-login settings using async settings provider
         try {
           // Use centralized async settings access (see 018-auth-settings-repo-access.md)
-          final settingsRepo = await ref.read(settingsRepositoryProvider.future);
+          final settingsRepo =
+              await ref.read(settingsRepositoryProvider.future);
           if (enableAutoLogin || settingsRepo.getLastLoginTime() == null) {
             await settingsRepo.setAutoLoginEnabled(true);
           }
@@ -311,7 +337,8 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
             await enrollBiometrics(username);
           }
         } catch (e) {
-          AppLogger.instance.w('Settings update or biometric enrollment failed', error: e);
+          AppLogger.instance
+              .w('Settings update or biometric enrollment failed', error: e);
         }
 
         // Reset rate limiter on successful login
@@ -329,7 +356,8 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
       await limiter.recordAttempt(username);
     }
 
-    state = AsyncValue.data(state.value!.copyWith(error: 'Invalid username or password.'));
+    state = AsyncValue.data(
+        state.value!.copyWith(error: 'Invalid username or password.'));
     return false;
   }
 
@@ -341,7 +369,7 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
     await _cloudSync.authSignOut(userId: userId);
 
     try {
-      await Supabase.instance.client.auth.signOut();
+      await _supabase.auth.signOut();
     } catch (e) {
       AppLogger.instance.w('Supabase logout failed', error: e);
     }
@@ -355,7 +383,8 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
     String? roleId,
   }) async {
     if (username.trim().isEmpty || password.isEmpty) {
-      state = AsyncValue.data(state.value!.copyWith(error: 'Username and password are required.'));
+      state = AsyncValue.data(
+          state.value!.copyWith(error: 'Username and password are required.'));
       return false;
     }
 
@@ -381,21 +410,23 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
   Future<bool> signUp(String email, String password) async {
     try {
       final trimmedEmail = email.trim();
-      AppLogger.instance.d('Signup attempt: email=$trimmedEmail, password length=${password.length}');
+      AppLogger.instance.d(
+          'Signup attempt: email=$trimmedEmail, password length=${password.length}');
 
-      final response = await Supabase.instance.client.auth.signUp(
+      final response = await _supabase.auth.signUp(
         email: trimmedEmail,
         password: password,
         data: {'full_name': 'Test User'},
       );
 
       if (response.user != null) {
-        AppLogger.instance.i('Signup success: user ID = ${response.user!.id}, email = ${response.user!.email}');
+        AppLogger.instance.i(
+            'Signup success: user ID = ${response.user!.id}, email = ${response.user!.email}');
 
         // Auto-login if email confirmation is off (respect rate limiting)
         final limiter = ref.watch(loginRateLimiterProvider);
         if (!await limiter.isBlocked(trimmedEmail)) {
-          final loginRes = await Supabase.instance.client.auth.signInWithPassword(
+          final loginRes = await _supabase.auth.signInWithPassword(
             email: trimmedEmail,
             password: password,
           );
@@ -403,11 +434,15 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
             AppLogger.instance.d('Auto-login after signup successful');
           }
         } else {
-          AppLogger.event('auth_rate_limit_exceeded', params: {'email': trimmedEmail, 'context': 'auto-login after signup'});
+          AppLogger.event('auth_rate_limit_exceeded', params: {
+            'email': trimmedEmail,
+            'context': 'auto-login after signup'
+          });
         }
         return true;
       } else {
-        AppLogger.instance.w('Signup response without user: session=${response.session}');
+        AppLogger.instance
+            .w('Signup response without user: session=${response.session}');
         return false;
       }
     } on AuthException catch (e) {
@@ -417,16 +452,19 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
         context: 'auth_signup_auth_exception',
         error: e,
       );
-      state = AsyncValue.data(state.value!.copyWith(error: 'Registration failed: ${e.message} (${e.code ?? 'no code'})'));
+      state = AsyncValue.data(state.value!.copyWith(
+          error: 'Registration failed: ${e.message} (${e.code ?? 'no code'})'));
     } catch (e, stack) {
-      AppLogger.instance.e('Unexpected signup error', error: e, stackTrace: stack);
+      AppLogger.instance
+          .e('Unexpected signup error', error: e, stackTrace: stack);
       await SupabaseConnectionDiagnostics.logNetworkDiagnostics(
         url: AppConfig.supabaseUrl,
         context: 'auth_signup_unexpected_exception',
         error: e,
         stackTrace: stack,
       );
-      state = AsyncValue.data(state.value!.copyWith(error: 'Unexpected error during registration'));
+      state = AsyncValue.data(
+          state.value!.copyWith(error: 'Unexpected error during registration'));
     }
     return false;
   }
@@ -483,10 +521,12 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
       final IAuthRepository repo = ref.read(authRepositoryProvider);
       final roleId = state.value!.roleId ?? repo.defaultUserRoleId;
       final role = repo.getRoleById(roleId);
-      final canManageUsers = role?.permissions.contains(AppPermissions.manageUsers) ?? false;
+      final canManageUsers =
+          role?.permissions.contains(AppPermissions.manageUsers) ?? false;
 
       if (!canManageUsers) {
-        state = AsyncValue.data(state.value!.copyWith(error: 'You do not have permission to delete users.'));
+        state = AsyncValue.data(state.value!
+            .copyWith(error: 'You do not have permission to delete users.'));
         return;
       }
 
@@ -502,7 +542,7 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
 
   /// Refresh user state (useful after subscription changes)
   Future<void> refreshUserState() async {
-    final current = Supabase.instance.client.auth.currentUser;
+    final current = _supabase.auth.currentUser;
     if (current != null) {
       state = AsyncValue.data(await _createAuthenticatedState(current));
       AppLogger.event('User state refreshed after subscription update');
@@ -528,12 +568,14 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
   /// Authenticate using biometrics and perform login with stored credentials
   Future<bool> authenticateWithBiometrics() async {
     if (!_isBiometricFeatureEnabled()) {
-      state = AsyncValue.data(state.value!.copyWith(error: 'Biometric authentication is disabled.'));
+      state = AsyncValue.data(state.value!
+          .copyWith(error: 'Biometric authentication is disabled.'));
       return false;
     }
 
     if (!await isBiometricAvailable()) {
-      state = AsyncValue.data(state.value!.copyWith(error: 'Biometric authentication not available.'));
+      state = AsyncValue.data(state.value!
+          .copyWith(error: 'Biometric authentication not available.'));
       return false;
     }
 
@@ -544,30 +586,36 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
       );
 
       if (!authenticated) {
-        state = AsyncValue.data(state.value!.copyWith(error: 'Biometric authentication failed.'));
+        state = AsyncValue.data(
+            state.value!.copyWith(error: 'Biometric authentication failed.'));
         return false;
       }
 
       // Retrieve enrollment state and refresh token (no password is persisted).
-      final storedUsername = await _secureStorage.read(key: _biometricUsernameKey);
-      final storedRefreshToken = await _secureStorage.read(key: _biometricRefreshTokenKey);
+      final storedUsername =
+          await _secureStorage.read(key: _biometricUsernameKey);
+      final storedRefreshToken =
+          await _secureStorage.read(key: _biometricRefreshTokenKey);
 
       if (storedRefreshToken == null || storedUsername == null) {
-        state = AsyncValue.data(state.value!.copyWith(error: 'No stored biometric session for login.'));
+        state = AsyncValue.data(state.value!
+            .copyWith(error: 'No stored biometric session for login.'));
         return false;
       }
 
-      await Supabase.instance.client.auth.refreshSession(storedRefreshToken);
-      final user = Supabase.instance.client.auth.currentUser;
+      await _supabase.auth.refreshSession(storedRefreshToken);
+      final user = _supabase.auth.currentUser;
       if (user == null) {
-        state = AsyncValue.data(state.value!.copyWith(error: 'Biometric login session could not be restored.'));
+        state = AsyncValue.data(state.value!
+            .copyWith(error: 'Biometric login session could not be restored.'));
         return false;
       }
 
       final normalizedStoredUsername = storedUsername.trim().toLowerCase();
       final normalizedUserEmail = (user.email ?? user.id).trim().toLowerCase();
       if (normalizedStoredUsername != normalizedUserEmail) {
-        state = AsyncValue.data(state.value!.copyWith(error: 'Biometric credentials do not match the active account.'));
+        state = AsyncValue.data(state.value!.copyWith(
+            error: 'Biometric credentials do not match the active account.'));
         return false;
       }
 
@@ -575,7 +623,8 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
       return true;
     } catch (e) {
       AppLogger.instance.w('Biometric authentication failed', error: e);
-      state = AsyncValue.data(state.value!.copyWith(error: 'Biometric authentication error: $e'));
+      state = AsyncValue.data(
+          state.value!.copyWith(error: 'Biometric authentication error: $e'));
       return false;
     }
   }
@@ -591,15 +640,18 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
     }
 
     try {
-      final session = Supabase.instance.client.auth.currentSession;
+      final session = _supabase.auth.currentSession;
       final refreshToken = session?.refreshToken;
       if (refreshToken == null || refreshToken.isEmpty) {
-        AppLogger.instance.w('Biometric enrollment skipped: no refresh token available');
+        AppLogger.instance
+            .w('Biometric enrollment skipped: no refresh token available');
         return false;
       }
 
-      await _secureStorage.write(key: _biometricUsernameKey, value: username.trim());
-      await _secureStorage.write(key: _biometricRefreshTokenKey, value: refreshToken);
+      await _secureStorage.write(
+          key: _biometricUsernameKey, value: username.trim());
+      await _secureStorage.write(
+          key: _biometricRefreshTokenKey, value: refreshToken);
       return true;
     } catch (e) {
       AppLogger.instance.w('Biometric enrollment failed', error: e);
@@ -670,7 +722,8 @@ class PrivacyConsentNotifier extends AsyncNotifier<bool> {
 }
 
 /// Provider for privacy/AI consent toggle
-final privacyConsentProvider = AsyncNotifierProvider<PrivacyConsentNotifier, bool>(
+final privacyConsentProvider =
+    AsyncNotifierProvider<PrivacyConsentNotifier, bool>(
   PrivacyConsentNotifier.new,
 );
 
@@ -714,7 +767,8 @@ class BiometricLoginNotifier extends AsyncNotifier<bool> {
 }
 
 /// Provider for biometric login toggle
-final biometricLoginProvider = AsyncNotifierProvider<BiometricLoginNotifier, bool>(
+final biometricLoginProvider =
+    AsyncNotifierProvider<BiometricLoginNotifier, bool>(
   BiometricLoginNotifier.new,
 );
 
@@ -744,7 +798,8 @@ class HelpLevelNotifier extends AsyncNotifier<ai_config.HelpLevel> {
 }
 
 /// Provider for help level setting (basic/detailed).
-final helpLevelProvider = AsyncNotifierProvider<HelpLevelNotifier, ai_config.HelpLevel>(
+final helpLevelProvider =
+    AsyncNotifierProvider<HelpLevelNotifier, ai_config.HelpLevel>(
   HelpLevelNotifier.new,
 );
 
@@ -765,38 +820,41 @@ final useBiometricsProvider = biometricLoginProvider;
 List<AppUser> _searchUsers(List<AppUser> users, String query) {
   final trimmedQuery = query.trim();
   if (trimmedQuery.isEmpty) {
-    AppLogger.instance.d('User search: empty query, returning all users (${users.length})');
+    AppLogger.instance
+        .d('User search: empty query, returning all users (${users.length})');
     return users;
   }
-  
+
   final lowerQuery = trimmedQuery.toLowerCase();
-  final filtered = users.where((user) => 
-    user.username.toLowerCase().contains(lowerQuery)
-  ).toList();
-  
-  AppLogger.instance.d('User search: query="$trimmedQuery", found ${filtered.length} of ${users.length} users');
+  final filtered = users
+      .where((user) => user.username.toLowerCase().contains(lowerQuery))
+      .toList();
+
+  AppLogger.instance.d(
+      'User search: query="$trimmedQuery", found ${filtered.length} of ${users.length} users');
   return filtered;
 }
 
 /// Private helper method for filtering users by criteria
 List<AppUser> _filterUsers(List<AppUser> users, UsersFilter filter) {
   var filtered = users;
-  
+
   // Filter by search query (case-insensitive on username)
   if (filter.searchQuery != null && filter.searchQuery!.trim().isNotEmpty) {
     final query = filter.searchQuery!.trim().toLowerCase();
-    filtered = filtered.where((user) => 
-      user.username.toLowerCase().contains(query)
-    ).toList();
+    filtered = filtered
+        .where((user) => user.username.toLowerCase().contains(query))
+        .toList();
   }
-  
+
   // Filter by role (exact match)
   if (filter.role != null && filter.role!.trim().isNotEmpty) {
     final role = filter.role!.trim();
     filtered = filtered.where((user) => user.roleId == role).toList();
   }
-  
-  AppLogger.instance.d('User filter: applied filters, found ${filtered.length} of ${users.length} users');
+
+  AppLogger.instance.d(
+      'User filter: applied filters, found ${filtered.length} of ${users.length} users');
   return filtered;
 }
 
@@ -806,7 +864,8 @@ final authUsersProvider = FutureProvider<List<AppUser>>((ref) {
 });
 
 /// Family provider for searching users by query (case-insensitive on username)
-final searchUsersProvider = Provider.autoDispose.family<List<AppUser>, String>((ref, query) {
+final searchUsersProvider =
+    Provider.autoDispose.family<List<AppUser>, String>((ref, query) {
   final usersAsync = ref.watch(authUsersProvider);
   return usersAsync.maybeWhen(
     data: (users) => _searchUsers(users, query),
@@ -815,7 +874,8 @@ final searchUsersProvider = Provider.autoDispose.family<List<AppUser>, String>((
 });
 
 /// Family provider for filtering users by role and status
-final filteredUsersProvider = Provider.autoDispose.family<List<AppUser>, UsersFilter>((ref, filter) {
+final filteredUsersProvider =
+    Provider.autoDispose.family<List<AppUser>, UsersFilter>((ref, filter) {
   final usersAsync = ref.watch(authUsersProvider);
   return usersAsync.maybeWhen(
     data: (users) => _filterUsers(users, filter),

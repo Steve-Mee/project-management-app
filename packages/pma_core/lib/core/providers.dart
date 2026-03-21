@@ -10,6 +10,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'services/analytics_service.dart';
 
 export 'providers/feature_flag_provider.dart';
+export 'providers/supabase_client_provider.dart';
 export 'services/analytics_service.dart';
 
 /// Issue #073: central analytics provider.

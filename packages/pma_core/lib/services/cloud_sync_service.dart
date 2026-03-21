@@ -7,17 +7,18 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 /// Stub for future cloud sync (Supabase/etc.).
 class CloudSyncService {
+  final SupabaseClient supabaseClient;
   final HiveProjectRepository? repository;
   AnalyticsService? _analyticsService;
 
   CloudSyncService({
+    required this.supabaseClient,
     this.repository,
     AnalyticsService? analyticsService,
   }) : _analyticsService = analyticsService;
 
   AnalyticsService get _analytics =>
-      _analyticsService ??=
-        SupabaseAnalyticsService(Supabase.instance.client);
+      _analyticsService ??= SupabaseAnalyticsService(supabaseClient);
 
   static final RegExp _uuidRegex = RegExp(
     r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-'
@@ -62,7 +63,7 @@ class CloudSyncService {
     String? userId,
     Map<String, Object?>? metadata,
   }) async {
-    final currentUser = Supabase.instance.client.auth.currentUser;
+    final currentUser = supabaseClient.auth.currentUser;
     if (currentUser == null) {
       AppLogger.instance.w('Skipping project sync: no authenticated user');
       return;
@@ -72,30 +73,34 @@ class CloudSyncService {
     // Note: In a real implementation, you'd sync the full project data
     // For now, just ensure membership is created
     try {
-      await Supabase.instance.client.from('projects').insert({
+      await supabaseClient.from('projects').insert({
         'id': projectId,
-        'name': metadata?['name'] ?? 'New Project', // Assuming name is passed in metadata
-        'user_id': currentUser.id,  // Zorg voor auth.uid()
+        'name': metadata?['name'] ??
+            'New Project', // Assuming name is passed in metadata
+        'user_id': currentUser.id, // Zorg voor auth.uid()
         'created_at': DateTime.now().toIso8601String(),
         'updated_at': DateTime.now().toIso8601String(),
         // Add other fields as needed
       });
       AppLogger.instance.i('Project $projectId inserted into Supabase');
     } catch (e) {
-      AppLogger.instance.w('Project insert failed, might already exist', error: e);
+      AppLogger.instance
+          .w('Project insert failed, might already exist', error: e);
       // Continue anyway - membership is more important
     }
 
     // Insert membership with owner role
     try {
-      await Supabase.instance.client.from('project_members').insert({
+      await supabaseClient.from('project_members').insert({
         'project_id': projectId,
-        'user_id': currentUser.id,  // Zorg voor auth.uid()
+        'user_id': currentUser.id, // Zorg voor auth.uid()
         'role': 'owner',
       });
-      AppLogger.instance.i('Membership created for user ${currentUser.id} in project $projectId');
+      AppLogger.instance.i(
+          'Membership created for user ${currentUser.id} in project $projectId');
     } catch (e) {
-      AppLogger.instance.e('Membership insert failed for project $projectId', error: e);
+      AppLogger.instance
+          .e('Membership insert failed for project $projectId', error: e);
       // This is critical - rethrow to fail the operation
       rethrow;
     }
@@ -109,7 +114,7 @@ class CloudSyncService {
     String? userId,
     Map<String, Object?>? metadata,
   }) async {
-    final currentUser = Supabase.instance.client.auth.currentUser;
+    final currentUser = supabaseClient.auth.currentUser;
     if (currentUser == null) {
       AppLogger.instance.w('Skipping project sync: no authenticated user');
       return;
@@ -128,7 +133,7 @@ class CloudSyncService {
         updateData.addAll(metadata);
       }
 
-      await Supabase.instance.client.from('projects').upsert(updateData);
+      await supabaseClient.from('projects').upsert(updateData);
       AppLogger.instance.i('Project $projectId upserted to Supabase');
     } catch (e) {
       AppLogger.instance.w('Project upsert failed for $projectId', error: e);
@@ -148,7 +153,7 @@ class CloudSyncService {
     String? userId,
     Map<String, Object?>? metadata,
   }) async {
-    final currentUser = Supabase.instance.client.auth.currentUser;
+    final currentUser = supabaseClient.auth.currentUser;
     if (currentUser == null) {
       AppLogger.instance.w('Skipping project sync: no authenticated user');
       return;
@@ -156,7 +161,7 @@ class CloudSyncService {
 
     // Delete project from Supabase
     try {
-      await Supabase.instance.client.from('projects').delete().eq('id', projectId);
+      await supabaseClient.from('projects').delete().eq('id', projectId);
       AppLogger.instance.i('Project $projectId deleted from Supabase');
     } catch (e) {
       AppLogger.instance.w('Project delete failed for $projectId', error: e);
@@ -172,7 +177,7 @@ class CloudSyncService {
   }
 
   Future<void> syncProjectBulkDelete({String? userId}) async {
-    final currentUser = Supabase.instance.client.auth.currentUser;
+    final currentUser = supabaseClient.auth.currentUser;
     if (currentUser == null) {
       AppLogger.instance.w('Skipping project sync: no authenticated user');
       return;
@@ -180,11 +185,12 @@ class CloudSyncService {
 
     // NOTE: Vervang door Supabase call later; controleer auth sessie.
     AppLogger.instance.i('Placeholder sync bulk delete');
-    await _insertAnalytics(AnalyticsEventName.projectBulkDeleted, userId: currentUser.id);
+    await _insertAnalytics(AnalyticsEventName.projectBulkDeleted,
+        userId: currentUser.id);
   }
 
   Future<void> syncAll({String? userId}) async {
-    final currentUser = Supabase.instance.client.auth.currentUser;
+    final currentUser = supabaseClient.auth.currentUser;
     if (currentUser == null) {
       AppLogger.instance.w('Skipping project sync: no authenticated user');
       return;
@@ -197,8 +203,9 @@ class CloudSyncService {
 
     // Fetch all projects from Supabase for sync
     try {
-      final response = await Supabase.instance.client.from('projects').select();
-      AppLogger.instance.i('Fetched ${response.length} projects from Supabase for sync');
+      final response = await supabaseClient.from('projects').select();
+      AppLogger.instance
+          .i('Fetched ${response.length} projects from Supabase for sync');
 
       final localProjects = await repository!.getAllProjects();
       // final remoteProjects = response.map((json) => ProjectModel.fromJson(json)).toList();
@@ -239,13 +246,13 @@ class CloudSyncService {
 
   /// Get real-time stream of projects changes
   Stream<List<Map<String, dynamic>>> getProjectsStream() {
-    final currentUser = Supabase.instance.client.auth.currentUser;
+    final currentUser = supabaseClient.auth.currentUser;
     if (currentUser == null) {
       AppLogger.instance.w('Cannot stream projects: no authenticated user');
       return const Stream.empty();
     }
 
-    return Supabase.instance.client.from('projects').stream(primaryKey: ['id']);
+    return supabaseClient.from('projects').stream(primaryKey: ['id']);
   }
 
   Future<void> authSignIn(
