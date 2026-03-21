@@ -2417,9 +2417,9 @@
   "@mirrorApplyNoDiff": {
     "description": "Fallback diff line when no differences are found in the apply dialog."
   },
-  "mirrorApplyBranchAdviceTitle": "Git branch advice",
+  "mirrorApplyBranchAdviceTitle": "Suggested branch name \u2013 advice only",
   "@mirrorApplyBranchAdviceTitle": {
-    "description": "Title of the branch advice card in the apply dialog."
+    "description": "Title of the branch advice card in the apply dialog. Explicitly advisory: Mirror never creates or switches branches."
   },
   "mirrorApplyCurrentBranch": "Current branch: {branch}",
   "@mirrorApplyCurrentBranch": {
@@ -2430,9 +2430,9 @@
       }
     }
   },
-  "mirrorApplySuggestedBranch": "Suggested branch: {branch}",
+  "mirrorApplySuggestedBranch": "Suggested branch name (advice only): {branch}",
   "@mirrorApplySuggestedBranch": {
-    "description": "Label showing the suggested target branch in the apply dialog.",
+    "description": "Label showing the suggested branch name in the apply dialog. Marked as advice only: Mirror does not create or switch branches.",
     "placeholders": {
       "branch": {
         "type": "String"

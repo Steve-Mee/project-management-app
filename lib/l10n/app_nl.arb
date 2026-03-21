@@ -1823,7 +1823,7 @@
   "@mirrorApplyNoDiff": {
     "description": "Fallback diff line when no differences are found in the apply dialog."
   },
-  "mirrorApplyBranchAdviceTitle": "Git branch advies",
+  "mirrorApplyBranchAdviceTitle": "Aanbevolen branchnaam \u2013 alleen advies",
   "@mirrorApplyBranchAdviceTitle": {
     "description": "Title of the branch advice card in the apply dialog."
   },
@@ -1836,7 +1836,7 @@
       }
     }
   },
-  "mirrorApplySuggestedBranch": "Aanbevolen branch: {branch}",
+  "mirrorApplySuggestedBranch": "Aanbevolen branchnaam (alleen advies): {branch}",
   "@mirrorApplySuggestedBranch": {
     "description": "Label showing the suggested target branch in the apply dialog.",
     "placeholders": {

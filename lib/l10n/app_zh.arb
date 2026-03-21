@@ -1203,7 +1203,7 @@
   "@mirrorApplyNoDiff": {
     "description": "Fallback diff line when no differences are found in the apply dialog."
   },
-  "mirrorApplyBranchAdviceTitle": "Git 分支建议",
+  "mirrorApplyBranchAdviceTitle": "建议分支名称 – 仅供参考",
   "@mirrorApplyBranchAdviceTitle": {
     "description": "Title of the branch advice card in the apply dialog."
   },
@@ -1216,7 +1216,7 @@
       }
     }
   },
-  "mirrorApplySuggestedBranch": "建议分支：{branch}",
+  "mirrorApplySuggestedBranch": "建议分支名称（仅供参考）：{branch}",
   "@mirrorApplySuggestedBranch": {
     "description": "Label showing the suggested target branch in the apply dialog.",
     "placeholders": {
