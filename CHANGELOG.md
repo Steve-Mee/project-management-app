@@ -1,3 +1,9 @@
+## [1.49.1](https://github.com/Steve-Mee/project-management-app/compare/v1.49.0...v1.49.1) (2026-03-21)
+
+### Bug Fixes
+
+* **mirror-gateway:** resolve supabase type imports for editor diagnostics ([5c4bc92](https://github.com/Steve-Mee/project-management-app/commit/5c4bc92b9e89386bbd2a7ffd65f980f59f384d45))
+
 ## [1.49.0](https://github.com/Steve-Mee/project-management-app/compare/v1.48.0...v1.49.0) (2026-03-21)
 
 ### Features
