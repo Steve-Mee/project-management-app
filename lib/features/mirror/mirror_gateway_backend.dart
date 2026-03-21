@@ -501,7 +501,7 @@ class MirrorGatewayBackend implements MirrorComputeBackend {
         required bool success,
         required int attempt,
       }) {
-        _observabilityService?.recordCompileLatency(
+        _observabilityService?.recordHttpAttemptLatency(
           durationMs: durationMs,
           mode: mode,
           operation: 'compile',
@@ -647,7 +647,7 @@ class MirrorGatewayBackend implements MirrorComputeBackend {
         required bool success,
         required int attempt,
       }) {
-        _observabilityService?.recordCompileLatency(
+        _observabilityService?.recordHttpAttemptLatency(
           durationMs: durationMs,
           mode: mode,
           operation: 'apply',

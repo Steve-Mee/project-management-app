@@ -34,6 +34,33 @@ Required dashboards:
 - Resilience: replay queue depth, circuit-breaker transitions
 - Security: auth denials, idempotency conflict rates
 
+### Mirror Observability Taxonomy
+
+Use distinct Mirror client telemetry events for latency triage:
+
+- `mirror_compile_http_attempt_latency`: compile-only HTTP attempt latency.
+- `mirror_apply_http_attempt_latency`: apply-only HTTP attempt latency.
+- `mirror_http_attempt_latency`: aggregate HTTP attempt latency across compile/apply.
+
+Required event fields:
+
+- `schemaVersion` (current: `2`)
+- `layer` (`client_gateway`)
+- `stage` (`http_attempt`)
+- `operation` (`compile` or `apply`)
+- `outcome` (`success` or `failure`)
+- `durationMs`, `attempt`, `mode`
+- `requestId`, `traceId`, `idempotencyKey` (when available)
+
+Operational query examples:
+
+- Debug compile spikes quickly: filter on `mirror_compile_http_attempt_latency`.
+- Debug apply spikes quickly: filter on `mirror_apply_http_attempt_latency`.
+- Build total latency percentiles: use `mirror_http_attempt_latency`, then group by `operation`.
+
+Gateway-side usage metering in `mirror_usage_logs` remains action-scoped via
+`action` (`compile` or `apply`) and `duration_ms`.
+
 ## SLO Targets
 
 Reference targets:

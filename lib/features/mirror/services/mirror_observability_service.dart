@@ -42,6 +42,46 @@ class MirrorObservabilityService {
   /// [operation]   `'compile'` or `'apply'`.
   /// [success]     Whether the HTTP call returned a 2xx response.
   /// [attempt]     1-based attempt number within the retry loop.
+  void recordHttpAttemptLatency({
+    required int durationMs,
+    required String mode,
+    required String operation,
+    required bool success,
+    int attempt = 1,
+    String? requestId,
+    String? traceId,
+    String? idempotencyKey,
+  }) {
+    final normalizedOperation = operation.trim().toLowerCase();
+    final outcome = success ? 'success' : 'failure';
+    final payload = <String, Object?>{
+      'schemaVersion': 2,
+      'layer': 'client_gateway',
+      'stage': 'http_attempt',
+      'durationMs': durationMs,
+      'mode': mode,
+      'operation': normalizedOperation,
+      'outcome': outcome,
+      'attempt': attempt,
+      if (requestId != null) 'requestId': requestId,
+      if (traceId != null) 'traceId': traceId,
+      if (idempotencyKey != null) 'idempotencyKey': idempotencyKey,
+    };
+
+    final operationEvent = switch (normalizedOperation) {
+      'compile' => 'mirror_compile_http_attempt_latency',
+      'apply' => 'mirror_apply_http_attempt_latency',
+      _ => null,
+    };
+
+    if (operationEvent != null) {
+      AppLogger.event(operationEvent, params: payload);
+    }
+
+    AppLogger.event('mirror_http_attempt_latency', params: payload);
+  }
+
+  @Deprecated('Use recordHttpAttemptLatency for operation-specific taxonomy.')
   void recordCompileLatency({
     required int durationMs,
     required String mode,
@@ -52,18 +92,15 @@ class MirrorObservabilityService {
     String? traceId,
     String? idempotencyKey,
   }) {
-    AppLogger.event(
-      'mirror_compile_latency',
-      params: <String, Object?>{
-        'durationMs': durationMs,
-        'mode': mode,
-        'operation': operation,
-        'success': success,
-        'attempt': attempt,
-        if (requestId != null) 'requestId': requestId,
-        if (traceId != null) 'traceId': traceId,
-        if (idempotencyKey != null) 'idempotencyKey': idempotencyKey,
-      },
+    recordHttpAttemptLatency(
+      durationMs: durationMs,
+      mode: mode,
+      operation: operation,
+      success: success,
+      attempt: attempt,
+      requestId: requestId,
+      traceId: traceId,
+      idempotencyKey: idempotencyKey,
     );
   }
 
