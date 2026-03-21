@@ -2,6 +2,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../../../core/providers/supabase_client_provider.dart';
 import '../models/mirror_template.dart';
 import '../services/mirror_observability_service.dart';
 import '../services/mirror_templates_cache.dart';
@@ -16,7 +17,7 @@ final mirrorTemplatesObservabilityProvider =
 
 final mirrorTemplatesProvider =
     FutureProvider<List<MirrorTemplate>>((ref) async {
-  final client = Supabase.instance.client;
+  final client = ref.read(supabaseClientProvider);
   final persistentCache = ref.read(mirrorTemplatesCacheProvider);
   final observability = ref.read(mirrorTemplatesObservabilityProvider);
   final now = DateTime.now().toUtc();

@@ -12,6 +12,7 @@ import '../../generated/app_localizations.dart';
 
 import '../../core/providers/mirror_session_provider.dart';
 import '../../core/providers/mirror_provider.dart';
+import '../../core/providers/supabase_client_provider.dart';
 import 'models/mirror_template.dart';
 import 'providers/mirror_templates_provider.dart';
 import 'services/mirror_editor_realtime_controller.dart';
@@ -70,6 +71,7 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
       projectId: widget.projectId,
       taskId: widget.taskId,
       sessionKey: _sessionKey,
+      supabaseClient: ref.read(supabaseClientProvider),
     );
     _runService = const MirrorEditorRunService();
     _mirrorPermissionSubscription = ref.listenManual<bool>(

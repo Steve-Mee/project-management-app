@@ -11,6 +11,7 @@ import '../../features/mirror/services/mirror_context_budget_service.dart';
 import 'mirror_feature_flag_provider.dart';
 import 'mirror_provider.dart';
 import 'mirror_session_provider.dart';
+import 'supabase_client_provider.dart';
 
 final mirrorContextBudgetServiceProvider =
     Provider<MirrorContextBudgetService>((ref) {
@@ -20,7 +21,7 @@ final mirrorContextBudgetServiceProvider =
 final mirrorGatewayBackendProvider = Provider<MirrorGatewayBackend>((ref) {
   final budgetService = ref.read(mirrorContextBudgetServiceProvider);
   return MirrorGatewayBackend(
-    client: Supabase.instance.client,
+    client: ref.read(supabaseClientProvider),
     budgetService: budgetService,
     onCompileValidated: ({
       required String projectId,

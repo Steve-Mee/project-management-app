@@ -9,6 +9,7 @@ class MirrorRealtimeService {
     required this.projectId,
     required this.taskId,
     required this.sessionKey,
+    this.supabaseClient,
     this.maxLiveOutputLines = 500,
     this.maxRealtimeCharsPerLine = 500,
     this.maxRealtimeLinesPerEvent = 50,
@@ -20,6 +21,7 @@ class MirrorRealtimeService {
   final String projectId;
   final String taskId;
   final String sessionKey;
+  final SupabaseClient? supabaseClient;
   final int maxLiveOutputLines;
   final int maxRealtimeCharsPerLine;
   final int maxRealtimeLinesPerEvent;
@@ -174,7 +176,8 @@ class MirrorRealtimeService {
   bool _isRecordInRealtimeScope(Map<String, dynamic> record) {
     String? currentUserId;
     try {
-      currentUserId = Supabase.instance.client.auth.currentUser?.id;
+      final client = supabaseClient ?? Supabase.instance.client;
+      currentUserId = client.auth.currentUser?.id;
     } catch (_) {
       return false;
     }

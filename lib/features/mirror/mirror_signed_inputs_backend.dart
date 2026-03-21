@@ -71,7 +71,7 @@ class MirrorFilePatch {
 }
 
 const MirrorPatchService _mirrorPatchService = MirrorPatchService();
-const MirrorSecureApplyService _mirrorSecureApplyService =
+final MirrorSecureApplyService _mirrorSecureApplyService =
     MirrorSecureApplyService();
 const MirrorAuditHistoryService _mirrorAuditHistoryService =
     MirrorAuditHistoryService();

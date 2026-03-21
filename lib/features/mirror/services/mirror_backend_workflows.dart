@@ -10,7 +10,7 @@ class MirrorBackendWorkflows {
   const MirrorBackendWorkflows();
 
   static const MirrorPatchService _patchService = MirrorPatchService();
-  static const MirrorSecureApplyService _secureApplyService =
+  static final MirrorSecureApplyService _secureApplyService =
       MirrorSecureApplyService();
   static const MirrorAuditHistoryService _auditHistoryService =
       MirrorAuditHistoryService();
