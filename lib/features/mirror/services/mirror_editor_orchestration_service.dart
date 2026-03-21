@@ -8,7 +8,7 @@ import '../../../generated/app_localizations.dart';
 import '../../../core/providers/mirror_entitlement_provider.dart';
 import '../../../core/providers/mirror_session_provider.dart';
 import '../apply_dialog.dart';
-import '../mirror_compute_backend.dart';
+import '../mirror_signed_inputs_backend.dart';
 import 'mirror_orchestrator_service.dart';
 
 class MirrorEditorOrchestrationService {

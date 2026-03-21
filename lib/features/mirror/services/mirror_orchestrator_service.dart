@@ -7,7 +7,7 @@ import 'package:pma_core/providers/task/task_providers.dart';
 import 'package:pma_core/services/app_logger.dart';
 
 import '../../../core/providers/mirror_session_provider.dart';
-import '../mirror_compute_backend.dart';
+import '../mirror_signed_inputs_backend.dart';
 import 'mirror_outbox_replay_service.dart';
 
 export 'mirror_outbox_replay_service.dart' show MirrorOutboxEntry;

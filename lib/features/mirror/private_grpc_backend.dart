@@ -6,7 +6,7 @@ import 'package:flutter/foundation.dart';
 import 'package:grpc/grpc.dart';
 
 import 'grpc_generated/mirror.pbgrpc.dart';
-import 'mirror_compute_backend.dart';
+import 'mirror_signed_inputs_backend.dart';
 
 const bool _isProductionGrpcRuntime =
     bool.fromEnvironment('dart.vm.product', defaultValue: false);

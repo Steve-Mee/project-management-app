@@ -24,9 +24,9 @@
 
 ### Zwakke punten
 
-- **`cloud_fly_backend.dart` bestaat niet**: de user-prompt beschrijft een `CloudFlyBackend`, maar dit bestand bestaat niet op schijf. Cloud-routing loopt via `MirrorGatewayBackend` → `FLY_MIRROR_COMPUTE_ENDPOINT`. Dit veroorzaakt verwachting-werkelijkheidskloof in de documentatie.
+- **`private_grpc_backend.dart` is de gRPC-implementatie**: de `PrivateGrpcBackend` beheert private gRPC-transport. Cloud-routing loopt via `MirrorGatewayBackend` → `FLY_MIRROR_COMPUTE_ENDPOINT`.
 - **Geen go_router-route voor `MirrorEditorScreen`**: navigatie is puur imperatief (`Navigator.push`), waardoor deep links via URL ontbreken. Er is een `initialRoute.contains('mirror')` check in `projects_initializer.dart` maar geen gedeclareerde route.
-- **Dubbele model-klassen**: `ApplySecurityArtifacts` in `mirror_compute_backend.dart` en `MirrorSecureApplyArtifacts` in `mirror_secure_apply_service.dart` zijn inhoudelijk identiek; hetzelfde voor `ApplyUploadFailure` / `MirrorSecureApplyUploadFailure`.
+- **Dubbele model-klassen**: `ApplySecurityArtifacts` in `mirror_signed_inputs_backend.dart` en `MirrorSecureApplyArtifacts` in `mirror_secure_apply_service.dart` zijn inhoudelijk identiek; hetzelfde voor `ApplyUploadFailure` / `MirrorSecureApplyUploadFailure`.
 - **Overlappende verantwoordelijkheden**: `MirrorEditorRunService` doet een budget-preflight-check en delegeert dan naar `MirrorEditorOrchestrationService`, die zelf ook file-validaties uitvoert. Gedeelde schermen tussen twee servicelagen.
 - **Monaco op desktop via HTML fallback**: `monaco_editor_host_io.dart` checkt `InAppWebViewPlatform.instance != null`. Op Windows/Linux/macOS valt dit door naar een gewone `TextField`, wat een significant UX-verschil is van de browser-omgeving.
 - **A/B-testing timeout van 3 seconden** kan een merkbare startup-vertraging veroorzaken bij elke sessie-init.
@@ -252,7 +252,7 @@ Een mature, goed-beveiligde implementatie met uitzonderlijk sterke integriteits-
 | # | Bestand | Wijziging |
 |---|---------|-----------|
 | W1 | `lib/features/mirror/services/mirror_editor_run_service.dart` | Verwijder de dubbele budget-preflight-check (zit ook in orchestration service). Houd één authoritative check in `MirrorEditorOrchestrationService`. |
-| W2 | `lib/features/mirror/mirror_compute_backend.dart` | Verplaats `MirrorPatchTools`, `MirrorApplySecurity` en `MirrorPromptBuilder` extensions naar aparte service-klassen in de `services/` map. Dit verwijdert de ISP-overtreding. |
+| W2 | `lib/features/mirror/mirror_signed_inputs_backend.dart` | Verplaats `MirrorPatchTools`, `MirrorApplySecurity` en `MirrorPromptBuilder` extensions naar aparte service-klassen in de `services/` map. Dit verwijdert de ISP-overtreding. |
 | W3 | `lib/features/mirror/mirror_gateway_backend.dart` | Vervang `_resolveClient(null)` fallback naar `Supabase.instance.client` door een verplichte constructor-parameter met `@visibleForTesting` override, zodat de singleton niet stilletjes de injectie omzeilt. |
 | W4 | `lib/features/mirror/providers/mirror_templates_provider.dart` | Vervang `Supabase.instance.client` op regel 18 door een geïnjecteerde client via een provider (conform rest van codebase). |
 | W5 | `lib/features/mirror/mirror_editor_screen.dart` | `_liveOutputScrollController.dispose()` is reeds correct aanwezig in de `dispose()`-methode. ✅ Geen actie vereist — notatie ter bevestiging van correctheid. |
@@ -290,9 +290,9 @@ Een mature, goed-beveiligde implementatie met uitzonderlijk sterke integriteits-
 
 | # | Bestand | Wat te verwijderen | Reden |
 |---|---------|---------------------|-------|
-| D1 | `lib/features/mirror/mirror_compute_backend.dart` (+ `mirror_secure_apply_service.dart`) | Elimineer `ApplySecurityArtifacts` / `ApplyUploadFailure` / `ApplyUploadFailureCode` duplicate model-klassen. Kies één definitie (recommend: `mirror_secure_apply_service.dart`) en laat `mirror_compute_backend.dart` ernaar verwijzen. | Twee identieke klassen met verschillende namen verhogen cognitieve last en veroorzaken merge-fouten. |
+| D1 | `lib/features/mirror/mirror_signed_inputs_backend.dart` (+ `mirror_secure_apply_service.dart`) | Elimineer `ApplySecurityArtifacts` / `ApplyUploadFailure` / `ApplyUploadFailureCode` duplicate model-klassen. Kies één definitie (recommend: `mirror_secure_apply_service.dart`) en laat `mirror_signed_inputs_backend.dart` ernaar verwijzen. | Twee identieke klassen met verschillende namen verhogen cognitieve last en veroorzaken merge-fouten. |
 | D2 | `lib/core/providers/ai_chat_provider.dart` | Verwijder de zinloze `ref.read(aiChatProvider)` aanroep in `openMirrorFromTask()` als die geen side-effect heeft. | Dead code / verborgen side-effect zonder documentatie. |
-| D3 | Overal waar `cloud_fly_backend.dart` als concept wordt aangehaald in comments/docu | Verwijder verwijzingen naar een `CloudFlyBackend`-klasse die niet bestaat. Vervang door "via MirrorGatewayBackend → FLY_MIRROR_COMPUTE_ENDPOINT". | Verwarring met documentatie die niet overeenkomt met de werkelijke implementatie. |
+| D3 | ~~Opgelost~~: `cloud_fly_backend.dart` / `CloudFlyBackend` verwijzingen zijn verwijderd uit docs en code. `PrivateGrpcBackend` (`private_grpc_backend.dart`) is de correcte gRPC-implementatie. | — | Naming drift volledig opgeruimd. |
 | D4 | `lib/features/mirror/widgets/monaco_editor_host_stub.dart` | Overweeg dit stub-bestand te verwijderen als het nergens geïmporteerd wordt (enkel `monaco_editor_host.dart` barrel + `_io` + `_web` zijn in gebruik). | Dode code verhoogt navigatiekosten. |
 | D5 | `lib/features/mirror/services/mirror_editor_run_service.dart` | De budget-preflight dupliceert `MirrorEditorOrchestrationService`. Na refactoring (W1) kan `MirrorEditorRunService` worden omgezet tot een thin wrapper of verwijderd ten gunste van directe aanroep van `MirrorEditorOrchestrationService`. | Overtollige laag met gedeelde verantwoordelijkheid. |
 

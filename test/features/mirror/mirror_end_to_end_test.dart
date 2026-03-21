@@ -9,7 +9,7 @@ import 'package:project_management_app/core/providers/mirror_entitlement_provide
 import 'package:project_management_app/core/providers/mirror_offline_cache_provider.dart';
 import 'package:project_management_app/core/providers/mirror_session_provider.dart';
 import 'package:project_management_app/features/mirror/mirror_editor_screen.dart';
-import 'package:project_management_app/features/mirror/mirror_compute_backend.dart';
+import 'package:project_management_app/features/mirror/mirror_signed_inputs_backend.dart';
 import 'package:project_management_app/generated/app_localizations.dart';
 import 'package:pma_core/auth/permissions.dart';
 import 'package:pma_core/providers/auth/auth_providers.dart';

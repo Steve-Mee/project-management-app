@@ -8,7 +8,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:uuid/uuid.dart';
 
 import '../../core/config/app_config.dart';
-import 'mirror_compute_backend.dart';
+import 'mirror_signed_inputs_backend.dart';
 import 'services/mirror_context_budget_service.dart';
 import 'services/mirror_observability_service.dart';
 import 'services/mirror_retry_policy.dart';

@@ -15,7 +15,7 @@ import 'package:pma_core/services/app_logger.dart';
 
 import '../../../core/providers/mirror_entitlement_provider.dart';
 import '../../../core/providers/mirror_session_provider.dart';
-import '../mirror_compute_backend.dart';
+import '../mirror_signed_inputs_backend.dart';
 import 'mirror_context_budget_service.dart';
 import 'mirror_observability_service.dart';
 

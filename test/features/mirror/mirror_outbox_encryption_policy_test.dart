@@ -5,7 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:project_management_app/core/services/mirror_premium_service.dart';
-import 'package:project_management_app/features/mirror/mirror_compute_backend.dart';
+import 'package:project_management_app/features/mirror/mirror_signed_inputs_backend.dart';
 import 'package:project_management_app/features/mirror/services/mirror_outbox_replay_service.dart';
 
 class _FakeRef implements Ref {

@@ -1,6 +1,6 @@
 // ARCHITECTURE LOCK: Mirror Gateway = thin proxy only. Compute always on Fly.io or local runner.
 import 'package:flutter_test/flutter_test.dart';
-import 'package:project_management_app/features/mirror/mirror_compute_backend.dart';
+import 'package:project_management_app/features/mirror/mirror_signed_inputs_backend.dart';
 
 // Run this test with:
 // flutter test test/mirror_integration_test.dart -r expanded

@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'dart:typed_data';
 
-import '../mirror_compute_backend.dart';
+import '../mirror_signed_inputs_backend.dart';
 import '_gzip_helper.dart' if (dart.library.io) '_gzip_helper_io.dart';
 
 /// Describes what [MirrorContextBudgetService.enforce] changed.

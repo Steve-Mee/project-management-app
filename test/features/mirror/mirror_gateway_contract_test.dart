@@ -6,7 +6,7 @@ import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:project_management_app/features/mirror/mirror_gateway_backend.dart';
-import 'package:project_management_app/features/mirror/mirror_compute_backend.dart';
+import 'package:project_management_app/features/mirror/mirror_signed_inputs_backend.dart';
 
 void main() {
   group('Mirror gateway contract', () {

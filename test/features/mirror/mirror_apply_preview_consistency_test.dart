@@ -17,7 +17,7 @@ void main() {
 
     test('backend apply contract supports compile fingerprint validation', () {
       final contract =
-          _readRepoFile('lib/features/mirror/mirror_compute_backend.dart');
+          _readRepoFile('lib/features/mirror/mirror_signed_inputs_backend.dart');
       final grpc = _readRepoFile('lib/features/mirror/private_grpc_backend.dart');
       final edge = _readRepoFile('lib/features/mirror/mirror_gateway_backend.dart');
 

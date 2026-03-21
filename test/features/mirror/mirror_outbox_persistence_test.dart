@@ -6,7 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:project_management_app/core/providers/mirror_session_provider.dart';
-import 'package:project_management_app/features/mirror/mirror_compute_backend.dart';
+import 'package:project_management_app/features/mirror/mirror_signed_inputs_backend.dart';
 import 'package:project_management_app/features/mirror/services/mirror_orchestrator_service.dart';
 
 class _AlwaysFailBackend implements MirrorComputeBackend {
