@@ -2,7 +2,6 @@ library;
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pma_core/services/mirror_access_policy.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../features/mirror/mirror_signed_inputs_backend.dart';
 import '../../features/mirror/mirror_gateway_backend.dart';

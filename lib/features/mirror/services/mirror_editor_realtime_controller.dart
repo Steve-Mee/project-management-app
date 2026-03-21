@@ -74,14 +74,14 @@ class MirrorEditorRealtimeController {
     required void Function(List<String> lines) onFlush,
     required String Function(String status) statusLineLabel,
   }) {
-    final _supabaseClient = supabaseClient ?? Supabase.instance.client;
-    final currentUserId = _supabaseClient.auth.currentUser?.id;
+    final resolvedClient = supabaseClient ?? Supabase.instance.client;
+    final currentUserId = resolvedClient.auth.currentUser?.id;
     if (currentUserId == null || currentUserId.isEmpty) {
       return;
     }
 
     final topic = 'mirror_ai_sessions:$currentUserId:$projectId:$taskId';
-    final channel = _supabaseClient.channel('mirror-ai-output-$topic');
+    final channel = resolvedClient.channel('mirror-ai-output-$topic');
 
     _aiOutputChannel = channel
         .onBroadcast(
