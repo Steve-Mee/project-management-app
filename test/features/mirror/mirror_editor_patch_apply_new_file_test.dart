@@ -5,22 +5,25 @@ import 'package:project_management_app/features/mirror/services/mirror_realtime_
 
 void main() {
   group('Mirror new-file patch apply contract', () {
-    test('editor apply flow upserts new files from patch previews', () {
-      final editorSource =
-          _readRepoFile('lib/features/mirror/services/mirror_editor_orchestration_service.dart');
+    test('run flow persists patch plan with upsert fallback for new files', () {
+      final source = _readRepoFile(
+          'lib/features/mirror/services/mirror_run_flow_service.dart');
 
-        expect(editorSource, contains('sessionNotifier.upsertFileContent('));
-      expect(editorSource, contains('path: patch.path,'));
-      expect(editorSource, contains('content: patch.updatedContent,'));
-      expect(editorSource, contains('if (!existsInSession) {'));
+      expect(
+          source, contains('_patchPipelineService.buildSessionPersistPlan('));
+      expect(source, contains('if (mutation.requiresUpsert) {'));
+      expect(source, contains('sessionNotifier.upsertFileContent('));
+      expect(source, contains('sessionNotifier.updateSelectedFileContent('));
     });
 
     test('session notifier supports upsert by file path', () {
       final providerSource =
           _readRepoFile('lib/core/providers/mirror_session_provider.dart');
 
-      expect(providerSource,
-          contains('void upsertFileContent({required String path, required String content})'));
+      expect(
+          providerSource,
+          contains(
+              'void upsertFileContent({required String path, required String content})'));
       expect(providerSource, contains('updatedFiles[path] = content;'));
       expect(providerSource, contains('state = state.copyWith('));
       expect(providerSource, contains('files: updatedFiles,'));

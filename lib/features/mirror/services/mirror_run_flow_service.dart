@@ -7,13 +7,14 @@ import '../../../generated/app_localizations.dart';
 import '../apply_dialog.dart';
 import '../mirror_signed_inputs_backend.dart';
 import '../providers/mirror_orchestrator_provider.dart';
-import 'mirror_backend_workflows.dart';
+import 'mirror_patch_pipeline_service.dart';
 import 'mirror_preview_metadata_service.dart';
 
 class MirrorRunFlowService {
   const MirrorRunFlowService();
 
-  static const MirrorBackendWorkflows _workflows = MirrorBackendWorkflows();
+  static const MirrorPatchPipelineService _patchPipelineService =
+      MirrorPatchPipelineService();
   static const MirrorPreviewMetadataService _previewMetadataService =
       MirrorPreviewMetadataService();
 
@@ -64,13 +65,6 @@ class MirrorRunFlowService {
         ),
       );
 
-      final originalCompileContext = ProjectContext(
-        projectId: executionContext.projectId,
-        taskId: executionContext.taskId,
-        files: Map<String, String>.from(executionContext.files),
-        metadata: executionContext.metadata,
-      );
-
       appendTerminalLine(l10n.mirrorStepGenerateSent);
       final generateResult = await orchestrator.generate(
         ref: ref,
@@ -97,38 +91,20 @@ class MirrorRunFlowService {
       appendTerminalLine(l10n.mirrorStepGenerateCompleted);
       if (generateResult.diagnostics.isNotEmpty) {
         appendTerminalLine(
-          l10n.mirrorGenerateDiagnostics(generateResult.diagnostics.join(' | ')),
+          l10n.mirrorGenerateDiagnostics(
+              generateResult.diagnostics.join(' | ')),
         );
       }
 
-      final generatedPatches = _workflows.buildPreviewPatches(
-        context: executionContext,
+      final compilePlan = _patchPipelineService.prepareCompilePlan(
+        executionContext: executionContext,
         selectedFile: selectedFile,
-        compileOutput: generateResult.code,
+        selectedContent: selectedContent,
         generatedCode: generateResult.code,
       );
-
-      final compileContext = generatedPatches.isEmpty
-          ? originalCompileContext
-          : originalCompileContext.copyWith(
-              files: _workflows.applyPatchesToFiles(
-                files: originalCompileContext.files,
-                patches: generatedPatches,
-              ),
-            );
-
-      final compileContextFingerprint =
-          _previewMetadataService.computeContextFingerprint(compileContext.files);
-
-      final compileContextForPreviewAndApply = compileContext.copyWith(
-        files: Map<String, String>.from(compileContext.files),
-        metadata: compileContext.metadata.copyWith(
-          previewContextFingerprint: compileContextFingerprint,
-        ),
-      );
-
-      final runPrompt = _firstNonEmpty(generateResult.code, selectedContent) ??
-          selectedContent;
+      final compileContextForPreviewAndApply =
+          compilePlan.compileContextForPreviewAndApply;
+      final runPrompt = compilePlan.runPrompt;
 
       appendTerminalLine(l10n.mirrorStepCompileSent);
       final compileResult = await orchestrator.compile(
@@ -155,7 +131,8 @@ class MirrorRunFlowService {
       appendTerminalLine(l10n.mirrorStepCompileCompleted);
       final compileOutput = compileResult.output;
       if (compileOutput == null || compileOutput.trim().isEmpty) {
-        _showSnackBar(messenger, l10n.mirrorCompileFailed(l10n.mirrorUnknownCompileError));
+        _showSnackBar(messenger,
+            l10n.mirrorCompileFailed(l10n.mirrorUnknownCompileError));
         return;
       }
 
@@ -177,12 +154,13 @@ class MirrorRunFlowService {
       }
 
       appendTerminalLine(l10n.mirrorStepPreviewBuilding);
-      final patches = _workflows.buildPreviewPatches(
-        context: compileContextForPreviewAndApply,
+      final applyPlan = _patchPipelineService.prepareApplyPlan(
+        compileContextForPreviewAndApply: compileContextForPreviewAndApply,
         selectedFile: selectedFile,
         compileOutput: compileOutput,
         generatedCode: generateResult.code,
       );
+      final patches = applyPlan.patches;
 
       if (patches.isEmpty) {
         appendTerminalLine(l10n.mirrorNoPatchPreviewTerminal);
@@ -191,10 +169,7 @@ class MirrorRunFlowService {
 
       appendTerminalLine(l10n.mirrorStepPreviewReady(patches.length));
 
-      final previewPatch = patches.firstWhere(
-        (MirrorFilePatch patch) => patch.path == selectedFile,
-        orElse: () => patches.first,
-      );
+      final previewPatch = applyPlan.previewPatch!;
 
       appendTerminalLine(l10n.mirrorStepApplyWaiting(previewPatch.path));
       if (!context.mounted) {
@@ -281,7 +256,7 @@ class MirrorRunFlowService {
     final previousSelected =
         ref.read(mirrorSessionProvider(sessionKey)).selectedFile;
     final currentFiles = ref.read(mirrorSessionProvider(sessionKey)).files;
-    final patchPlan = _workflows.buildSessionPatchPlan(
+    final patchPlan = _patchPipelineService.buildSessionPersistPlan(
       currentFiles: currentFiles,
       previousSelected: previousSelected,
       fallbackSelectedFile: fallbackSelectedFile,

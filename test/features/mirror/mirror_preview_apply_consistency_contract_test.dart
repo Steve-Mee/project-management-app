@@ -6,25 +6,42 @@ import 'package:flutter_test/flutter_test.dart';
 void main() {
   group('Mirror preview/apply consistency contract', () {
     test('editor freezes mutable run inputs while run is active', () {
-      final source = _readRepoFile('lib/features/mirror/mirror_editor_screen.dart');
+      final source =
+          _readRepoFile('lib/features/mirror/mirror_editor_screen.dart');
 
       expect(source, contains('isEnabled: !_isRunInProgress'));
       expect(source, contains('if (_isRunInProgress) {'));
       expect(source, contains('onChanged: (String content) {'));
     });
 
-    test('orchestration carries previewContextFingerprint from compile snapshot', () {
+    test('run flow carries previewContextFingerprint from compile snapshot',
+        () {
       final source = _readRepoFile(
-        'lib/features/mirror/services/mirror_editor_orchestration_service.dart',
+        'lib/features/mirror/services/mirror_run_flow_service.dart',
       );
 
-      expect(source, contains("'previewContextFingerprint': compileContextFingerprint"));
+      expect(source, contains('compileContextForPreviewAndApply'));
+      expect(source, contains('_patchPipelineService.prepareCompilePlan('));
+      expect(source, contains('buildApplyMetadata('));
       expect(source, contains('context: compileContextForPreviewAndApply'));
-      expect(source, contains('metadata: Map<String, dynamic>.from('));
     });
 
-    test('gateway apply requires compile fingerprint and validates context fingerprint', () {
-      final source = _readRepoFile('lib/features/mirror/mirror_gateway_backend.dart');
+    test('patch planning contract is centralized in pipeline service', () {
+      final source = _readRepoFile(
+        'lib/features/mirror/services/mirror_patch_pipeline_service.dart',
+      );
+
+      expect(source, contains('class MirrorPatchPipelineService'));
+      expect(source, contains('MirrorCompilePatchPlan prepareCompilePlan('));
+      expect(source, contains('MirrorApplyPatchPlan prepareApplyPlan('));
+      expect(source, contains('buildSessionPersistPlan('));
+    });
+
+    test(
+        'gateway apply requires compile fingerprint and validates context fingerprint',
+        () {
+      final source =
+          _readRepoFile('lib/features/mirror/mirror_gateway_backend.dart');
 
       expect(source, contains('preview fingerprint missing'));
       expect(source, contains('preview fingerprint mismatch'));
