@@ -1723,7 +1723,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get mirrorApplyNoDiff => '(No differences detected)';
 
   @override
-  String get mirrorApplyBranchAdviceTitle => 'Git branch advice';
+  String get mirrorApplyBranchAdviceTitle =>
+      'Suggested branch name – advice only';
 
   @override
   String mirrorApplyCurrentBranch(String branch) {
@@ -1732,7 +1733,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String mirrorApplySuggestedBranch(String branch) {
-    return 'Suggested branch: $branch';
+    return 'Suggested branch name (advice only): $branch';
   }
 
   @override
@@ -1741,7 +1742,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String mirrorApplyBranchTipWithBranch(String branch) {
-    return 'Tip: use the suggested branch \"$branch\" for safer review and simpler rollback.';
+    return 'Advice only: consider using the suggested branch \"$branch\" for safer review and simpler rollback. Mirror will not create or switch branches for you.';
   }
 
   @override

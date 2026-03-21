@@ -1715,7 +1715,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get mirrorApplyNoDiff => '(差分が検出されませんでした)';
 
   @override
-  String get mirrorApplyBranchAdviceTitle => 'Gitブランチアドバイス';
+  String get mirrorApplyBranchAdviceTitle => '推奨ブランチ名 – あくまで提案です';
 
   @override
   String mirrorApplyCurrentBranch(String branch) {
@@ -1724,7 +1724,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String mirrorApplySuggestedBranch(String branch) {
-    return '推奨ブランチ: $branch';
+    return '推奨ブランチ名（参考のみ）: $branch';
   }
 
   @override
@@ -1733,7 +1733,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String mirrorApplyBranchTipWithBranch(String branch) {
-    return 'ヒント: 安全なレビューと簡単なロールバックのため、提案ブランチ「$branch」を使ってください。';
+    return '助言のみ: 提案ブランチ「$branch」は、より安全なレビューと簡単なロールバックのための推奨です。';
   }
 
   @override

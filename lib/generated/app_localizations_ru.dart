@@ -1727,7 +1727,8 @@ class AppLocalizationsRu extends AppLocalizations {
   String get mirrorApplyNoDiff => '(Различий не обнаружено)';
 
   @override
-  String get mirrorApplyBranchAdviceTitle => 'Рекомендация по ветке Git';
+  String get mirrorApplyBranchAdviceTitle =>
+      'Предлагаемое имя ветки – только рекомендация';
 
   @override
   String mirrorApplyCurrentBranch(String branch) {
@@ -1736,7 +1737,7 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String mirrorApplySuggestedBranch(String branch) {
-    return 'Рекомендуемая ветка: $branch';
+    return 'Предлагаемое имя ветки (только рекомендация): $branch';
   }
 
   @override
@@ -1745,7 +1746,7 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String mirrorApplyBranchTipWithBranch(String branch) {
-    return 'Совет: используйте предложенную ветку \"$branch\" для безопасной проверки и простого отката.';
+    return 'Только совет: рассматривайте предложенную ветку \"$branch\" как рекомендацию для более безопасной проверки и простого отката.';
   }
 
   @override

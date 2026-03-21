@@ -1714,7 +1714,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get mirrorApplyNoDiff => '(차이가 감지되지 않음)';
 
   @override
-  String get mirrorApplyBranchAdviceTitle => 'Git 브랜치 권장사항';
+  String get mirrorApplyBranchAdviceTitle => '권장 브랜치 이름 – 참고용 안내';
 
   @override
   String mirrorApplyCurrentBranch(String branch) {
@@ -1723,7 +1723,7 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String mirrorApplySuggestedBranch(String branch) {
-    return '권장 브랜치: $branch';
+    return '권장 브랜치 이름(참고용): $branch';
   }
 
   @override
@@ -1731,7 +1731,7 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String mirrorApplyBranchTipWithBranch(String branch) {
-    return '팁: 안전한 검토와 쉬운 롤백을 위해 제안된 브랜치 \"$branch\"를 사용하세요.';
+    return '조언 전용: 제안된 브랜치 \"$branch\"는 더 안전한 검토와 쉬운 롤백을 위한 권장 사항입니다.';
   }
 
   @override

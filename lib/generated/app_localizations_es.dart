@@ -1731,7 +1731,8 @@ class AppLocalizationsEs extends AppLocalizations {
   String get mirrorApplyNoDiff => '(No se detectaron diferencias)';
 
   @override
-  String get mirrorApplyBranchAdviceTitle => 'Consejo de rama Git';
+  String get mirrorApplyBranchAdviceTitle =>
+      'Nombre de rama sugerido – solo sugerencia';
 
   @override
   String mirrorApplyCurrentBranch(String branch) {
@@ -1740,7 +1741,7 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String mirrorApplySuggestedBranch(String branch) {
-    return 'Rama sugerida: $branch';
+    return 'Nombre de rama sugerido (solo sugerencia): $branch';
   }
 
   @override
@@ -1749,7 +1750,7 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String mirrorApplyBranchTipWithBranch(String branch) {
-    return 'Consejo: use la rama sugerida \"$branch\" para una revision segura y un rollback sencillo.';
+    return 'Solo consejo: considere usar la rama sugerida \"$branch\" como recomendacion para una revision mas segura y un rollback mas simple.';
   }
 
   @override

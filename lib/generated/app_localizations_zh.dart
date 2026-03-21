@@ -1712,7 +1712,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get mirrorApplyNoDiff => '(未检测到差异)';
 
   @override
-  String get mirrorApplyBranchAdviceTitle => 'Git 分支建议';
+  String get mirrorApplyBranchAdviceTitle => '建议分支名称 – 仅供参考';
 
   @override
   String mirrorApplyCurrentBranch(String branch) {
@@ -1721,7 +1721,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String mirrorApplySuggestedBranch(String branch) {
-    return '建议分支：$branch';
+    return '建议分支名称（仅供参考）：$branch';
   }
 
   @override
@@ -1729,7 +1729,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String mirrorApplyBranchTipWithBranch(String branch) {
-    return '提示：请使用建议分支“$branch”，以便安全审查并轻松回滚。';
+    return '仅供建议：可考虑使用推荐分支“$branch”进行更安全的审查和更简单的回滚。';
   }
 
   @override

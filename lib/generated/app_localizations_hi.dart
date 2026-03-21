@@ -1724,7 +1724,7 @@ class AppLocalizationsHi extends AppLocalizations {
   String get mirrorApplyNoDiff => '(कोई अंतर नहीं मिला)';
 
   @override
-  String get mirrorApplyBranchAdviceTitle => 'Git शाखा सलाह';
+  String get mirrorApplyBranchAdviceTitle => 'सुझाई गई शाखा का नाम – केवल सलाह';
 
   @override
   String mirrorApplyCurrentBranch(String branch) {
@@ -1733,7 +1733,7 @@ class AppLocalizationsHi extends AppLocalizations {
 
   @override
   String mirrorApplySuggestedBranch(String branch) {
-    return 'सुझाई गई शाखा: $branch';
+    return 'सुझाई गई शाखा का नाम (केवल सलाह): $branch';
   }
 
   @override
@@ -1742,7 +1742,7 @@ class AppLocalizationsHi extends AppLocalizations {
 
   @override
   String mirrorApplyBranchTipWithBranch(String branch) {
-    return 'सुझाव: सुरक्षित समीक्षा और आसान रोलबैक के लिए सुझाई गई शाखा \"$branch\" का उपयोग करें।';
+    return 'केवल सलाह: सुझाई गई शाखा \"$branch\" को सुझाव मानें ताकि समीक्षा अधिक सुरक्षित रहे और रोलबैक आसान हो।';
   }
 
   @override

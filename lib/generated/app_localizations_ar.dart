@@ -1721,7 +1721,8 @@ class AppLocalizationsAr extends AppLocalizations {
   String get mirrorApplyNoDiff => '(لم يتم اكتشاف أي فوارق)';
 
   @override
-  String get mirrorApplyBranchAdviceTitle => 'نصيحة فرع Git';
+  String get mirrorApplyBranchAdviceTitle =>
+      'اسم الفرع المقترح – للاسترشاد فقط';
 
   @override
   String mirrorApplyCurrentBranch(String branch) {
@@ -1730,7 +1731,7 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String mirrorApplySuggestedBranch(String branch) {
-    return 'الفرع المقترح: $branch';
+    return 'اسم الفرع المقترح (للاسترشاد فقط): $branch';
   }
 
   @override
@@ -1739,7 +1740,7 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String mirrorApplyBranchTipWithBranch(String branch) {
-    return 'نصيحة: استخدم الفرع المقترح \"$branch\" لمراجعة آمنة وتراجع أسهل.';
+    return 'للنصيحة فقط: اعتبر الفرع المقترح \"$branch\" توصية لمراجعة أكثر أمانا وتراجع أسهل.';
   }
 
   @override

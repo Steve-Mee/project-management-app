@@ -3225,10 +3225,10 @@ abstract class AppLocalizations {
   /// **'(No differences detected)'**
   String get mirrorApplyNoDiff;
 
-  /// Title of the branch advice card in the apply dialog.
+  /// Title of the branch advice card in the apply dialog. Explicitly advisory: Mirror never creates or switches branches.
   ///
   /// In en, this message translates to:
-  /// **'Git branch advice'**
+  /// **'Suggested branch name – advice only'**
   String get mirrorApplyBranchAdviceTitle;
 
   /// Label showing the active git branch in the apply dialog.
@@ -3237,10 +3237,10 @@ abstract class AppLocalizations {
   /// **'Current branch: {branch}'**
   String mirrorApplyCurrentBranch(String branch);
 
-  /// Label showing the suggested target branch in the apply dialog.
+  /// Label showing the suggested branch name in the apply dialog. Marked as advice only: Mirror does not create or switch branches.
   ///
   /// In en, this message translates to:
-  /// **'Suggested branch: {branch}'**
+  /// **'Suggested branch name (advice only): {branch}'**
   String mirrorApplySuggestedBranch(String branch);
 
   /// Tip text in the branch advice card encouraging branch-based workflow.
@@ -3252,7 +3252,7 @@ abstract class AppLocalizations {
   /// Tip text in the branch advice card with the suggested branch name.
   ///
   /// In en, this message translates to:
-  /// **'Tip: use the suggested branch \"{branch}\" for safer review and simpler rollback.'**
+  /// **'Advice only: consider using the suggested branch \"{branch}\" for safer review and simpler rollback. Mirror will not create or switch branches for you.'**
   String mirrorApplyBranchTipWithBranch(String branch);
 
   /// Notice in the branch advice card explaining apply behavior in the current working tree.
