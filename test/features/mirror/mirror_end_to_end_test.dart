@@ -6,7 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hive/hive.dart';
 import 'package:project_management_app/core/providers/mirror_entitlement_provider.dart';
-import 'package:project_management_app/core/providers/mirror_offline_cache_provider.dart';
+import 'package:project_management_app/core/providers/mirror_provider.dart';
 import 'package:project_management_app/core/providers/mirror_session_provider.dart';
 import 'package:project_management_app/features/mirror/mirror_editor_screen.dart';
 import 'package:project_management_app/features/mirror/mirror_signed_inputs_backend.dart';
@@ -32,7 +32,8 @@ Future<void> _pumpUntil(
     await tester.pump(step);
   }
 
-  expect(condition(), isTrue, reason: reason ?? 'Condition not reached in time');
+  expect(condition(), isTrue,
+      reason: reason ?? 'Condition not reached in time');
 }
 
 class _TestMirrorNotifier extends MirrorNotifier {
@@ -130,7 +131,7 @@ void main() {
     }
   });
 
-    testWidgets('run flow reaches preview stage and calls generate+compile',
+  testWidgets('run flow reaches preview stage and calls generate+compile',
       (WidgetTester tester) async {
     tester.view.physicalSize = const Size(1600, 1200);
     tester.view.devicePixelRatio = 1.0;
@@ -188,6 +189,7 @@ void main() {
       mirrorSessionProvider('project-e2e::task-e2e'),
     );
     expect(session.terminalLog, isNotEmpty);
-    expect(backend.callOrder, containsAllInOrder(<String>['generate', 'compile']));
+    expect(
+        backend.callOrder, containsAllInOrder(<String>['generate', 'compile']));
   }, skip: true);
 }

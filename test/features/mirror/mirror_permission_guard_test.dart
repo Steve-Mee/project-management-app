@@ -6,7 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:hive/hive.dart';
 import 'package:pma_core/auth/permissions.dart';
 import 'package:pma_core/providers/auth/auth_providers.dart';
-import 'package:project_management_app/core/providers/mirror_offline_cache_provider.dart';
+import 'package:project_management_app/core/providers/mirror_provider.dart';
 import 'package:project_management_app/features/mirror/mirror_editor_screen.dart';
 import 'package:project_management_app/generated/app_localizations.dart';
 import 'package:pma_core/models/comment_model.dart';
@@ -78,7 +78,8 @@ void main() {
     }
   });
 
-  testWidgets('blocks direct mirror screen opening without use_mirror permission',
+  testWidgets(
+      'blocks direct mirror screen opening without use_mirror permission',
       (WidgetTester tester) async {
     final notifier = _TestMirrorNotifier(
       const MirrorState(

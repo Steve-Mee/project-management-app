@@ -1,16 +1,16 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pma_core/services/mirror_access_policy.dart';
-import 'package:project_management_app/core/providers/mirror_offline_cache_provider.dart';
+import 'package:project_management_app/core/providers/mirror_provider.dart';
 
 class _TestMirrorNotifier extends MirrorNotifier {
   @override
   MirrorState build() => const MirrorState(
-    mode: 'private',
-    isPremium: false,
-    teamModeVariant: 'solo',
-    offlineWarning: null,
-  );
+        mode: 'private',
+        isPremium: false,
+        teamModeVariant: 'solo',
+        offlineWarning: null,
+      );
 }
 
 void main() {
@@ -109,8 +109,9 @@ void main() {
       expect(container.read(mirrorProvider).teamModeVariant, 'solo');
       expect(container.read(mirrorProvider).isTeamMode, isFalse);
 
-      container.read(mirrorProvider.notifier).state =
-          container.read(mirrorProvider).copyWith(offlineWarning: 'offline fallback');
+      container.read(mirrorProvider.notifier).state = container
+          .read(mirrorProvider)
+          .copyWith(offlineWarning: 'offline fallback');
       expect(container.read(mirrorProvider).offlineWarning, 'offline fallback');
 
       container.read(mirrorProvider.notifier).clearOfflineWarning();

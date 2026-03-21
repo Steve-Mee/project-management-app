@@ -11,13 +11,13 @@ import 'package:xterm/xterm.dart';
 import '../../generated/app_localizations.dart';
 
 import '../../core/providers/mirror_session_provider.dart';
+import '../../core/providers/mirror_provider.dart';
 import 'models/mirror_template.dart';
 import 'providers/mirror_templates_provider.dart';
 import 'services/mirror_editor_realtime_controller.dart';
 import 'services/mirror_editor_run_service.dart';
 import 'templates_gallery.dart';
 import 'widgets/monaco_editor_host.dart';
-import '../../core/providers/mirror_offline_cache_provider.dart';
 
 class MirrorEditorScreen extends ConsumerStatefulWidget {
   const MirrorEditorScreen({
@@ -170,9 +170,8 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
                   ),
                   const SizedBox(width: 8),
                   OutlinedButton.icon(
-                    onPressed: _isRunInProgress
-                        ? null
-                        : _runCurrentFileInTerminal,
+                    onPressed:
+                        _isRunInProgress ? null : _runCurrentFileInTerminal,
                     icon: _isRunInProgress
                         ? const SizedBox(
                             width: 16,
@@ -710,7 +709,8 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
   }
 
   void _applyTemplateToSelectedFile(MirrorTemplate template) {
-    final selectedFile = ref.read(mirrorSessionProvider(_sessionKey)).selectedFile;
+    final selectedFile =
+        ref.read(mirrorSessionProvider(_sessionKey)).selectedFile;
     _sessionNotifier.updateSelectedFileContent(template.seedContent);
     _appendTerminalLine(
       _l10n.mirrorTemplateAppliedTerminal(selectedFile, template.title),
@@ -868,9 +868,8 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
         }
 
         final retryableRaw = map['retryable'];
-        final retryable = retryableRaw is bool
-            ? retryableRaw
-            : _isRetryableFamily(family);
+        final retryable =
+            retryableRaw is bool ? retryableRaw : _isRetryableFamily(family);
         final message = map['message']?.toString().trim();
 
         return _MirrorStructuredError(
@@ -921,6 +920,7 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
   String _statusLineLabel(String status) {
     return _l10n.mirrorStatusLine(status);
   }
+
   IconData _iconForFile(String path) {
     if (path.endsWith('.dart')) {
       return Icons.code;
@@ -1006,11 +1006,11 @@ class _ModeSelector extends StatelessWidget {
             onChanged: !isEnabled
                 ? null
                 : (String? value) {
-              if (value == null) {
-                return;
-              }
-              onModeChanged(value);
-            },
+                    if (value == null) {
+                      return;
+                    }
+                    onModeChanged(value);
+                  },
           ),
         ),
       ],

@@ -7,7 +7,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:hive/hive.dart';
 import 'package:pma_core/auth/permissions.dart';
 import 'package:pma_core/providers/auth/auth_providers.dart';
-import 'package:project_management_app/core/providers/mirror_offline_cache_provider.dart';
+import 'package:project_management_app/core/providers/mirror_provider.dart';
 import 'package:project_management_app/generated/app_localizations.dart';
 import 'package:project_management_app/features/mirror/mirror_editor_screen.dart';
 import 'package:project_management_app/features/mirror/services/mirror_realtime_service.dart';
@@ -61,7 +61,8 @@ void main() {
   late Directory hiveDir;
 
   setUpAll(() async {
-    hiveDir = await Directory.systemTemp.createTemp('mirror_editor_screen_test_');
+    hiveDir =
+        await Directory.systemTemp.createTemp('mirror_editor_screen_test_');
     Hive.init(hiveDir.path);
 
     if (!Hive.isAdapterRegistered(0)) {
@@ -89,7 +90,8 @@ void main() {
   });
 
   group('MirrorEditorScreen widget tests', () {
-    testWidgets('shows mode selector and mode options', (WidgetTester tester) async {
+    testWidgets('shows mode selector and mode options',
+        (WidgetTester tester) async {
       tester.view.physicalSize = const Size(1600, 1200);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.resetPhysicalSize);
@@ -120,7 +122,8 @@ void main() {
       expect(find.text(l10n.mirrorCloudMode), findsWidgets);
     });
 
-    testWidgets('blocks cloud mode for non-premium users and shows snackbar', (WidgetTester tester) async {
+    testWidgets('blocks cloud mode for non-premium users and shows snackbar',
+        (WidgetTester tester) async {
       tester.view.physicalSize = const Size(1600, 1200);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.resetPhysicalSize);
@@ -150,7 +153,8 @@ void main() {
       expect(notifier.state.mode, 'private');
     });
 
-    testWidgets('applies realtime output cap to latest 500 lines', (WidgetTester tester) async {
+    testWidgets('applies realtime output cap to latest 500 lines',
+        (WidgetTester tester) async {
       tester.view.physicalSize = const Size(1600, 1200);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.resetPhysicalSize);

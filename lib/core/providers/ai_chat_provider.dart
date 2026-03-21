@@ -7,7 +7,7 @@ import 'package:pma_core/providers/ai_providers.dart' show aiChatProvider;
 import 'package:pma_core/providers/auth/auth_providers.dart';
 
 import 'mirror_feature_flag_provider.dart';
-import 'mirror_offline_cache_provider.dart';
+import 'mirror_provider.dart';
 
 class MirrorLaunchPayload {
   const MirrorLaunchPayload({
@@ -79,4 +79,3 @@ final aiChatBridgeProvider =
     NotifierProvider<AiChatBridgeNotifier, MirrorLaunchPayload?>(
   AiChatBridgeNotifier.new,
 );
-

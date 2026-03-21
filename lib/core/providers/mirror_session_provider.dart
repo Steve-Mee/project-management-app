@@ -11,7 +11,7 @@ import 'package:pma_core/providers/project/project_providers.dart';
 import 'package:pma_core/providers/task/task_providers.dart';
 
 import '../../features/mirror/services/mirror_draft_cache_service.dart';
-import 'mirror_offline_cache_provider.dart';
+import 'mirror_provider.dart';
 
 class MirrorSessionState {
   const MirrorSessionState({
@@ -91,7 +91,8 @@ class MirrorSessionState {
   }) {
     return <String, String>{
       'README.md': '# Mirror Session\n\nProject: $projectId\nTask: $taskId\n',
-      'lib/main.dart': "void main() {\n  print('Mirror session: $projectId::$taskId');\n}\n",
+      'lib/main.dart':
+          "void main() {\n  print('Mirror session: $projectId::$taskId');\n}\n",
     };
   }
 }
@@ -115,7 +116,7 @@ String _computeContextFingerprint(Map<String, String> files) {
 }
 
 class MirrorSessionNotifier
-  extends AutoDisposeFamilyNotifier<MirrorSessionState, String> {
+    extends AutoDisposeFamilyNotifier<MirrorSessionState, String> {
   static const Duration _draftPersistDebounce = Duration(milliseconds: 500);
 
   bool _cacheHydrated = false;
@@ -202,8 +203,7 @@ class MirrorSessionNotifier
         taskId: taskId,
         files: mergedFiles,
         selectedFile: selectedFile,
-        contextFingerprint:
-            draftSnapshot?.contextFingerprint ??
+        contextFingerprint: draftSnapshot?.contextFingerprint ??
             _computeContextFingerprint(mergedFiles),
         contextVersion: draftSnapshot?.contextVersion ?? _draftContextVersion,
       );
@@ -233,8 +233,7 @@ class MirrorSessionNotifier
       state = state.copyWith(
         files: Map<String, String>.from(snapshot.files),
         selectedFile: selectedFile,
-        contextFingerprint:
-            snapshot.contextFingerprint ??
+        contextFingerprint: snapshot.contextFingerprint ??
             _computeContextFingerprint(snapshot.files),
         contextVersion: snapshot.contextVersion ?? _draftContextVersion,
       );
@@ -290,7 +289,10 @@ class MirrorSessionNotifier
           'Description: ${project.description!.trim()}',
         '',
         '## Task Overview',
-        if (tasks.isEmpty) '- No tasks found for this project.' else taskSummaries,
+        if (tasks.isEmpty)
+          '- No tasks found for this project.'
+        else
+          taskSummaries,
       ].join('\n'),
       'context/project.json': const JsonEncoder.withIndent('  ').convert(
         project.toJson(),
@@ -458,8 +460,6 @@ class MirrorSessionNotifier
   }
 }
 
-final mirrorSessionProvider = NotifierProvider.autoDispose.family<
-  MirrorSessionNotifier,
-  MirrorSessionState,
-  String
->(MirrorSessionNotifier.new);
+final mirrorSessionProvider = NotifierProvider.autoDispose
+    .family<MirrorSessionNotifier, MirrorSessionState, String>(
+        MirrorSessionNotifier.new);

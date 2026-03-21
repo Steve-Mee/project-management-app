@@ -14,6 +14,7 @@ import 'package:pma_core/repository/encrypted_hive_box.dart';
 import 'package:pma_core/services/app_logger.dart';
 
 import '../../../core/providers/mirror_entitlement_provider.dart';
+import '../../../core/providers/mirror_provider.dart';
 import '../../../core/providers/mirror_session_provider.dart';
 import '../mirror_signed_inputs_backend.dart';
 import 'mirror_context_budget_service.dart';
@@ -172,6 +173,7 @@ class MirrorOutboxEntry {
     }
     return DateTime.tryParse(value.toString())?.toUtc();
   }
+
   static dynamic _jsonSafe(dynamic value) {
     if (value is Map) {
       return value.map(

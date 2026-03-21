@@ -52,47 +52,9 @@ class ApplyResult {
   final String? message;
 }
 
-class ApplySecurityArtifacts {
-  const ApplySecurityArtifacts({
-    required this.backupId,
-    required this.signedInputUrls,
-    required this.backupSignedUrls,
-    required this.createdAt,
-    this.uploadFailures = const <ApplyUploadFailure>[],
-  });
-
-  final String backupId;
-  final Map<String, String> signedInputUrls;
-  final Map<String, String> backupSignedUrls;
-  final DateTime createdAt;
-  final List<ApplyUploadFailure> uploadFailures;
-}
-
-class ApplyUploadFailure {
-  const ApplyUploadFailure({
-    required this.filePath,
-    required this.code,
-    required this.stage,
-    required this.error,
-  });
-
-  final String filePath;
-  final ApplyUploadFailureCode code;
-  final String stage;
-  final String error;
-}
-
-enum ApplyUploadFailureCode {
-  authUserMissing('auth_user_missing'),
-  signedInputUploadFailed('signed_input_upload_failed'),
-  backupUploadFailed('backup_upload_failed'),
-  signedInputUrlFailed('signed_input_url_failed'),
-  backupUrlFailed('backup_url_failed');
-
-  const ApplyUploadFailureCode(this.value);
-
-  final String value;
-}
+typedef ApplySecurityArtifacts = MirrorSecureApplyArtifacts;
+typedef ApplyUploadFailure = MirrorSecureApplyUploadFailure;
+typedef ApplyUploadFailureCode = MirrorSecureApplyUploadFailureCode;
 
 class MirrorFilePatch {
   const MirrorFilePatch({
@@ -240,8 +202,7 @@ extension MirrorApplySecurity on MirrorComputeBackend {
     String signedInputBucket = MirrorSecureApplyService.defaultSignedInputBucket,
     String backupBucket = MirrorSecureApplyService.defaultBackupBucket,
   }) async {
-    final artifacts =
-        await _mirrorSecureApplyService.prepareSignedInputAndBackup(
+    return _mirrorSecureApplyService.prepareSignedInputAndBackup(
       projectId: context.projectId,
       taskId: context.taskId,
       files: context.files,
@@ -249,7 +210,6 @@ extension MirrorApplySecurity on MirrorComputeBackend {
       signedInputBucket: signedInputBucket,
       backupBucket: backupBucket,
     );
-    return _toBackendArtifacts(artifacts);
   }
 
   Future<ApplyResult> secureApply({
@@ -268,9 +228,8 @@ extension MirrorApplySecurity on MirrorComputeBackend {
       taskId: context.taskId,
       mode: mode,
       files: context.files,
-      onApply: (serviceArtifacts) async {
-        final backendArtifacts = _toBackendArtifacts(serviceArtifacts);
-        final backendResult = await onApply(backendArtifacts);
+      onApply: (artifacts) async {
+        final backendResult = await onApply(artifacts);
         return MirrorSecureApplyResult(
           success: backendResult.success,
           appliedFiles: backendResult.appliedFiles,
@@ -286,43 +245,6 @@ extension MirrorApplySecurity on MirrorComputeBackend {
       appliedFiles: result.appliedFiles,
       message: result.message,
     );
-  }
-}
-
-ApplySecurityArtifacts _toBackendArtifacts(
-    MirrorSecureApplyArtifacts artifacts) {
-  return ApplySecurityArtifacts(
-    backupId: artifacts.backupId,
-    signedInputUrls: artifacts.signedInputUrls,
-    backupSignedUrls: artifacts.backupSignedUrls,
-    createdAt: artifacts.createdAt,
-    uploadFailures: artifacts.uploadFailures
-        .map(
-          (failure) => ApplyUploadFailure(
-            filePath: failure.filePath,
-            code: _toBackendUploadFailureCode(failure.code),
-            stage: failure.stage,
-            error: failure.error,
-          ),
-        )
-        .toList(growable: false),
-  );
-}
-
-ApplyUploadFailureCode _toBackendUploadFailureCode(
-  MirrorSecureApplyUploadFailureCode code,
-) {
-  switch (code) {
-    case MirrorSecureApplyUploadFailureCode.authUserMissing:
-      return ApplyUploadFailureCode.authUserMissing;
-    case MirrorSecureApplyUploadFailureCode.signedInputUploadFailed:
-      return ApplyUploadFailureCode.signedInputUploadFailed;
-    case MirrorSecureApplyUploadFailureCode.backupUploadFailed:
-      return ApplyUploadFailureCode.backupUploadFailed;
-    case MirrorSecureApplyUploadFailureCode.signedInputUrlFailed:
-      return ApplyUploadFailureCode.signedInputUrlFailed;
-    case MirrorSecureApplyUploadFailureCode.backupUrlFailed:
-      return ApplyUploadFailureCode.backupUrlFailed;
   }
 }
 

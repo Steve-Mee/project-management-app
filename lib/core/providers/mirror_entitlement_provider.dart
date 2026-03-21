@@ -9,18 +9,8 @@ import '../../features/mirror/mirror_gateway_backend.dart';
 import '../../features/mirror/private_grpc_backend.dart';
 import '../../features/mirror/services/mirror_context_budget_service.dart';
 import 'mirror_feature_flag_provider.dart';
-import 'mirror_offline_cache_provider.dart';
+import 'mirror_provider.dart';
 import 'mirror_session_provider.dart';
-import '../services/mirror_premium_service.dart';
-
-final mirrorPremiumServiceProvider = Provider<MirrorPremiumService>((ref) {
-  return MirrorPremiumService();
-});
-
-final mirrorPremiumProvider = FutureProvider<bool>((ref) async {
-  final premiumService = ref.watch(mirrorPremiumServiceProvider);
-  return premiumService.isPremium();
-});
 
 final mirrorContextBudgetServiceProvider =
     Provider<MirrorContextBudgetService>((ref) {
@@ -56,7 +46,8 @@ final mirrorGatewayBackendProvider = Provider<MirrorGatewayBackend>((ref) {
 });
 
 final mirrorBackendProvider = FutureProvider<MirrorComputeBackend>((ref) async {
-  final isMirrorEnabled = await resolveMirrorFeatureEnabled(ref, useWatch: true);
+  final isMirrorEnabled =
+      await resolveMirrorFeatureEnabled(ref, useWatch: true);
   if (!isMirrorEnabled) {
     return const _MirrorDisabledBackend();
   }
