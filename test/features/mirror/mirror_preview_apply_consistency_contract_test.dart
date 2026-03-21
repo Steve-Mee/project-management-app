@@ -21,17 +21,17 @@ void main() {
       );
 
       expect(source, contains('compileContextForPreviewAndApply'));
-      expect(source, contains('_patchPipelineService.prepareCompilePlan('));
+      expect(source, contains('_workflows.prepareCompilePlan('));
       expect(source, contains('buildApplyMetadata('));
       expect(source, contains('context: compileContextForPreviewAndApply'));
     });
 
-    test('patch planning contract is centralized in pipeline service', () {
+    test('patch planning contract is centralized in backend workflows service', () {
       final source = _readRepoFile(
-        'lib/features/mirror/services/mirror_patch_pipeline_service.dart',
+        'lib/features/mirror/services/mirror_backend_workflows.dart',
       );
 
-      expect(source, contains('class MirrorPatchPipelineService'));
+      expect(source, contains('class MirrorBackendWorkflows'));
       expect(source, contains('MirrorCompilePatchPlan prepareCompilePlan('));
       expect(source, contains('MirrorApplyPatchPlan prepareApplyPlan('));
       expect(source, contains('buildSessionPersistPlan('));

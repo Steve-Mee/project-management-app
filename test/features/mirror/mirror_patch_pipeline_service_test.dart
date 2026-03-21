@@ -1,10 +1,10 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:project_management_app/features/mirror/mirror_signed_inputs_backend.dart';
-import 'package:project_management_app/features/mirror/services/mirror_patch_pipeline_service.dart';
+import 'package:project_management_app/features/mirror/services/mirror_backend_workflows.dart';
 
 void main() {
-  group('MirrorPatchPipelineService', () {
-    const service = MirrorPatchPipelineService();
+  group('MirrorBackendWorkflows patch planning', () {
+    const service = MirrorBackendWorkflows();
 
     test('prepareCompilePlan patches compile context and emits run prompt', () {
       const executionContext = ProjectContext(

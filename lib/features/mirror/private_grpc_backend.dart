@@ -8,6 +8,8 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'grpc_generated/mirror.pbgrpc.dart';
 import 'mirror_signed_inputs_backend.dart';
+import 'services/mirror_apply_audit_service.dart';
+import 'services/mirror_apply_validator_service.dart';
 import 'services/mirror_backend_workflows.dart';
 
 const bool _isProductionGrpcRuntime =
@@ -15,6 +17,8 @@ const bool _isProductionGrpcRuntime =
 const ChannelCredentials _insecureChannelCredentials =
     ChannelCredentials.insecure();
 const MirrorBackendWorkflows _mirrorWorkflows = MirrorBackendWorkflows();
+const MirrorApplyValidatorService _mirrorValidator = MirrorApplyValidatorService();
+const MirrorApplyAuditService _mirrorAudit = MirrorApplyAuditService();
 
 class PrivateGrpcBackend implements MirrorComputeBackend {
   PrivateGrpcBackend({
@@ -160,17 +164,17 @@ class PrivateGrpcBackend implements MirrorComputeBackend {
 
         final output = compileResult.output!;
         if (compileFingerprint != null && compileFingerprint.isNotEmpty) {
-          final actualFingerprint = computeCompileResultFingerprint(
+          final validation = _mirrorValidator.validatePreviewApplyConsistency(
             prompt: prompt,
             context: context,
             mode: mode,
-            output: output,
+            expectedCompileFingerprint: compileFingerprint,
+            preflightOutput: output,
           );
-          if (actualFingerprint != compileFingerprint) {
-            return const ApplyResult(
+          if (!validation.isValid) {
+            return ApplyResult(
               success: false,
-              message:
-                  'Apply blocked: preview fingerprint mismatch. Re-run preview before applying.',
+              message: validation.errorMessage ?? 'Apply failed: consistency check failed.',
             );
           }
         }
@@ -205,7 +209,7 @@ class PrivateGrpcBackend implements MirrorComputeBackend {
           patches: patches,
         );
 
-        await _mirrorWorkflows.persistApplyToHive(
+        await _mirrorAudit.persistApplyToHive(
           context: context,
           mode: mode,
           prompt: prompt,

@@ -9,6 +9,8 @@ import 'package:uuid/uuid.dart';
 
 import '../../core/config/app_config.dart';
 import 'mirror_signed_inputs_backend.dart';
+import 'services/mirror_apply_audit_service.dart';
+import 'services/mirror_apply_validator_service.dart';
 import 'services/mirror_backend_workflows.dart';
 import 'services/mirror_context_budget_service.dart';
 import 'services/mirror_observability_service.dart';
@@ -16,6 +18,8 @@ import 'services/mirror_retry_policy.dart';
 
 const Uuid _uuid = Uuid();
 const MirrorBackendWorkflows _mirrorWorkflows = MirrorBackendWorkflows();
+const MirrorApplyValidatorService _mirrorValidator = MirrorApplyValidatorService();
+const MirrorApplyAuditService _mirrorAudit = MirrorApplyAuditService();
 
 class MirrorGatewayBackend implements MirrorComputeBackend {
   MirrorGatewayBackend({
@@ -211,15 +215,22 @@ class MirrorGatewayBackend implements MirrorComputeBackend {
         );
       }
 
-      final consistencyError = _validatePreviewApplyConsistency(
+      final consistencyValidation = _mirrorValidator.validatePreviewApplyConsistency(
         prompt: prompt,
         context: context,
         mode: mode,
         expectedCompileFingerprint: normalizedCompileFingerprint,
         preflightOutput: preflight.output!,
       );
-      if (consistencyError != null) {
-        return ApplyResult(success: false, message: consistencyError);
+      if (!consistencyValidation.isValid) {
+        return ApplyResult(
+          success: false,
+          message: _formatStructuredError(
+            family: _MirrorGatewayErrorFamily.consistency,
+            message: consistencyValidation.errorMessage ?? 'Unknown consistency error',
+            retryable: consistencyValidation.isRetryable,
+          ),
+        );
       }
 
       return _applyWithoutSecurity(
@@ -267,15 +278,22 @@ class MirrorGatewayBackend implements MirrorComputeBackend {
           );
         }
 
-        final consistencyError = _validatePreviewApplyConsistency(
+        final consistencyValidation = _mirrorValidator.validatePreviewApplyConsistency(
           prompt: prompt,
           context: context,
           mode: mode,
           expectedCompileFingerprint: normalizedCompileFingerprint,
           preflightOutput: preflight.output!,
         );
-        if (consistencyError != null) {
-          return ApplyResult(success: false, message: consistencyError);
+        if (!consistencyValidation.isValid) {
+          return ApplyResult(
+            success: false,
+            message: _formatStructuredError(
+              family: _MirrorGatewayErrorFamily.consistency,
+              message: consistencyValidation.errorMessage ?? 'Unknown consistency error',
+              retryable: consistencyValidation.isRetryable,
+            ),
+          );
         }
 
         return _executeApplyRequest(
@@ -287,46 +305,6 @@ class MirrorGatewayBackend implements MirrorComputeBackend {
         );
       },
     );
-  }
-
-  String? _validatePreviewApplyConsistency({
-    required String prompt,
-    required ProjectContext context,
-    required String mode,
-    required String expectedCompileFingerprint,
-    required String preflightOutput,
-  }) {
-    final actualFingerprint = computeCompileResultFingerprint(
-      prompt: prompt,
-      context: context,
-      mode: mode,
-      output: preflightOutput,
-    );
-    if (actualFingerprint != expectedCompileFingerprint) {
-      return _formatStructuredError(
-        family: _MirrorGatewayErrorFamily.consistency,
-        message:
-            'Apply blocked: preview fingerprint mismatch. Re-run preview before applying.',
-        retryable: false,
-      );
-    }
-
-    // Contract: context.metadata['previewContextFingerprint'] is validated
-    final expectedContextFingerprint =
-        context.metadata.previewContextFingerprint ?? '';
-    if (expectedContextFingerprint.isNotEmpty) {
-      final actualContextFingerprint = _fingerprintFileMap(context.files);
-      if (actualContextFingerprint != expectedContextFingerprint) {
-        return _formatStructuredError(
-          family: _MirrorGatewayErrorFamily.consistency,
-          message:
-              'Apply blocked: preview context mismatch. Re-run preview before applying.',
-          retryable: false,
-        );
-      }
-    }
-
-    return null;
   }
 
   Future<ApplyResult> _applyWithoutSecurity({
@@ -396,7 +374,7 @@ class MirrorGatewayBackend implements MirrorComputeBackend {
         patches: patches,
       );
 
-      await _mirrorWorkflows.persistApplyToHive(
+      await _mirrorAudit.persistApplyToHive(
         context: context,
         mode: mode,
         prompt: prompt,

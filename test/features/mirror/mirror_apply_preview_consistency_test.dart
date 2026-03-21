@@ -7,7 +7,7 @@ void main() {
   group('Mirror preview/apply consistency contract', () {
     test('editor computes and threads compile fingerprint through dialog and apply', () {
       final source =
-          _readRepoFile('lib/features/mirror/services/mirror_editor_orchestration_service.dart');
+          _readRepoFile('lib/features/mirror/services/mirror_run_flow_service.dart');
 
       expect(source, contains('computeCompileResultFingerprint('));
       expect(source, contains('compileFingerprint: compileFingerprint'));

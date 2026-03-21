@@ -6,7 +6,7 @@ void main() {
   group('Mirror apply context consistency contract', () {
     test('apply context is derived from original compile context', () {
       final source =
-          _readRepoFile('lib/features/mirror/services/mirror_editor_orchestration_service.dart');
+          _readRepoFile('lib/features/mirror/services/mirror_run_flow_service.dart');
 
       expect(
         source,
@@ -24,7 +24,7 @@ void main() {
 
     test('compile context still allows preview patches for compile stage', () {
       final source =
-          _readRepoFile('lib/features/mirror/services/mirror_editor_orchestration_service.dart');
+          _readRepoFile('lib/features/mirror/services/mirror_run_flow_service.dart');
 
       expect(source, contains('final compileContext = generatedPatches.isEmpty'));
       expect(source, contains('files: backend.applyPatchesToFiles('));

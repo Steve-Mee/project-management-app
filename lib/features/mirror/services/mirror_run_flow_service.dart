@@ -7,15 +7,14 @@ import '../../../generated/app_localizations.dart';
 import '../apply_dialog.dart';
 import '../mirror_signed_inputs_backend.dart';
 import '../providers/mirror_orchestrator_provider.dart';
-import 'mirror_patch_pipeline_service.dart';
+import 'mirror_backend_workflows.dart';
 import 'mirror_preview_metadata_service.dart';
 import 'mirror_service_boundaries.dart';
 
 class MirrorRunFlowService implements MirrorInteractiveRunCoordinator {
   const MirrorRunFlowService();
 
-  static const MirrorPatchPipelineService _patchPipelineService =
-      MirrorPatchPipelineService();
+  static const MirrorBackendWorkflows _workflows = MirrorBackendWorkflows();
   static const MirrorPreviewMetadataService _previewMetadataService =
       MirrorPreviewMetadataService();
 
@@ -98,7 +97,7 @@ class MirrorRunFlowService implements MirrorInteractiveRunCoordinator {
         );
       }
 
-      final compilePlan = _patchPipelineService.prepareCompilePlan(
+      final compilePlan = _workflows.prepareCompilePlan(
         executionContext: executionContext,
         selectedFile: selectedFile,
         selectedContent: selectedContent,
@@ -156,7 +155,7 @@ class MirrorRunFlowService implements MirrorInteractiveRunCoordinator {
       }
 
       appendTerminalLine(l10n.mirrorStepPreviewBuilding);
-      final applyPlan = _patchPipelineService.prepareApplyPlan(
+      final applyPlan = _workflows.prepareApplyPlan(
         compileContextForPreviewAndApply: compileContextForPreviewAndApply,
         selectedFile: selectedFile,
         compileOutput: compileOutput,
@@ -282,7 +281,7 @@ class MirrorRunFlowService implements MirrorInteractiveRunCoordinator {
     final previousSelected =
         ref.read(mirrorSessionProvider(sessionKey)).selectedFile;
     final currentFiles = ref.read(mirrorSessionProvider(sessionKey)).files;
-    final patchPlan = _patchPipelineService.buildSessionPersistPlan(
+    final patchPlan = _workflows.buildSessionPersistPlan(
       currentFiles: currentFiles,
       previousSelected: previousSelected,
       fallbackSelectedFile: fallbackSelectedFile,
