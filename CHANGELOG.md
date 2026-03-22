@@ -1,3 +1,9 @@
+## [1.50.1](https://github.com/Steve-Mee/project-management-app/compare/v1.50.0...v1.50.1) (2026-03-22)
+
+### Bug Fixes
+
+* **verification:** remove auth.uid dependency in mirror smoke test ([bdfdf4c](https://github.com/Steve-Mee/project-management-app/commit/bdfdf4cb1c8b936a6117fc496e9361aa0589b7c3))
+
 ## [1.50.0](https://github.com/Steve-Mee/project-management-app/compare/v1.49.2...v1.50.0) (2026-03-22)
 
 ### Features
