@@ -56,6 +56,30 @@ The following rules are permanent unless explicitly changed by architecture deci
 - Security-first defaults, fail closed on missing secrets
 - Offline continuity with encrypted local cache and outbox replay
 
+## Mirror Mode Resolution Precedence
+
+Mirror mode and variant hydration are resolved in deterministic order so async source timing cannot silently change the effective mode.
+
+Resolution order:
+
+1. Explicit requested mode (user intent)
+2. Cached mode (offline continuity)
+3. Feature-gate constraints (hard disable)
+4. Premium entitlement and policy decision
+5. Runner/team variant fallback
+
+Hydration provenance is tracked in `MirrorState` via:
+
+- `hydrationPhase`
+- `modeSource`
+- `premiumSource`
+- `teamModeVariantSource`
+- `runnerModeVariantSource`
+- `hydrationReasonCode`
+- `fallbackReason`
+
+These fields are emitted through `mirror_mode_resolution` telemetry events and surfaced in debug diagnostics on the Mirror editor screen.
+
 ## Apply Security & Delivery Mode
 
 The `MirrorApplySecurityModeService` centralizes the decision logic for patch delivery (signed vs. inline flow):

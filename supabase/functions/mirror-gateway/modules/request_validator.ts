@@ -3,89 +3,17 @@
 
 import {
   normalizeNonEmptyString,
-  normalizeRequestBody,
   normalizeSignedInputUrls,
-  parseRequestJsonWithLimit,
 } from './request_normalization.ts'
+import {
+  type MirrorComputeRequest,
+  type RequestValidationError,
+  type ValidatedRequest,
+  validateAndParseRequest,
+} from './request_schema.ts'
 
-export interface MirrorComputeRequest {
-  prompt: string
-  projectId: string
-  taskId: string
-  mode: 'private' | 'cloud'
-  actorUserId?: string
-  backupId?: string
-  fileSetFingerprint?: string
-  signedInputUrls?: Record<string, string>
-  files?: Record<string, string>
-  metadata?: Record<string, unknown>
-}
-
-export type RequestValidationErrorKind =
-  | 'payload_too_large'
-  | 'bad_json'
-  | 'bad_request'
-  | 'invalid_fields'
-
-export interface RequestValidationError {
-  kind: RequestValidationErrorKind
-  message: string
-  statusCode: number
-}
-
-export interface ValidatedRequest {
-  normalized: MirrorComputeRequest
-  raw: unknown
-}
-
-const MAX_REQUEST_BODY_BYTES = 512 * 1024
-
-/**
- * Parse and validate incoming request body.
- * Returns validated normalized request or structured error.
- */
-export async function validateAndParseRequest(
-  req: Request,
-): Promise<ValidatedRequest | RequestValidationError> {
-  // Step 1: Parse JSON with size limit
-  let rawBody: Partial<MirrorComputeRequest>
-  try {
-    rawBody = await parseRequestJsonWithLimit(req, MAX_REQUEST_BODY_BYTES)
-  } catch (error) {
-    if (error instanceof Error && error.message.startsWith('payload_too_large:')) {
-      return {
-        kind: 'payload_too_large',
-        message: `Request body exceeds ${MAX_REQUEST_BODY_BYTES} bytes limit`,
-        statusCode: 413,
-      }
-    }
-
-    if (error instanceof Error && error.message === 'bad_json') {
-      return {
-        kind: 'bad_json',
-        message: 'Invalid JSON body',
-        statusCode: 400,
-      }
-    }
-
-    throw error
-  }
-
-  // Step 2: Normalize and validate fields
-  const normalized = normalizeRequestBody(rawBody)
-  if (!normalized) {
-    return {
-      kind: 'invalid_fields',
-      message: 'Missing or invalid fields: prompt, projectId (UUID), taskId (UUID), mode',
-      statusCode: 400,
-    }
-  }
-
-  return {
-    normalized,
-    raw: rawBody,
-  }
-}
+export type { MirrorComputeRequest, RequestValidationError, ValidatedRequest }
+export { validateAndParseRequest }
 
 /**
  * Extract and normalize artifact identifiers (backup IDs, signed URLs).

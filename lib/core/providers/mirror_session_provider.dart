@@ -20,7 +20,7 @@ final mirrorDraftCacheServiceProvider = Provider<MirrorDraftCacheService>((ref) 
 
 final mirrorSessionRepositoryBootstrapTimeoutProvider =
     Provider<Duration>((ref) {
-  return const Duration(milliseconds: 1500);
+  return const Duration(seconds: 3);
 });
 
 class MirrorSessionState {
@@ -145,7 +145,9 @@ class MirrorSessionNotifier
   static const Duration _draftPersistDebounce = Duration(milliseconds: 500);
 
   int _bootstrapGeneration = 0;
+  int _stateGeneration = 0;
   bool _bootstrapStarted = false;
+  bool _persistInFlight = false;
   Timer? _draftPersistTimer;
   String? _activeSessionKey;
   String _lastMode = 'private';
@@ -170,26 +172,19 @@ class MirrorSessionNotifier
       _draftPersistTimer = null;
       final activeKey = _activeSessionKey;
       if (activeKey != null && state.files.isNotEmpty) {
-        final files = Map<String, String>.of(state.files);
-        final selectedFile = state.selectedFile;
-        final contextFingerprint =
-            state.contextFingerprint ?? _computeContextFingerprint(files);
-        final contextVersion = state.contextVersion ?? _draftContextVersion;
-        unawaited(draftCacheService.writeDraft(
-          sessionKey: activeKey,
-          files: files,
-          selectedFile: selectedFile,
-          mode: _lastMode,
-          offlineWarningKey: _lastOfflineWarningKey,
-          contextFingerprint: contextFingerprint,
-          contextVersion: contextVersion,
-        ));
+        unawaited(
+          _persistDraftNow(
+            activeKey,
+            generation: _stateGeneration,
+            draftCacheServiceOverride: draftCacheService,
+          ),
+        );
       }
     });
 
     if (!_bootstrapStarted) {
       _bootstrapStarted = true;
-      unawaited(_bootstrapSession(sessionKey));
+      unawaited(Future<void>.microtask(() => _bootstrapSession(sessionKey)));
     }
 
     final parts = sessionKey.split('::');
@@ -208,17 +203,20 @@ class MirrorSessionNotifier
       taskId: taskId,
     );
 
+    _replaceState(
+      baseline.copyWith(
+        bootstrapPhase: MirrorSessionBootstrapPhase.repositoryLoading,
+        bootstrapSource: 'baseline',
+        bootstrapReasonCode: null,
+      ),
+    );
+
     final draftFuture =
         ref.read(mirrorSessionDraftBootstrapProvider(sessionKey).future);
     final repositoryFuture =
         ref.read(mirrorSessionRepositoryBootstrapProvider(sessionKey).future);
     final repositoryTimeout =
       ref.read(mirrorSessionRepositoryBootstrapTimeoutProvider);
-
-    final draft = await draftFuture;
-    if (!_isCurrentBootstrap(generation, sessionKey)) {
-      return;
-    }
 
     final repository = await repositoryFuture.timeout(
       repositoryTimeout,
@@ -233,6 +231,19 @@ class MirrorSessionNotifier
       return;
     }
 
+    final draft = await draftFuture;
+    if (!_isCurrentBootstrap(generation, sessionKey)) {
+      return;
+    }
+
+    _replaceState(
+      state.copyWith(
+        bootstrapPhase: MirrorSessionBootstrapPhase.merging,
+        bootstrapSource:
+            draft != null && draft.files.isNotEmpty ? 'draft' : 'baseline',
+      ),
+    );
+
     final bootstrap = resolveMirrorSessionBootstrap(
       baselineFiles: baseline.files,
       baselineSelectedFile: baseline.selectedFile,
@@ -241,15 +252,17 @@ class MirrorSessionNotifier
       repository: repository,
     );
 
-    state = baseline.copyWith(
-      files: bootstrap.files,
-      selectedFile: bootstrap.selectedFile,
-      contextFingerprint: _computeContextFingerprint(bootstrap.files),
-      contextVersion: bootstrap.contextVersion,
-      terminalLog: bootstrap.terminalLines,
-      bootstrapPhase: bootstrap.phase,
-      bootstrapSource: bootstrap.sourceSummary,
-      bootstrapReasonCode: bootstrap.reasonCode,
+    _replaceState(
+      baseline.copyWith(
+        files: bootstrap.files,
+        selectedFile: bootstrap.selectedFile,
+        contextFingerprint: _computeContextFingerprint(bootstrap.files),
+        contextVersion: bootstrap.contextVersion,
+        terminalLog: bootstrap.terminalLines,
+        bootstrapPhase: bootstrap.phase,
+        bootstrapSource: bootstrap.sourceSummary,
+        bootstrapReasonCode: bootstrap.reasonCode,
+      ),
     );
   }
 
@@ -257,29 +270,29 @@ class MirrorSessionNotifier
     if (!state.files.containsKey(path)) {
       return;
     }
-    state = state.copyWith(selectedFile: path);
+    _replaceState(state.copyWith(selectedFile: path));
     _scheduleDraftPersist();
   }
 
   void updateSelectedFileContent(String content) {
     final updatedFiles = Map<String, String>.from(state.files);
     updatedFiles[state.selectedFile] = content;
-    state = state.copyWith(
+    _replaceState(state.copyWith(
       files: updatedFiles,
       contextFingerprint: _computeContextFingerprint(updatedFiles),
       contextVersion: _draftContextVersion,
-    );
+    ));
     _scheduleDraftPersist();
   }
 
   void upsertFileContent({required String path, required String content}) {
     final updatedFiles = Map<String, String>.from(state.files);
     updatedFiles[path] = content;
-    state = state.copyWith(
+    _replaceState(state.copyWith(
       files: updatedFiles,
       contextFingerprint: _computeContextFingerprint(updatedFiles),
       contextVersion: _draftContextVersion,
-    );
+    ));
     _scheduleDraftPersist();
   }
 
@@ -291,7 +304,7 @@ class MirrorSessionNotifier
     final capped = merged.length <= maxLines
         ? merged
         : merged.sublist(merged.length - maxLines);
-    state = state.copyWith(liveOutput: capped);
+    _replaceState(state.copyWith(liveOutput: capped));
   }
 
   void appendTerminalLine(String line, {int maxLines = 1000}) {
@@ -302,7 +315,7 @@ class MirrorSessionNotifier
     final capped = merged.length <= maxLines
         ? merged
         : merged.sublist(merged.length - maxLines);
-    state = state.copyWith(terminalLog: capped);
+    _replaceState(state.copyWith(terminalLog: capped));
   }
 
   void setCompileValidationArtifacts({
@@ -315,14 +328,41 @@ class MirrorSessionNotifier
     }
 
     final normalizedToken = serverVersionToken?.trim();
-    state = state.copyWith(
+    _replaceState(state.copyWith(
       compileFingerprint: normalizedFingerprint,
       compileServerVersionToken:
           (normalizedToken == null || normalizedToken.isEmpty)
               ? null
               : normalizedToken,
-    );
+    ));
     _scheduleDraftPersist();
+  }
+
+  Future<void> persistOnRunStart() async {
+    final sessionKey = _activeSessionKey;
+    if (sessionKey == null || sessionKey.isEmpty) {
+      return;
+    }
+    _draftPersistTimer?.cancel();
+    await _persistDraftNow(sessionKey, generation: _stateGeneration);
+  }
+
+  Future<void> persistOnApply() async {
+    final sessionKey = _activeSessionKey;
+    if (sessionKey == null || sessionKey.isEmpty) {
+      return;
+    }
+    _draftPersistTimer?.cancel();
+    await _persistDraftNow(sessionKey, generation: _stateGeneration);
+  }
+
+  Future<void> persistOnRouteExit() async {
+    final sessionKey = _activeSessionKey;
+    if (sessionKey == null || sessionKey.isEmpty) {
+      return;
+    }
+    _draftPersistTimer?.cancel();
+    await _persistDraftNow(sessionKey, generation: _stateGeneration);
   }
 
   void _scheduleDraftPersist() {
@@ -331,36 +371,83 @@ class MirrorSessionNotifier
       return;
     }
 
+    final generation = _stateGeneration;
     _draftPersistTimer?.cancel();
     _draftPersistTimer = Timer(_draftPersistDebounce, () {
-      unawaited(_persistDraftNow(sessionKey));
+      unawaited(_persistDraftNow(sessionKey, generation: generation));
     });
   }
 
-  Future<void> _persistDraftNow(String sessionKey) async {
+  Future<void> _persistDraftNow(
+    String sessionKey, {
+    required int generation,
+    MirrorDraftCacheService? draftCacheServiceOverride,
+  }) async {
     if (state.files.isEmpty) {
       return;
     }
 
+    if (!_isCurrentPersistTarget(generation, sessionKey)) {
+      return;
+    }
+
+    if (_persistInFlight) {
+      return;
+    }
+
+    _persistInFlight = true;
+
+    final files = Map<String, String>.from(state.files);
+    final selectedFile = state.selectedFile;
+    final contextFingerprint =
+        state.contextFingerprint ?? _computeContextFingerprint(files);
+    final contextVersion = state.contextVersion ?? _draftContextVersion;
+
     try {
-      final draftCacheService = ref.read(mirrorDraftCacheServiceProvider);
+      final MirrorDraftCacheService draftCacheService =
+          draftCacheServiceOverride ?? ref.read(mirrorDraftCacheServiceProvider);
       await draftCacheService.writeDraft(
         sessionKey: sessionKey,
-        files: state.files,
-        selectedFile: state.selectedFile,
+        files: files,
+        selectedFile: selectedFile,
         mode: _lastMode,
         offlineWarningKey: _lastOfflineWarningKey,
-        contextFingerprint:
-            state.contextFingerprint ?? _computeContextFingerprint(state.files),
-        contextVersion: state.contextVersion ?? _draftContextVersion,
+        contextFingerprint: contextFingerprint,
+        contextVersion: contextVersion,
       );
     } catch (_) {
       // Keep editing responsive when draft persistence is unavailable.
+    } finally {
+      _persistInFlight = false;
+
+      final latestSessionKey = _activeSessionKey;
+      final shouldReplayPersist =
+          latestSessionKey != null &&
+          latestSessionKey == sessionKey &&
+          generation != _stateGeneration;
+      if (shouldReplayPersist) {
+        unawaited(
+          _persistDraftNow(
+            latestSessionKey,
+            generation: _stateGeneration,
+            draftCacheServiceOverride: draftCacheServiceOverride,
+          ),
+        );
+      }
     }
   }
 
   bool _isCurrentBootstrap(int generation, String sessionKey) {
     return generation == _bootstrapGeneration && _activeSessionKey == sessionKey;
+  }
+
+  bool _isCurrentPersistTarget(int generation, String sessionKey) {
+    return generation == _stateGeneration && _activeSessionKey == sessionKey;
+  }
+
+  void _replaceState(MirrorSessionState next) {
+    state = next;
+    _stateGeneration += 1;
   }
 }
 

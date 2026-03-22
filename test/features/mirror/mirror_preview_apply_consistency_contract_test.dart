@@ -17,13 +17,14 @@ void main() {
     test('run flow carries previewContextFingerprint from compile snapshot',
         () {
       final source = _readRepoFile(
-        'lib/features/mirror/services/mirror_run_flow_service.dart',
+        'lib/features/mirror/services/mirror_apply_flow_coordinator.dart',
       );
 
       expect(source, contains('compileContextForPreviewAndApply'));
       expect(source, contains('_workflows.prepareCompilePlan('));
-      expect(source, contains('buildApplyMetadata('));
-      expect(source, contains('context: compileContextForPreviewAndApply'));
+      expect(source, contains('_previewMetadataService.buildApplyMetadata('));
+      expect(source, contains('previewCompileFingerprint: compileFingerprint,'));
+      expect(source, contains('previewCompileOutput: compileOutput,'));
     });
 
     test('patch planning contract is centralized in backend workflows service', () {
@@ -40,14 +41,20 @@ void main() {
     test(
         'gateway apply requires compile fingerprint and validates context fingerprint',
         () {
-      final source =
+      final gateway =
           _readRepoFile('lib/features/mirror/mirror_gateway_backend.dart');
+      final workflows = _readRepoFile(
+        'lib/features/mirror/services/mirror_backend_workflows.dart',
+      );
+      final validator = _readRepoFile(
+        'lib/features/mirror/services/mirror_apply_validator_service.dart',
+      );
 
-      expect(source, contains('preview fingerprint missing'));
-      expect(source, contains('preview fingerprint mismatch'));
-      expect(source, contains('preview context mismatch'));
-      expect(source, contains("context.metadata['previewContextFingerprint']"));
-      expect(source, contains('_validatePreviewApplyConsistency('));
+      expect(workflows, contains('preview fingerprint missing'));
+      expect(validator, contains('preview fingerprint mismatch'));
+      expect(validator, contains('preview context mismatch'));
+      expect(validator, contains('previewContextFingerprint'));
+      expect(gateway, contains('compileFingerprint: compileFingerprint,'));
     });
   });
 }

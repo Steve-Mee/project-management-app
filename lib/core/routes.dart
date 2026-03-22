@@ -243,12 +243,15 @@ class AppRoutes {
                   data: (guard) {
                     switch (guard) {
                       case MirrorRouteGuardResult.allowed:
-                        if (projectId.isEmpty || taskId.isEmpty) {
+                        if (projectId.isEmpty ||
+                            taskId.isEmpty ||
+                            !isValidMirrorContextId(projectId) ||
+                            !isValidMirrorContextId(taskId)) {
                           return Scaffold(
                             appBar: AppBar(),
                             body: const Center(
                               child: Text(
-                                'Invalid Mirror link: missing project or task.',
+                                'Invalid Mirror link: project and task IDs must be valid UUIDs.',
                               ),
                             ),
                           );

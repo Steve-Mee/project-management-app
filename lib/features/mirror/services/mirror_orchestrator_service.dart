@@ -1,4 +1,4 @@
-// ARCHITECTURE LOCK: Mirror Gateway = thin proxy only. Compute always on Fly.io or local runner.
+﻿// ARCHITECTURE LOCK: Mirror Gateway = thin proxy only. Compute always on Fly.io or local runner.
 import 'dart:async';
 import 'dart:math';
 
@@ -14,6 +14,10 @@ import 'mirror_service_boundaries.dart';
 
 export 'mirror_outbox_replay_service.dart' show MirrorOutboxEntry;
 
+/// Adds retry + outbox replay behavior on top of the active compute backend.
+///
+/// This service no longer owns interactive apply orchestration; it only wraps
+/// generate/compile/apply calls with resiliency and replay semantics.
 class MirrorOrchestratorService implements MirrorExecutionOrchestrator {
   MirrorOrchestratorService({
     required MirrorComputeBackend backend,
@@ -42,63 +46,27 @@ class MirrorOrchestratorService implements MirrorExecutionOrchestrator {
     required String prompt,
     required ProjectContext context,
     required String mode,
-  }) async {
-    await _replayQueuedWork(ref, reason: 'pre_generate');
-
-    _emitStatus(
-      ref,
-      sessionKey,
-      terminalLine: 'Mirror generate started ($mode mode).',
-      liveLine: 'Generating...',
-    );
-
-    final result = await _withRetries<GenerateResult>(
+  }) {
+    return _runWithOutbox<GenerateResult>(
       operationName: 'generate',
       ref: ref,
       sessionKey: sessionKey,
-      operation: () => _interactivePath.generate(
+      prompt: prompt,
+      context: context,
+      mode: mode,
+      startTerminalLine: 'Mirror generate started ($mode mode).',
+      startLiveLine: 'Generating...',
+      doneTerminalLine: 'Mirror generate completed successfully.',
+      doneLiveLine: 'Generate done.',
+      work: () => _interactivePath.generate(
         prompt: prompt,
         context: context,
         mode: mode,
       ),
-      isSuccess: (GenerateResult value) => value.success,
-      failureMessage: (GenerateResult value) =>
-          value.message ?? value.diagnostics.join(' | '),
+      isSuccess: (GenerateResult v) => v.success,
+      failureMessage: (GenerateResult v) =>
+          v.message ?? v.diagnostics.join(' | '),
     );
-
-    if (result.success) {
-      _emitStatus(
-        ref,
-        sessionKey,
-        terminalLine: 'Mirror generate completed successfully.',
-        liveLine: 'Generate done.',
-      );
-    } else {
-      await _replayService(ref).enqueue(
-        operation: 'generate',
-        sessionKey: sessionKey,
-        prompt: prompt,
-        context: context,
-        mode: mode,
-        lastError: result.message ?? result.diagnostics.join(' | '),
-      );
-      unawaited(
-        _replayService(ref).replayDueEntries(
-          reason: 'post_generate_failure',
-          operationExecutor: _createOutboxExecutor(),
-          onReplaySuccess: _onOutboxReplaySuccess(ref),
-        ),
-      );
-      _emitStatus(
-        ref,
-        sessionKey,
-        terminalLine:
-            'Mirror generate failed: ${result.message ?? result.diagnostics.join(' | ')}',
-        liveLine: 'Generate failed.',
-      );
-    }
-
-    return result;
   }
 
   @override
@@ -108,61 +76,26 @@ class MirrorOrchestratorService implements MirrorExecutionOrchestrator {
     required String prompt,
     required ProjectContext context,
     required String mode,
-  }) async {
-    await _replayQueuedWork(ref, reason: 'pre_compile');
-
-    _emitStatus(
-      ref,
-      sessionKey,
-      terminalLine: 'Mirror compile started ($mode mode).',
-      liveLine: 'Compiling...',
-    );
-
-    final result = await _withRetries<CompileResult>(
+  }) {
+    return _runWithOutbox<CompileResult>(
       operationName: 'compile',
       ref: ref,
       sessionKey: sessionKey,
-      operation: () => _interactivePath.compile(
+      prompt: prompt,
+      context: context,
+      mode: mode,
+      startTerminalLine: 'Mirror compile started ($mode mode).',
+      startLiveLine: 'Compiling...',
+      doneTerminalLine: 'Mirror compile completed successfully.',
+      doneLiveLine: 'Compile done.',
+      work: () => _interactivePath.compile(
         prompt: prompt,
         context: context,
         mode: mode,
       ),
-      isSuccess: (CompileResult value) => value.success,
-      failureMessage: (CompileResult value) => value.errors.join(' | '),
+      isSuccess: (CompileResult v) => v.success,
+      failureMessage: (CompileResult v) => v.errors.join(' | '),
     );
-
-    if (result.success) {
-      _emitStatus(
-        ref,
-        sessionKey,
-        terminalLine: 'Mirror compile completed successfully.',
-        liveLine: 'Compile done.',
-      );
-    } else {
-      await _replayService(ref).enqueue(
-        operation: 'compile',
-        sessionKey: sessionKey,
-        prompt: prompt,
-        context: context,
-        mode: mode,
-        lastError: result.errors.join(' | '),
-      );
-      unawaited(
-        _replayService(ref).replayDueEntries(
-          reason: 'post_compile_failure',
-          operationExecutor: _createOutboxExecutor(),
-          onReplaySuccess: _onOutboxReplaySuccess(ref),
-        ),
-      );
-      _emitStatus(
-        ref,
-        sessionKey,
-        terminalLine: 'Mirror compile failed: ${result.errors.join(' | ')}',
-        liveLine: 'Compile failed.',
-      );
-    }
-
-    return result;
   }
 
   @override
@@ -173,82 +106,124 @@ class MirrorOrchestratorService implements MirrorExecutionOrchestrator {
     required ProjectContext context,
     required String mode,
     String? compileFingerprint,
-  }) async {
-    await _replayQueuedWork(ref, reason: 'pre_apply');
-
-    _emitStatus(
-      ref,
-      sessionKey,
-      terminalLine: 'Mirror apply started ($mode mode).',
-      liveLine: 'Applying...',
-    );
-
-    final result = await _withRetries<ApplyResult>(
+  }) {
+    // MirrorApplyFlowCoordinator embeds compileFingerprint in context.metadata
+    // before calling apply(), so no special injection is needed here.
+    return _runWithOutbox<ApplyResult>(
       operationName: 'apply',
       ref: ref,
       sessionKey: sessionKey,
-      operation: () => _interactivePath.apply(
+      prompt: prompt,
+      context: context,
+      mode: mode,
+      startTerminalLine: 'Mirror apply started ($mode mode).',
+      startLiveLine: 'Applying...',
+      doneTerminalLine: 'Mirror apply completed successfully.',
+      doneLiveLine: 'Apply done.',
+      work: () => _interactivePath.apply(
         prompt: prompt,
         context: context,
         mode: mode,
         compileFingerprint: compileFingerprint,
       ),
-      isSuccess: (ApplyResult value) => value.success,
-      failureMessage: (ApplyResult value) => value.message,
+      isSuccess: (ApplyResult v) => v.success,
+      failureMessage: (ApplyResult v) => v.message,
+    );
+  }
+
+  // ── Shared outbox pattern ────────────────────────────────────────────────
+  //
+  // Drains the outbox before executing, then retries the operation. On failure
+  // the operation is enqueued for later replay while a background drain fires.
+  // Cache invalidation after a replayed apply is handled inline below.
+
+  Future<T> _runWithOutbox<T>({
+    required String operationName,
+    required WidgetRef ref,
+    required String sessionKey,
+    required String prompt,
+    required ProjectContext context,
+    required String mode,
+    required String startTerminalLine,
+    required String startLiveLine,
+    required String doneTerminalLine,
+    required String doneLiveLine,
+    required Future<T> Function() work,
+    required bool Function(T) isSuccess,
+    required String? Function(T) failureMessage,
+  }) async {
+    // Reused for both the pre-op drain and the post-failure background replay.
+    Future<MirrorOutboxOperationResult> replayExecutor(
+      MirrorOutboxEntry entry,
+    ) async {
+      return _replayPath.execute(entry);
+    }
+
+    Future<void> replaySuccessCallback(MirrorOutboxEntry entry) async {
+      if (entry.operation != 'apply') return;
+      try {
+        await _refreshCachesForReplay(
+          ref: ref,
+          context: entry.context,
+          sessionKey: entry.sessionKey,
+        );
+      } catch (_) {
+        // Provider scope may already be disposed.
+      }
+    }
+
+    await _replayService(ref).replayDueEntries(
+      reason: 'pre_$operationName',
+      operationExecutor: replayExecutor,
+      onReplaySuccess: replaySuccessCallback,
+    );
+    // Emit the foreground status only after older queued work had a chance to
+    // drain, so terminal output reflects the current attempt in order.
+    _emitStatus(ref, sessionKey,
+        terminalLine: startTerminalLine, liveLine: startLiveLine);
+
+    final result = await _withRetries<T>(
+      operationName: operationName,
+      ref: ref,
+      sessionKey: sessionKey,
+      operation: work,
+      isSuccess: isSuccess,
+      failureMessage: failureMessage,
     );
 
-    if (result.success) {
-      await _refreshTaskAndSubTaskCaches(
-        ref: ref,
-        context: context,
-        sessionKey: sessionKey,
-      );
-      final appliedFilesText = result.appliedFiles.isEmpty
-          ? 'No files were reported as applied.'
-          : 'Applied files: ${result.appliedFiles.join(', ')}';
-      _emitStatus(
-        ref,
-        sessionKey,
-        terminalLine: 'Mirror apply completed successfully. $appliedFilesText',
-        liveLine: 'Apply done.',
-      );
+    if (isSuccess(result)) {
+      _emitStatus(ref, sessionKey,
+          terminalLine: doneTerminalLine, liveLine: doneLiveLine);
     } else {
-      final queueContext =
-          compileFingerprint == null || compileFingerprint.isEmpty
-              ? context
-              : context.copyWith(
-                  metadata: context.metadata.copyWith(
-                    compileFingerprint: compileFingerprint,
-                  ),
-                );
+      // Foreground failures are persisted for later replay instead of being
+      // silently dropped when the backend or network is unstable.
       await _replayService(ref).enqueue(
-        operation: 'apply',
+        operation: operationName,
         sessionKey: sessionKey,
         prompt: prompt,
-        context: queueContext,
+        context: context,
         mode: mode,
-        lastError: result.message,
+        lastError: failureMessage(result) ?? 'unknown',
       );
-      unawaited(
-        _replayService(ref).replayDueEntries(
-          reason: 'post_apply_failure',
-          operationExecutor: _createOutboxExecutor(),
-          onReplaySuccess: _onOutboxReplaySuccess(ref),
-        ),
-      );
-      _emitStatus(
-        ref,
-        sessionKey,
-        terminalLine:
-            'Mirror apply failed: ${result.message ?? 'unknown error'}',
-        liveLine: 'Apply failed.',
-      );
+      unawaited(_replayService(ref).replayDueEntries(
+        reason: 'post_${operationName}_failure',
+        operationExecutor: replayExecutor,
+        onReplaySuccess: replaySuccessCallback,
+      ));
+      _emitStatus(ref, sessionKey,
+          terminalLine:
+              'Mirror $operationName failed: ${failureMessage(result) ?? 'unknown error'}',
+          liveLine: '$operationName failed.');
     }
 
     return result;
   }
 
-  Future<void> _refreshTaskAndSubTaskCaches({
+  // ── Cache invalidation (outbox replay path only) ─────────────────────────
+  //
+  // Interactive apply cache refresh is owned by MirrorApplyFlowCoordinator.
+
+  Future<void> _refreshCachesForReplay({
     required WidgetRef ref,
     required ProjectContext context,
     required String sessionKey,
@@ -261,18 +236,14 @@ class MirrorOrchestratorService implements MirrorExecutionOrchestrator {
         ? context.taskId
         : (parts.length > 1 ? parts[1] : '');
 
-    if (projectId.isEmpty) {
-      return;
-    }
+    if (projectId.isEmpty) return;
 
     try {
       await ref.read(tasksProvider.notifier).loadTasks(projectId);
-      if (taskId.isNotEmpty) {
-        ref.invalidate(subTasksByTaskProvider(taskId));
-      }
+      if (taskId.isNotEmpty) ref.invalidate(subTasksByTaskProvider(taskId));
     } catch (error) {
       AppLogger.instance.w(
-        'Mirror apply succeeded but task/subtask cache refresh failed',
+        'Mirror outbox replay: task/subtask cache refresh failed',
         error: error,
       );
     }
@@ -295,6 +266,8 @@ class MirrorOrchestratorService implements MirrorExecutionOrchestrator {
           return value;
         }
 
+        // Backend calls can return a structured failure result without
+        // throwing. Those still participate in the retry loop.
         final isLastAttempt = attempt > maxRetries;
         if (isLastAttempt) {
           return value;
@@ -308,6 +281,8 @@ class MirrorOrchestratorService implements MirrorExecutionOrchestrator {
           liveLine: '$operationName retry $attempt/${maxRetries + 1}',
         );
       } catch (error) {
+        // Transport/runtime exceptions use the same retry budget as explicit
+        // backend failures so callers get one consistent resiliency policy.
         final isLastAttempt = attempt > maxRetries;
         if (isLastAttempt) {
           rethrow;
@@ -352,47 +327,14 @@ class MirrorOrchestratorService implements MirrorExecutionOrchestrator {
     }
   }
 
-  Future<void> _replayQueuedWork(WidgetRef ref,
-      {required String reason}) async {
-    await _replayService(ref).replayDueEntries(
-      reason: reason,
-      operationExecutor: _createOutboxExecutor(),
-      onReplaySuccess: _onOutboxReplaySuccess(ref),
-    );
-  }
-
-  Future<MirrorOutboxOperationResult> Function(MirrorOutboxEntry entry)
-      _createOutboxExecutor() {
-    return (MirrorOutboxEntry entry) async {
-      return _replayPath.execute(entry);
-    };
-  }
-
-  Future<void> Function(MirrorOutboxEntry entry) _onOutboxReplaySuccess(
-    WidgetRef ref,
-  ) {
-    return (MirrorOutboxEntry entry) async {
-      if (entry.operation != 'apply') {
-        return;
-      }
-      try {
-        await _refreshTaskAndSubTaskCaches(
-          ref: ref,
-          context: entry.context,
-          sessionKey: entry.sessionKey,
-        );
-      } catch (_) {
-        // Ignore late replay callbacks when provider scope is already disposed.
-      }
-    };
-  }
-
   MirrorOutboxReplayService _replayService(WidgetRef ref) {
     final existing = _outboxReplayService;
     if (existing != null) {
       return existing;
     }
 
+    // Lazily initialize to avoid constructing replay infrastructure in flows
+    // that never need it, such as simple tests.
     final created = ref.read(mirrorOutboxReplayServiceProvider);
     _outboxReplayService = created;
     return created;
@@ -400,6 +342,8 @@ class MirrorOrchestratorService implements MirrorExecutionOrchestrator {
 
   Duration _applyBackoffJitter(Duration base) {
     final baseMs = max(1, base.inMilliseconds);
+    // Small jitter spreads retries across clients and avoids synchronized
+    // retry bursts after a transient upstream failure.
     final jitterFraction = (_jitterRandom.nextDouble() - 0.5) * 0.4;
     final jittered = (baseMs * (1 + jitterFraction)).round();
     return Duration(milliseconds: max(1, jittered));

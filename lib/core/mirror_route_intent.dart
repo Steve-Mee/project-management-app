@@ -8,6 +8,14 @@ class MirrorRouteIntent {
   final String taskId;
 }
 
+final RegExp _uuidV4LikePattern = RegExp(
+  r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$',
+);
+
+bool isValidMirrorContextId(String value) {
+  return _uuidV4LikePattern.hasMatch(value.trim());
+}
+
 MirrorRouteIntent? tryParseMirrorRouteIntent(String routeName) {
   final normalized = routeName.trim();
   if (normalized.isEmpty) {
@@ -27,6 +35,10 @@ MirrorRouteIntent? tryParseMirrorRouteIntent(String routeName) {
   final projectId = segments[1].trim();
   final taskId = segments[2].trim();
   if (projectId.isEmpty || taskId.isEmpty) {
+    return null;
+  }
+  if (!isValidMirrorContextId(projectId) ||
+      !isValidMirrorContextId(taskId)) {
     return null;
   }
 

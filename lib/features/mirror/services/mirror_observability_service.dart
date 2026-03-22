@@ -39,6 +39,24 @@ class MirrorObservabilityService {
     );
   }
 
+  /// Records explicit stale-cache fallback events for templates.
+  void recordTemplateCacheFallback({
+    required String source,
+    required String reason,
+    required int stalenessAgeMs,
+    int? templateCount,
+  }) {
+    AppLogger.event(
+      'mirror_templates_cache_fallback',
+      params: <String, Object?>{
+        'source': source,
+        'reason': reason,
+        'stalenessAgeMs': stalenessAgeMs,
+        if (templateCount != null) 'templateCount': templateCount,
+      },
+    );
+  }
+
   /// Records the wall-clock time for a single compile or apply HTTP attempt.
   ///
   /// [durationMs]  Elapsed milliseconds for the HTTP round-trip.
@@ -247,6 +265,32 @@ class MirrorObservabilityService {
         'reason': reason,
         'consecutiveFailures': consecutiveFailures,
         if (openUntil != null) 'openUntil': openUntil.toUtc().toIso8601String(),
+      },
+    );
+  }
+
+  /// Records client-side schema validation failures before any network activity.
+  ///
+  /// [backend]    Identifier of the backend that detected the failure, e.g.
+  ///              `'mirror_gateway'` or `'private_grpc'`.
+  /// [operation]  `'compile'` or `'apply'`.
+  /// [errors]     List of validation error messages from the schema class.
+  /// [mode]       Mirror mode, if known at validation time.
+  void recordValidationError({
+    required String backend,
+    required String operation,
+    required List<String> errors,
+    String? mode,
+  }) {
+    AppLogger.event(
+      'mirror_validation_error',
+      params: <String, Object?>{
+        'stage': 'backend',
+        'backend': backend,
+        'operation': operation,
+        'errorCount': errors.length,
+        'errors': errors,
+        if (mode != null) 'mode': mode,
       },
     );
   }

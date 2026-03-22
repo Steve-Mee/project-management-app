@@ -5,6 +5,8 @@ import 'dart:io';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+import 'package:project_management_app/core/providers/mirror_premium_provider.dart';
+import 'package:project_management_app/core/services/mirror_premium_service.dart';
 import 'package:project_management_app/core/providers/mirror_session_provider.dart';
 import 'package:project_management_app/features/mirror/mirror_signed_inputs_backend.dart';
 import 'package:project_management_app/features/mirror/services/mirror_orchestrator_service.dart';
@@ -101,7 +103,16 @@ void main() {
 
   group('Mirror outbox persistence', () {
     test('persists outbox entries across orchestrator restarts', () async {
-      final container = ProviderContainer();
+      final container = ProviderContainer(
+        overrides: <Override>[
+          mirrorPremiumServiceProvider.overrideWith(
+            (ref) => MirrorPremiumService(
+              productionMode: false,
+              autoRefreshOnEntitlementChange: false,
+            ),
+          ),
+        ],
+      );
       addTearDown(container.dispose);
       final ref = _FakeWidgetRef(container);
       final context = _buildContext();
@@ -143,7 +154,16 @@ void main() {
 
     test('stores idempotency key and keeps last-write-wins on conflict',
         () async {
-      final container = ProviderContainer();
+      final container = ProviderContainer(
+        overrides: <Override>[
+          mirrorPremiumServiceProvider.overrideWith(
+            (ref) => MirrorPremiumService(
+              productionMode: false,
+              autoRefreshOnEntitlementChange: false,
+            ),
+          ),
+        ],
+      );
       addTearDown(container.dispose);
       final ref = _FakeWidgetRef(container);
       final context = _buildContext();
@@ -189,7 +209,16 @@ void main() {
     });
 
     test('records retry metadata and emits retry status updates', () async {
-      final container = ProviderContainer();
+      final container = ProviderContainer(
+        overrides: <Override>[
+          mirrorPremiumServiceProvider.overrideWith(
+            (ref) => MirrorPremiumService(
+              productionMode: false,
+              autoRefreshOnEntitlementChange: false,
+            ),
+          ),
+        ],
+      );
       addTearDown(container.dispose);
       final ref = _FakeWidgetRef(container);
       final context = _buildContext();

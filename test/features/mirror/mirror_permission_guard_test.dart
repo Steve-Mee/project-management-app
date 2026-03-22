@@ -7,12 +7,20 @@ import 'package:hive/hive.dart';
 import 'package:pma_core/auth/permissions.dart';
 import 'package:pma_core/providers/auth/auth_providers.dart';
 import 'package:project_management_app/core/providers/mirror_mode_controller_provider.dart';
+import 'package:project_management_app/core/providers/supabase_client_provider.dart';
 import 'package:project_management_app/features/mirror/mirror_editor_screen.dart';
+import 'package:project_management_app/features/mirror/providers/mirror_templates_provider.dart';
 import 'package:project_management_app/generated/app_localizations.dart';
 import 'package:pma_core/models/comment_model.dart';
 import 'package:pma_core/models/project_model.dart';
 import 'package:pma_core/models/sub_task_model.dart';
 import 'package:pma_core/models/task_model.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+
+class _FakeSupabaseClient extends Fake implements SupabaseClient {}
+
+final _noopTemplatesRealtimeInvalidationProvider =
+  Provider.autoDispose<void>((ref) {});
 
 class _TestMirrorModeController extends MirrorModeController {
   _TestMirrorModeController(this._initialState);
@@ -31,6 +39,10 @@ Widget _buildHarness({
       mirrorModeControllerProvider.overrideWith(() => notifier),
       hasPermissionProvider(AppPermissions.useMirror)
           .overrideWith((ref) => false),
+      supabaseClientProvider.overrideWith((ref) => _FakeSupabaseClient()),
+      mirrorTemplatesRealtimeInvalidationProvider.overrideWith(
+        (ref) => ref.watch(_noopTemplatesRealtimeInvalidationProvider),
+      ),
     ],
     child: const MaterialApp(
       locale: Locale('en'),

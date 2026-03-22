@@ -1,4 +1,5 @@
 // ignore_for_file: subtype_of_sealed_class
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -17,6 +18,13 @@ import 'package:project_management_app/features/mirror/services/mirror_templates
 /// throws [UnsupportedError].  This forces [_fetchTemplatesServerVersion]
 /// to fail inside the try-block so the error-fallback path is exercised.
 class _FakeSupabaseClient extends Fake implements SupabaseClient {}
+
+class _TimeoutSupabaseClient extends _FakeSupabaseClient {
+  @override
+  dynamic noSuchMethod(Invocation invocation) {
+    throw TimeoutException('simulated timeout');
+  }
+}
 
 /// Controllable in-memory implementation of [MirrorTemplatesCache].
 /// Call [seed] before a test to pre-populate the persistent cache layer.
@@ -51,10 +59,15 @@ MirrorTemplate _tpl(String id) => MirrorTemplate(
       iconName: 'icon-$id',
     );
 
-ProviderContainer _makeContainer(_FakeMirrorTemplatesCache fakeCache) =>
+ProviderContainer _makeContainer(
+  _FakeMirrorTemplatesCache fakeCache, {
+  SupabaseClient? client,
+}) =>
     ProviderContainer(
       overrides: [
-        supabaseClientProvider.overrideWith((ref) => _FakeSupabaseClient()),
+        supabaseClientProvider.overrideWith(
+          (ref) => client ?? _FakeSupabaseClient(),
+        ),
         mirrorTemplatesCacheProvider.overrideWith((ref) => fakeCache),
       ],
     );
@@ -203,8 +216,9 @@ void main() {
       expect(result.isStaleFallback, isTrue);
       expect(
         result.reasonCode,
-        MirrorTemplatesLoadReasonCodes.networkOrFetchError,
+        MirrorTemplatesLoadReasonCodes.networkError,
       );
+      expect(result.cacheAge, isNotNull);
     });
 
     test(
@@ -227,8 +241,75 @@ void main() {
       expect(result.isStaleFallback, isTrue);
       expect(
         result.reasonCode,
-        MirrorTemplatesLoadReasonCodes.networkOrFetchError,
+        MirrorTemplatesLoadReasonCodes.networkError,
       );
+      expect(result.cacheAge, isNotNull);
+    });
+
+    test('uses timeout fallback reason when fetch throws TimeoutException', () async {
+      debugSetMirrorTemplatesMemoryCache(
+        templates: [_tpl('mem-timeout')],
+        serverVersion: 'v1',
+        fetchedAtUtc:
+            DateTime.now().toUtc().subtract(const Duration(minutes: 2)),
+      );
+
+      final container = _makeContainer(
+        fakeCache,
+        client: _TimeoutSupabaseClient(),
+      );
+      addTearDown(container.dispose);
+
+      final result = await container.read(mirrorTemplatesProvider.future);
+      expect(result.isStaleFallback, isTrue);
+      expect(result.reasonCode, MirrorTemplatesLoadReasonCodes.timeout);
+    });
+
+    test('classifies version mismatch fallback reason for diagnostics', () {
+      final reason = debugClassifyTemplatesFallbackReason(
+        error: Exception('fetch failed'),
+        missReason: MirrorTemplatesLoadReasonCodes.versionMismatch,
+      );
+
+      expect(reason, MirrorTemplatesLoadReasonCodes.versionMismatch);
+    });
+
+    test(
+        'explicit invalidation clears memory+persistent cache and next fetch requires network',
+        () async {
+      debugSetMirrorTemplatesMemoryCache(
+        templates: [_tpl('mem-before-invalidate')],
+        serverVersion: 'v1',
+        fetchedAtUtc:
+            DateTime.now().toUtc().subtract(const Duration(minutes: 2)),
+      );
+      fakeCache.seed(
+        MirrorTemplatesCacheSnapshot(
+          templates: [_tpl('persistent-before-invalidate')],
+          serverVersion: 'v1',
+          fetchedAtUtc:
+              DateTime.now().toUtc().subtract(const Duration(minutes: 2)),
+        ),
+      );
+
+      final container = _makeContainer(fakeCache);
+      addTearDown(container.dispose);
+
+      final fallbackResult = await container.read(mirrorTemplatesProvider.future);
+      expect(
+        fallbackResult.templates.map((t) => t.id).toList(),
+        ['mem-before-invalidate'],
+      );
+
+      await container
+          .read(mirrorTemplatesInvalidationControllerProvider)
+          .invalidateTemplatesCache();
+
+      await expectLater(
+        container.read(mirrorTemplatesProvider.future),
+        throwsA(isA<UnsupportedError>()),
+      );
+      expect(await fakeCache.readSnapshot(), isNull);
     });
 
     test(

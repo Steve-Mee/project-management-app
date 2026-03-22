@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:crypto/crypto.dart';
@@ -77,6 +78,8 @@ class MirrorSecureApplyService {
 
   static const String defaultSignedInputBucket = 'mirror-signed-inputs';
   static const String defaultBackupBucket = 'mirror-backups';
+  static const int _artifactOperationMaxAttempts = 3;
+  static const Duration _artifactInitialBackoff = Duration(milliseconds: 150);
 
   Future<MirrorSecureApplyArtifacts> prepareSignedInputAndBackup({
     required String projectId,
@@ -120,11 +123,13 @@ class MirrorSecureApplyService {
       final payload = utf8.encode(entry.value);
 
       try {
-        await _uploadReplaceBinary(
-          client: client,
-          bucket: signedInputBucket,
-          path: signedInputPath,
-          bytes: payload,
+        await _runArtifactOperationWithRetry(
+          () => _uploadReplaceBinary(
+            client: client,
+            bucket: signedInputBucket,
+            path: signedInputPath,
+            bytes: payload,
+          ),
         );
       } catch (error) {
         uploadFailures.add(
@@ -139,11 +144,13 @@ class MirrorSecureApplyService {
       }
 
       try {
-        await _uploadReplaceBinary(
-          client: client,
-          bucket: backupBucket,
-          path: backupPath,
-          bytes: payload,
+        await _runArtifactOperationWithRetry(
+          () => _uploadReplaceBinary(
+            client: client,
+            bucket: backupBucket,
+            path: backupPath,
+            bytes: payload,
+          ),
         );
       } catch (error) {
         uploadFailures.add(
@@ -159,9 +166,11 @@ class MirrorSecureApplyService {
 
       late final String signedInputUrl;
       try {
-        signedInputUrl = await client.storage
-            .from(signedInputBucket)
-            .createSignedUrl(signedInputPath, signedUrlTtl.inSeconds);
+        signedInputUrl = await _runArtifactOperationWithRetry(
+          () => client.storage
+              .from(signedInputBucket)
+              .createSignedUrl(signedInputPath, signedUrlTtl.inSeconds),
+        );
       } catch (error) {
         uploadFailures.add(
           MirrorSecureApplyUploadFailure(
@@ -176,9 +185,11 @@ class MirrorSecureApplyService {
 
       late final String backupSignedUrl;
       try {
-        backupSignedUrl = await client.storage
-            .from(backupBucket)
-            .createSignedUrl(backupPath, signedUrlTtl.inSeconds);
+        backupSignedUrl = await _runArtifactOperationWithRetry(
+          () => client.storage
+              .from(backupBucket)
+              .createSignedUrl(backupPath, signedUrlTtl.inSeconds),
+        );
       } catch (error) {
         uploadFailures.add(
           MirrorSecureApplyUploadFailure(
@@ -315,6 +326,30 @@ class MirrorSecureApplyService {
           '${result.message ?? 'Apply failed.'} Backup ID: ${artifacts.backupId}',
     );
   }
+}
+
+Future<T> _runArtifactOperationWithRetry<T>(
+  Future<T> Function() operation,
+) async {
+  Object? lastError;
+  var backoff = MirrorSecureApplyService._artifactInitialBackoff;
+
+  for (var attempt = 1;
+      attempt <= MirrorSecureApplyService._artifactOperationMaxAttempts;
+      attempt += 1) {
+    try {
+      return await operation();
+    } catch (error) {
+      lastError = error;
+      if (attempt == MirrorSecureApplyService._artifactOperationMaxAttempts) {
+        break;
+      }
+      await Future<void>.delayed(backoff);
+      backoff *= 2;
+    }
+  }
+
+  throw lastError ?? StateError('Artifact operation failed without error.');
 }
 
 String _buildBackupId({

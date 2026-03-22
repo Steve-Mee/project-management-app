@@ -51,12 +51,18 @@ class MirrorCompileRequestSchema {
     if (projectId.length > 256) {
       errors.add('projectId: must be ≤256 characters');
     }
+    if (!_isValidUuid(projectId)) {
+      errors.add('projectId: must be valid UUID');
+    }
 
     if (taskId.isEmpty) {
       errors.add('taskId: must be non-empty string');
     }
     if (taskId.length > 256) {
       errors.add('taskId: must be ≤256 characters');
+    }
+    if (!_isValidUuid(taskId)) {
+      errors.add('taskId: must be valid UUID');
     }
 
     if (mode != 'private' && mode != 'cloud') {
@@ -181,12 +187,18 @@ class MirrorApplyRequestSchema {
     if (projectId.length > 256) {
       errors.add('projectId: must be ≤256 characters');
     }
+    if (!_isValidUuid(projectId)) {
+      errors.add('projectId: must be valid UUID');
+    }
 
     if (taskId.isEmpty) {
       errors.add('taskId: must be non-empty string');
     }
     if (taskId.length > 256) {
       errors.add('taskId: must be ≤256 characters');
+    }
+    if (!_isValidUuid(taskId)) {
+      errors.add('taskId: must be valid UUID');
     }
 
     if (mode != 'private' && mode != 'cloud') {
@@ -231,6 +243,11 @@ class MirrorApplyRequestSchema {
 
   bool _isValidHash(String value) {
     return value.contains(':') && value.split(':').length == 2;
+  }
+
+  bool _isValidUuid(String value) {
+    final pattern = RegExp(r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$');
+    return pattern.hasMatch(value);
   }
 }
 

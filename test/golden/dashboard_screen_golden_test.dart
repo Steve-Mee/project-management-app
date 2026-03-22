@@ -7,12 +7,14 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:pma_core/providers.dart';
+import 'package:pma_core/core/providers/supabase_client_provider.dart';
 import 'package:project_management_app/features/dashboard/dashboard_screen.dart';
 import 'package:project_management_app/generated/app_localizations.dart';
 import 'package:pma_core/models/project_meta.dart';
 import 'package:pma_core/models/project_model.dart';
 import 'package:pma_core/models/task_model.dart';
 import 'package:pma_core/repository/impl/hive_task_repository.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'dart:io';
 
 // ignore_for_file: prefer_const_constructors
@@ -41,6 +43,8 @@ class FakeTaskRepository extends HiveTaskRepository {
     return tasks.where((task) => task.projectId == projectId).toList();
   }
 }
+
+class _FakeSupabaseClient extends Fake implements SupabaseClient {}
 
 void main() {
   testWidgets('dashboard_screen_golden: renders expected dashboard baseline', (tester) async {
@@ -117,6 +121,7 @@ void main() {
           (ref) async => FakeTaskRepository(tasks),
         ),
         projectMetaProvider.overrideWithValue(meta),
+        pmaSupabaseClientProvider.overrideWith((ref) => _FakeSupabaseClient()),
       ],
     );
 
@@ -140,9 +145,13 @@ void main() {
     // Dashboard has periodic/background provider activity; settle with fixed pumps.
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 400));
+    final goldenPath = File(
+      'C:/my_project_management_app/test/goldens/dashboard.png',
+    );
+    expect(goldenPath.existsSync(), isTrue);
     await expectLater(
       find.byType(DashboardScreen),
-      matchesGoldenFile('test/goldens/dashboard.png'),
+      matchesGoldenFile(goldenPath.path),
     );
 
     container.dispose();

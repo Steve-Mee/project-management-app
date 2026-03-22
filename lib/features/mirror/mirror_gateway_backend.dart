@@ -9,17 +9,15 @@ import 'package:uuid/uuid.dart';
 
 import '../../core/config/app_config.dart';
 import 'mirror_signed_inputs_backend.dart';
-import 'services/mirror_apply_audit_service.dart';
-import 'services/mirror_apply_validator_service.dart';
+import 'services/mirror_backend_error_format.dart';
 import 'services/mirror_backend_workflows.dart';
 import 'services/mirror_context_budget_service.dart';
 import 'services/mirror_observability_service.dart';
+import 'services/mirror_request_schema.dart';
 import 'services/mirror_retry_policy.dart';
 
 const Uuid _uuid = Uuid();
 const MirrorBackendWorkflows _mirrorWorkflows = MirrorBackendWorkflows();
-const MirrorApplyValidatorService _mirrorValidator = MirrorApplyValidatorService();
-const MirrorApplyAuditService _mirrorAudit = MirrorApplyAuditService();
 
 class MirrorGatewayBackend implements MirrorComputeBackend {
   MirrorGatewayBackend({
@@ -28,9 +26,12 @@ class MirrorGatewayBackend implements MirrorComputeBackend {
     this.httpEndpoint,
     this.applyHttpEndpoint,
     this.useSecureApply = true,
-    this.timeout = const Duration(seconds: 30),
-    this.maxRetries = 2,
-    this.initialBackoff = const Duration(milliseconds: 300),
+    this.auditLoggingEnabled = true,
+    this.requireSignedApply = false,
+    this.userTrustScore = 100,
+    Duration timeout = const Duration(seconds: 30),
+    int maxRetries = 2,
+    Duration initialBackoff = const Duration(milliseconds: 300),
     MirrorContextBudgetService? budgetService,
     MirrorObservabilityService? observabilityService,
     MirrorRetryPolicy? retryPolicy,
@@ -54,9 +55,9 @@ class MirrorGatewayBackend implements MirrorComputeBackend {
   final String? httpEndpoint;
   final String? applyHttpEndpoint;
   final bool useSecureApply;
-  final Duration timeout;
-  final int maxRetries;
-  final Duration initialBackoff;
+  final bool auditLoggingEnabled;
+  final bool requireSignedApply;
+  final int userTrustScore;
   final void Function({
     required String projectId,
     required String taskId,
@@ -72,7 +73,7 @@ class MirrorGatewayBackend implements MirrorComputeBackend {
   }) async {
     late final CompileResult compileResult;
     try {
-      final endpoint = _resolveCompileEndpoint();
+      final endpoint = resolveCompileEndpoint(httpEndpoint: httpEndpoint);
       compileResult = await _postCompile(
         endpoint: endpoint,
         prompt: prompt,
@@ -119,8 +120,34 @@ class MirrorGatewayBackend implements MirrorComputeBackend {
     required ProjectContext context,
     required String mode,
   }) async {
+    // --- PRE-FLIGHT SCHEMA VALIDATION ---
+    final schemaErrors = MirrorCompileRequestSchema(
+      prompt: prompt,
+      projectId: context.projectId,
+      taskId: context.taskId,
+      mode: mode,
+      files: context.files,
+    ).validate();
+    if (schemaErrors.isNotEmpty) {
+      _observabilityService?.recordValidationError(
+        backend: 'mirror_gateway',
+        operation: 'compile',
+        errors: schemaErrors,
+        mode: mode,
+      );
+      return CompileResult(
+        success: false,
+        errors: <String>[
+          _formatStructuredError(
+            family: _MirrorGatewayErrorFamily.validation,
+            message: schemaErrors.join('; '),
+            retryable: false,
+          ),
+        ],
+      );
+    }
     try {
-      final endpoint = _resolveCompileEndpoint();
+      final endpoint = resolveCompileEndpoint(httpEndpoint: httpEndpoint);
       return _postCompile(
         endpoint: endpoint,
         prompt: prompt,
@@ -154,9 +181,37 @@ class MirrorGatewayBackend implements MirrorComputeBackend {
     required String mode,
     String? compileFingerprint,
   }) async {
+    // --- PRE-FLIGHT SCHEMA VALIDATION ---
+    final schemaErrors = MirrorApplyRequestSchema(
+      prompt: prompt,
+      projectId: context.projectId,
+      taskId: context.taskId,
+      mode: mode,
+      files: context.files,
+      compileFingerprint: compileFingerprint,
+    ).validate();
+    if (schemaErrors.isNotEmpty) {
+      _observabilityService?.recordValidationError(
+        backend: 'mirror_gateway',
+        operation: 'apply',
+        errors: schemaErrors,
+        mode: mode,
+      );
+      return ApplyResult(
+        success: false,
+        message: _formatStructuredError(
+          family: _MirrorGatewayErrorFamily.validation,
+          message: schemaErrors.join('; '),
+          retryable: false,
+        ),
+      );
+    }
     late final String endpoint;
     try {
-      endpoint = _resolveApplyEndpoint();
+      endpoint = resolveApplyEndpoint(
+        compileHttpEndpoint: httpEndpoint,
+        applyHttpEndpoint: applyHttpEndpoint,
+      );
     } catch (error) {
       _observabilityService?.recordFallbackEvent(
         reason: 'config_error',
@@ -174,231 +229,50 @@ class MirrorGatewayBackend implements MirrorComputeBackend {
       );
     }
 
-    final normalizedCompileFingerprint = compileFingerprint?.trim() ?? '';
-    if (useSecureApply && normalizedCompileFingerprint.isEmpty) {
-      return ApplyResult(
-        success: false,
-        message: _formatStructuredError(
-          family: _MirrorGatewayErrorFamily.validation,
-          message:
-              'Apply blocked: preview fingerprint missing. Re-run preview before applying.',
-          retryable: false,
-        ),
-      );
-    }
-
-    if (!useSecureApply && normalizedCompileFingerprint.isEmpty) {
-      return _applyWithoutSecurity(
-        endpoint: endpoint,
-        prompt: prompt,
-        context: context,
-        mode: mode,
-      );
-    }
-
-    if (!useSecureApply) {
-      final preflight = await compile(
-        prompt: prompt,
-        context: context,
-        mode: mode,
-      );
-      if (!preflight.success || preflight.output == null) {
-        return ApplyResult(
-          success: false,
-          message: preflight.errors.isEmpty
-              ? _formatStructuredError(
-                  family: _MirrorGatewayErrorFamily.validation,
-                  message: 'Apply failed: compile output is empty.',
-                  retryable: false,
-                )
-              : preflight.errors.join(' | '),
-        );
-      }
-
-      final consistencyValidation = _mirrorValidator.validatePreviewApplyConsistency(
-        prompt: prompt,
-        context: context,
-        mode: mode,
-        expectedCompileFingerprint: normalizedCompileFingerprint,
-        preflightOutput: preflight.output!,
-      );
-      if (!consistencyValidation.isValid) {
-        return ApplyResult(
-          success: false,
-          message: _formatStructuredError(
-            family: _MirrorGatewayErrorFamily.consistency,
-            message: consistencyValidation.errorMessage ?? 'Unknown consistency error',
-            retryable: consistencyValidation.isRetryable,
-          ),
-        );
-      }
-
-      return _applyWithoutSecurity(
-        endpoint: endpoint,
-        prompt: prompt,
-        context: context,
-        mode: mode,
-      );
-    }
-
-    final resolvedClient = _client;
-    if (resolvedClient == null) {
-      return ApplyResult(
-        success: false,
-        message: _formatStructuredError(
-          family: _MirrorGatewayErrorFamily.config,
-          message:
-              'Mirror Gateway backend requires an injected Supabase client for secure apply.',
-          retryable: false,
-        ),
-      );
-    }
-
-    return _mirrorWorkflows.secureApply(
-      client: resolvedClient,
+    return _mirrorWorkflows.executeApplyFlow(
+      backend: 'mirror_gateway',
       prompt: prompt,
       context: context,
       mode: mode,
-      onApply: (ApplySecurityArtifacts artifacts) async {
-        final preflight = await compile(
-          prompt: prompt,
-          context: context,
-          mode: mode,
-        );
-        if (!preflight.success || preflight.output == null) {
-          return ApplyResult(
-            success: false,
-            message: preflight.errors.isEmpty
-                ? _formatStructuredError(
-                    family: _MirrorGatewayErrorFamily.validation,
-                    message: 'Apply failed: compile output is empty.',
-                    retryable: false,
-                  )
-                : preflight.errors.join(' | '),
-          );
-        }
-
-        final consistencyValidation = _mirrorValidator.validatePreviewApplyConsistency(
-          prompt: prompt,
-          context: context,
-          mode: mode,
-          expectedCompileFingerprint: normalizedCompileFingerprint,
-          preflightOutput: preflight.output!,
-        );
-        if (!consistencyValidation.isValid) {
-          return ApplyResult(
-            success: false,
-            message: _formatStructuredError(
-              family: _MirrorGatewayErrorFamily.consistency,
-              message: consistencyValidation.errorMessage ?? 'Unknown consistency error',
-              retryable: consistencyValidation.isRetryable,
-            ),
-          );
-        }
-
-        return _executeApplyRequest(
+      compileFingerprint: compileFingerprint,
+      preflightCompile: () => compile(
+        prompt: prompt,
+        context: context,
+        mode: mode,
+      ),
+      executeTransportApply: (ApplySecurityArtifacts? artifacts) async {
+        final raw = await _postRaw(
           endpoint: endpoint,
           prompt: prompt,
           context: context,
           mode: mode,
-          artifacts: artifacts,
+          extra: artifacts == null
+              ? const <String, dynamic>{}
+              : <String, dynamic>{
+                  'backupId': artifacts.backupId,
+                  'fileSetFingerprint': _fingerprintFileMap(context.files),
+                  'actorUserId': _client?.auth.currentUser?.id,
+                  'signedInputUrls': artifacts.signedInputUrls,
+                },
+        );
+        return MirrorApplyTransportResult(
+          success: raw.success,
+          output: raw.body == null ? null : _normalizeGatewayOutput(raw.body!),
+          errors: raw.errors,
         );
       },
-    );
-  }
-
-  Future<ApplyResult> _applyWithoutSecurity({
-    required String endpoint,
-    required String prompt,
-    required ProjectContext context,
-    required String mode,
-  }) async {
-    return _executeApplyRequest(
-      endpoint: endpoint,
-      prompt: prompt,
-      context: context,
-      mode: mode,
-      artifacts: null,
-    );
-  }
-
-  Future<ApplyResult> _executeApplyRequest({
-    required String endpoint,
-    required String prompt,
-    required ProjectContext context,
-    required String mode,
-    required ApplySecurityArtifacts? artifacts,
-  }) async {
-    final raw = await _postRaw(
-      endpoint: endpoint,
-      prompt: prompt,
-      context: context,
-      mode: mode,
-      extra: artifacts == null
-          ? const <String, dynamic>{}
-          : <String, dynamic>{
-              'backupId': artifacts.backupId,
-              'fileSetFingerprint': _fingerprintFileMap(context.files),
-              'actorUserId': _client?.auth.currentUser?.id,
-              'signedInputUrls': artifacts.signedInputUrls,
-            },
-    );
-
-    if (!raw.success || raw.body == null) {
-      return ApplyResult(
-        success: false,
-        message: raw.errors.join(' | '),
-      );
-    }
-
-    final normalizedOutput = _normalizeGatewayOutput(raw.body!);
-
-    final patches = _mirrorWorkflows.buildPatchesFromApplyPayload(
-      context: context,
-      output: normalizedOutput,
-    );
-
-    if (patches.isEmpty) {
-      return _mirrorWorkflows.buildNoPatchApplyFailure(
-        message: _formatStructuredError(
-          family: _MirrorGatewayErrorFamily.validation,
-          message: 'Apply failed: no patchable changes returned.',
-          retryable: false,
-        ),
-      );
-    }
-
-    if (artifacts != null) {
-      final updatedFiles = _mirrorWorkflows.applyPatchesToFiles(
-        files: context.files,
-        patches: patches,
-      );
-
-      await _mirrorAudit.persistApplyToHive(
-        context: context,
-        mode: mode,
-        prompt: prompt,
-        patches: patches,
-        artifacts: artifacts,
-        backend: 'mirror_gateway',
-        updatedFiles: updatedFiles,
-      );
-    }
-
-    return _mirrorWorkflows.buildApplySuccessResult(
-      patches: patches,
-      backupId: artifacts?.backupId,
-    );
-  }
-
-  String _resolveCompileEndpoint() {
-    return resolveCompileEndpoint(httpEndpoint: httpEndpoint);
-  }
-
-  String _resolveApplyEndpoint() {
-    return resolveApplyEndpoint(
-      compileHttpEndpoint: httpEndpoint,
-      applyHttpEndpoint: applyHttpEndpoint,
+      formatError: ({required family, required message, bool? retryable}) =>
+          formatMirrorBackendError(
+        family: family,
+        message: message,
+        retryable: retryable,
+      ),
+      secureApplyClient: _client,
+      allowSecureApply: useSecureApply,
+      auditLoggingEnabled: auditLoggingEnabled,
+      requireSignedApply: requireSignedApply,
+      userTrustScore: userTrustScore,
+      observabilityService: _observabilityService,
     );
   }
 
@@ -892,7 +766,6 @@ enum _MirrorGatewayHttpErrorCode {
 enum _MirrorGatewayErrorFamily {
   config('config_error', false),
   validation('validation_error', false),
-  consistency('consistency_error', false),
   timeout('timeout', true),
   network('network', true),
   unauthorized('unauthorized', false),

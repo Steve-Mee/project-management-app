@@ -26,8 +26,8 @@ void main() {
       );
 
       const context = ProjectContext(
-        projectId: 'project-1',
-        taskId: 'task-1',
+        projectId: '11111111-1111-4111-8111-111111111111',
+        taskId: '22222222-2222-4222-8222-222222222222',
         files: <String, String>{'lib/main.dart': 'void main() {}'},
         metadata: ProjectContextMetadata(
           idempotencyKey: 'idem-gateway-001',

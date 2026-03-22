@@ -2,6 +2,7 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pma_core/auth/permissions.dart';
@@ -20,6 +21,7 @@ import 'providers/mirror_editor_orchestration_provider.dart';
 import 'providers/mirror_templates_provider.dart';
 import 'services/mirror_editor_preflight_service.dart';
 import 'services/mirror_editor_realtime_controller.dart';
+import 'services/mirror_apply_post_hooks_service.dart';
 import 'services/mirror_voice_draft_sanitizer.dart';
 import 'templates_gallery.dart';
 import 'widgets/monaco_editor_host.dart';
@@ -50,6 +52,8 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
   late final TerminalController _terminalController;
   late final MirrorEditorRealtimeController _realtimeController;
   late final ProviderSubscription<bool> _mirrorPermissionSubscription;
+  late final MirrorSessionNotifier _sessionNotifier;
+  late final MirrorApplyPostHooksService _postHooksService;
   final ScrollController _liveOutputScrollController = ScrollController();
   bool _isListening = false;
   bool _isRunInProgress = false;
@@ -58,9 +62,6 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
   _MirrorStructuredError? _lastStructuredError;
 
   String get _sessionKey => '${widget.projectId}::${widget.taskId}';
-
-  MirrorSessionNotifier get _sessionNotifier =>
-      ref.read(mirrorSessionProvider(_sessionKey).notifier);
 
   AppLocalizations get _l10n => AppLocalizations.of(context)!;
 
@@ -73,12 +74,27 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
     return '${local.year}-$month-$day $hour:$minute';
   }
 
+  String _formatTemplatesFallbackReason(String? reasonCode) {
+    switch (reasonCode) {
+      case MirrorTemplatesLoadReasonCodes.timeout:
+        return 'timeout';
+      case MirrorTemplatesLoadReasonCodes.versionMismatch:
+        return 'version mismatch';
+      case MirrorTemplatesLoadReasonCodes.networkError:
+        return 'network error';
+      default:
+        return 'unknown reason';
+    }
+  }
+
   @override
   void initState() {
     super.initState();
     final canUseMirror = ref.read(
       hasPermissionProvider(AppPermissions.useMirror),
     );
+    _sessionNotifier = ref.read(mirrorSessionProvider(_sessionKey).notifier);
+    _postHooksService = ref.read(mirrorApplyPostHooksServiceProvider);
     _terminal = Terminal(maxLines: 1000);
     _terminalController = TerminalController();
     _realtimeController = MirrorEditorRealtimeController(
@@ -119,6 +135,11 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
   @override
   void dispose() {
     _mirrorPermissionSubscription.close();
+    unawaited(
+      _postHooksService.persistOnRouteExit(
+            sessionNotifier: _sessionNotifier,
+          ),
+    );
     _disposeRealtimeController();
     _liveOutputScrollController.dispose();
     super.dispose();
@@ -126,6 +147,7 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
 
   @override
   Widget build(BuildContext context) {
+    ref.watch(mirrorTemplatesRealtimeInvalidationProvider);
     final l10n = _l10n;
     final canUseMirror = ref.watch(
       hasPermissionProvider(AppPermissions.useMirror),
@@ -135,6 +157,7 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
     }
 
     final selectedMode = ref.watch(mirrorResolvedModeProvider);
+    final resolvedState = ref.watch(mirrorResolvedStateProvider);
     final sessionState = ref.watch(mirrorSessionProvider(_sessionKey));
     final isPremium = ref.watch(mirrorPremiumProvider).valueOrNull ?? false;
 
@@ -168,6 +191,10 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
                 },
               ),
               const SizedBox(height: 12),
+              if (kDebugMode) ...<Widget>[
+                _MirrorProvenanceDiagnostics(state: resolvedState),
+                const SizedBox(height: 8),
+              ],
               Text(
                 _l10n.mirrorProjectTaskHeader(widget.projectId, widget.taskId),
                 style: Theme.of(context).textTheme.bodySmall,
@@ -583,8 +610,11 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
                         const SizedBox(height: 12),
                         FilledButton.tonalIcon(
                           onPressed: () {
-                            ref.invalidate(mirrorTemplatesProvider);
-                            final _ = ref.refresh(mirrorTemplatesProvider);
+                            final _ = ref
+                                .read(
+                                  mirrorTemplatesInvalidationControllerProvider,
+                                )
+                                .invalidateTemplatesCache(refresh: true);
                           },
                           icon: const Icon(Icons.refresh),
                           label: Text(_l10n.mirrorRetryButton),
@@ -606,6 +636,8 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
                               _formatStaleUpdatedAt(result.fetchedAtUtc!),
                             )
                       : null;
+                    final staleReasonMessage =
+                      _formatTemplatesFallbackReason(result.reasonCode);
 
                   return Column(
                     children: <Widget>[
@@ -623,16 +655,35 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
                               color: Theme.of(context).colorScheme.outlineVariant,
                             ),
                           ),
-                          child: Row(
+                          child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: <Widget>[
-                              const Icon(Icons.warning_amber_rounded, size: 18),
-                              const SizedBox(width: 8),
-                              Expanded(
-                                child: Text(
-                                  staleWarningMessage ??
-                                      _l10n.mirrorTemplatesStaleFallbackWarning,
-                                  style: Theme.of(context).textTheme.bodySmall,
+                              Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: <Widget>[
+                                  const Icon(Icons.warning_amber_rounded, size: 18),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: Text(
+                                      '${staleWarningMessage ?? _l10n.mirrorTemplatesStaleFallbackWarning} ($staleReasonMessage)',
+                                      style: Theme.of(context).textTheme.bodySmall,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 6),
+                              Align(
+                                alignment: Alignment.centerLeft,
+                                child: TextButton.icon(
+                                  onPressed: () {
+                                    final _ = ref
+                                        .read(
+                                          mirrorTemplatesInvalidationControllerProvider,
+                                        )
+                                        .invalidateTemplatesCache(refresh: true);
+                                  },
+                                  icon: const Icon(Icons.refresh),
+                                  label: Text(_l10n.mirrorRetryButton),
                                 ),
                               ),
                             ],
@@ -678,8 +729,9 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
             const SizedBox(height: 12),
             FilledButton.tonalIcon(
               onPressed: () {
-                ref.invalidate(mirrorTemplatesProvider);
-                final _ = ref.refresh(mirrorTemplatesProvider);
+                final _ = ref
+                    .read(mirrorTemplatesInvalidationControllerProvider)
+                    .invalidateTemplatesCache(refresh: true);
               },
               icon: const Icon(Icons.refresh),
               label: Text(_l10n.mirrorRetryButton),
@@ -1138,6 +1190,43 @@ class _ModeSelector extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+class _MirrorProvenanceDiagnostics extends StatelessWidget {
+  const _MirrorProvenanceDiagnostics({required this.state});
+
+  final MirrorState state;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final label = [
+      'phase=${state.hydrationPhase.name}',
+      'modeSource=${state.modeSource}',
+      'premium=${state.premiumSource.name}',
+      'team=${state.teamModeVariantSource.name}',
+      'runner=${state.runnerModeVariantSource.name}',
+      if (state.hydrationReasonCode != null) 'reason=${state.hydrationReasonCode}',
+      if (state.fallbackReason != null) 'fallback=${state.fallbackReason}',
+    ].join(' | ');
+
+    return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        color: colorScheme.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: colorScheme.outlineVariant),
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      child: Text(
+        'Mirror diagnostics: $label',
+        style: Theme.of(context)
+            .textTheme
+            .labelSmall
+            ?.copyWith(color: colorScheme.onSurfaceVariant),
+      ),
     );
   }
 }

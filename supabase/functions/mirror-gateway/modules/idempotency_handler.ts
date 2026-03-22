@@ -5,7 +5,9 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import type { MirrorComputeRequest } from './request_validator.ts'
 
-type SupabaseClient = ReturnType<typeof createClient>
+type SupabaseClient = {
+  from: (table: string) => any
+}
 
 const DEFAULT_IDEMPOTENCY_TTL_SECONDS = 120
 const IDEMPOTENCY_PROCESSING_STALE_SECONDS = 300
@@ -262,7 +264,7 @@ export async function claimIdempotencyKey({
     .eq('user_id', userId)
     .eq('action', action)
     .eq('idempotency_key', idempotencyKey)
-    .maybeSingle<IdempotencyRecord>()
+    .maybeSingle()
 
   if (selectError) {
     throw new Error(`idempotency_select_failed:${selectError.message}`)
@@ -332,7 +334,7 @@ export async function claimIdempotencyKey({
         .eq('user_id', userId)
         .eq('action', action)
         .eq('idempotency_key', idempotencyKey)
-        .maybeSingle<IdempotencyRecord>()
+        .maybeSingle()
 
       if (raceSelectError) {
         throw new Error(`idempotency_select_failed:${raceSelectError.message}`)

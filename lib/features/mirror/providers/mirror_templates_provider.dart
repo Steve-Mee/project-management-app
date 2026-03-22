@@ -1,4 +1,6 @@
 // ARCHITECTURE LOCK: Mirror Gateway = thin proxy only. Compute always on Fly.io or local runner.
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:meta/meta.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -21,7 +23,8 @@ class MirrorTemplatesLoadReasonCodes {
   static const String empty = 'empty';
   static const String stale = 'stale';
   static const String versionMismatch = 'version_mismatch';
-  static const String networkOrFetchError = 'network_or_fetch_error';
+  static const String networkError = 'network_error';
+  static const String timeout = 'timeout';
 }
 
 class MirrorTemplatesLoadResult {
@@ -31,6 +34,7 @@ class MirrorTemplatesLoadResult {
     required this.source,
     this.reasonCode,
     this.fetchedAtUtc,
+    this.cacheAge,
   });
 
   final List<MirrorTemplate> templates;
@@ -38,6 +42,7 @@ class MirrorTemplatesLoadResult {
   final String source;
   final String? reasonCode;
   final DateTime? fetchedAtUtc;
+  final Duration? cacheAge;
 
   bool get isStaleFallback => freshness == MirrorTemplatesFreshness.staleFallback;
 }
@@ -51,6 +56,38 @@ final mirrorTemplatesObservabilityProvider =
 final mirrorTemplatesSupabaseClientProvider =
     Provider<SupabaseClient>((ref) => ref.read(supabaseClientProvider));
 
+final mirrorTemplatesInvalidationControllerProvider =
+    Provider<MirrorTemplatesInvalidationController>(
+  (ref) => MirrorTemplatesInvalidationController(ref),
+);
+
+/// Keeps template cache coherent when mirror template rows change server-side,
+/// such as after seed/sync operations from admin tooling.
+final mirrorTemplatesRealtimeInvalidationProvider =
+    Provider.autoDispose<void>((ref) {
+  final client = ref.read(mirrorTemplatesSupabaseClientProvider);
+  final channel = client.channel('mirror-templates-cache-invalidation');
+
+  channel
+      .onPostgresChanges(
+        event: PostgresChangeEvent.all,
+        schema: 'public',
+        table: 'mirror_templates',
+        callback: (PostgresChangePayload _) {
+          unawaited(
+            ref
+                .read(mirrorTemplatesInvalidationControllerProvider)
+                .invalidateTemplatesCache(),
+          );
+        },
+      )
+      .subscribe();
+
+  ref.onDispose(() {
+    client.removeChannel(channel);
+  });
+});
+
 final mirrorTemplatesProvider =
   FutureProvider<MirrorTemplatesLoadResult>((ref) async {
   final client = ref.read(mirrorTemplatesSupabaseClientProvider);
@@ -58,6 +95,7 @@ final mirrorTemplatesProvider =
   final observability = ref.read(mirrorTemplatesObservabilityProvider);
   final now = DateTime.now().toUtc();
   var cached = _MirrorTemplatesMemoryCache.snapshot;
+  String? missReason;
   var cacheSource = 'none';
 
   if (cached != null) {
@@ -84,10 +122,12 @@ final mirrorTemplatesProvider =
         cached.serverVersion == serverVersion;
 
     if (cacheIsFresh) {
+      final cacheAge = now.difference(cached.fetchedAtUtc);
       observability.recordTemplateCacheEvent(
         result: 'hit',
         source: cacheSource,
         freshness: 'fresh',
+        stalenessAgeMs: cacheAge.inMilliseconds,
         templateCount: cached.templates.length,
       );
       return MirrorTemplatesLoadResult(
@@ -95,10 +135,11 @@ final mirrorTemplatesProvider =
         freshness: MirrorTemplatesFreshness.fresh,
         source: cacheSource,
         fetchedAtUtc: cached.fetchedAtUtc,
+        cacheAge: cacheAge,
       );
     }
 
-    final missReason = cached == null
+    missReason = cached == null
         ? MirrorTemplatesLoadReasonCodes.empty
         : now.difference(cached.fetchedAtUtc) > _templatesCacheTtl
             ? MirrorTemplatesLoadReasonCodes.stale
@@ -109,6 +150,9 @@ final mirrorTemplatesProvider =
       source: cacheSource,
       reason: missReason,
       freshness: 'fresh',
+      stalenessAgeMs: cached == null
+          ? null
+          : now.difference(cached.fetchedAtUtc).inMilliseconds,
       templateCount: cached?.templates.length,
     );
 
@@ -130,17 +174,28 @@ final mirrorTemplatesProvider =
       freshness: MirrorTemplatesFreshness.fresh,
       source: 'network',
       fetchedAtUtc: now,
+      cacheAge: Duration.zero,
     );
-  } catch (_) {
+  } catch (error) {
     final canUseCache = cached != null &&
         now.difference(cached.fetchedAtUtc) <= _templatesCacheTtl;
     if (canUseCache) {
+      final fallbackReason = _classifyTemplatesFallbackReason(
+        error: error,
+        missReason: missReason,
+      );
       final stalenessAgeMs = now.difference(cached.fetchedAtUtc).inMilliseconds;
       observability.recordTemplateCacheEvent(
         result: 'fallback',
         source: cacheSource,
-        reason: MirrorTemplatesLoadReasonCodes.networkOrFetchError,
+        reason: fallbackReason,
         freshness: 'stale_fallback',
+        stalenessAgeMs: stalenessAgeMs,
+        templateCount: cached.templates.length,
+      );
+      observability.recordTemplateCacheFallback(
+        source: cacheSource,
+        reason: fallbackReason,
         stalenessAgeMs: stalenessAgeMs,
         templateCount: cached.templates.length,
       );
@@ -148,13 +203,38 @@ final mirrorTemplatesProvider =
         templates: cached.templates,
         freshness: MirrorTemplatesFreshness.staleFallback,
         source: cacheSource,
-        reasonCode: MirrorTemplatesLoadReasonCodes.networkOrFetchError,
+        reasonCode: fallbackReason,
         fetchedAtUtc: cached.fetchedAtUtc,
+        cacheAge: now.difference(cached.fetchedAtUtc),
       );
     }
     rethrow;
   }
 });
+
+String _classifyTemplatesFallbackReason({
+  required Object error,
+  required String? missReason,
+}) {
+  if (error is TimeoutException) {
+    return MirrorTemplatesLoadReasonCodes.timeout;
+  }
+
+  if (missReason == MirrorTemplatesLoadReasonCodes.versionMismatch) {
+    return MirrorTemplatesLoadReasonCodes.versionMismatch;
+  }
+
+  return MirrorTemplatesLoadReasonCodes.networkError;
+}
+
+/// Exposes fallback reason classification for unit tests.
+@visibleForTesting
+String debugClassifyTemplatesFallbackReason({
+  required Object error,
+  required String? missReason,
+}) {
+  return _classifyTemplatesFallbackReason(error: error, missReason: missReason);
+}
 
 Future<List<MirrorTemplate>> _fetchTemplates(SupabaseClient client) async {
   final rows = await client
@@ -204,6 +284,21 @@ class _TemplatesCacheSnapshot {
 
 class _MirrorTemplatesMemoryCache {
   static _TemplatesCacheSnapshot? snapshot;
+}
+
+class MirrorTemplatesInvalidationController {
+  MirrorTemplatesInvalidationController(this._ref);
+
+  final Ref _ref;
+
+  Future<void> invalidateTemplatesCache({bool refresh = false}) async {
+    _MirrorTemplatesMemoryCache.snapshot = null;
+    await _ref.read(mirrorTemplatesCacheProvider).clear();
+    _ref.invalidate(mirrorTemplatesProvider);
+    if (refresh) {
+      final _ = _ref.refresh(mirrorTemplatesProvider);
+    }
+  }
 }
 
 /// Resets the in-process template memory cache.

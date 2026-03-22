@@ -6,11 +6,11 @@ void main() {
   group('Mirror apply context consistency contract', () {
     test('apply context is derived from original compile context', () {
       final source =
-          _readRepoFile('lib/features/mirror/services/mirror_run_flow_service.dart');
+          _readRepoFile('lib/features/mirror/services/mirror_apply_flow_coordinator.dart');
 
       expect(
         source,
-        contains('final originalCompileContext = ProjectContext('),
+        contains('final compileContext = compilePlan.compileContextForPreviewAndApply;'),
       );
       expect(
         source,
@@ -18,17 +18,17 @@ void main() {
       );
       expect(
         source,
-        contains('files: backend.applyPatchesToFiles('),
+        contains('final applyContext = compileContext.copyWith('),
       );
     });
 
     test('compile context still allows preview patches for compile stage', () {
       final source =
-          _readRepoFile('lib/features/mirror/services/mirror_run_flow_service.dart');
+          _readRepoFile('lib/features/mirror/services/mirror_apply_flow_coordinator.dart');
 
-      expect(source, contains('final compileContext = generatedPatches.isEmpty'));
-      expect(source, contains('files: backend.applyPatchesToFiles('));
-      expect(source, contains('context: compileContextForPreviewAndApply,'));
+      expect(source, contains('final compilePlan = _workflows.prepareCompilePlan('));
+      expect(source, contains('final applyPlan = _workflows.prepareApplyPlan('));
+      expect(source, contains('context: compileContext,'));
       expect(source, contains('context: applyContext,'));
     });
   });

@@ -1,4 +1,11 @@
+import 'dart:convert';
+
 import '../mirror_signed_inputs_backend.dart';
+import 'mirror_apply_audit_service.dart';
+import 'mirror_apply_security_mode_service.dart';
+import 'mirror_apply_validator_service.dart';
+import 'mirror_backend_error_format.dart';
+import 'mirror_observability_service.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'mirror_patch_service.dart';
 import 'mirror_preview_metadata_service.dart';
@@ -50,6 +57,24 @@ class MirrorApplyPatchPlan {
   final MirrorFilePatch? previewPatch;
 }
 
+class MirrorApplyTransportResult {
+  const MirrorApplyTransportResult({
+    required this.success,
+    this.output,
+    this.errors = const <String>[],
+  });
+
+  final bool success;
+  final String? output;
+  final List<String> errors;
+}
+
+typedef MirrorApplyErrorFormatter = String Function({
+  required MirrorBackendErrorFamily family,
+  required String message,
+  bool? retryable,
+});
+
 /// PR2 workflow service: keeps cross-cutting Mirror backend behaviors in one
 /// place so transports/backends remain focused on IO and protocol mapping.
 class MirrorBackendWorkflows {
@@ -58,6 +83,9 @@ class MirrorBackendWorkflows {
   static const MirrorPatchService _patchService = MirrorPatchService();
   static const MirrorPreviewMetadataService _previewMetadataService =
       MirrorPreviewMetadataService();
+  static const MirrorApplyValidatorService _applyValidator =
+      MirrorApplyValidatorService();
+  static const MirrorApplyAuditService _applyAudit = MirrorApplyAuditService();
 
   List<MirrorFilePatch> buildPatchesFromApplyPayload({
     required ProjectContext context,
@@ -344,5 +372,231 @@ class MirrorBackendWorkflows {
       appliedFiles: result.appliedFiles,
       message: result.message,
     );
+  }
+
+  Future<ApplyResult> executeApplyFlow({
+    required String backend,
+    required String prompt,
+    required ProjectContext context,
+    required String mode,
+    required Future<CompileResult> Function() preflightCompile,
+    required Future<MirrorApplyTransportResult> Function(
+      ApplySecurityArtifacts? artifacts,
+    ) executeTransportApply,
+    required MirrorApplyErrorFormatter formatError,
+    SupabaseClient? secureApplyClient,
+    String? compileFingerprint,
+    bool allowSecureApply = true,
+    bool auditLoggingEnabled = true,
+    bool requireSignedApply = false,
+    int userTrustScore = 100,
+    MirrorObservabilityService? observabilityService,
+    Duration signedUrlTtl = MirrorSecureApplyService.defaultSignedUrlTtl,
+    String signedInputBucket =
+        MirrorSecureApplyService.defaultSignedInputBucket,
+    String backupBucket = MirrorSecureApplyService.defaultBackupBucket,
+  }) async {
+    final preflight = await preflightCompile();
+    final preflightOutput = preflight.output?.trim() ?? '';
+    if (!preflight.success || preflightOutput.isEmpty) {
+      return ApplyResult(
+        success: false,
+        message: preflight.errors.isEmpty
+            ? formatError(
+                family: MirrorBackendErrorFamily.validation,
+                message: 'Apply failed: compile output is empty.',
+                retryable: false,
+              )
+            : preflight.errors.join(' | '),
+      );
+    }
+
+    final normalizedCompileFingerprint = compileFingerprint?.trim() ?? '';
+    if (normalizedCompileFingerprint.isNotEmpty) {
+      final consistencyValidation =
+          _applyValidator.validatePreviewApplyConsistency(
+        prompt: prompt,
+        context: context,
+        mode: mode,
+        expectedCompileFingerprint: normalizedCompileFingerprint,
+        preflightOutput: preflightOutput,
+      );
+      if (!consistencyValidation.isValid) {
+        return ApplyResult(
+          success: false,
+          message: formatError(
+            family: MirrorBackendErrorFamily.consistency,
+            message:
+                consistencyValidation.errorMessage ?? 'Unknown consistency error',
+            retryable: consistencyValidation.isRetryable,
+          ),
+        );
+      }
+    }
+
+    final previewPatches = buildPatchesFromApplyPayload(
+      context: context,
+      output: preflightOutput,
+    );
+    if (previewPatches.isEmpty) {
+      return buildNoPatchApplyFailure(
+        message: formatError(
+          family: MirrorBackendErrorFamily.validation,
+          message: 'Apply failed: no patchable changes returned.',
+          retryable: false,
+        ),
+      );
+    }
+
+    final factors = buildApplySecurityModeFactors(
+      totalPatchBytes: _estimatePatchBytes(previewPatches),
+      auditLoggingEnabled: auditLoggingEnabled,
+      mode: mode,
+      requireSignedApply: requireSignedApply,
+      userTrustScore: userTrustScore,
+    );
+    final decision = allowSecureApply
+        ? mirrorApplySecurityModeService.determineApplySecurityMode(factors)
+        : const ApplySecurityModeDecision(
+            mode: MirrorApplySecurityMode.direct,
+            rationale: 'Secure apply disabled; using direct apply flow.',
+            isSecurityBindingDecision: false,
+          );
+
+    mirrorApplySecurityModeService.logSecurityModeDecision(
+      '${context.projectId}::${context.taskId}',
+      decision,
+      factors,
+    );
+
+    if (decision.mode == MirrorApplySecurityMode.signed &&
+        normalizedCompileFingerprint.isEmpty) {
+      return ApplyResult(
+        success: false,
+        message: formatError(
+          family: MirrorBackendErrorFamily.validation,
+          message:
+              'Apply blocked: preview fingerprint missing. Re-run preview before applying.',
+          retryable: false,
+        ),
+      );
+    }
+
+    if (decision.mode == MirrorApplySecurityMode.signed) {
+      if (secureApplyClient == null) {
+        return ApplyResult(
+          success: false,
+          message: formatError(
+            family: MirrorBackendErrorFamily.config,
+            message:
+                'Secure apply requires an injected Supabase client for signed artifact preparation.',
+            retryable: false,
+          ),
+        );
+      }
+
+      return secureApply(
+        client: secureApplyClient,
+        prompt: prompt,
+        context: context,
+        mode: mode,
+        signedUrlTtl: signedUrlTtl,
+        signedInputBucket: signedInputBucket,
+        backupBucket: backupBucket,
+        onApply: (ApplySecurityArtifacts artifacts) async {
+          final transport = await executeTransportApply(artifacts);
+          return _finalizeApplyTransport(
+            backend: backend,
+            prompt: prompt,
+            context: context,
+            mode: mode,
+            transport: transport,
+            artifacts: artifacts,
+            formatError: formatError,
+          );
+        },
+      );
+    }
+
+    final transport = await executeTransportApply(null);
+    return _finalizeApplyTransport(
+      backend: backend,
+      prompt: prompt,
+      context: context,
+      mode: mode,
+      transport: transport,
+      artifacts: null,
+      formatError: formatError,
+    );
+  }
+
+  Future<ApplyResult> _finalizeApplyTransport({
+    required String backend,
+    required String prompt,
+    required ProjectContext context,
+    required String mode,
+    required MirrorApplyTransportResult transport,
+    required ApplySecurityArtifacts? artifacts,
+    required MirrorApplyErrorFormatter formatError,
+  }) async {
+    final output = transport.output?.trim() ?? '';
+    if (!transport.success || output.isEmpty) {
+      return ApplyResult(
+        success: false,
+        message: transport.errors.isEmpty
+            ? formatError(
+                family: MirrorBackendErrorFamily.validation,
+                message: 'Apply failed: apply output is empty.',
+                retryable: false,
+              )
+            : transport.errors.join(' | '),
+      );
+    }
+
+    final patches = buildPatchesFromApplyPayload(
+      context: context,
+      output: output,
+    );
+    if (patches.isEmpty) {
+      return buildNoPatchApplyFailure(
+        message: formatError(
+          family: MirrorBackendErrorFamily.validation,
+          message: 'Apply failed: no patchable changes returned.',
+          retryable: false,
+        ),
+      );
+    }
+
+    if (artifacts != null) {
+      final updatedFiles = applyPatchesToFiles(
+        files: context.files,
+        patches: patches,
+      );
+      await _applyAudit.persistApplyToHive(
+        context: context,
+        mode: mode,
+        prompt: prompt,
+        patches: patches,
+        artifacts: artifacts,
+        backend: backend,
+        updatedFiles: updatedFiles,
+      );
+    }
+
+    return buildApplySuccessResult(
+      patches: patches,
+      backupId: artifacts?.backupId,
+    );
+  }
+
+  int _estimatePatchBytes(List<MirrorFilePatch> patches) {
+    var totalBytes = 0;
+    for (final patch in patches) {
+      final payload = patch.diff.trim().isNotEmpty
+          ? patch.diff
+          : patch.updatedContent;
+      totalBytes += utf8.encode(payload).length;
+    }
+    return totalBytes;
   }
 }

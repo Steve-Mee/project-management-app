@@ -19,9 +19,13 @@ This handbook is the single entry point for Mirror documentation. Use it to navi
 - [usage.md](usage.md)
 - [architecture.md](architecture.md)
 - [security.md](security.md)
+- [mirror_threat_model.md](mirror_threat_model.md)
 - [offline-first.md](offline-first.md)
 - [operations.md](operations.md)
+- [mirror_operational_runbook.md](mirror_operational_runbook.md)
 - [production-readiness.md](production-readiness.md)
+- [mirror-db-performance-baseline.md](mirror-db-performance-baseline.md)
+- [mirror-production-readiness-checklist.md](mirror-production-readiness-checklist.md)
 
 ### Implementation References
 
@@ -46,14 +50,19 @@ This handbook is the single entry point for Mirror documentation. Use it to navi
 - [architecture.md](architecture.md)
 - [contracts.md](contracts.md)
 - [security.md](security.md)
+- [mirror_threat_model.md](mirror_threat_model.md)
 - [feature-flags.md](feature-flags.md)
 - [offline-first.md](offline-first.md)
 
 ### For SRE And Release Owners
 
 - [operations.md](operations.md)
+- [mirror_operational_runbook.md](mirror_operational_runbook.md)
 - [production-readiness.md](production-readiness.md)
+- [mirror-db-performance-baseline.md](mirror-db-performance-baseline.md)
+- [mirror-production-readiness-checklist.md](mirror-production-readiness-checklist.md)
 - [security.md](security.md)
+- [mirror_threat_model.md](mirror_threat_model.md)
 - [troubleshooting.md](troubleshooting.md)
 
 ## Documentation Conventions
@@ -70,5 +79,5 @@ The archive preserves historical source material, migration records, and review 
 - [archive/migration-map.md](archive/migration-map.md) records the old-to-new document mapping from the reorganization.
 - [archive/diffs/full-docs-handbook.diff](archive/diffs/full-docs-handbook.diff) and the other files under [archive/diffs](archive/diffs) are retained for historical review only and should not be treated as active documentation.
 
-Last updated: 2026-03-21  
-Version note: Mirror handbook baseline index for the consolidated `/docs` structure.
+Last updated: 2026-03-22  
+Version note: Mirror handbook index updated with DB baseline and production-readiness execution checklists.

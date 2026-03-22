@@ -286,8 +286,8 @@ void main() {
         () =>
             container
                 .read(mirrorSessionProvider('project-timeout::task-timeout'))
-                .bootstrapPhase !=
-            MirrorSessionBootstrapPhase.initial,
+            .bootstrapPhase ==
+          MirrorSessionBootstrapPhase.degraded,
       );
 
       final session =

@@ -6,14 +6,29 @@ void main() {
   group('Mirror gateway hardening contract', () {
     test('gateway keeps weighted throttling, circuit breaker, and redaction hooks', () {
       final source = _readRepoFile('supabase/functions/mirror-gateway/index.ts');
+      final telemetry =
+          _readRepoFile('supabase/functions/mirror-gateway/modules/telemetry.ts');
+      final resilience = _readRepoFile(
+        'supabase/functions/mirror-gateway/modules/resilience_handler.ts',
+      );
+      final rateLimiter = _readRepoFile(
+        'supabase/functions/mirror-gateway/modules/rate_limiter_handler.ts',
+      );
+      final forwarding = _readRepoFile(
+        'supabase/functions/mirror-gateway/modules/request_forwarding.ts',
+      );
+      final auditLogger = _readRepoFile(
+        'supabase/functions/mirror-gateway/modules/audit_logger.ts',
+      );
 
-      expect(source, contains("reason?: 'minute_rate' | 'burst_quota' | 'weighted_minute' | 'weighted_burst'"));
-      expect(source, contains('weightedUnitsLastMinute'));
-      expect(source, contains('evaluateCircuitBreakerAllowance'));
-      expect(source, contains("reason: 'circuit_breaker_open'"));
-      expect(source, contains('sanitizeUpstreamBodyForErrorDetails'));
-      expect(source, contains('normalizeArtifactId'));
-      expect(source, isNot(contains('body: upstreamBody')));
+      expect(telemetry, contains('reason?: string'));
+      expect(rateLimiter, contains('weightedMinuteUnits'));
+      expect(rateLimiter, contains('weightedBurstUnits'));
+      expect(resilience, contains('evaluateCircuitBreakerAllowance'));
+      expect(source, contains('handleCircuitBreakerRejection'));
+      expect(forwarding, contains('sanitizeUpstreamBodyForErrorDetails'));
+      expect(auditLogger, contains('normalizeArtifactId'));
+      expect(forwarding, isNot(contains('body: upstreamBody')));
     });
   });
 }

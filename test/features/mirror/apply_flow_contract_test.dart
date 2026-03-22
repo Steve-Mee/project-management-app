@@ -11,36 +11,40 @@ import 'package:project_management_app/features/mirror/mirror_signed_inputs_back
 void main() {
   group('Mirror apply end-to-end contract', () {
     test('signed uploads contract keeps backup and signed URL artifacts', () {
-      final backendSource =
-          _readRepoFile('lib/features/mirror/mirror_signed_inputs_backend.dart');
+      final workflowSource = _readRepoFile(
+        'lib/features/mirror/services/mirror_backend_workflows.dart',
+      );
       final secureApplySource = _readRepoFile(
         'lib/features/mirror/services/mirror_secure_apply_service.dart',
       );
 
-      expect(backendSource, contains('prepareSignedInputAndBackup'));
-      expect(
-          backendSource,
-          contains(
-              'signedInputBucket = MirrorSecureApplyService.defaultSignedInputBucket'));
-      expect(
-          backendSource,
-          contains(
-              'backupBucket = MirrorSecureApplyService.defaultBackupBucket'));
-      expect(secureApplySource, contains('await _uploadReplaceBinary('));
+      expect(workflowSource, contains('prepareSignedInputAndBackup'));
+      expect(workflowSource, contains('executeApplyFlow'));
+        expect(workflowSource, contains('defaultSignedInputBucket'));
+        expect(workflowSource, contains('defaultBackupBucket'));
+      expect(secureApplySource, contains('_runArtifactOperationWithRetry'));
+        expect(secureApplySource, contains('_uploadReplaceBinary('));
       expect(secureApplySource, contains('.createSignedUrl(signedInputPath'));
       expect(secureApplySource, contains('.createSignedUrl(backupPath'));
-      expect(backendSource, contains('signedInputUrls'));
-      expect(backendSource, contains('backupSignedUrls'));
-      expect(backendSource, contains('backupId'));
+      expect(secureApplySource, contains('signedInputUrls'));
+      expect(secureApplySource, contains('backupSignedUrls'));
+      expect(secureApplySource, contains('backupId'));
     });
 
     test('apply forwards metadata and security payload fields', () async {
-      late Uri capturedUri;
-      Map<String, dynamic>? capturedBody;
+      final capturedUris = <Uri>[];
+      final capturedBodies = <Map<String, dynamic>>[];
 
       final mockClient = MockClient((http.Request request) async {
-        capturedUri = request.url;
-        capturedBody = _asMap(request.body);
+        capturedUris.add(request.url);
+        capturedBodies.add(_asMap(request.body));
+        if (request.url.path.endsWith('/compile')) {
+          return http.Response(
+            '{"success":true,"output":"void main() { print(\\"ok\\"); }"}',
+            200,
+            headers: <String, String>{'content-type': 'application/json'},
+          );
+        }
         return http.Response(
           '{"success":true,"files":{"lib/main.dart":"void main() { print(\\"ok\\"); }"}}',
           200,
@@ -50,14 +54,16 @@ void main() {
 
       final backend = MirrorGatewayBackend(
         httpClient: mockClient,
+        httpEndpoint:
+          'https://edge.example/functions/v1/mirror-gateway/compile',
         applyHttpEndpoint:
             'https://edge.example/functions/v1/mirror-gateway/apply',
         useSecureApply: false,
       );
 
       const context = ProjectContext(
-        projectId: 'project-7',
-        taskId: 'task-42',
+        projectId: '11111111-1111-4111-8111-111111111111',
+        taskId: '22222222-2222-4222-8222-222222222222',
         files: <String, String>{'lib/main.dart': 'void main() {}'},
         metadata: ProjectContextMetadata(
           buildTarget: 'flutter',
@@ -72,15 +78,21 @@ void main() {
         mode: 'private',
       );
 
-      expect(capturedUri.toString(),
+      final applyIndex = capturedUris.indexWhere(
+        (uri) => uri.toString().contains('/functions/v1/mirror-gateway/apply'),
+      );
+      expect(applyIndex, isNonNegative);
+      final capturedBody = capturedBodies[applyIndex];
+
+      expect(capturedUris[applyIndex].toString(),
           contains('/functions/v1/mirror-gateway/apply'));
-      expect(capturedBody?['prompt'], 'apply patch');
-      expect(capturedBody?['projectId'], 'project-7');
-      expect(capturedBody?['taskId'], 'task-42');
-      expect(capturedBody?['mode'], 'private');
+      expect(capturedBody['prompt'], 'apply patch');
+      expect(capturedBody['projectId'], '11111111-1111-4111-8111-111111111111');
+      expect(capturedBody['taskId'], '22222222-2222-4222-8222-222222222222');
+      expect(capturedBody['mode'], 'private');
 
       final metadata = Map<String, dynamic>.from(
-        (capturedBody?['metadata'] as Map?) ?? const <String, dynamic>{},
+        (capturedBody['metadata'] as Map?) ?? const <String, dynamic>{},
       );
       expect(metadata['buildTarget'], 'flutter');
       expect(metadata['teamMode'], isTrue);

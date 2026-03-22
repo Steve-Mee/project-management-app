@@ -18,6 +18,7 @@ void main() {
       expect(content, contains('mirror_compile_http_attempt_latency'));
       expect(content, contains('mirror_apply_http_attempt_latency'));
       expect(content, contains('mirror_http_attempt_latency'));
+      expect(content, contains('mirror_templates_cache_fallback'));
       expect(content, isNot(contains("'mirror_compile_latency'")));
     });
 

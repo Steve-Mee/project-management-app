@@ -1,5 +1,7 @@
 enum MirrorSessionBootstrapPhase {
   initial,
+  repositoryLoading,
+  merging,
   ready,
   degraded,
 }

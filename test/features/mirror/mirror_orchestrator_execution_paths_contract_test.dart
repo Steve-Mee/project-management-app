@@ -14,6 +14,7 @@ void main() {
       expect(source, contains('_interactivePath.generate('));
       expect(source, contains('_interactivePath.compile('));
       expect(source, contains('_interactivePath.apply('));
+      expect(source, contains('Future<MirrorOutboxOperationResult> replayExecutor('));
       expect(source, contains('_replayPath.execute(entry)'));
     });
   });

@@ -10,7 +10,7 @@ void main() {
           'lib/features/mirror/services/mirror_run_flow_service.dart');
 
       expect(
-          source, contains('_patchPipelineService.buildSessionPersistPlan('));
+        source, contains('_workflows.buildSessionPersistPlan('));
       expect(source, contains('if (mutation.requiresUpsert) {'));
       expect(source, contains('sessionNotifier.upsertFileContent('));
       expect(source, contains('sessionNotifier.updateSelectedFileContent('));
@@ -25,7 +25,7 @@ void main() {
           contains(
               'void upsertFileContent({required String path, required String content})'));
       expect(providerSource, contains('updatedFiles[path] = content;'));
-      expect(providerSource, contains('state = state.copyWith('));
+      expect(providerSource, contains('_replaceState(state.copyWith('));
       expect(providerSource, contains('files: updatedFiles,'));
     });
 

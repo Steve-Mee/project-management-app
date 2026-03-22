@@ -41,7 +41,9 @@ void main() {
     });
 
     test('gateway idempotency contract uses expires_at cache columns and runtime statuses', () {
-      final source = _readRepoFile('supabase/functions/mirror-gateway/index.ts');
+      final source = _readRepoFile(
+        'supabase/functions/mirror-gateway/modules/idempotency_handler.ts',
+      );
 
       expect(RegExp(r'\bexpires_at\b').allMatches(source).isNotEmpty, isTrue);
       expect(RegExp(r'\bresponse_status\b').allMatches(source).isNotEmpty, isTrue);
@@ -49,7 +51,7 @@ void main() {
       expect(RegExp(r'\bresponse_content_type\b').allMatches(source).isNotEmpty, isTrue);
       expect(
         RegExp(
-          r"IDEMPOTENCY_ALLOWED_STATUSES\s*=\s*\['processing',\s*'completed',\s*'failed'\]\s+as const",
+          r"status:\s*'processing'\s*\|\s*'completed'\s*\|\s*'failed'",
           multiLine: true,
         ).hasMatch(source),
         isTrue,

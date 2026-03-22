@@ -3,6 +3,7 @@ library;
 import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:pma_core/services/app_logger.dart';
 
 import 'mirror_hydration_inputs_provider.dart';
 import 'mirror_offline_cache_provider.dart';
@@ -299,6 +300,21 @@ class MirrorModeController extends Notifier<MirrorState> {
       runnerModeVariantSource: resolved.provenance.runnerModeVariantSource,
       hydrationReasonCode: resolved.provenance.reasonCode,
       fallbackReason: resolved.provenance.fallbackReason,
+    );
+
+    AppLogger.event(
+      'mirror_mode_resolution',
+      params: <String, Object?>{
+        'mode': resolved.mode,
+        'hydrationPhase': resolved.provenance.phase.name,
+        'modeSource': resolved.provenance.modeSource,
+        'premiumSource': resolved.provenance.premiumSource.name,
+        'teamVariantSource': resolved.provenance.teamModeVariantSource.name,
+        'runnerVariantSource': resolved.provenance.runnerModeVariantSource.name,
+        'reasonCode': resolved.provenance.reasonCode,
+        'fallbackReason': resolved.provenance.fallbackReason,
+        'isPremium': resolved.isPremium,
+      },
     );
 
     if (persistEffectiveMode && _isCurrentGeneration(generation)) {

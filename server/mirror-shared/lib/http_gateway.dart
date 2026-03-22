@@ -7,6 +7,7 @@ import 'package:grpc/grpc.dart';
 
 // ignore: avoid_relative_lib_imports
 import '../../../lib/features/mirror/grpc_generated/mirror.pbgrpc.dart';
+import 'request_validator.dart';
 
 class MirrorGatewayQuotaConfig {
   const MirrorGatewayQuotaConfig({
@@ -152,7 +153,38 @@ class MirrorHttpGateway {
       return;
     }
 
-    final quotaViolation = _validateQuota(bytes, requestId: requestId);
+    late final Map<String, dynamic> requestBody;
+    try {
+      requestBody = _decodeJsonObject(bytes);
+    } on FormatException {
+      _writeError(
+        request.response,
+        status: 400,
+        error: _GatewayStructuredError(
+          code: 'bad_request',
+          message: 'Request body must be a JSON object.',
+          retryable: false,
+          requestId: requestId,
+        ),
+      );
+      return;
+    }
+
+    final schemaViolation = _validateRequestSchema(
+      requestBody,
+      action: action,
+      requestId: requestId,
+    );
+    if (schemaViolation != null) {
+      _writeError(
+        request.response,
+        status: 400,
+        error: schemaViolation,
+      );
+      return;
+    }
+
+    final quotaViolation = _validateQuota(requestBody, requestId: requestId);
     if (quotaViolation != null) {
       _writeError(
         request.response,
@@ -165,7 +197,7 @@ class MirrorHttpGateway {
     try {
       final responseJson = await _forwardToGrpc(
         action: action,
-        body: _decodeJsonObject(bytes),
+        body: requestBody,
         metadata: _extractMetadata(request),
       );
       _writeJson(request.response, 200, responseJson);
@@ -200,32 +232,35 @@ class MirrorHttpGateway {
     }
   }
 
-  _GatewayStructuredError? _validateQuota(
-    List<int> bytes, {
+  _GatewayStructuredError? _validateRequestSchema(
+    Map<String, dynamic> body, {
+    required String action,
     required String requestId,
   }) {
-    late final Object decoded;
-    try {
-      decoded = jsonDecode(utf8.decode(bytes));
-    } catch (_) {
-      return const _GatewayStructuredError(
-        code: 'bad_request',
-        message: 'Request body must be valid JSON.',
-        retryable: false,
-        requestId: '',
-      ).copyWithRequestId(requestId);
+    final errors = action == 'Apply'
+        ? MirrorRequestValidator.validateApplyBody(body)
+        : MirrorRequestValidator.validateCompileBody(body);
+
+    if (errors.isEmpty) {
+      return null;
     }
 
-    if (decoded is! Map) {
-      return _GatewayStructuredError(
-        code: 'bad_request',
-        message: 'Request body must be a JSON object.',
-        retryable: false,
-        requestId: requestId,
-      );
-    }
+    return _GatewayStructuredError(
+      code: 'bad_request',
+      message: 'Request schema validation failed.',
+      retryable: false,
+      requestId: requestId,
+      details: <String, Object>{
+        'errors': errors,
+      },
+    );
+  }
 
-    final filesRaw = decoded['files'];
+  _GatewayStructuredError? _validateQuota(
+    Map<String, dynamic> body, {
+    required String requestId,
+  }) {
+    final filesRaw = body['files'];
     if (filesRaw is! Map) {
       return _GatewayStructuredError(
         code: 'bad_request',
@@ -475,17 +510,5 @@ class MirrorHttpGateway {
     } catch (_) {
       return value;
     }
-  }
-}
-
-extension on _GatewayStructuredError {
-  _GatewayStructuredError copyWithRequestId(String requestId) {
-    return _GatewayStructuredError(
-      code: code,
-      message: message,
-      retryable: retryable,
-      requestId: requestId,
-      details: details,
-    );
   }
 }

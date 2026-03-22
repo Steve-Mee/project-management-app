@@ -22,6 +22,9 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 class _FakeSupabaseClient extends Fake implements SupabaseClient {}
 
+final _noopTemplatesRealtimeInvalidationProvider =
+  Provider.autoDispose<void>((ref) {});
+
 class _TestMirrorModeController extends MirrorModeController {
   _TestMirrorModeController(this._initialState);
 
@@ -49,6 +52,9 @@ Widget _buildHarness({
       hasPermissionProvider(AppPermissions.useMirror)
           .overrideWith((ref) => true),
       supabaseClientProvider.overrideWith((ref) => _FakeSupabaseClient()),
+      mirrorTemplatesRealtimeInvalidationProvider.overrideWith(
+        (ref) => ref.watch(_noopTemplatesRealtimeInvalidationProvider),
+      ),
       ...overrides,
     ],
     child: MaterialApp(
@@ -235,7 +241,7 @@ void main() {
         ],
         freshness: MirrorTemplatesFreshness.staleFallback,
         source: 'memory',
-        reasonCode: MirrorTemplatesLoadReasonCodes.networkOrFetchError,
+        reasonCode: MirrorTemplatesLoadReasonCodes.networkError,
         fetchedAtUtc: DateTime.utc(2026, 3, 22, 15, 30),
       );
 
@@ -267,6 +273,8 @@ void main() {
         findsOneWidget,
       );
       expect(find.textContaining(expectedFormattedTime), findsOneWidget);
+      expect(find.textContaining('(network error)'), findsOneWidget);
+      expect(find.text('Try again'), findsOneWidget);
     });
 
     testWidgets('does not show stale templates warning for fresh templates',

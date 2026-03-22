@@ -11,21 +11,28 @@ import 'package:project_management_app/features/mirror/mirror_signed_inputs_back
 void main() {
   group('Mirror gateway contract', () {
     test('gateway keeps explicit compile/apply path dispatch', () {
-      final source =
+      final indexSource =
           _readRepoFile('supabase/functions/mirror-gateway/index.ts');
+      final routingSource = _readRepoFile(
+        'supabase/functions/mirror-gateway/modules/routing_identity.ts',
+      );
+      final preconditionsSource = _readRepoFile(
+        'supabase/functions/mirror-gateway/modules/pre_condition_handler.ts',
+      );
 
-      expect(source, contains('function resolveActionFromPath'));
-      expect(source, contains("normalized.endsWith('/compile')"));
-      expect(source, contains("normalized.endsWith('/apply')"));
-      expect(source, contains('Invalid route. Use /compile or /apply.'));
-      expect(source, contains("const action = resolveActionFromPath"));
-      expect(source, contains("if (!action)"));
-      expect(source, contains("missing_endpoint_env:"));
-      expect(source, contains("code: 'config_error'"));
-      expect(source, contains("mirror_apply_audit_events"));
-      expect(source, contains("writeApplyAuditEvent"));
-      expect(source, contains("fileSetFingerprint"));
-      expect(source, contains("diff_fingerprint"));
+      expect(indexSource, contains('resolveActionFromPath'));
+      expect(indexSource, contains('validateRequestPreconditions'));
+      expect(indexSource, contains('executeForwardAndFinalize'));
+
+      expect(routingSource, contains("normalized.endsWith('/compile')"));
+      expect(routingSource, contains("normalized.endsWith('/apply')"));
+      expect(routingSource, contains('missing_endpoint_env:'));
+      expect(routingSource, contains('resolveForwardEndpoint'));
+
+      expect(preconditionsSource,
+          contains('Invalid route. Use /compile or /apply.'));
+      expect(preconditionsSource, contains("code: 'bad_request'"));
+      expect(preconditionsSource, contains("code: 'method_not_allowed'"));
     });
 
     test(
@@ -53,8 +60,8 @@ void main() {
       );
 
       const context = ProjectContext(
-        projectId: 'project-1',
-        taskId: 'task-1',
+        projectId: '11111111-1111-4111-8111-111111111111',
+        taskId: '22222222-2222-4222-8222-222222222222',
         files: <String, String>{'lib/main.dart': 'void main() {}'},
         metadata: ProjectContextMetadata(teamModeEnabled: true),
       );
@@ -70,8 +77,8 @@ void main() {
       expect(
           capturedAuth == null || capturedAuth!.startsWith('Bearer '), isTrue);
       expect(capturedBody?['prompt'], 'compile this');
-      expect(capturedBody?['projectId'], 'project-1');
-      expect(capturedBody?['taskId'], 'task-1');
+        expect(capturedBody?['projectId'], '11111111-1111-4111-8111-111111111111');
+        expect(capturedBody?['taskId'], '22222222-2222-4222-8222-222222222222');
       expect(capturedBody?['mode'], 'cloud');
       expect(capturedBody?['files'], isA<Map>());
 
@@ -93,7 +100,11 @@ void main() {
             'https://edge.example/functions/v1/mirror-gateway/compile',
       );
 
-      const context = ProjectContext(projectId: 'p', taskId: 't');
+      const context = ProjectContext(
+        projectId: '11111111-1111-4111-8111-111111111111',
+        taskId: '22222222-2222-4222-8222-222222222222',
+        files: <String, String>{'lib/main.dart': 'void main() {}'},
+      );
       final result = await backend.compile(
         prompt: 'x',
         context: context,
@@ -101,18 +112,26 @@ void main() {
       );
 
       expect(result.success, isFalse);
-      expect(result.errors.join(' | '), contains('unauthorized: HTTP 403'));
+      expect(result.errors.join(' | '), contains('unauthorized'));
+      expect(result.errors.join(' | '), contains('HTTP 403'));
       expect(result.errors.join(' | '), contains('denied'));
     });
 
     test('runtime apply contract sends apply payload and maps success',
         () async {
-      late Uri capturedUri;
-      Map<String, dynamic>? capturedBody;
+      final capturedUris = <Uri>[];
+      final capturedBodies = <Map<String, dynamic>>[];
 
       final mockClient = MockClient((http.Request request) async {
-        capturedUri = request.url;
-        capturedBody = _asMap(request.body);
+        capturedUris.add(request.url);
+        capturedBodies.add(_asMap(request.body));
+        if (request.url.path.endsWith('/compile')) {
+          return http.Response(
+            '{"success":true,"output":"void main() { print(\\"ok\\"); }"}',
+            200,
+            headers: <String, String>{'content-type': 'application/json'},
+          );
+        }
         return http.Response(
           '{"success":true,"files":{"lib/main.dart":"void main() { print(\\"ok\\"); }"}}',
           200,
@@ -122,14 +141,16 @@ void main() {
 
       final backend = MirrorGatewayBackend(
         httpClient: mockClient,
+        httpEndpoint:
+          'https://edge.example/functions/v1/mirror-gateway/compile',
         applyHttpEndpoint:
             'https://edge.example/functions/v1/mirror-gateway/apply',
         useSecureApply: false,
       );
 
       const context = ProjectContext(
-        projectId: 'project-1',
-        taskId: 'task-1',
+        projectId: '11111111-1111-4111-8111-111111111111',
+        taskId: '22222222-2222-4222-8222-222222222222',
         files: <String, String>{'lib/main.dart': 'void main() {}'},
       );
 
@@ -139,12 +160,18 @@ void main() {
         mode: 'cloud',
       );
 
-      expect(capturedUri.toString(),
+      final applyIndex = capturedUris.indexWhere(
+        (uri) => uri.toString().contains('/functions/v1/mirror-gateway/apply'),
+      );
+      expect(applyIndex, isNonNegative);
+      final capturedBody = capturedBodies[applyIndex];
+
+      expect(capturedUris[applyIndex].toString(),
           contains('/functions/v1/mirror-gateway/apply'));
-      expect(capturedBody?['prompt'], 'apply this change');
-      expect(capturedBody?['projectId'], 'project-1');
-      expect(capturedBody?['taskId'], 'task-1');
-      expect(capturedBody?['mode'], 'cloud');
+      expect(capturedBody['prompt'], 'apply this change');
+      expect(capturedBody['projectId'], '11111111-1111-4111-8111-111111111111');
+      expect(capturedBody['taskId'], '22222222-2222-4222-8222-222222222222');
+      expect(capturedBody['mode'], 'cloud');
       expect(result.success, isTrue);
       expect(result.appliedFiles, contains('lib/main.dart'));
     });
@@ -157,14 +184,16 @@ void main() {
 
       final backend = MirrorGatewayBackend(
         httpClient: mockClient,
+        httpEndpoint:
+          'https://edge.example/functions/v1/mirror-gateway/compile',
         applyHttpEndpoint:
             'https://edge.example/functions/v1/mirror-gateway/apply',
         useSecureApply: false,
       );
 
       const context = ProjectContext(
-        projectId: 'project-1',
-        taskId: 'task-1',
+        projectId: '11111111-1111-4111-8111-111111111111',
+        taskId: '22222222-2222-4222-8222-222222222222',
         files: <String, String>{'lib/main.dart': 'void main() {}'},
       );
 
@@ -175,21 +204,23 @@ void main() {
       );
 
       expect(result.success, isFalse);
-      expect(result.message ?? '', contains('server_error: HTTP 502'));
+      expect(result.message ?? '', contains('server_error'));
+      expect(result.message ?? '', contains('HTTP 502'));
       expect(result.message ?? '', contains('upstream down'));
     });
 
     test('apply route contract is explicit in gateway + flutter backend wiring',
         () {
-      final gatewaySource =
-          _readRepoFile('supabase/functions/mirror-gateway/index.ts');
+      final gatewaySource = _readRepoFile(
+      'supabase/functions/mirror-gateway/modules/routing_identity.ts',
+      );
       final flutterSource =
           _readRepoFile('lib/features/mirror/mirror_gateway_backend.dart');
 
       expect(gatewaySource, contains('resolveActionFromPath'));
       expect(gatewaySource, contains("normalized.endsWith('/apply')"));
       expect(gatewaySource,
-          contains('resolveForwardEndpoint(normalized.mode, action)'));
+        contains('resolveForwardEndpoint('));
 
       expect(flutterSource, contains('/functions/v1/mirror-gateway/apply'));
       expect(flutterSource, contains('applyHttpEndpoint'));

@@ -5,6 +5,8 @@ import 'package:pma_core/providers/sync/sync_providers.dart';
 import 'package:pma_core/services/cloud_sync_service.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+class _FakeSupabaseClient extends Fake implements SupabaseClient {}
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
@@ -63,7 +65,7 @@ void main() {
 
     test('cloud sync service still exposes Supabase stream API', () {
       final service =
-          CloudSyncService(supabaseClient: Supabase.instance.client);
+          CloudSyncService(supabaseClient: _FakeSupabaseClient());
       expect(service.getProjectsStream,
           isA<Stream<List<Map<String, dynamic>>> Function()>());
     });

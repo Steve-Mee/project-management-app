@@ -8,25 +8,28 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'grpc_generated/mirror.pbgrpc.dart';
 import 'mirror_signed_inputs_backend.dart';
-import 'services/mirror_apply_audit_service.dart';
-import 'services/mirror_apply_validator_service.dart';
+import 'services/mirror_backend_error_format.dart';
 import 'services/mirror_backend_workflows.dart';
+import 'services/mirror_observability_service.dart';
 
 const bool _isProductionGrpcRuntime =
     bool.fromEnvironment('dart.vm.product', defaultValue: false);
 const ChannelCredentials _insecureChannelCredentials =
     ChannelCredentials.insecure();
 const MirrorBackendWorkflows _mirrorWorkflows = MirrorBackendWorkflows();
-const MirrorApplyValidatorService _mirrorValidator = MirrorApplyValidatorService();
-const MirrorApplyAuditService _mirrorAudit = MirrorApplyAuditService();
 
 class PrivateGrpcBackend implements MirrorComputeBackend {
   PrivateGrpcBackend({
     required this.client,
     this.host = '127.0.0.1',
     this.port = 50051,
+  this.useSecureApply = true,
+  this.auditLoggingEnabled = true,
+  this.requireSignedApply = false,
+  this.userTrustScore = 100,
     this.timeout = const Duration(seconds: 30),
     this.credentials = const ChannelCredentials.insecure(),
+    this.observabilityService,
   }) {
     _enforceProductionTransportSecurity();
   }
@@ -34,8 +37,13 @@ class PrivateGrpcBackend implements MirrorComputeBackend {
   final SupabaseClient client;
   final String host;
   final int port;
+  final bool useSecureApply;
+  final bool auditLoggingEnabled;
+  final bool requireSignedApply;
+  final int userTrustScore;
   final Duration timeout;
   final ChannelCredentials credentials;
+  final MirrorObservabilityService? observabilityService;
 
   void _enforceProductionTransportSecurity() {
     // Production guard: fail closed when insecure transport is configured in
@@ -141,89 +149,41 @@ class PrivateGrpcBackend implements MirrorComputeBackend {
     required String mode,
     String? compileFingerprint,
   }) async {
-    return _mirrorWorkflows.secureApply(
-      client: client,
+    return _mirrorWorkflows.executeApplyFlow(
+      backend: 'private_grpc',
       prompt: prompt,
       context: context,
       mode: mode,
-      onApply: (ApplySecurityArtifacts artifacts) async {
-        final compileResult = await compile(
-          prompt: prompt,
-          context: context,
-          mode: mode,
-        );
-
-        if (!compileResult.success || compileResult.output == null) {
-          return ApplyResult(
-            success: false,
-            message: compileResult.errors.isEmpty
-                ? 'Apply failed: compile output is empty.'
-                : compileResult.errors.join(' | '),
-          );
-        }
-
-        final output = compileResult.output!;
-        if (compileFingerprint != null && compileFingerprint.isNotEmpty) {
-          final validation = _mirrorValidator.validatePreviewApplyConsistency(
-            prompt: prompt,
-            context: context,
-            mode: mode,
-            expectedCompileFingerprint: compileFingerprint,
-            preflightOutput: output,
-          );
-          if (!validation.isValid) {
-            return ApplyResult(
-              success: false,
-              message: validation.errorMessage ?? 'Apply failed: consistency check failed.',
-            );
-          }
-        }
-
+      compileFingerprint: compileFingerprint,
+      preflightCompile: () => compile(
+        prompt: prompt,
+        context: context,
+        mode: mode,
+      ),
+      executeTransportApply: (_) async {
         final applyRpcResult = await _applyRpc(
           prompt: prompt,
           context: context,
           mode: mode,
         );
-        if (!applyRpcResult.success || applyRpcResult.output == null) {
-          return ApplyResult(
-            success: false,
-            message: applyRpcResult.errors.isEmpty
-                ? 'Apply failed: compile output is empty.'
-                : applyRpcResult.errors.join(' | '),
-          );
-        }
-
-        final patches = _mirrorWorkflows.buildPatchesFromApplyPayload(
-          context: context,
-          output: applyRpcResult.output!,
-        );
-
-        if (patches.isEmpty) {
-          return _mirrorWorkflows.buildNoPatchApplyFailure(
-            message: 'Apply failed: no patchable changes returned.',
-          );
-        }
-
-        final updatedFiles = _mirrorWorkflows.applyPatchesToFiles(
-          files: context.files,
-          patches: patches,
-        );
-
-        await _mirrorAudit.persistApplyToHive(
-          context: context,
-          mode: mode,
-          prompt: prompt,
-          patches: patches,
-          artifacts: artifacts,
-          backend: 'private_grpc',
-          updatedFiles: updatedFiles,
-        );
-
-        return _mirrorWorkflows.buildApplySuccessResult(
-          patches: patches,
-          backupId: artifacts.backupId,
+        return MirrorApplyTransportResult(
+          success: applyRpcResult.success,
+          output: applyRpcResult.output,
+          errors: applyRpcResult.errors,
         );
       },
+      formatError: ({required family, required message, bool? retryable}) =>
+          formatMirrorBackendError(
+        family: family,
+        message: message,
+        retryable: retryable,
+      ),
+      secureApplyClient: client,
+      allowSecureApply: useSecureApply,
+      auditLoggingEnabled: auditLoggingEnabled,
+      requireSignedApply: requireSignedApply,
+      userTrustScore: userTrustScore,
+      observabilityService: observabilityService,
     );
   }
 

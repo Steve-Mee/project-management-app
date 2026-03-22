@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+import 'package:project_management_app/core/providers/mirror_session_provider.dart';
 import 'package:project_management_app/core/services/mirror_premium_service.dart';
 import 'package:project_management_app/features/mirror/mirror_signed_inputs_backend.dart';
 import 'package:project_management_app/features/mirror/services/mirror_outbox_replay_service.dart';
@@ -22,6 +23,19 @@ class _FakeRef implements Ref {
   dynamic noSuchMethod(Invocation invocation) {
     return super.noSuchMethod(invocation);
   }
+}
+
+class _TestMirrorSessionNotifier extends MirrorSessionNotifier {
+  @override
+  MirrorSessionState build(String sessionKey) {
+    return MirrorSessionState.initial(projectId: 'project', taskId: 'task');
+  }
+
+  @override
+  void appendTerminalLine(String line, {int maxLines = 1000}) {}
+
+  @override
+  void appendLiveOutput(List<String> lines, {int maxLines = 500}) {}
 }
 
 void main() {
@@ -86,7 +100,13 @@ void main() {
 
   group('MirrorOutboxReplayService encryption policy matrix', () {
     test('fail-closed throws when encrypted box open fails', () async {
-      final container = ProviderContainer();
+      final container = ProviderContainer(
+        overrides: <Override>[
+          mirrorSessionProvider.overrideWith(
+            _TestMirrorSessionNotifier.new,
+          ),
+        ],
+      );
       addTearDown(container.dispose);
       final ref = _FakeRef(container);
 
@@ -119,7 +139,13 @@ void main() {
 
     test('fail-open falls back to unencrypted box when encryption fails',
         () async {
-      final container = ProviderContainer();
+      final container = ProviderContainer(
+        overrides: <Override>[
+          mirrorSessionProvider.overrideWith(
+            _TestMirrorSessionNotifier.new,
+          ),
+        ],
+      );
       addTearDown(container.dispose);
       final ref = _FakeRef(container);
 
