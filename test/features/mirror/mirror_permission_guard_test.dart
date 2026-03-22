@@ -6,7 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:hive/hive.dart';
 import 'package:pma_core/auth/permissions.dart';
 import 'package:pma_core/providers/auth/auth_providers.dart';
-import 'package:project_management_app/core/providers/mirror_provider.dart';
+import 'package:project_management_app/core/providers/mirror_mode_controller_provider.dart';
 import 'package:project_management_app/features/mirror/mirror_editor_screen.dart';
 import 'package:project_management_app/generated/app_localizations.dart';
 import 'package:pma_core/models/comment_model.dart';
@@ -14,8 +14,8 @@ import 'package:pma_core/models/project_model.dart';
 import 'package:pma_core/models/sub_task_model.dart';
 import 'package:pma_core/models/task_model.dart';
 
-class _TestMirrorNotifier extends MirrorNotifier {
-  _TestMirrorNotifier(this._initialState);
+class _TestMirrorModeController extends MirrorModeController {
+  _TestMirrorModeController(this._initialState);
 
   final MirrorState _initialState;
 
@@ -24,11 +24,11 @@ class _TestMirrorNotifier extends MirrorNotifier {
 }
 
 Widget _buildHarness({
-  required MirrorNotifier notifier,
+  required MirrorModeController notifier,
 }) {
   return ProviderScope(
     overrides: <Override>[
-      mirrorProvider.overrideWith(() => notifier),
+      mirrorModeControllerProvider.overrideWith(() => notifier),
       hasPermissionProvider(AppPermissions.useMirror)
           .overrideWith((ref) => false),
     ],
@@ -81,7 +81,7 @@ void main() {
   testWidgets(
       'blocks direct mirror screen opening without use_mirror permission',
       (WidgetTester tester) async {
-    final notifier = _TestMirrorNotifier(
+    final notifier = _TestMirrorModeController(
       const MirrorState(
         mode: 'private',
         isPremium: true,
@@ -100,3 +100,4 @@ void main() {
     expect(find.byType(AppBar), findsOneWidget);
   });
 }
+

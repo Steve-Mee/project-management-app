@@ -8,7 +8,7 @@ import 'package:hive/hive.dart';
 import 'package:pma_core/auth/permissions.dart';
 import 'package:pma_core/providers/auth/auth_providers.dart';
 import 'package:project_management_app/core/providers/supabase_client_provider.dart';
-import 'package:project_management_app/core/providers/mirror_provider.dart';
+import 'package:project_management_app/core/providers/mirror_mode_controller_provider.dart';
 import 'package:project_management_app/generated/app_localizations.dart';
 import 'package:project_management_app/features/mirror/mirror_editor_screen.dart';
 import 'package:project_management_app/features/mirror/models/mirror_template.dart';
@@ -22,8 +22,8 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 class _FakeSupabaseClient extends Fake implements SupabaseClient {}
 
-class _TestMirrorNotifier extends MirrorNotifier {
-  _TestMirrorNotifier(this._initialState);
+class _TestMirrorModeController extends MirrorModeController {
+  _TestMirrorModeController(this._initialState);
 
   final MirrorState _initialState;
   final List<String> setModeCalls = <String>[];
@@ -39,13 +39,13 @@ class _TestMirrorNotifier extends MirrorNotifier {
 }
 
 Widget _buildHarness({
-  required _TestMirrorNotifier notifier,
+  required _TestMirrorModeController notifier,
   Stream<Map<String, dynamic>>? realtimeRecords,
   List<Override> overrides = const <Override>[],
 }) {
   return ProviderScope(
     overrides: <Override>[
-      mirrorProvider.overrideWith(() => notifier),
+      mirrorModeControllerProvider.overrideWith(() => notifier),
       hasPermissionProvider(AppPermissions.useMirror)
           .overrideWith((ref) => true),
       supabaseClientProvider.overrideWith((ref) => _FakeSupabaseClient()),
@@ -106,7 +106,7 @@ void main() {
       addTearDown(tester.view.resetPhysicalSize);
       addTearDown(tester.view.resetDevicePixelRatio);
 
-      final notifier = _TestMirrorNotifier(
+      final notifier = _TestMirrorModeController(
         const MirrorState(
           mode: 'private',
           isPremium: true,
@@ -138,7 +138,7 @@ void main() {
       addTearDown(tester.view.resetPhysicalSize);
       addTearDown(tester.view.resetDevicePixelRatio);
 
-      final notifier = _TestMirrorNotifier(
+      final notifier = _TestMirrorModeController(
         const MirrorState(
           mode: 'private',
           isPremium: false,
@@ -169,7 +169,7 @@ void main() {
       addTearDown(tester.view.resetPhysicalSize);
       addTearDown(tester.view.resetDevicePixelRatio);
 
-      final notifier = _TestMirrorNotifier(
+      final notifier = _TestMirrorModeController(
         const MirrorState(
           mode: 'private',
           isPremium: true,
@@ -216,7 +216,7 @@ void main() {
       addTearDown(tester.view.resetPhysicalSize);
       addTearDown(tester.view.resetDevicePixelRatio);
 
-      final notifier = _TestMirrorNotifier(
+      final notifier = _TestMirrorModeController(
         const MirrorState(
           mode: 'private',
           isPremium: true,
@@ -276,7 +276,7 @@ void main() {
       addTearDown(tester.view.resetPhysicalSize);
       addTearDown(tester.view.resetDevicePixelRatio);
 
-      final notifier = _TestMirrorNotifier(
+      final notifier = _TestMirrorModeController(
         const MirrorState(
           mode: 'private',
           isPremium: true,
@@ -320,3 +320,4 @@ void main() {
     });
   });
 }
+

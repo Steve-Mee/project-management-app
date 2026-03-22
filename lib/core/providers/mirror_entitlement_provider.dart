@@ -8,7 +8,9 @@ import '../../features/mirror/mirror_gateway_backend.dart';
 import '../../features/mirror/private_grpc_backend.dart';
 import '../../features/mirror/services/mirror_context_budget_service.dart';
 import 'mirror_feature_flag_provider.dart';
-import 'mirror_provider.dart';
+import 'mirror_hydration_inputs_provider.dart';
+import 'mirror_mode_controller_provider.dart';
+import 'mirror_premium_provider.dart';
 import 'mirror_session_provider.dart';
 import 'supabase_client_provider.dart';
 
@@ -52,7 +54,7 @@ final mirrorBackendProvider = FutureProvider<MirrorComputeBackend>((ref) async {
     return const _MirrorDisabledBackend();
   }
 
-  final mode = ref.watch(mirrorModeProvider);
+  final mode = ref.watch(mirrorResolvedModeProvider);
   final isPremium = await ref.watch(mirrorPremiumProvider.future);
   final runnerModeVariant =
       await ref.watch(mirrorRunnerModeVariantProvider.future);

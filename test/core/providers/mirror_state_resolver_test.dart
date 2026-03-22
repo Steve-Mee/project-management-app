@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:project_management_app/core/providers/mirror_provider.dart';
+import 'package:project_management_app/core/providers/mirror_hydration_inputs_provider.dart';
 import 'package:project_management_app/core/providers/mirror_state_resolver.dart';
 
 void main() {

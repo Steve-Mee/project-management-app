@@ -11,8 +11,9 @@ import 'widgets/mirror_voice_prompt_bar.dart';
 import '../../generated/app_localizations.dart';
 
 import '../../core/providers/mirror_entitlement_provider.dart';
+import '../../core/providers/mirror_mode_controller_provider.dart';
+import '../../core/providers/mirror_premium_provider.dart';
 import '../../core/providers/mirror_session_provider.dart';
-import '../../core/providers/mirror_provider.dart';
 import '../../core/providers/supabase_client_provider.dart';
 import 'models/mirror_template.dart';
 import 'providers/mirror_editor_orchestration_provider.dart';
@@ -133,7 +134,7 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
       return _buildPermissionRevokedState(context, l10n);
     }
 
-    final selectedMode = ref.watch(mirrorModeProvider);
+    final selectedMode = ref.watch(mirrorResolvedModeProvider);
     final sessionState = ref.watch(mirrorSessionProvider(_sessionKey));
     final isPremium = ref.watch(mirrorPremiumProvider).valueOrNull ?? false;
 
@@ -163,7 +164,7 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
                     return;
                   }
 
-                  ref.read(mirrorProvider.notifier).setMode(mode);
+                  ref.read(mirrorModeControllerProvider.notifier).setMode(mode);
                 },
               ),
               const SizedBox(height: 12),
@@ -877,7 +878,7 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
       ref: ref,
       projectId: widget.projectId,
       taskId: widget.taskId,
-      selectedMode: ref.read(mirrorModeProvider),
+      selectedMode: ref.read(mirrorResolvedModeProvider),
       sessionKey: _sessionKey,
       l10n: _l10n,
       isMounted: () => mounted,

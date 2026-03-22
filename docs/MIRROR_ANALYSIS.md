@@ -16,7 +16,7 @@
   - De state-hydration in de Flutter core combineert meerdere async bronnen tegelijk: auth state, premium hints, feature flags, A/B-varianten, repositorycontext en offline cache. In `lib/core/providers/mirror_provider.dart` en `lib/core/providers/mirror_session_provider.dart` werkt dit, maar het maakt timinggedrag gevoelig voor race conditions en complexer om te testen.
   - De templates-cache in `lib/features/mirror/providers/mirror_templates_provider.dart` kan bij netwerkproblemen stale data tonen zonder expliciete user-facing waarschuwing. Voor een AI coding studio is dat productmatig riskanter dan bij gewone lijstdata.
   - `project_id` en `task_id` worden in meerdere Mirror-tabellen als `TEXT` opgeslagen zonder relationele koppeling. Dat houdt de feature losjes gekoppeld, maar verzwakt datakwaliteit, cleanup en rapportage op de lange termijn.
-  - Er is nog rest-overlap tussen compat/shim-lagen en de huidige architectuur. `lib/core/providers/mirror_provider.dart` fungeert deels nog als compatibele façade naast nieuwere providers en services, wat het state-eigenaarschap minder scherp maakt.
+  - ~~Er is nog rest-overlap tussen compat/shim-lagen en de huidige architectuur. `lib/core/providers/mirror_provider.dart` fungeert deels nog als compatibele façade naast nieuwere providers en services, wat het state-eigenaarschap minder scherp maakt.~~ **[OPGELOST]** `mirror_provider.dart` volledig verwijderd; state-eigenaarschap nu exclusief in `mirror_mode_controller_provider.dart` (write-owner) en `mirror_hydration_inputs_provider.dart` (input snapshots).
 - Overall score (1-10)
   - 8.7/10
 
@@ -88,9 +88,10 @@
     - Splits de resterende concerns verder uit naar afzonderlijke modules voor auth/permission, idempotency, rate limiting, circuit breaker en forwarding. Houd `index.ts` als compositielaag.
     - Voeg een centrale request-schema validatie toe voor compile/apply payloads voordat normalisatie start, zodat validatiegedrag niet meer impliciet verspreid zit.
     - Beperk domeinbeslissingen in de gateway tot policy enforcement; houd runner-specifieke of patch-specifieke interpretatie buiten deze laag.
-  - `lib/core/providers/mirror_provider.dart`
-    - Verplaats cache-hydration en sommige async refreshes naar expliciete application services of een launch coordinator, zodat deze provider minder lifecycle-complexiteit draagt.
-    - Houd deze provider op termijn alleen verantwoordelijk voor user-facing Mirror mode state in plaats van ook compat/shim gedrag.
+  - `lib/core/providers/mirror_provider.dart` **(VERWIJDERD)**
+    - ~~Verplaats cache-hydration en sommige async refreshes naar expliciete application services of een launch coordinator, zodat deze provider minder lifecycle-complexiteit draagt.~~
+    - ~~Houd deze provider op termijn alleen verantwoordelijk voor user-facing Mirror mode state in plaats van ook compat/shim gedrag.~~
+    - Bestand volledig verwijderd; opgesplitst in `mirror_mode_controller_provider.dart` (MirrorModeController + read-model providers) en `mirror_hydration_inputs_provider.dart` (async input snapshots).
   - `lib/core/providers/mirror_session_provider.dart`
     - Splits repository context hydration, draft restore en actieve editor/session state op in kleinere verantwoordelijkheden.
     - Maak persistence explicieter op belangrijke lifecycle-momenten zoals run, apply en route-exit, zodat debounced autosave niet de enige waarheid is.
@@ -130,8 +131,9 @@
     - Verdere granularisatie van bestaande gateway modules zodat de thin-proxy intent ook structureel afdwingbaar blijft.
 
 - Verwijderingen (wat weg kan en waarom)
-  - `lib/core/providers/mirror_provider.dart` als compat/shim-laag
-    - Gefaseerd weghalen zodra afhankelijkheden zijn omgezet naar directere providers/services. Dit vermindert indirectie en maakt state-eigenaarschap duidelijker.
+  - `lib/core/providers/mirror_provider.dart` als compat/shim-laag **(VERWIJDERD)**
+    - ~~Gefaseerd weghalen zodra afhankelijkheden zijn omgezet naar directere providers/services. Dit vermindert indirectie en maakt state-eigenaarschap duidelijker.~~
+    - Volledig verwijderd via `git rm`. Alle productiecode en tests gemigreerd naar `MirrorModeController` / `mirrorModeControllerProvider` / `mirrorResolvedModeProvider` / `mirrorResolvedOfflineWarningProvider`.
   - `lib/features/mirror/services/mirror_editor_orchestration_service.dart` (VERWIJDERD)
     - Dit was al een `@Deprecated` shim die verwees naar `mirrorInteractiveRunCoordinatorProvider`. Verwijderd in refactoring PR1; echte flow-logica zit in `mirror_run_flow_service.dart`.
   - Dubbele validatie- en foutmappingspaden tussen `supabase/functions/mirror-gateway/index.ts` en `server/mirror-shared/lib/http_gateway.dart`
@@ -242,3 +244,14 @@ The recommendations above have been executed in three coordinated PRs to address
 - Moved refresh invalidation into the effective coalesced refresh run to avoid premature invalidation during in-flight work.
 - Guarded post-refresh persistence side effects (`saveMode`) so stale generations cannot write cache state.
 - Added new regression coverage for repository timeout degradation and overlapping premium refresh coalescing.
+
+## Changelog: Compat Shim Removal
+
+- Deleted `lib/core/providers/mirror_provider.dart` (compat/shim façade, 448 lines) entirely from the codebase.
+- Extracted write-owner controller into `lib/core/providers/mirror_mode_controller_provider.dart`: contains `MirrorState`, `MirrorModeController` (single Riverpod `Notifier` write-owner), and derived read-model providers `mirrorResolvedStateProvider`, `mirrorResolvedModeProvider`, `mirrorResolvedOfflineWarningProvider`.
+- Extracted async input snapshot providers into `lib/core/providers/mirror_hydration_inputs_provider.dart`: `currentMirrorUserIdProvider`, `mirrorPremiumSnapshotProvider`, `mirrorFeatureGateSnapshotProvider`, team/runner variant snapshot and projection providers.
+- Migrated all production callsites (`mirror_editor_screen.dart`, `mirror_launch_coordinator.dart`, `mirror_session_provider.dart`, `mirror_entitlement_provider.dart`) off shim symbols.
+- Migrated all test files off `MirrorNotifier`/`mirrorProvider`/`mirrorModeProvider`/`mirrorOfflineWarningProvider` to new canonical names.
+- Renamed `test/core/providers/mirror_provider_test.dart` → `test/core/providers/mirror_mode_controller_provider_test.dart`.
+- Updated `lib/core/providers.dart` barrel: replaced shim export with two new provider exports.
+- Flutter analyze and `get_errors` both confirm zero issues after removal.

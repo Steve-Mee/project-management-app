@@ -1,9 +1,9 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pma_core/services/mirror_access_policy.dart';
-import 'package:project_management_app/core/providers/mirror_provider.dart';
+import 'package:project_management_app/core/providers/mirror_mode_controller_provider.dart';
 
-class _TestMirrorNotifier extends MirrorNotifier {
+class _TestMirrorModeController extends MirrorModeController {
   @override
   MirrorState build() => const MirrorState(
         mode: 'private',
@@ -101,21 +101,23 @@ void main() {
     test('warning clear behavior', () {
       final container = ProviderContainer(
         overrides: <Override>[
-          mirrorProvider.overrideWith(_TestMirrorNotifier.new),
+          mirrorModeControllerProvider.overrideWith(
+            _TestMirrorModeController.new,
+          ),
         ],
       );
       addTearDown(container.dispose);
 
-      expect(container.read(mirrorProvider).teamModeVariant, 'solo');
-      expect(container.read(mirrorProvider).isTeamMode, isFalse);
+      expect(container.read(mirrorModeControllerProvider).teamModeVariant, 'solo');
+      expect(container.read(mirrorModeControllerProvider).isTeamMode, isFalse);
 
-      container.read(mirrorProvider.notifier).state = container
-          .read(mirrorProvider)
+      container.read(mirrorModeControllerProvider.notifier).state = container
+          .read(mirrorModeControllerProvider)
           .copyWith(offlineWarning: 'offline fallback');
-      expect(container.read(mirrorProvider).offlineWarning, 'offline fallback');
+      expect(container.read(mirrorModeControllerProvider).offlineWarning, 'offline fallback');
 
-      container.read(mirrorProvider.notifier).clearOfflineWarning();
-      expect(container.read(mirrorProvider).offlineWarning, isNull);
+      container.read(mirrorModeControllerProvider.notifier).clearOfflineWarning();
+      expect(container.read(mirrorModeControllerProvider).offlineWarning, isNull);
     });
   });
 }

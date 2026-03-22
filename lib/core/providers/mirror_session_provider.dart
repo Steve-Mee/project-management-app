@@ -11,7 +11,7 @@ import 'package:pma_core/providers/project/project_providers.dart';
 import 'package:pma_core/providers/task/task_providers.dart';
 
 import '../../features/mirror/services/mirror_draft_cache_service.dart';
-import 'mirror_provider.dart';
+import 'mirror_mode_controller_provider.dart';
 import 'mirror_session_bootstrap.dart';
 
 final mirrorDraftCacheServiceProvider = Provider<MirrorDraftCacheService>((ref) {
@@ -154,14 +154,14 @@ class MirrorSessionNotifier
   @override
   MirrorSessionState build(String sessionKey) {
     _activeSessionKey = sessionKey;
-    _lastMode = ref.read(mirrorModeProvider);
-    _lastOfflineWarningKey = ref.read(mirrorOfflineWarningProvider);
+    _lastMode = ref.read(mirrorResolvedModeProvider);
+    _lastOfflineWarningKey = ref.read(mirrorResolvedOfflineWarningProvider);
     final draftCacheService = ref.read(mirrorDraftCacheServiceProvider);
 
-    ref.listen<String>(mirrorModeProvider, (_, String next) {
+    ref.listen<String>(mirrorResolvedModeProvider, (_, String next) {
       _lastMode = next;
     });
-    ref.listen<String?>(mirrorOfflineWarningProvider, (_, String? next) {
+    ref.listen<String?>(mirrorResolvedOfflineWarningProvider, (_, String? next) {
       _lastOfflineWarningKey = next;
     });
 

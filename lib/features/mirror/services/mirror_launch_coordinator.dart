@@ -4,7 +4,7 @@ import 'package:pma_core/providers/auth/auth_providers.dart';
 
 import '../../../core/providers/ai_chat_provider.dart';
 import '../../../core/providers/mirror_feature_flag_provider.dart';
-import '../../../core/providers/mirror_provider.dart';
+import '../../../core/providers/mirror_mode_controller_provider.dart';
 
 class MirrorLaunchCoordinator {
   const MirrorLaunchCoordinator(this._ref);
@@ -29,9 +29,9 @@ class MirrorLaunchCoordinator {
     }
 
     final safeMode = preferredMode == 'cloud' ? 'cloud' : 'private';
-    await _ref.read(mirrorProvider.notifier).setMode(safeMode);
+    await _ref.read(mirrorModeControllerProvider.notifier).setMode(safeMode);
 
-    final mirrorState = _ref.read(mirrorProvider);
+    final mirrorState = _ref.read(mirrorResolvedStateProvider);
     return MirrorLaunchPayload(
       projectId: projectId,
       taskId: taskId,

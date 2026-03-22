@@ -5,7 +5,8 @@ import 'dart:io';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hive_flutter/hive_flutter.dart';
-import 'package:project_management_app/core/providers/mirror_provider.dart';
+import 'package:project_management_app/core/providers/mirror_hydration_inputs_provider.dart';
+import 'package:project_management_app/core/providers/mirror_mode_controller_provider.dart';
 import 'package:project_management_app/core/providers/mirror_session_bootstrap.dart';
 import 'package:project_management_app/core/providers/mirror_session_provider.dart';
 import 'package:project_management_app/core/providers/mirror_state_resolver.dart';
@@ -135,21 +136,21 @@ void main() {
       );
       addTearDown(container.dispose);
 
-      container.read(mirrorProvider);
+      container.read(mirrorModeControllerProvider);
       await _waitUntil(
         () =>
-            container.read(mirrorProvider).hydrationPhase !=
+            container.read(mirrorModeControllerProvider).hydrationPhase !=
             MirrorHydrationPhase.hydrating,
       );
-      expect(container.read(mirrorProvider).teamModeVariant, 'solo');
+      expect(container.read(mirrorModeControllerProvider).teamModeVariant, 'solo');
 
       final staleRefresh =
-          container.read(mirrorProvider.notifier).refreshTeamModeVariant();
+          container.read(mirrorModeControllerProvider.notifier).refreshTeamModeVariant();
       await Future<void>.delayed(const Duration(milliseconds: 10));
 
       container.read(userIdProvider.notifier).state = 'user-b';
         final currentRefresh =
-          container.read(mirrorProvider.notifier).refreshTeamModeVariant();
+          container.read(mirrorModeControllerProvider.notifier).refreshTeamModeVariant();
 
       staleTeam.complete(const MirrorVariantSnapshot(
         value: 'solo',
@@ -161,8 +162,8 @@ void main() {
       ));
       await Future.wait([staleRefresh, currentRefresh]);
 
-      await _waitUntil(() => container.read(mirrorProvider).teamModeVariant == 'team');
-      expect(container.read(mirrorProvider).teamModeVariant, 'team');
+      await _waitUntil(() => container.read(mirrorModeControllerProvider).teamModeVariant == 'team');
+      expect(container.read(mirrorModeControllerProvider).teamModeVariant, 'team');
     });
 
     test('session bootstrap completions stay isolated per session key', () async {
@@ -174,8 +175,8 @@ void main() {
           mirrorDraftCacheServiceProvider.overrideWith(
             (ref) => const _NoopDraftCacheService(),
           ),
-          mirrorModeProvider.overrideWith((ref) => 'private'),
-          mirrorOfflineWarningProvider.overrideWith((ref) => null),
+          mirrorResolvedModeProvider.overrideWith((ref) => 'private'),
+          mirrorResolvedOfflineWarningProvider.overrideWith((ref) => null),
           mirrorSessionDraftBootstrapProvider.overrideWith(
             (ref, sessionKey) async => null,
           ),
@@ -259,8 +260,8 @@ void main() {
           mirrorDraftCacheServiceProvider.overrideWith(
             (ref) => const _NoopDraftCacheService(),
           ),
-          mirrorModeProvider.overrideWith((ref) => 'private'),
-          mirrorOfflineWarningProvider.overrideWith((ref) => null),
+          mirrorResolvedModeProvider.overrideWith((ref) => 'private'),
+          mirrorResolvedOfflineWarningProvider.overrideWith((ref) => null),
           mirrorSessionRepositoryBootstrapTimeoutProvider.overrideWith(
             (ref) => const Duration(milliseconds: 40),
           ),
@@ -350,21 +351,21 @@ void main() {
       );
       addTearDown(container.dispose);
 
-      container.read(mirrorProvider);
+      container.read(mirrorModeControllerProvider);
       await _waitUntil(
         () =>
-            container.read(mirrorProvider).hydrationPhase !=
+            container.read(mirrorModeControllerProvider).hydrationPhase !=
             MirrorHydrationPhase.hydrating,
       );
       expect(premiumReads, 1);
 
       final refreshA =
-          container.read(mirrorProvider.notifier).refreshPremiumFromMetadata();
+          container.read(mirrorModeControllerProvider.notifier).refreshPremiumFromMetadata();
       await Future<void>.delayed(const Duration(milliseconds: 10));
       final refreshB =
-          container.read(mirrorProvider.notifier).refreshPremiumFromMetadata();
+          container.read(mirrorModeControllerProvider.notifier).refreshPremiumFromMetadata();
       final refreshC =
-          container.read(mirrorProvider.notifier).refreshPremiumFromMetadata();
+          container.read(mirrorModeControllerProvider.notifier).refreshPremiumFromMetadata();
 
       expect(premiumReads, 2);
 
@@ -373,7 +374,7 @@ void main() {
       await Future.wait([refreshA, refreshB, refreshC]);
 
       expect(premiumReads, 3);
-      expect(container.read(mirrorProvider).isPremium, isTrue);
+      expect(container.read(mirrorModeControllerProvider).isPremium, isTrue);
     });
 
     test('await setMode waits for in-flight refresh completion', () async {
@@ -416,20 +417,20 @@ void main() {
       );
       addTearDown(container.dispose);
 
-      container.read(mirrorProvider);
+      container.read(mirrorModeControllerProvider);
       await _waitUntil(
         () =>
-            container.read(mirrorProvider).hydrationPhase !=
+            container.read(mirrorModeControllerProvider).hydrationPhase !=
             MirrorHydrationPhase.hydrating,
       );
 
       final inFlight =
-          container.read(mirrorProvider.notifier).refreshTeamModeVariant();
+          container.read(mirrorModeControllerProvider.notifier).refreshTeamModeVariant();
       await Future<void>.delayed(const Duration(milliseconds: 10));
 
       var setModeCompleted = false;
       final setModeFuture =
-          container.read(mirrorProvider.notifier).setMode('cloud');
+          container.read(mirrorModeControllerProvider.notifier).setMode('cloud');
       setModeFuture.then((_) {
         setModeCompleted = true;
       });
@@ -444,7 +445,7 @@ void main() {
 
       await Future.wait([inFlight, setModeFuture]);
       expect(setModeCompleted, isTrue);
-      expect(container.read(mirrorProvider).mode, 'cloud');
+      expect(container.read(mirrorModeControllerProvider).mode, 'cloud');
     });
 
     test('premium stale overlap recovers to latest premium state', () async {
@@ -491,29 +492,30 @@ void main() {
       );
       addTearDown(container.dispose);
 
-      container.read(mirrorProvider);
+      container.read(mirrorModeControllerProvider);
       await _waitUntil(
         () =>
-            container.read(mirrorProvider).hydrationPhase !=
+            container.read(mirrorModeControllerProvider).hydrationPhase !=
             MirrorHydrationPhase.hydrating,
       );
 
-      await container.read(mirrorProvider.notifier).setMode('cloud');
-      expect(container.read(mirrorProvider).mode, 'cloud');
+      await container.read(mirrorModeControllerProvider.notifier).setMode('cloud');
+      expect(container.read(mirrorModeControllerProvider).mode, 'cloud');
 
       final refreshA =
-          container.read(mirrorProvider.notifier).refreshPremiumFromMetadata();
+          container.read(mirrorModeControllerProvider.notifier).refreshPremiumFromMetadata();
       await Future<void>.delayed(const Duration(milliseconds: 10));
       final refreshB =
-          container.read(mirrorProvider.notifier).refreshPremiumFromMetadata();
+          container.read(mirrorModeControllerProvider.notifier).refreshPremiumFromMetadata();
 
       stalePremium.complete(false);
       replayPremium.complete(true);
 
       await Future.wait([refreshA, refreshB]);
-      final state = container.read(mirrorProvider);
+      final state = container.read(mirrorModeControllerProvider);
       expect(state.isPremium, isTrue);
       expect(state.mode, 'cloud');
     });
   });
 }
+
