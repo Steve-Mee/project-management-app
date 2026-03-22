@@ -1,3 +1,9 @@
+## [1.49.2](https://github.com/Steve-Mee/project-management-app/compare/v1.49.1...v1.49.2) (2026-03-22)
+
+### Bug Fixes
+
+* **mirror:** make stale templates fallback explicit in UI ([8f2068e](https://github.com/Steve-Mee/project-management-app/commit/8f2068e0f5b4d2a8c42c92bee60dad759aee73cc))
+
 ## [1.49.1](https://github.com/Steve-Mee/project-management-app/compare/v1.49.0...v1.49.1) (2026-03-21)
 
 ### Bug Fixes
