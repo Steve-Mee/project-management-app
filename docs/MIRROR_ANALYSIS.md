@@ -233,3 +233,12 @@ The recommendations above have been executed in three coordinated PRs to address
 - Split session bootstrap merge policy into a pure helper with explicit phase/source outputs.
 - Added launch coordinator and reduced ai-chat launch provider to bridge behavior only.
 - Added targeted race-condition tests for auth-switch, premium refresh overlap, and session-key bootstrap isolation.
+
+## Changelog: State Hydration Hardening (Pass 2)
+
+- Added repository bootstrap timeout guard in session hydration with configurable timeout provider and degraded fallback behavior.
+- Added explicit timeout fallback message to improve diagnosability when repository bootstrap exceeds startup budget.
+- Implemented coalesced Mirror refresh orchestration to collapse overlapping refresh requests into latest-wins replay.
+- Moved refresh invalidation into the effective coalesced refresh run to avoid premature invalidation during in-flight work.
+- Guarded post-refresh persistence side effects (`saveMode`) so stale generations cannot write cache state.
+- Added new regression coverage for repository timeout degradation and overlapping premium refresh coalescing.

@@ -4,6 +4,13 @@ enum MirrorSessionBootstrapPhase {
   degraded,
 }
 
+class MirrorSessionBootstrapMessages {
+  const MirrorSessionBootstrapMessages._();
+
+  static const String repositoryTimeout =
+      'Mirror session fallback active: repository bootstrap timed out.';
+}
+
 class MirrorSessionBootstrapDraft {
   const MirrorSessionBootstrapDraft({
     required this.files,

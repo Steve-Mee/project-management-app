@@ -97,13 +97,20 @@ class MirrorState {
 class MirrorNotifier extends Notifier<MirrorState> {
   int _hydrationGeneration = 0;
   bool _bootstrapStarted = false;
+  bool _refreshInFlight = false;
+  bool _refreshPending = false;
+  String? _pendingRequestedMode;
+  bool _pendingPersistEffectiveMode = false;
+  bool _pendingRefreshPremium = false;
+  bool _pendingRefreshTeamVariant = false;
+  bool _pendingRefreshRunnerVariant = false;
 
   @override
   MirrorState build() {
     if (!_bootstrapStarted) {
       _bootstrapStarted = true;
       Future<void>.microtask(() {
-        unawaited(_refreshFromSources());
+        unawaited(_queueRefresh());
       });
     }
 
@@ -118,39 +125,116 @@ class MirrorNotifier extends Notifier<MirrorState> {
   }
 
   Future<void> setMode(String mode) async {
-    await _refreshFromSources(
+    await _queueRefresh(
       requestedMode: mode,
       persistEffectiveMode: true,
     );
   }
 
   Future<void> refreshPremiumFromMetadata() async {
-    ref.invalidate(mirrorPremiumProvider);
-    ref.invalidate(mirrorPremiumSnapshotProvider);
-    await _refreshFromSources(
+    await _queueRefresh(
       requestedMode: state.mode,
       persistEffectiveMode: true,
+      refreshPremium: true,
     );
   }
 
   Future<void> refreshTeamModeVariant() async {
-    ref.invalidate(mirrorTeamModeVariantSnapshotProvider);
-    await _refreshFromSources(requestedMode: state.mode);
+    await _queueRefresh(
+      requestedMode: state.mode,
+      refreshTeamVariant: true,
+    );
   }
 
   Future<void> refreshRunnerModeVariant() async {
-    ref.invalidate(mirrorRunnerModeVariantSnapshotProvider);
-    await _refreshFromSources(requestedMode: state.mode);
+    await _queueRefresh(
+      requestedMode: state.mode,
+      refreshRunnerVariant: true,
+    );
   }
 
   void clearOfflineWarning() {
     state = state.copyWith(clearOfflineWarning: true);
   }
 
+  Future<void> _queueRefresh({
+    String? requestedMode,
+    bool persistEffectiveMode = false,
+    bool refreshPremium = false,
+    bool refreshTeamVariant = false,
+    bool refreshRunnerVariant = false,
+  }) async {
+    if (_refreshInFlight) {
+      _refreshPending = true;
+      if (requestedMode != null) {
+        _pendingRequestedMode = requestedMode;
+      }
+      _pendingPersistEffectiveMode =
+          _pendingPersistEffectiveMode || persistEffectiveMode;
+      _pendingRefreshPremium = _pendingRefreshPremium || refreshPremium;
+      _pendingRefreshTeamVariant =
+          _pendingRefreshTeamVariant || refreshTeamVariant;
+      _pendingRefreshRunnerVariant =
+          _pendingRefreshRunnerVariant || refreshRunnerVariant;
+      return;
+    }
+
+    _refreshInFlight = true;
+    var effectiveRequestedMode = requestedMode ?? state.mode;
+    var effectivePersistEffectiveMode = persistEffectiveMode;
+    var effectiveRefreshPremium = refreshPremium;
+    var effectiveRefreshTeamVariant = refreshTeamVariant;
+    var effectiveRefreshRunnerVariant = refreshRunnerVariant;
+
+    try {
+      while (true) {
+        await _refreshFromSources(
+          requestedMode: effectiveRequestedMode,
+          persistEffectiveMode: effectivePersistEffectiveMode,
+          refreshPremium: effectiveRefreshPremium,
+          refreshTeamVariant: effectiveRefreshTeamVariant,
+          refreshRunnerVariant: effectiveRefreshRunnerVariant,
+        );
+
+        if (!_refreshPending) {
+          break;
+        }
+
+        effectiveRequestedMode = _pendingRequestedMode ?? state.mode;
+        effectivePersistEffectiveMode = _pendingPersistEffectiveMode;
+        effectiveRefreshPremium = _pendingRefreshPremium;
+        effectiveRefreshTeamVariant = _pendingRefreshTeamVariant;
+        effectiveRefreshRunnerVariant = _pendingRefreshRunnerVariant;
+        _refreshPending = false;
+        _pendingRequestedMode = null;
+        _pendingPersistEffectiveMode = false;
+        _pendingRefreshPremium = false;
+        _pendingRefreshTeamVariant = false;
+        _pendingRefreshRunnerVariant = false;
+      }
+    } finally {
+      _refreshInFlight = false;
+    }
+  }
+
   Future<void> _refreshFromSources({
     String? requestedMode,
     bool persistEffectiveMode = false,
+    bool refreshPremium = false,
+    bool refreshTeamVariant = false,
+    bool refreshRunnerVariant = false,
   }) async {
+    if (refreshPremium) {
+      ref.invalidate(mirrorPremiumProvider);
+      ref.invalidate(mirrorPremiumSnapshotProvider);
+    }
+    if (refreshTeamVariant) {
+      ref.invalidate(mirrorTeamModeVariantSnapshotProvider);
+    }
+    if (refreshRunnerVariant) {
+      ref.invalidate(mirrorRunnerModeVariantSnapshotProvider);
+    }
+
     final generation = ++_hydrationGeneration;
     state = state.copyWith(hydrationPhase: MirrorHydrationPhase.hydrating);
     final userId = ref.read(currentMirrorUserIdProvider);
@@ -225,7 +309,7 @@ class MirrorNotifier extends Notifier<MirrorState> {
       fallbackReason: resolved.provenance.fallbackReason,
     );
 
-    if (persistEffectiveMode) {
+    if (persistEffectiveMode && _isCurrentGeneration(generation)) {
       unawaited(MirrorOfflineCache.saveMode(resolved.mode));
     }
   }

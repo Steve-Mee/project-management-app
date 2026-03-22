@@ -18,6 +18,11 @@ final mirrorDraftCacheServiceProvider = Provider<MirrorDraftCacheService>((ref) 
   return const MirrorDraftCacheService();
 });
 
+final mirrorSessionRepositoryBootstrapTimeoutProvider =
+    Provider<Duration>((ref) {
+  return const Duration(milliseconds: 1500);
+});
+
 class MirrorSessionState {
   const MirrorSessionState({
     required this.projectId,
@@ -202,13 +207,22 @@ class MirrorSessionNotifier
         ref.read(mirrorSessionDraftBootstrapProvider(sessionKey).future);
     final repositoryFuture =
         ref.read(mirrorSessionRepositoryBootstrapProvider(sessionKey).future);
+    final repositoryTimeout =
+      ref.read(mirrorSessionRepositoryBootstrapTimeoutProvider);
 
     final draft = await draftFuture;
     if (!_isCurrentBootstrap(generation, sessionKey)) {
       return;
     }
 
-    final repository = await repositoryFuture;
+    final repository = await repositoryFuture.timeout(
+      repositoryTimeout,
+      onTimeout: () => const MirrorSessionBootstrapRepository(
+        files: <String, String>{},
+        preferredSelectedFile: '',
+        errorMessage: MirrorSessionBootstrapMessages.repositoryTimeout,
+      ),
+    );
     if (!_isCurrentBootstrap(generation, sessionKey)) {
       return;
     }
