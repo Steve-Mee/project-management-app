@@ -2985,6 +2985,18 @@ abstract class AppLocalizations {
   /// **'Could not load recent workflows.'**
   String get mirrorTemplatesLoadFailed;
 
+  /// Warning shown when the template list falls back to stale cache after a network/fetch failure.
+  ///
+  /// In en, this message translates to:
+  /// **'Showing cached saved views because live templates could not be refreshed.'**
+  String get mirrorTemplatesStaleFallbackWarning;
+
+  /// Warning shown when stale cache fallback is used and the last successful fetch timestamp is known.
+  ///
+  /// In en, this message translates to:
+  /// **'Showing cached saved views from {lastUpdated} because live templates could not be refreshed.'**
+  String mirrorTemplatesStaleFallbackWarningWithTime(String lastUpdated);
+
   /// Terminal line shown after applying a Mirror template.
   ///
   /// In en, this message translates to:

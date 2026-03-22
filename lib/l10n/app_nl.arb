@@ -1624,6 +1624,19 @@
   "@mirrorTemplatesLoadFailed": {
     "description": "Melding wanneer de templates-galerij niet geladen kan worden."
   },
+  "mirrorTemplatesStaleFallbackWarning": "Je ziet opgeslagen weergaven uit de cache omdat live templates nu niet konden worden ververst.",
+  "@mirrorTemplatesStaleFallbackWarning": {
+    "description": "Waarschuwing wanneer de templates-lijst terugvalt op stale cache na een netwerk- of fetchfout."
+  },
+  "mirrorTemplatesStaleFallbackWarningWithTime": "Je ziet opgeslagen weergaven uit de cache van {lastUpdated} omdat live templates nu niet konden worden ververst.",
+  "@mirrorTemplatesStaleFallbackWarningWithTime": {
+    "description": "Waarschuwing wanneer stale cache fallback wordt gebruikt en het laatste succesvolle ophaaltijdstip bekend is.",
+    "placeholders": {
+      "lastUpdated": {
+        "type": "String"
+      }
+    }
+  },
   "mirrorTemplateAppliedTerminal": "Opslaan: {selectedFile} - {title}",
   "@mirrorTemplateAppliedTerminal": {
     "description": "Terminalregel na toepassen van een Mirror-template.",

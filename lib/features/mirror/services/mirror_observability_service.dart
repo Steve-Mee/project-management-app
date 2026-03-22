@@ -22,6 +22,8 @@ class MirrorObservabilityService {
     required String result,
     required String source,
     String? reason,
+    String? freshness,
+    int? stalenessAgeMs,
     int? templateCount,
   }) {
     AppLogger.event(
@@ -30,6 +32,8 @@ class MirrorObservabilityService {
         'result': result,
         'source': source,
         if (reason != null) 'reason': reason,
+        if (freshness != null) 'freshness': freshness,
+        if (stalenessAgeMs != null) 'stalenessAgeMs': stalenessAgeMs,
         if (templateCount != null) 'templateCount': templateCount,
       },
     );

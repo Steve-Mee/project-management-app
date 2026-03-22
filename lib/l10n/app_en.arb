@@ -2219,6 +2219,19 @@
   "@mirrorTemplatesLoadFailed": {
     "description": "Message shown when template gallery cannot be loaded."
   },
+  "mirrorTemplatesStaleFallbackWarning": "Showing cached saved views because live templates could not be refreshed.",
+  "@mirrorTemplatesStaleFallbackWarning": {
+    "description": "Warning shown when the template list falls back to stale cache after a network/fetch failure."
+  },
+  "mirrorTemplatesStaleFallbackWarningWithTime": "Showing cached saved views from {lastUpdated} because live templates could not be refreshed.",
+  "@mirrorTemplatesStaleFallbackWarningWithTime": {
+    "description": "Warning shown when stale cache fallback is used and the last successful fetch timestamp is known.",
+    "placeholders": {
+      "lastUpdated": {
+        "type": "String"
+      }
+    }
+  },
   "mirrorTemplateAppliedTerminal": "Save: {selectedFile} - {title}",
   "@mirrorTemplateAppliedTerminal": {
     "description": "Terminal line shown after applying a Mirror template.",

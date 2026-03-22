@@ -199,7 +199,12 @@ void main() {
       addTearDown(container.dispose);
 
       final result = await container.read(mirrorTemplatesProvider.future);
-      expect(result.map((t) => t.id).toList(), ['mem-1']);
+      expect(result.templates.map((t) => t.id).toList(), ['mem-1']);
+      expect(result.isStaleFallback, isTrue);
+      expect(
+        result.reasonCode,
+        MirrorTemplatesLoadReasonCodes.networkOrFetchError,
+      );
     });
 
     test(
@@ -218,7 +223,12 @@ void main() {
       addTearDown(container.dispose);
 
       final result = await container.read(mirrorTemplatesProvider.future);
-      expect(result.map((t) => t.id).toList(), ['per-1', 'per-2']);
+      expect(result.templates.map((t) => t.id).toList(), ['per-1', 'per-2']);
+      expect(result.isStaleFallback, isTrue);
+      expect(
+        result.reasonCode,
+        MirrorTemplatesLoadReasonCodes.networkOrFetchError,
+      );
     });
 
     test(

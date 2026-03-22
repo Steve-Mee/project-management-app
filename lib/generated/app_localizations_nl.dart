@@ -1590,6 +1590,15 @@ class AppLocalizationsNl extends AppLocalizations {
   String get mirrorTemplatesLoadFailed => 'Kon recente workflows niet laden.';
 
   @override
+  String get mirrorTemplatesStaleFallbackWarning =>
+      'Je ziet opgeslagen weergaven uit de cache omdat live templates nu niet konden worden ververst.';
+
+  @override
+  String mirrorTemplatesStaleFallbackWarningWithTime(String lastUpdated) {
+    return 'Je ziet opgeslagen weergaven uit de cache van $lastUpdated omdat live templates nu niet konden worden ververst.';
+  }
+
+  @override
   String mirrorTemplateAppliedTerminal(String selectedFile, String title) {
     return 'Opslaan: $selectedFile - $title';
   }

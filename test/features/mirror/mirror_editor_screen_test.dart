@@ -7,14 +7,20 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:hive/hive.dart';
 import 'package:pma_core/auth/permissions.dart';
 import 'package:pma_core/providers/auth/auth_providers.dart';
+import 'package:project_management_app/core/providers/supabase_client_provider.dart';
 import 'package:project_management_app/core/providers/mirror_provider.dart';
 import 'package:project_management_app/generated/app_localizations.dart';
 import 'package:project_management_app/features/mirror/mirror_editor_screen.dart';
+import 'package:project_management_app/features/mirror/models/mirror_template.dart';
+import 'package:project_management_app/features/mirror/providers/mirror_templates_provider.dart';
 import 'package:project_management_app/features/mirror/services/mirror_realtime_service.dart';
 import 'package:pma_core/models/comment_model.dart';
 import 'package:pma_core/models/project_model.dart';
 import 'package:pma_core/models/sub_task_model.dart';
 import 'package:pma_core/models/task_model.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+
+class _FakeSupabaseClient extends Fake implements SupabaseClient {}
 
 class _TestMirrorNotifier extends MirrorNotifier {
   _TestMirrorNotifier(this._initialState);
@@ -35,12 +41,15 @@ class _TestMirrorNotifier extends MirrorNotifier {
 Widget _buildHarness({
   required _TestMirrorNotifier notifier,
   Stream<Map<String, dynamic>>? realtimeRecords,
+  List<Override> overrides = const <Override>[],
 }) {
   return ProviderScope(
     overrides: <Override>[
       mirrorProvider.overrideWith(() => notifier),
       hasPermissionProvider(AppPermissions.useMirror)
           .overrideWith((ref) => true),
+      supabaseClientProvider.overrideWith((ref) => _FakeSupabaseClient()),
+      ...overrides,
     ],
     child: MaterialApp(
       locale: const Locale('en'),
@@ -198,6 +207,116 @@ void main() {
       expect(capped.length, 500);
       expect(capped.first, 'line 10');
       expect(capped.last, 'line 509');
+    });
+
+    testWidgets('shows stale templates warning with last updated timestamp',
+        (WidgetTester tester) async {
+      tester.view.physicalSize = const Size(1600, 1200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      final notifier = _TestMirrorNotifier(
+        const MirrorState(
+          mode: 'private',
+          isPremium: true,
+          teamModeVariant: 'solo',
+          offlineWarning: null,
+        ),
+      );
+      final staleResult = MirrorTemplatesLoadResult(
+        templates: const <MirrorTemplate>[
+          MirrorTemplate(
+            id: 'stale-template-1',
+            title: 'Stale Template',
+            description: 'desc',
+            seedContent: 'seed',
+          ),
+        ],
+        freshness: MirrorTemplatesFreshness.staleFallback,
+        source: 'memory',
+        reasonCode: MirrorTemplatesLoadReasonCodes.networkOrFetchError,
+        fetchedAtUtc: DateTime.utc(2026, 3, 22, 15, 30),
+      );
+
+      await tester.pumpWidget(
+        _buildHarness(
+          notifier: notifier,
+          overrides: <Override>[
+            mirrorTemplatesProvider.overrideWith(
+              (ref) async => staleResult,
+            ),
+          ],
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byIcon(Icons.auto_awesome));
+      await tester.pumpAndSettle();
+
+      final localTimestamp = DateTime.utc(2026, 3, 22, 15, 30).toLocal();
+      final month = localTimestamp.month.toString().padLeft(2, '0');
+      final day = localTimestamp.day.toString().padLeft(2, '0');
+      final hour = localTimestamp.hour.toString().padLeft(2, '0');
+      final minute = localTimestamp.minute.toString().padLeft(2, '0');
+      final expectedFormattedTime =
+          '${localTimestamp.year}-$month-$day $hour:$minute';
+
+      expect(
+        find.textContaining('Showing cached saved views from'),
+        findsOneWidget,
+      );
+      expect(find.textContaining(expectedFormattedTime), findsOneWidget);
+    });
+
+    testWidgets('does not show stale templates warning for fresh templates',
+        (WidgetTester tester) async {
+      tester.view.physicalSize = const Size(1600, 1200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      final notifier = _TestMirrorNotifier(
+        const MirrorState(
+          mode: 'private',
+          isPremium: true,
+          teamModeVariant: 'solo',
+          offlineWarning: null,
+        ),
+      );
+      final freshResult = MirrorTemplatesLoadResult(
+        templates: const <MirrorTemplate>[
+          MirrorTemplate(
+            id: 'fresh-template-1',
+            title: 'Fresh Template',
+            description: 'desc',
+            seedContent: 'seed',
+          ),
+        ],
+        freshness: MirrorTemplatesFreshness.fresh,
+        source: 'network',
+        fetchedAtUtc: DateTime.utc(2026, 3, 22, 15, 30),
+      );
+
+      await tester.pumpWidget(
+        _buildHarness(
+          notifier: notifier,
+          overrides: <Override>[
+            mirrorTemplatesProvider.overrideWith(
+              (ref) async => freshResult,
+            ),
+          ],
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byIcon(Icons.auto_awesome));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.textContaining('Showing cached saved views'),
+        findsNothing,
+      );
     });
   });
 }

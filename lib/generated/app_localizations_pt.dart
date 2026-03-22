@@ -1586,6 +1586,15 @@ class AppLocalizationsPt extends AppLocalizations {
   String get mirrorTemplatesLoadFailed => 'Could not load recent workflows.';
 
   @override
+  String get mirrorTemplatesStaleFallbackWarning =>
+      'Showing cached saved views because live templates could not be refreshed.';
+
+  @override
+  String mirrorTemplatesStaleFallbackWarningWithTime(String lastUpdated) {
+    return 'Showing cached saved views from $lastUpdated because live templates could not be refreshed.';
+  }
+
+  @override
   String mirrorTemplateAppliedTerminal(String selectedFile, String title) {
     return 'Save: $selectedFile - $title';
   }

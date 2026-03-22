@@ -63,6 +63,15 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
 
   AppLocalizations get _l10n => AppLocalizations.of(context)!;
 
+  String _formatStaleUpdatedAt(DateTime timestampUtc) {
+    final local = timestampUtc.toLocal();
+    final month = local.month.toString().padLeft(2, '0');
+    final day = local.day.toString().padLeft(2, '0');
+    final hour = local.hour.toString().padLeft(2, '0');
+    final minute = local.minute.toString().padLeft(2, '0');
+    return '${local.year}-$month-$day $hour:$minute';
+  }
+
   @override
   void initState() {
     super.initState();
@@ -583,17 +592,61 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
                     ),
                   ),
                 ),
-                data: (List<MirrorTemplate> templates) {
+                data: (MirrorTemplatesLoadResult result) {
+                  final templates = result.templates;
                   if (templates.isEmpty) {
                     return _buildTemplatesEmptyState(ref);
                   }
 
-                  return TemplatesGallery(
-                    templates: templates,
-                    onTemplateSelected: (MirrorTemplate template) {
-                      Navigator.of(context).pop();
-                      _applyTemplateToSelectedFile(template);
-                    },
+                  final staleWarningMessage = result.isStaleFallback
+                      ? result.fetchedAtUtc == null
+                          ? _l10n.mirrorTemplatesStaleFallbackWarning
+                          : _l10n.mirrorTemplatesStaleFallbackWarningWithTime(
+                              _formatStaleUpdatedAt(result.fetchedAtUtc!),
+                            )
+                      : null;
+
+                  return Column(
+                    children: <Widget>[
+                      if (result.isStaleFallback)
+                        Container(
+                          width: double.infinity,
+                          margin: const EdgeInsets.fromLTRB(12, 8, 12, 0),
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color: Theme.of(context)
+                                .colorScheme
+                                .surfaceContainerHighest,
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(
+                              color: Theme.of(context).colorScheme.outlineVariant,
+                            ),
+                          ),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: <Widget>[
+                              const Icon(Icons.warning_amber_rounded, size: 18),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  staleWarningMessage ??
+                                      _l10n.mirrorTemplatesStaleFallbackWarning,
+                                  style: Theme.of(context).textTheme.bodySmall,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      Expanded(
+                        child: TemplatesGallery(
+                          templates: templates,
+                          onTemplateSelected: (MirrorTemplate template) {
+                            Navigator.of(context).pop();
+                            _applyTemplateToSelectedFile(template);
+                          },
+                        ),
+                      ),
+                    ],
                   );
                 },
               );

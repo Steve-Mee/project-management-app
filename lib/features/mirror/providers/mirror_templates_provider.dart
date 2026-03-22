@@ -10,6 +10,38 @@ import '../services/mirror_templates_cache.dart';
 
 const Duration _templatesCacheTtl = Duration(minutes: 10);
 
+enum MirrorTemplatesFreshness {
+  fresh,
+  staleFallback,
+}
+
+class MirrorTemplatesLoadReasonCodes {
+  const MirrorTemplatesLoadReasonCodes._();
+
+  static const String empty = 'empty';
+  static const String stale = 'stale';
+  static const String versionMismatch = 'version_mismatch';
+  static const String networkOrFetchError = 'network_or_fetch_error';
+}
+
+class MirrorTemplatesLoadResult {
+  const MirrorTemplatesLoadResult({
+    required this.templates,
+    required this.freshness,
+    required this.source,
+    this.reasonCode,
+    this.fetchedAtUtc,
+  });
+
+  final List<MirrorTemplate> templates;
+  final MirrorTemplatesFreshness freshness;
+  final String source;
+  final String? reasonCode;
+  final DateTime? fetchedAtUtc;
+
+  bool get isStaleFallback => freshness == MirrorTemplatesFreshness.staleFallback;
+}
+
 final mirrorTemplatesCacheProvider =
     Provider<MirrorTemplatesCache>((ref) => const MirrorTemplatesCache());
 
@@ -20,7 +52,7 @@ final mirrorTemplatesSupabaseClientProvider =
     Provider<SupabaseClient>((ref) => ref.read(supabaseClientProvider));
 
 final mirrorTemplatesProvider =
-    FutureProvider<List<MirrorTemplate>>((ref) async {
+  FutureProvider<MirrorTemplatesLoadResult>((ref) async {
   final client = ref.read(mirrorTemplatesSupabaseClientProvider);
   final persistentCache = ref.read(mirrorTemplatesCacheProvider);
   final observability = ref.read(mirrorTemplatesObservabilityProvider);
@@ -55,19 +87,28 @@ final mirrorTemplatesProvider =
       observability.recordTemplateCacheEvent(
         result: 'hit',
         source: cacheSource,
+        freshness: 'fresh',
         templateCount: cached.templates.length,
       );
-      return cached.templates;
+      return MirrorTemplatesLoadResult(
+        templates: cached.templates,
+        freshness: MirrorTemplatesFreshness.fresh,
+        source: cacheSource,
+        fetchedAtUtc: cached.fetchedAtUtc,
+      );
     }
+
+    final missReason = cached == null
+        ? MirrorTemplatesLoadReasonCodes.empty
+        : now.difference(cached.fetchedAtUtc) > _templatesCacheTtl
+            ? MirrorTemplatesLoadReasonCodes.stale
+            : MirrorTemplatesLoadReasonCodes.versionMismatch;
 
     observability.recordTemplateCacheEvent(
       result: 'miss',
       source: cacheSource,
-      reason: cached == null
-          ? 'empty'
-          : now.difference(cached.fetchedAtUtc) > _templatesCacheTtl
-              ? 'stale'
-              : 'version_mismatch',
+      reason: missReason,
+      freshness: 'fresh',
       templateCount: cached?.templates.length,
     );
 
@@ -84,18 +125,32 @@ final mirrorTemplatesProvider =
         fetchedAtUtc: now,
       ),
     );
-    return templates;
+    return MirrorTemplatesLoadResult(
+      templates: templates,
+      freshness: MirrorTemplatesFreshness.fresh,
+      source: 'network',
+      fetchedAtUtc: now,
+    );
   } catch (_) {
     final canUseCache = cached != null &&
         now.difference(cached.fetchedAtUtc) <= _templatesCacheTtl;
     if (canUseCache) {
+      final stalenessAgeMs = now.difference(cached.fetchedAtUtc).inMilliseconds;
       observability.recordTemplateCacheEvent(
         result: 'fallback',
         source: cacheSource,
-        reason: 'network_or_fetch_error',
+        reason: MirrorTemplatesLoadReasonCodes.networkOrFetchError,
+        freshness: 'stale_fallback',
+        stalenessAgeMs: stalenessAgeMs,
         templateCount: cached.templates.length,
       );
-      return cached.templates;
+      return MirrorTemplatesLoadResult(
+        templates: cached.templates,
+        freshness: MirrorTemplatesFreshness.staleFallback,
+        source: cacheSource,
+        reasonCode: MirrorTemplatesLoadReasonCodes.networkOrFetchError,
+        fetchedAtUtc: cached.fetchedAtUtc,
+      );
     }
     rethrow;
   }
