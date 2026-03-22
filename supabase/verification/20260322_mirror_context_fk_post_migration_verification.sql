@@ -239,6 +239,7 @@ SAVEPOINT mirror_context_smoke_test;
 DO $$
 DECLARE
   any_task RECORD;
+  smoke_user_id UUID;
   inserted_id UUID;
   normalized_project_text TEXT;
   normalized_task_text TEXT;
@@ -247,8 +248,24 @@ BEGIN
   FROM public.tasks t
   LIMIT 1;
 
+  SELECT s.user_id INTO smoke_user_id
+  FROM public.ai_sessions s
+  WHERE s.user_id IS NOT NULL
+  LIMIT 1;
+
+  IF smoke_user_id IS NULL THEN
+    SELECT u.id INTO smoke_user_id
+    FROM auth.users u
+    LIMIT 1;
+  END IF;
+
   IF any_task.id IS NULL THEN
     RAISE NOTICE 'Smoke test skipped: no tasks available';
+    RETURN;
+  END IF;
+
+  IF smoke_user_id IS NULL THEN
+    RAISE NOTICE 'Smoke test skipped: no suitable user_id available';
     RETURN;
   END IF;
 
@@ -263,7 +280,7 @@ BEGIN
     metadata
   )
   VALUES (
-    auth.uid(),
+    smoke_user_id,
     any_task.project_id::text,
     any_task.id::text,
     'mirror context smoke test',
