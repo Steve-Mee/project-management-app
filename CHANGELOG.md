@@ -1,3 +1,9 @@
+## [1.50.0](https://github.com/Steve-Mee/project-management-app/compare/v1.49.2...v1.50.0) (2026-03-22)
+
+### Features
+
+* **mirror:** enforce relational project-task context with UUID FKs ([0463f18](https://github.com/Steve-Mee/project-management-app/commit/0463f18394a24a7060fdfaf4fb3968a11e0597c5))
+
 ## [1.49.2](https://github.com/Steve-Mee/project-management-app/compare/v1.49.1...v1.49.2) (2026-03-22)
 
 ### Bug Fixes
