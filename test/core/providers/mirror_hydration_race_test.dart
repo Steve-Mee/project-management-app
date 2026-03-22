@@ -148,7 +148,8 @@ void main() {
       await Future<void>.delayed(const Duration(milliseconds: 10));
 
       container.read(userIdProvider.notifier).state = 'user-b';
-      await container.read(mirrorProvider.notifier).refreshTeamModeVariant();
+        final currentRefresh =
+          container.read(mirrorProvider.notifier).refreshTeamModeVariant();
 
       staleTeam.complete(const MirrorVariantSnapshot(
         value: 'solo',
@@ -158,7 +159,7 @@ void main() {
         value: 'team',
         source: MirrorValueSource.remote,
       ));
-      await staleRefresh;
+      await Future.wait([staleRefresh, currentRefresh]);
 
       await _waitUntil(() => container.read(mirrorProvider).teamModeVariant == 'team');
       expect(container.read(mirrorProvider).teamModeVariant, 'team');
@@ -293,6 +294,10 @@ void main() {
       expect(session.bootstrapPhase, MirrorSessionBootstrapPhase.degraded);
       expect(session.bootstrapSource, 'baseline');
       expect(
+        session.bootstrapReasonCode,
+        MirrorSessionBootstrapReasonCodes.repositoryTimeout,
+      );
+      expect(
         session.terminalLog,
         contains(MirrorSessionBootstrapMessages.repositoryTimeout),
       );
@@ -369,6 +374,146 @@ void main() {
 
       expect(premiumReads, 3);
       expect(container.read(mirrorProvider).isPremium, isTrue);
+    });
+
+    test('await setMode waits for in-flight refresh completion', () async {
+      final initialTeam = _completed(const MirrorVariantSnapshot(
+        value: 'solo',
+        source: MirrorValueSource.remote,
+      ));
+      final blockedTeam = Completer<MirrorVariantSnapshot>();
+      final teamResponses = _QueuedAsync<MirrorVariantSnapshot>(
+        ListQueue<Completer<MirrorVariantSnapshot>>.of([
+          initialTeam,
+          blockedTeam,
+        ]),
+      );
+
+      final container = ProviderContainer(
+        overrides: [
+          mirrorDraftCacheServiceProvider.overrideWith(
+            (ref) => const _NoopDraftCacheService(),
+          ),
+          mirrorFeatureGateSnapshotProvider.overrideWith(
+            (ref) async => const MirrorFeatureGateSnapshot(
+              mirrorEnabled: true,
+              allowPrivateMode: true,
+              allowCloudMode: true,
+              allowAdminBypass: false,
+            ),
+          ),
+          mirrorPremiumSnapshotProvider.overrideWith((ref) async => true),
+          mirrorTeamModeVariantSnapshotProvider.overrideWith(
+            (ref) => teamResponses.next(),
+          ),
+          mirrorRunnerModeVariantSnapshotProvider.overrideWith(
+            (ref) async => const MirrorVariantSnapshot(
+              value: 'cloud',
+              source: MirrorValueSource.remote,
+            ),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      container.read(mirrorProvider);
+      await _waitUntil(
+        () =>
+            container.read(mirrorProvider).hydrationPhase !=
+            MirrorHydrationPhase.hydrating,
+      );
+
+      final inFlight =
+          container.read(mirrorProvider.notifier).refreshTeamModeVariant();
+      await Future<void>.delayed(const Duration(milliseconds: 10));
+
+      var setModeCompleted = false;
+      final setModeFuture =
+          container.read(mirrorProvider.notifier).setMode('cloud');
+      setModeFuture.then((_) {
+        setModeCompleted = true;
+      });
+
+      await Future<void>.delayed(const Duration(milliseconds: 20));
+      expect(setModeCompleted, isFalse);
+
+      blockedTeam.complete(const MirrorVariantSnapshot(
+        value: 'solo',
+        source: MirrorValueSource.remote,
+      ));
+
+      await Future.wait([inFlight, setModeFuture]);
+      expect(setModeCompleted, isTrue);
+      expect(container.read(mirrorProvider).mode, 'cloud');
+    });
+
+    test('premium stale overlap recovers to latest premium state', () async {
+      final initialPremium = _completed(true);
+      final stalePremium = Completer<bool>();
+      final replayPremium = Completer<bool>();
+      final premiumResponses = _QueuedAsync<bool>(
+        ListQueue<Completer<bool>>.of([
+          initialPremium,
+          stalePremium,
+          replayPremium,
+        ]),
+      );
+
+      final container = ProviderContainer(
+        overrides: [
+          mirrorDraftCacheServiceProvider.overrideWith(
+            (ref) => const _NoopDraftCacheService(),
+          ),
+          mirrorFeatureGateSnapshotProvider.overrideWith(
+            (ref) async => const MirrorFeatureGateSnapshot(
+              mirrorEnabled: true,
+              allowPrivateMode: true,
+              allowCloudMode: true,
+              allowAdminBypass: false,
+            ),
+          ),
+          mirrorPremiumSnapshotProvider.overrideWith(
+            (ref) => premiumResponses.next(),
+          ),
+          mirrorTeamModeVariantSnapshotProvider.overrideWith(
+            (ref) async => const MirrorVariantSnapshot(
+              value: 'solo',
+              source: MirrorValueSource.remote,
+            ),
+          ),
+          mirrorRunnerModeVariantSnapshotProvider.overrideWith(
+            (ref) async => const MirrorVariantSnapshot(
+              value: 'cloud',
+              source: MirrorValueSource.remote,
+            ),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      container.read(mirrorProvider);
+      await _waitUntil(
+        () =>
+            container.read(mirrorProvider).hydrationPhase !=
+            MirrorHydrationPhase.hydrating,
+      );
+
+      await container.read(mirrorProvider.notifier).setMode('cloud');
+      expect(container.read(mirrorProvider).mode, 'cloud');
+
+      final refreshA =
+          container.read(mirrorProvider.notifier).refreshPremiumFromMetadata();
+      await Future<void>.delayed(const Duration(milliseconds: 10));
+      final refreshB =
+          container.read(mirrorProvider.notifier).refreshPremiumFromMetadata();
+
+      stalePremium.complete(false);
+      replayPremium.complete(true);
+
+      await Future.wait([refreshA, refreshB]);
+      final state = container.read(mirrorProvider);
+      expect(state.isPremium, isTrue);
+      expect(state.mode, 'cloud');
     });
   });
 }

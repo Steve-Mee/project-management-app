@@ -37,6 +37,7 @@ class MirrorSessionState {
     this.compileServerVersionToken,
     this.bootstrapPhase = MirrorSessionBootstrapPhase.initial,
     this.bootstrapSource = 'baseline',
+    this.bootstrapReasonCode,
   });
 
   final String projectId;
@@ -51,6 +52,7 @@ class MirrorSessionState {
   final String? compileServerVersionToken;
   final MirrorSessionBootstrapPhase bootstrapPhase;
   final String bootstrapSource;
+  final String? bootstrapReasonCode;
 
   MirrorSessionState copyWith({
     String? projectId,
@@ -65,6 +67,7 @@ class MirrorSessionState {
     String? compileServerVersionToken,
     MirrorSessionBootstrapPhase? bootstrapPhase,
     String? bootstrapSource,
+    String? bootstrapReasonCode,
   }) {
     return MirrorSessionState(
       projectId: projectId ?? this.projectId,
@@ -80,6 +83,7 @@ class MirrorSessionState {
           compileServerVersionToken ?? this.compileServerVersionToken,
       bootstrapPhase: bootstrapPhase ?? this.bootstrapPhase,
       bootstrapSource: bootstrapSource ?? this.bootstrapSource,
+      bootstrapReasonCode: bootstrapReasonCode ?? this.bootstrapReasonCode,
     );
   }
 
@@ -102,6 +106,7 @@ class MirrorSessionState {
       compileServerVersionToken: null,
       bootstrapPhase: MirrorSessionBootstrapPhase.initial,
       bootstrapSource: 'baseline',
+      bootstrapReasonCode: null,
     );
   }
 
@@ -221,6 +226,7 @@ class MirrorSessionNotifier
         files: <String, String>{},
         preferredSelectedFile: '',
         errorMessage: MirrorSessionBootstrapMessages.repositoryTimeout,
+        reasonCode: MirrorSessionBootstrapReasonCodes.repositoryTimeout,
       ),
     );
     if (!_isCurrentBootstrap(generation, sessionKey)) {
@@ -243,6 +249,7 @@ class MirrorSessionNotifier
       terminalLog: bootstrap.terminalLines,
       bootstrapPhase: bootstrap.phase,
       bootstrapSource: bootstrap.sourceSummary,
+      bootstrapReasonCode: bootstrap.reasonCode,
     );
   }
 
@@ -432,6 +439,7 @@ final mirrorSessionRepositoryBootstrapProvider = FutureProvider.autoDispose
       preferredSelectedFile: '',
       errorMessage:
           'Mirror session fallback active: unable to load repository context ($error).',
+      reasonCode: MirrorSessionBootstrapReasonCodes.repositoryError,
     );
   }
 });

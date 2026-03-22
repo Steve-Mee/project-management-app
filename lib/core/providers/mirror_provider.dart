@@ -40,6 +40,7 @@ class MirrorState {
     this.premiumSource = MirrorValueSource.remote,
     this.teamModeVariantSource = MirrorValueSource.defaultValue,
     this.runnerModeVariantSource = MirrorValueSource.defaultValue,
+    this.hydrationReasonCode,
     this.fallbackReason,
   });
 
@@ -53,6 +54,7 @@ class MirrorState {
   final MirrorValueSource premiumSource;
   final MirrorValueSource teamModeVariantSource;
   final MirrorValueSource runnerModeVariantSource;
+  final String? hydrationReasonCode;
   final String? fallbackReason;
 
   bool get isTeamMode => teamModeVariant == 'team';
@@ -70,6 +72,7 @@ class MirrorState {
     MirrorValueSource? premiumSource,
     MirrorValueSource? teamModeVariantSource,
     MirrorValueSource? runnerModeVariantSource,
+    String? hydrationReasonCode,
     String? fallbackReason,
     bool clearOfflineWarning = false,
   }) {
@@ -87,6 +90,8 @@ class MirrorState {
           teamModeVariantSource ?? this.teamModeVariantSource,
         runnerModeVariantSource:
           runnerModeVariantSource ?? this.runnerModeVariantSource,
+        hydrationReasonCode:
+          hydrationReasonCode ?? this.hydrationReasonCode,
         fallbackReason: clearOfflineWarning
           ? null
           : (fallbackReason ?? this.fallbackReason),
@@ -104,6 +109,7 @@ class MirrorNotifier extends Notifier<MirrorState> {
   bool _pendingRefreshPremium = false;
   bool _pendingRefreshTeamVariant = false;
   bool _pendingRefreshRunnerVariant = false;
+  Future<void>? _activeRefreshFuture;
 
   @override
   MirrorState build() {
@@ -176,7 +182,7 @@ class MirrorNotifier extends Notifier<MirrorState> {
           _pendingRefreshTeamVariant || refreshTeamVariant;
       _pendingRefreshRunnerVariant =
           _pendingRefreshRunnerVariant || refreshRunnerVariant;
-      return;
+      return _activeRefreshFuture ?? Future<void>.value();
     }
 
     _refreshInFlight = true;
@@ -185,36 +191,41 @@ class MirrorNotifier extends Notifier<MirrorState> {
     var effectiveRefreshPremium = refreshPremium;
     var effectiveRefreshTeamVariant = refreshTeamVariant;
     var effectiveRefreshRunnerVariant = refreshRunnerVariant;
+    final refreshFuture = () async {
+      try {
+        while (true) {
+          await _refreshFromSources(
+            requestedMode: effectiveRequestedMode,
+            persistEffectiveMode: effectivePersistEffectiveMode,
+            refreshPremium: effectiveRefreshPremium,
+            refreshTeamVariant: effectiveRefreshTeamVariant,
+            refreshRunnerVariant: effectiveRefreshRunnerVariant,
+          );
 
-    try {
-      while (true) {
-        await _refreshFromSources(
-          requestedMode: effectiveRequestedMode,
-          persistEffectiveMode: effectivePersistEffectiveMode,
-          refreshPremium: effectiveRefreshPremium,
-          refreshTeamVariant: effectiveRefreshTeamVariant,
-          refreshRunnerVariant: effectiveRefreshRunnerVariant,
-        );
+          if (!_refreshPending) {
+            break;
+          }
 
-        if (!_refreshPending) {
-          break;
+          effectiveRequestedMode = _pendingRequestedMode ?? state.mode;
+          effectivePersistEffectiveMode = _pendingPersistEffectiveMode;
+          effectiveRefreshPremium = _pendingRefreshPremium;
+          effectiveRefreshTeamVariant = _pendingRefreshTeamVariant;
+          effectiveRefreshRunnerVariant = _pendingRefreshRunnerVariant;
+          _refreshPending = false;
+          _pendingRequestedMode = null;
+          _pendingPersistEffectiveMode = false;
+          _pendingRefreshPremium = false;
+          _pendingRefreshTeamVariant = false;
+          _pendingRefreshRunnerVariant = false;
         }
-
-        effectiveRequestedMode = _pendingRequestedMode ?? state.mode;
-        effectivePersistEffectiveMode = _pendingPersistEffectiveMode;
-        effectiveRefreshPremium = _pendingRefreshPremium;
-        effectiveRefreshTeamVariant = _pendingRefreshTeamVariant;
-        effectiveRefreshRunnerVariant = _pendingRefreshRunnerVariant;
-        _refreshPending = false;
-        _pendingRequestedMode = null;
-        _pendingPersistEffectiveMode = false;
-        _pendingRefreshPremium = false;
-        _pendingRefreshTeamVariant = false;
-        _pendingRefreshRunnerVariant = false;
+      } finally {
+        _refreshInFlight = false;
+        _activeRefreshFuture = null;
       }
-    } finally {
-      _refreshInFlight = false;
-    }
+    }();
+
+    _activeRefreshFuture = refreshFuture;
+    return refreshFuture;
   }
 
   Future<void> _refreshFromSources({
@@ -306,6 +317,7 @@ class MirrorNotifier extends Notifier<MirrorState> {
       premiumSource: resolved.provenance.premiumSource,
       teamModeVariantSource: resolved.provenance.teamModeVariantSource,
       runnerModeVariantSource: resolved.provenance.runnerModeVariantSource,
+      hydrationReasonCode: resolved.provenance.reasonCode,
       fallbackReason: resolved.provenance.fallbackReason,
     );
 

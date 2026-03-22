@@ -30,6 +30,7 @@ void main() {
       expect(resolved.mode, 'private');
       expect(resolved.offlineWarning, isNull);
       expect(resolved.teamModeVariant, 'team');
+      expect(resolved.provenance.reasonCode, isNull);
     });
 
     test('uses cached requested mode when no explicit mode was requested', () {
@@ -89,6 +90,10 @@ void main() {
         resolved.offlineWarning,
         'Cloud mode requires an active Stripe premium subscription.',
       );
+      expect(
+        resolved.provenance.reasonCode,
+        MirrorHydrationReasonCodes.policyWarning,
+      );
     });
 
     test('surfaces runner fallback warning when policy permits mode', () {
@@ -119,6 +124,10 @@ void main() {
       expect(
         resolved.offlineWarning,
         MirrorOfflineWarningKeys.runnerVariantFallbackCloud,
+      );
+      expect(
+        resolved.provenance.reasonCode,
+        MirrorHydrationReasonCodes.runnerVariantFallback,
       );
     });
   });

@@ -13,6 +13,16 @@ enum MirrorHydrationPhase {
   degraded,
 }
 
+class MirrorHydrationReasonCodes {
+  const MirrorHydrationReasonCodes._();
+
+  static const String policyWarning = 'policy_warning';
+  static const String runnerVariantCache = 'runner_variant_cache';
+  static const String runnerVariantFallback = 'runner_variant_fallback';
+  static const String teamVariantCache = 'team_variant_cache';
+  static const String teamVariantFallback = 'team_variant_fallback';
+}
+
 class MirrorHydrationProvenance {
   const MirrorHydrationProvenance({
     required this.phase,
@@ -20,6 +30,7 @@ class MirrorHydrationProvenance {
     required this.premiumSource,
     required this.teamModeVariantSource,
     required this.runnerModeVariantSource,
+    this.reasonCode,
     this.fallbackReason,
   });
 
@@ -28,6 +39,7 @@ class MirrorHydrationProvenance {
   final MirrorValueSource premiumSource;
   final MirrorValueSource teamModeVariantSource;
   final MirrorValueSource runnerModeVariantSource;
+  final String? reasonCode;
   final String? fallbackReason;
 }
 
@@ -141,6 +153,11 @@ MirrorResolvedSnapshot resolveMirrorHydration(
   final fallbackReason = decision.warning ??
       snapshot.runnerModeVariant.warningKey ??
       snapshot.teamModeVariant.warningKey;
+  final reasonCode = _resolveReasonCode(
+    decisionWarning: decision.warning,
+    runnerSource: snapshot.runnerModeVariant.source,
+    teamSource: snapshot.teamModeVariant.source,
+  );
   final isDegraded = snapshot.teamModeVariant.source != MirrorValueSource.remote ||
       snapshot.runnerModeVariant.source != MirrorValueSource.remote ||
       fallbackReason != null;
@@ -159,6 +176,7 @@ MirrorResolvedSnapshot resolveMirrorHydration(
       premiumSource: MirrorValueSource.remote,
       teamModeVariantSource: snapshot.teamModeVariant.source,
       runnerModeVariantSource: snapshot.runnerModeVariant.source,
+      reasonCode: reasonCode,
       fallbackReason: fallbackReason,
     ),
   );
@@ -166,4 +184,29 @@ MirrorResolvedSnapshot resolveMirrorHydration(
 
 String _normalizeMode(String rawMode) {
   return rawMode == 'cloud' ? 'cloud' : 'private';
+}
+
+String? _resolveReasonCode({
+  required String? decisionWarning,
+  required MirrorValueSource runnerSource,
+  required MirrorValueSource teamSource,
+}) {
+  if (decisionWarning != null) {
+    return MirrorHydrationReasonCodes.policyWarning;
+  }
+
+  if (runnerSource == MirrorValueSource.cache) {
+    return MirrorHydrationReasonCodes.runnerVariantCache;
+  }
+  if (runnerSource == MirrorValueSource.fallback) {
+    return MirrorHydrationReasonCodes.runnerVariantFallback;
+  }
+  if (teamSource == MirrorValueSource.cache) {
+    return MirrorHydrationReasonCodes.teamVariantCache;
+  }
+  if (teamSource == MirrorValueSource.fallback) {
+    return MirrorHydrationReasonCodes.teamVariantFallback;
+  }
+
+  return null;
 }

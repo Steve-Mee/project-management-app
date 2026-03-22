@@ -32,6 +32,7 @@ void main() {
       expect(result.files['context/project.json'], '{"id":"p1"}');
       expect(result.selectedFile, 'lib/main.dart');
       expect(result.contextVersion, 3);
+      expect(result.reasonCode, isNull);
       expect(result.terminalLines, <String>[
         'Mirror session restored unsaved draft from local cache.',
         'repo loaded',
@@ -74,6 +75,7 @@ void main() {
           files: <String, String>{},
           preferredSelectedFile: '',
           errorMessage: 'repo failed',
+          reasonCode: MirrorSessionBootstrapReasonCodes.repositoryError,
         ),
         draft: const MirrorSessionBootstrapDraft(
           files: <String, String>{
@@ -89,6 +91,10 @@ void main() {
         'Mirror session restored unsaved draft from local cache.',
         'repo failed',
       ]);
+      expect(
+        result.reasonCode,
+        MirrorSessionBootstrapReasonCodes.repositoryError,
+      );
     });
   });
 }

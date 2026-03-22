@@ -11,6 +11,13 @@ class MirrorSessionBootstrapMessages {
       'Mirror session fallback active: repository bootstrap timed out.';
 }
 
+class MirrorSessionBootstrapReasonCodes {
+  const MirrorSessionBootstrapReasonCodes._();
+
+  static const String repositoryTimeout = 'repository_timeout';
+  static const String repositoryError = 'repository_error';
+}
+
 class MirrorSessionBootstrapDraft {
   const MirrorSessionBootstrapDraft({
     required this.files,
@@ -29,12 +36,14 @@ class MirrorSessionBootstrapRepository {
     required this.preferredSelectedFile,
     this.infoMessage,
     this.errorMessage,
+    this.reasonCode,
   });
 
   final Map<String, String> files;
   final String preferredSelectedFile;
   final String? infoMessage;
   final String? errorMessage;
+  final String? reasonCode;
 }
 
 class MirrorSessionBootstrapResult {
@@ -45,6 +54,7 @@ class MirrorSessionBootstrapResult {
     required this.terminalLines,
     required this.phase,
     required this.sourceSummary,
+    this.reasonCode,
   });
 
   final Map<String, String> files;
@@ -53,6 +63,7 @@ class MirrorSessionBootstrapResult {
   final List<String> terminalLines;
   final MirrorSessionBootstrapPhase phase;
   final String sourceSummary;
+  final String? reasonCode;
 }
 
 MirrorSessionBootstrapResult resolveMirrorSessionBootstrap({
@@ -91,6 +102,10 @@ MirrorSessionBootstrapResult resolveMirrorSessionBootstrap({
     if (draft == null && (repository == null || repository.files.isEmpty))
       'baseline',
   ].join('+');
+  final reasonCode = repository?.reasonCode ??
+      (repository?.errorMessage != null
+          ? MirrorSessionBootstrapReasonCodes.repositoryError
+          : null);
 
   return MirrorSessionBootstrapResult(
     files: files,
@@ -99,6 +114,7 @@ MirrorSessionBootstrapResult resolveMirrorSessionBootstrap({
     terminalLines: terminalLines,
     phase: phase,
     sourceSummary: sourceSummary,
+    reasonCode: reasonCode,
   );
 }
 
