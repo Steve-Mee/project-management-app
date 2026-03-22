@@ -76,7 +76,7 @@ export async function validateAndParseRequest(
   if (!normalized) {
     return {
       kind: 'invalid_fields',
-      message: 'Missing or invalid fields: prompt, projectId, taskId, mode',
+      message: 'Missing or invalid fields: prompt, projectId (UUID), taskId (UUID), mode',
       statusCode: 400,
     }
   }

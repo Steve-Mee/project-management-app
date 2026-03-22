@@ -35,6 +35,8 @@ export async function writeMirrorUsageLog({
     user_id: userId,
     project_id: projectId,
     task_id: taskId,
+    project_uuid: projectId,
+    task_uuid: taskId,
     mode,
     action,
     duration_ms: Math.max(0, Date.now() - startedAtMs),

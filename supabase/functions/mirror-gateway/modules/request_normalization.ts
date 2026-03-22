@@ -11,6 +11,9 @@ export interface MirrorComputeRequestLike {
   metadata?: Record<string, unknown>
 }
 
+const UUID_V4_LIKE_REGEX =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+
 export function normalizeNonEmptyString(value: unknown): string | undefined {
   if (typeof value !== 'string') {
     return undefined
@@ -83,6 +86,12 @@ export function normalizeRequestBody(
   const normalizedTaskId = normalizeNonEmptyString(taskId)
 
   if (!normalizedPrompt || !normalizedProjectId || !normalizedTaskId || !mode) {
+    return null
+  }
+  if (!UUID_V4_LIKE_REGEX.test(normalizedProjectId)) {
+    return null
+  }
+  if (!UUID_V4_LIKE_REGEX.test(normalizedTaskId)) {
     return null
   }
   if (mode !== 'private' && mode !== 'cloud') {
