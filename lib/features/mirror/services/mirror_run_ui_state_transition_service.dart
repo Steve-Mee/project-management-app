@@ -27,7 +27,7 @@ class MirrorRunUiStateTransitionService {
   MirrorRunUiStateSnapshot onRunStarted(
     MirrorRunUiStateSnapshot current,
   ) {
-    return MirrorRunUiStateSnapshot(
+    return const MirrorRunUiStateSnapshot(
       isRunInProgress: true,
       lastStructuredError: null,
     );

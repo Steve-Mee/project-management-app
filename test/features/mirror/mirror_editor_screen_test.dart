@@ -241,6 +241,7 @@ void main() {
         ],
         freshness: MirrorTemplatesFreshness.staleFallback,
         source: 'memory',
+        sourceKind: MirrorTemplatesDataSource.memory,
         reasonCode: MirrorTemplatesLoadReasonCodes.networkError,
         fetchedAtUtc: DateTime.utc(2026, 3, 22, 15, 30),
       );
@@ -303,6 +304,7 @@ void main() {
         ],
         freshness: MirrorTemplatesFreshness.fresh,
         source: 'network',
+        sourceKind: MirrorTemplatesDataSource.network,
         fetchedAtUtc: DateTime.utc(2026, 3, 22, 15, 30),
       );
 

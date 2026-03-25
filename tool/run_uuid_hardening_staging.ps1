@@ -17,7 +17,7 @@ param(
 
 $ErrorActionPreference = "Stop"
 
-function Require-Command {
+function Test-Command {
     param([string]$Name)
     if (-not (Get-Command $Name -ErrorAction SilentlyContinue)) {
         throw "Required command '$Name' was not found in PATH."
