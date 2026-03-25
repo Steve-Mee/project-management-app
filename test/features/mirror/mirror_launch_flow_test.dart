@@ -27,8 +27,16 @@ void main() {
         contains('AppRoutes.mirrorEditorPath(payload.projectId, payload.taskId)'),
       );
 
-      expect(projectDetailSource, contains('mirrorUnavailableForAccount'));
-      expect(taskCardSource, contains('mirrorUnavailableForAccount'));
+      expect(projectDetailSource, contains('mirrorLaunchFailureMessage('));
+      expect(taskCardSource, contains('mirrorLaunchFailureMessage('));
+      expect(
+        projectDetailSource,
+        contains('package:project_management_app/features/mirror/mirror_launch_feedback.dart'),
+      );
+      expect(
+        taskCardSource,
+        contains('package:project_management_app/features/mirror/mirror_launch_feedback.dart'),
+      );
     });
 
     test('ai bridge routes through the same launch coordinator', () {
@@ -39,12 +47,14 @@ void main() {
 
       expect(aiBridgeSource, contains('mirrorLaunchCoordinatorProvider'));
       expect(aiBridgeSource, contains('openMirrorFromTask('));
-      expect(aiBridgeSource, contains('state = payload;'));
+      expect(aiBridgeSource, contains('Future<MirrorLaunchResult> openMirrorFromTask'));
+      expect(aiBridgeSource, contains('state = result.payload;'));
 
       expect(launchCoordinatorSource, contains('resolveMirrorFeatureEnabled'));
       expect(launchCoordinatorSource, contains('hasPermissionProvider(AppPermissions.useMirror)'));
       expect(launchCoordinatorSource, contains('setMode(safeMode)'));
-      expect(launchCoordinatorSource, contains('MirrorLaunchPayload('));
+      expect(launchCoordinatorSource, contains('MirrorLaunchResult.featureDisabled'));
+      expect(launchCoordinatorSource, contains('MirrorLaunchResult.launchedWithDowngrade'));
     });
 
     test('launch guard sequencing is feature flag first then permission', () {
@@ -69,9 +79,10 @@ void main() {
 
       expect(routesSource, contains('switch (guard)'));
       expect(routesSource, contains('case MirrorRouteGuardResult.featureDisabled:'));
-      expect(routesSource, contains('Mirror is currently disabled.'));
+      expect(routesSource, contains('l10n.mirrorFeatureDisabled'));
       expect(routesSource, contains('case MirrorRouteGuardResult.permissionDenied:'));
-      expect(routesSource, contains('You do not have access to Mirror.'));
+      expect(routesSource, contains('l10n.mirrorPermissionDenied'));
+      expect(routesSource, contains('l10n.mirrorUnavailableForAccount'));
       expect(routesSource, contains('case MirrorRouteGuardResult.allowed:'));
       expect(routesSource, contains('return MirrorEditorScreen('));
     });

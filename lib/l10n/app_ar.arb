@@ -1183,6 +1183,10 @@
   "@mirrorPermissionDenied": {
     "description": "Screen-level message when user lacks use_mirror permission."
   },
+  "mirrorFeatureDisabled": "ميزة Mirror معطلة حالياً من قِبل المشرف.",
+  "@mirrorFeatureDisabled": {
+    "description": "Snackbar message when the Mirror feature flag is disabled."
+  },
   "mirrorPermissionRevokedSessionDisabled": "تم تعطيل جلسة محرر Mirror لأن صلاحياتك تغيّرت. أغلق هذه الشاشة للمتابعة بأمان.",
   "@mirrorPermissionRevokedSessionDisabled": {
     "description": "Description shown on the permission-revoked screen after session deactivation."

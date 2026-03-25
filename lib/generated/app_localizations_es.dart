@@ -1720,6 +1720,10 @@ class AppLocalizationsEs extends AppLocalizations {
       'Mirror no está disponible para su cuenta.';
 
   @override
+  String get mirrorFeatureDisabled =>
+      'Mirror está actualmente desactivado por el administrador.';
+
+  @override
   String get mirrorPermissionRevokedSessionDisabled =>
       'Tu sesión del editor Mirror se desactivó porque tus permisos cambiaron. Cierra esta pantalla para continuar de forma segura.';
 

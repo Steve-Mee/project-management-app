@@ -11,6 +11,7 @@ import 'mirror_feature_flag_provider.dart';
 import 'mirror_hydration_inputs_provider.dart';
 import 'mirror_mode_controller_provider.dart';
 import 'mirror_premium_provider.dart';
+import 'mirror_runtime_config_provider.dart';
 import 'mirror_session_provider.dart';
 import 'supabase_client_provider.dart';
 
@@ -84,7 +85,14 @@ final mirrorBackendProvider = FutureProvider<MirrorComputeBackend>((ref) async {
     return ref.watch(mirrorGatewayBackendProvider);
   }
 
-  return PrivateGrpcBackend(client: ref.read(supabaseClientProvider));
+  final grpcConfig = ref.watch(mirrorPrivateGrpcRuntimeConfigProvider);
+  return PrivateGrpcBackend(
+    client: ref.read(supabaseClientProvider),
+    host: grpcConfig.host,
+    port: grpcConfig.port,
+    timeout: grpcConfig.timeout,
+    credentials: grpcConfig.channelCredentials,
+  );
 });
 
 class _MirrorDisabledBackend implements MirrorComputeBackend {

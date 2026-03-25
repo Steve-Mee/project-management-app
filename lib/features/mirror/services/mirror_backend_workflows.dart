@@ -75,8 +75,14 @@ typedef MirrorApplyErrorFormatter = String Function({
   bool? retryable,
 });
 
-/// PR2 workflow service: keeps cross-cutting Mirror backend behaviors in one
-/// place so transports/backends remain focused on IO and protocol mapping.
+/// Pure stateless patch-building utility. Owns NO session state, NO backend
+/// calls, and NO side effects. Every method is a deterministic transformation:
+/// given the same inputs the same outputs are guaranteed.
+///
+/// Transports and backends delegate patch/plan construction here so that
+/// compile/apply logic is not duplicated across the cloud and local paths.
+/// The `const` constructor is intentional — no mutable state must ever be
+/// added to this class.
 class MirrorBackendWorkflows {
   const MirrorBackendWorkflows();
 

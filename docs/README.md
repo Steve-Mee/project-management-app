@@ -23,9 +23,13 @@ This handbook is the single entry point for Mirror documentation. Use it to navi
 - [offline-first.md](offline-first.md)
 - [operations.md](operations.md)
 - [mirror_operational_runbook.md](mirror_operational_runbook.md)
+- [mirror_execution_todo.md](mirror_execution_todo.md)
+- [mirror_orchestration_flowmap.md](mirror_orchestration_flowmap.md)
+- [mirror_session_state_transitions.md](mirror_session_state_transitions.md)
 - [production-readiness.md](production-readiness.md)
 - [mirror-db-performance-baseline.md](mirror-db-performance-baseline.md)
 - [mirror-production-readiness-checklist.md](mirror-production-readiness-checklist.md)
+- [mirror_uuid_hardening_execution_log.md](mirror_uuid_hardening_execution_log.md)
 
 ### Implementation References
 
@@ -58,9 +62,13 @@ This handbook is the single entry point for Mirror documentation. Use it to navi
 
 - [operations.md](operations.md)
 - [mirror_operational_runbook.md](mirror_operational_runbook.md)
+- [mirror_execution_todo.md](mirror_execution_todo.md)
+- [mirror_orchestration_flowmap.md](mirror_orchestration_flowmap.md)
+- [mirror_session_state_transitions.md](mirror_session_state_transitions.md)
 - [production-readiness.md](production-readiness.md)
 - [mirror-db-performance-baseline.md](mirror-db-performance-baseline.md)
 - [mirror-production-readiness-checklist.md](mirror-production-readiness-checklist.md)
+- [mirror_uuid_hardening_execution_log.md](mirror_uuid_hardening_execution_log.md)
 - [security.md](security.md)
 - [mirror_threat_model.md](mirror_threat_model.md)
 - [troubleshooting.md](troubleshooting.md)

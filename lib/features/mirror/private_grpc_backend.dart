@@ -21,16 +21,17 @@ const MirrorBackendWorkflows _mirrorWorkflows = MirrorBackendWorkflows();
 class PrivateGrpcBackend implements MirrorComputeBackend {
   PrivateGrpcBackend({
     required this.client,
-    this.host = '127.0.0.1',
-    this.port = 50051,
-  this.useSecureApply = true,
-  this.auditLoggingEnabled = true,
-  this.requireSignedApply = false,
-  this.userTrustScore = 100,
+    required this.host,
+    required this.port,
+    this.useSecureApply = true,
+    this.auditLoggingEnabled = true,
+    this.requireSignedApply = false,
+    this.userTrustScore = 100,
     this.timeout = const Duration(seconds: 30),
-    this.credentials = const ChannelCredentials.insecure(),
+    required this.credentials,
     this.observabilityService,
-  }) {
+    bool? productionRuntime,
+  }) : _productionRuntime = productionRuntime ?? _isProductionGrpcRuntime {
     _enforceProductionTransportSecurity();
   }
 
@@ -44,11 +45,12 @@ class PrivateGrpcBackend implements MirrorComputeBackend {
   final Duration timeout;
   final ChannelCredentials credentials;
   final MirrorObservabilityService? observabilityService;
+  final bool _productionRuntime;
 
   void _enforceProductionTransportSecurity() {
     // Production guard: fail closed when insecure transport is configured in
     // release/runtime-product environments.
-    if (!kReleaseMode && !_isProductionGrpcRuntime) {
+    if (!kReleaseMode && !_productionRuntime) {
       return;
     }
 

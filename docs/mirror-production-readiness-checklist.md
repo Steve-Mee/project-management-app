@@ -12,6 +12,7 @@ Use this together with:
 - [mirror_operational_runbook.md](mirror_operational_runbook.md)
 - [mirror_threat_model.md](mirror_threat_model.md)
 - [mirror-db-performance-baseline.md](mirror-db-performance-baseline.md)
+- [mirror_uuid_hardening_execution_log.md](mirror_uuid_hardening_execution_log.md)
 
 Status legend:
 - [ ] Not complete
@@ -48,6 +49,26 @@ Evidence:
 - [ ] `mirror_context_fk_migration_issues` reviewed for residual rows
 - [ ] Rollback path confirmed for any migration in this release
 
+UUID evidence artifact:
+- [ ] [mirror_uuid_hardening_execution_log.md](mirror_uuid_hardening_execution_log.md) completed with SQL output and GO/NO-GO decision
+
+### Execution Evidence (Mandatory For GO)
+
+Use [mirror_uuid_hardening_execution_log.md](mirror_uuid_hardening_execution_log.md) and confirm these fields are present:
+
+- [ ] Environment, operator, UTC timestamp, change ticket, release reference
+- [ ] Verification script execution captured (`20260322_mirror_context_fk_post_migration_verification.sql`)
+- [ ] `no_go_count` recorded
+- [ ] `ai_sessions` null/orphan/mismatch counters recorded
+- [ ] FK validation status recorded
+- [ ] `mirror_context_fk_migration_issues` trend recorded (stable/decreasing/increasing)
+- [ ] Remediation statements captured with timestamps when applicable
+- [ ] Post-remediation re-run result captured when remediation occurred
+- [ ] Final GO/NO-GO decision recorded
+- [ ] Backend, SRE, and Security approvers recorded
+- [ ] Evidence links attached (SQL output, dashboards, ticket references)
+- [ ] Evidence file set attached with canonical names (`01_verification_output.txt`, `02_issue_trend.txt`, `03_issue_latest200.txt`)
+
 ## 3. Security Gate
 
 - [x] Thin-proxy gateway architecture preserved
@@ -56,6 +77,9 @@ Evidence:
 - [ ] Storage policy checks executed in target environment
 - [ ] Secret inventory reviewed for gateway and runner environments
 - [ ] Secret rotation or overlap plan documented when secrets changed
+- [ ] Private gRPC runtime endpoint validation recorded (host/port/TLS/source)
+- [ ] Production private gRPC endpoint verified as non-loopback
+- [ ] Production private gRPC transport verified as TLS-enabled
 
 ## 4. Performance Gate
 
@@ -98,3 +122,5 @@ Evidence:
 ## Current Status
 
 As of 2026-03-22, the repository-preparable portion of this checklist is complete. The remaining unchecked items require execution or approval in staging or production environments.
+
+Operational note (2026-03-24): staging DB URL is now available, but UUID verification execution remains blocked because Docker Engine (`dockerDesktopLinuxEngine`) is not running and local `psql` is not installed.

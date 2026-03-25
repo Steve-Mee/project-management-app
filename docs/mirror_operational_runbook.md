@@ -130,6 +130,29 @@ Never place these in client artifacts:
 - `MIRROR_JWT_SECRET`
 - `MIRROR_JWT_KEYS_BY_KID`
 
+### Private gRPC runtime config governance
+
+Operator-owned policy for private-mode runtime config:
+- Private gRPC endpoint values must be environment-specific and reviewed during each release gate.
+- Production must never resolve to localhost endpoints.
+- Production must use TLS-enabled transport.
+- Any endpoint, port, or TLS change must include a change ticket and rollback note.
+
+Required validation before production GO:
+1. Capture effective private runtime endpoint and port for target environment.
+2. Confirm TLS is enabled for private-mode transport.
+3. Confirm endpoint is not `127.0.0.1`, `localhost`, or equivalent loopback.
+4. Record validator, UTC timestamp, and evidence link in release checklist.
+
+Evidence fields to capture in change artifacts:
+- `private_grpc_host`
+- `private_grpc_port`
+- `private_grpc_tls_enabled`
+- `config_source` (env/secrets manager)
+- `validated_by`
+- `validated_at_utc`
+- `change_ticket`
+
 ## Deployment Sequence
 
 ### Pre-deploy checks
@@ -256,6 +279,144 @@ Mitigation:
 - recover or rollback upstream runner
 - reduce traffic while upstream stabilizes
 - only restart gateway after root cause is understood; do not use restarts as primary mitigation
+
+### Admin bypass or privilege exception
+
+Symptoms:
+- unexpected feature-flag state change that broadens Mirror access
+- report of emergency override, entitlement exception, or role escalation
+- mismatch between expected `use_mirror` policy and observed launch behavior
+
+Triage:
+1. identify exact change window and affected environment
+2. collect actor identity, flag key, previous value, next value, and timestamp from audit views
+3. verify whether the change was covered by approved incident ticket or break-glass request
+4. confirm whether RLS and admin role boundaries were bypassed, misconfigured, or functioning as designed
+5. assess blast radius: users, projects, and time window exposed
+
+Mitigation:
+- revert unauthorized or unapproved flag/role changes immediately
+- invalidate related sessions/tokens if account compromise is suspected
+- rotate secrets when privilege misuse intersects runner or gateway auth material
+- keep Mirror in safest available mode (feature disabled or private-only) until root cause is contained
+
+Exit criteria:
+- privilege exception is either approved and documented or fully reverted
+- ownership and approval trail is attached to incident notes
+- post-incident follow-up task exists for policy, guardrail, or audit gap discovered
+
+## UUID Context Hardening Operations
+
+Use this section to operationalize Mirror UUID context hardening after migration rollout.
+
+Primary script:
+- `supabase/verification/20260322_mirror_context_fk_post_migration_verification.sql`
+
+Execution order:
+1. Run the verification script in the target environment.
+2. Confirm schema/constraint/trigger checks all pass.
+3. Confirm `ai_sessions` no-go counters are all zero.
+4. Review `mirror_context_fk_migration_issues` and confirm no unexpected growth.
+5. If any no-go counter is non-zero, apply only the documented remediation queries and re-run verification.
+
+Staging quick command bundle (copy/paste baseline):
+
+```bash
+# 1) run verification script
+psql "$STAGING_DATABASE_URL" -v ON_ERROR_STOP=1 \
+	-f supabase/verification/20260322_mirror_context_fk_post_migration_verification.sql
+
+# 2) capture issue trend snapshot
+psql "$STAGING_DATABASE_URL" -v ON_ERROR_STOP=1 -c \
+	"SELECT source_table, issue_type, COUNT(*) AS issue_count \
+	 FROM public.mirror_context_fk_migration_issues \
+	 GROUP BY source_table, issue_type \
+	 ORDER BY source_table, issue_type;"
+
+# 3) capture latest issue evidence rows
+psql "$STAGING_DATABASE_URL" -v ON_ERROR_STOP=1 -c \
+	"SELECT * \
+	 FROM public.mirror_context_fk_migration_issues \
+	 ORDER BY detected_at DESC \
+	 LIMIT 200;"
+```
+
+Staging quick command bundle (Windows PowerShell with evidence files):
+
+```powershell
+$Timestamp = Get-Date -Format "yyyyMMdd-HHmmss"
+$OutDir = "docs/evidence/uuid-hardening/staging/$Timestamp"
+New-Item -ItemType Directory -Force -Path $OutDir | Out-Null
+
+# 1) run verification script and capture full output
+psql $env:STAGING_DATABASE_URL -v ON_ERROR_STOP=1 `
+	-f "supabase/verification/20260322_mirror_context_fk_post_migration_verification.sql" `
+	| Tee-Object -FilePath "$OutDir/01_verification_output.txt"
+
+# 2) capture issue trend snapshot
+psql $env:STAGING_DATABASE_URL -v ON_ERROR_STOP=1 -c `
+	"SELECT source_table, issue_type, COUNT(*) AS issue_count
+	 FROM public.mirror_context_fk_migration_issues
+	 GROUP BY source_table, issue_type
+	 ORDER BY source_table, issue_type;" `
+	| Tee-Object -FilePath "$OutDir/02_issue_trend.txt"
+
+# 3) capture latest issue evidence rows
+psql $env:STAGING_DATABASE_URL -v ON_ERROR_STOP=1 -c `
+	"SELECT *
+	 FROM public.mirror_context_fk_migration_issues
+	 ORDER BY detected_at DESC
+	 LIMIT 200;" `
+	| Tee-Object -FilePath "$OutDir/03_issue_latest200.txt"
+
+Write-Output "Evidence folder: $OutDir"
+```
+
+Operator notes for this bundle:
+- replace `$STAGING_DATABASE_URL` with the approved staging connection string source
+- redirect outputs to timestamped files and attach them in `docs/mirror_uuid_hardening_execution_log.md`
+- if counters are non-zero, execute only reviewed remediation SQL, then re-run this same bundle
+
+One-command execution option (recommended on Windows):
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File tool/run_uuid_hardening_staging.ps1
+```
+
+Execution behavior:
+- if local `psql` exists, the script uses it directly
+- if local `psql` is missing but Docker is available, the script runs `psql` via `postgres:16-alpine`
+- only hard blocker is missing database URL (`STAGING_DATABASE_URL` or `-DatabaseUrl`)
+
+Optional rerun after approved remediation SQL:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File tool/run_uuid_hardening_staging.ps1 `
+	-RerunAfterRemediation `
+	-RemediationSqlFile "supabase/verification/<approved_remediation_file>.sql"
+```
+
+GO criteria:
+- `no_go_count = 0` in the script summary row
+- `ai_sessions` null/orphan/mismatch counters are zero
+- expected FK constraints are present and validated
+- migration issue table trend is stable or decreasing after remediation
+
+NO-GO criteria:
+- any unresolved `ai_sessions` UUID null/orphan/mismatch issue remains
+- required FK constraint is missing or `convalidated = false`
+- migration issues continue to grow after remediation attempts
+
+Escalation evidence package:
+- full output of the verification script
+- rows from `mirror_context_fk_migration_issues` (latest 200)
+- executed remediation statements and timestamps
+- post-remediation re-run output showing remaining failures
+
+Reference docs:
+- `docs/mirror-db-performance-baseline.md`
+- `docs/mirror-production-readiness-checklist.md`
+- `docs/mirror_uuid_hardening_execution_log.md`
 
 ## Cleanup Schedules
 

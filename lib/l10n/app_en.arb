@@ -2406,6 +2406,10 @@
   "@mirrorPermissionDenied": {
     "description": "Screen-level message when user lacks use_mirror permission."
   },
+  "mirrorFeatureDisabled": "Mirror is currently disabled by admin.",
+  "@mirrorFeatureDisabled": {
+    "description": "Snackbar message when the Mirror feature flag is disabled."
+  },
   "mirrorPermissionRevokedSessionDisabled": "Your Mirror editor session was disabled because your permission changed. Close this screen to continue safely.",
   "@mirrorPermissionRevokedSessionDisabled": {
     "description": "Description shown on the permission-revoked screen after session deactivation."

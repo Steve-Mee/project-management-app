@@ -57,6 +57,45 @@ class MirrorObservabilityService {
     );
   }
 
+  /// Records user interactions that happen while templates are served from a
+  /// stale fallback source.
+  void recordTemplateFallbackInteraction({
+    required String action,
+    required String source,
+    required String reason,
+    int? stalenessAgeMs,
+    String? templateId,
+  }) {
+    AppLogger.event(
+      'mirror_templates_fallback_interaction',
+      params: <String, Object?>{
+        'action': action,
+        'source': source,
+        'reason': reason,
+        if (stalenessAgeMs != null) 'stalenessAgeMs': stalenessAgeMs,
+        if (templateId != null) 'templateId': templateId,
+      },
+    );
+  }
+
+  /// Records outbox hydration or persistence corruption signals.
+  void recordOutboxCorruption({
+    required String reason,
+    String? storageKey,
+    String? recoveryAction,
+    bool? recovered,
+  }) {
+    AppLogger.event(
+      'mirror_outbox_corruption',
+      params: <String, Object?>{
+        'reason': reason,
+        if (storageKey != null) 'storageKey': storageKey,
+        if (recoveryAction != null) 'recoveryAction': recoveryAction,
+        if (recovered != null) 'recovered': recovered,
+      },
+    );
+  }
+
   /// Records the wall-clock time for a single compile or apply HTTP attempt.
   ///
   /// [durationMs]  Elapsed milliseconds for the HTTP round-trip.

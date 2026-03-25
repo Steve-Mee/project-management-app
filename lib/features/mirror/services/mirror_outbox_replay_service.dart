@@ -20,6 +20,11 @@ import '../mirror_signed_inputs_backend.dart';
 import 'mirror_context_budget_service.dart';
 import 'mirror_observability_service.dart';
 
+enum MirrorOutboxCorruptionRecoveryAction {
+  migrateLegacy,
+  quarantine,
+}
+
 class MirrorOutboxEntry {
   const MirrorOutboxEntry({
     required this.operation,
@@ -101,8 +106,12 @@ class MirrorOutboxEntry {
     };
   }
 
-  static MirrorOutboxEntry? fromRaw(dynamic raw) {
+  static MirrorOutboxEntry? fromRaw(
+    dynamic raw, {
+    void Function(String reason)? onFailure,
+  }) {
     if (raw is! Map) {
+      onFailure?.call('raw_not_map');
       return null;
     }
 
@@ -110,6 +119,7 @@ class MirrorOutboxEntry {
       final map = Map<String, dynamic>.from(raw);
       final contextRaw = map['context'];
       if (contextRaw is! Map) {
+        onFailure?.call('context_not_map');
         return null;
       }
 
@@ -127,11 +137,13 @@ class MirrorOutboxEntry {
           createdAtRaw == null ||
           parsedContext.projectId.isEmpty ||
           parsedContext.taskId.isEmpty) {
+        onFailure?.call('missing_required_fields');
         return null;
       }
 
       final createdAt = DateTime.tryParse(createdAtRaw)?.toUtc();
       if (createdAt == null) {
+        onFailure?.call('invalid_created_at');
         return null;
       }
 
@@ -150,8 +162,153 @@ class MirrorOutboxEntry {
         updatedAt: _parseDateTime(map['updatedAt']),
       );
     } catch (_) {
+      onFailure?.call('parse_exception');
       return null;
     }
+  }
+
+  static MirrorOutboxCorruptionRecoveryAction recoveryActionForReason(
+    String reason,
+  ) {
+    switch (reason) {
+      case 'missing_required_fields':
+      case 'context_not_map':
+        return MirrorOutboxCorruptionRecoveryAction.migrateLegacy;
+      default:
+        return MirrorOutboxCorruptionRecoveryAction.quarantine;
+    }
+  }
+
+  static MirrorOutboxEntry? tryRecoverLegacyFromRaw(
+    dynamic raw, {
+    required String reason,
+  }) {
+    if (recoveryActionForReason(reason) !=
+        MirrorOutboxCorruptionRecoveryAction.migrateLegacy) {
+      return null;
+    }
+    if (raw is! Map) {
+      return null;
+    }
+
+    final map = Map<String, dynamic>.from(raw);
+    final operation = _firstNonBlank(<String?>[
+      map['operation']?.toString(),
+      map['op']?.toString(),
+    ]);
+    final prompt = _firstNonBlank(<String?>[
+      map['prompt']?.toString(),
+      map['input']?.toString(),
+    ]);
+    final mode = _firstNonBlank(<String?>[
+          map['mode']?.toString(),
+          map['requestedMode']?.toString(),
+          map['requested_mode']?.toString(),
+        ]) ??
+        'private';
+    final createdAtRaw = _firstNonBlank(<String?>[
+      map['createdAt']?.toString(),
+      map['created_at']?.toString(),
+    ]);
+
+    if (operation == null || prompt == null || createdAtRaw == null) {
+      return null;
+    }
+
+    final createdAt = DateTime.tryParse(createdAtRaw)?.toUtc();
+    if (createdAt == null) {
+      return null;
+    }
+
+    final contextRaw = map['context'];
+    final contextMap = contextRaw is Map
+        ? Map<String, dynamic>.from(contextRaw)
+        : <String, dynamic>{};
+    final projectId = _firstNonBlank(<String?>[
+      contextMap['projectId']?.toString(),
+      contextMap['project_id']?.toString(),
+      map['projectId']?.toString(),
+      map['project_id']?.toString(),
+    ]);
+    final taskId = _firstNonBlank(<String?>[
+      contextMap['taskId']?.toString(),
+      contextMap['task_id']?.toString(),
+      map['taskId']?.toString(),
+      map['task_id']?.toString(),
+    ]);
+
+    if (projectId == null || taskId == null) {
+      return null;
+    }
+
+    final filesRaw = contextMap.containsKey('files')
+        ? contextMap['files']
+        : map['files'];
+    final metadataRaw = contextMap.containsKey('metadata')
+        ? contextMap['metadata']
+        : map['metadata'];
+
+    final files = <String, String>{};
+    if (filesRaw is Map) {
+      for (final entry in filesRaw.entries) {
+        files[entry.key.toString()] = entry.value?.toString() ?? '';
+      }
+    }
+
+    final metadata = metadataRaw is Map
+        ? Map<String, dynamic>.from(metadataRaw)
+        : <String, dynamic>{};
+
+    final parsedContext = ProjectContext.fromJson(<String, dynamic>{
+      'projectId': projectId,
+      'taskId': taskId,
+      'files': files,
+      'metadata': metadata,
+    });
+
+    final sessionKey = _firstNonBlank(<String?>[
+          map['sessionKey']?.toString(),
+          map['session_key']?.toString(),
+        ]) ??
+        '$projectId::$taskId';
+
+    return MirrorOutboxEntry(
+      operation: operation,
+      sessionKey: sessionKey,
+      prompt: prompt,
+      context: parsedContext,
+      mode: mode,
+      createdAt: createdAt,
+      idempotencyKey: map['idempotencyKey']?.toString() ??
+          map['idempotency_key']?.toString() ??
+          '',
+      retryCount: _parseInt(
+        map.containsKey('retryCount') ? map['retryCount'] : map['retry_count'],
+      ),
+      lastAttemptAt: _parseDateTime(
+        map.containsKey('lastAttemptAt')
+            ? map['lastAttemptAt']
+            : map['last_attempt_at'],
+      ),
+      nextRetryAt: _parseDateTime(
+        map.containsKey('nextRetryAt')
+            ? map['nextRetryAt']
+            : map['next_retry_at'],
+      ),
+      lastError: map['lastError']?.toString() ?? map['last_error']?.toString(),
+      updatedAt: _parseDateTime(
+        map.containsKey('updatedAt') ? map['updatedAt'] : map['updated_at'],
+      ),
+    );
+  }
+
+  static String? _firstNonBlank(Iterable<String?> values) {
+    for (final value in values) {
+      if (value != null && value.trim().isNotEmpty) {
+        return value.trim();
+      }
+    }
+    return null;
   }
 
   static int _parseInt(dynamic value) {
@@ -869,7 +1026,7 @@ class MirrorOutboxReplayService {
   Future<void> _hydrateQueue() async {
     final box = await _openOutboxBox();
     _outboxBox = box;
-    _rebuildQueueCache(box);
+    await _rebuildQueueCache(box);
   }
 
   void _startReplayTicker() {
@@ -882,18 +1039,52 @@ class MirrorOutboxReplayService {
     });
   }
 
-  void _rebuildQueueCache(Box<Map<dynamic, dynamic>> box) {
+  Future<void> _rebuildQueueCache(Box<Map<dynamic, dynamic>> box) async {
     _queue.clear();
-    for (final key in box.keys) {
+    for (final key in box.keys.toList(growable: false)) {
       final raw = box.get(key);
-      final entry = MirrorOutboxEntry.fromRaw(raw);
+      final storageKey = key.toString();
+      String? parseFailureReason;
+      final entry = MirrorOutboxEntry.fromRaw(
+        raw,
+        onFailure: (String reason) {
+          parseFailureReason = reason;
+        },
+      );
       if (entry == null) {
+        final reason = parseFailureReason ?? 'parse_unknown';
+        final recoveryAction =
+            MirrorOutboxEntry.recoveryActionForReason(reason);
+        final recovered = MirrorOutboxEntry.tryRecoverLegacyFromRaw(
+          raw,
+          reason: reason,
+        );
+        _observabilityService?.recordOutboxCorruption(
+          reason: reason,
+          storageKey: storageKey,
+          recoveryAction: recoveryAction.name,
+          recovered: recovered != null,
+        );
+        if (recovered == null) {
+          continue;
+        }
+
+        final recoveredKey = recovered.idempotencyKey.isNotEmpty
+            ? recovered.idempotencyKey
+            : storageKey;
+        final normalizedRecovered = recovered.copyWith(
+          idempotencyKey: recoveredKey,
+        );
+        _queue[recoveredKey] = normalizedRecovered;
+        await box.put(recoveredKey, normalizedRecovered.toMap());
+        if (recoveredKey != storageKey) {
+          await box.delete(storageKey);
+        }
         continue;
       }
 
-      final storedKey = key.toString();
       final effectiveKey =
-          entry.idempotencyKey.isNotEmpty ? entry.idempotencyKey : storedKey;
+          entry.idempotencyKey.isNotEmpty ? entry.idempotencyKey : storageKey;
       _queue[effectiveKey] = entry.copyWith(idempotencyKey: effectiveKey);
     }
   }

@@ -7,11 +7,13 @@ class TemplatesGallery extends StatelessWidget {
     required this.onTemplateSelected,
     this.templates = const <MirrorTemplate>[],
     this.crossAxisCount = 2,
+    this.staleWarningTooltip,
   });
 
   final ValueChanged<MirrorTemplate> onTemplateSelected;
   final List<MirrorTemplate> templates;
   final int crossAxisCount;
+  final String? staleWarningTooltip;
 
   @override
   Widget build(BuildContext context) {
@@ -33,6 +35,7 @@ class TemplatesGallery extends StatelessWidget {
         return _TemplateCard(
           template: template,
           onTap: () => onTemplateSelected(template),
+          staleWarningTooltip: staleWarningTooltip,
         );
       },
     );
@@ -43,10 +46,12 @@ class _TemplateCard extends StatelessWidget {
   const _TemplateCard({
     required this.template,
     required this.onTap,
+    this.staleWarningTooltip,
   });
 
   final MirrorTemplate template;
   final VoidCallback onTap;
+  final String? staleWarningTooltip;
 
   @override
   Widget build(BuildContext context) {
@@ -76,6 +81,17 @@ class _TemplateCard extends StatelessWidget {
                     ),
                   ),
                   const Spacer(),
+                  if (staleWarningTooltip != null) ...<Widget>[
+                    Tooltip(
+                      message: staleWarningTooltip!,
+                      child: Icon(
+                        Icons.cloud_off_outlined,
+                        size: 18,
+                        color: colorScheme.secondary,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                  ],
                   const Icon(Icons.chevron_right),
                 ],
               ),

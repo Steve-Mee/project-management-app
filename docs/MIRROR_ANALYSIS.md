@@ -1,429 +1,472 @@
-# Mirror – Diepgaande Architecturale Analyse
-
-**Rapport datum**: 22 maart 2026  
-**Analyseniveau**: Senior architect review met 15+ jaar clean architecture & AI-integratie expertise  
-**Analysestatus**: Voltooid – alle lagen systematisch gereviewd
-
-## 1. Algemene beoordeling
-
-### Sterke punten
-
-1. **Architectuurlaagopbouw is krachtig en coherent**
-   - Heldere scheiding tussen Flutter UI, Riverpod-providers, backend-abstracties en Supabase-infrastructuur
-   - `MirrorGatewayBackend` en `PrivateGrpcBackend` implementeren identieke `MirrorComputeBackend` contract
-   - Thin proxy gateway in `supabase/functions/mirror-gateway/index.ts` handhaaft focusregel (auth, idempotency, forwarding)
-   - Alle layers hebben expliciete module grenzen en testable interfaces
-
-2. **Security is meerlagig en geen client-only trust**
-   - Flutter: `hasPermissionProvider(AppPermissions.useMirror)` guards access
-   - Gateway: validatie van bearer auth, entitlement RPC, cloud-only mode checks
-   - Database: RLS op alle Mirror-tabellen (`ai_sessions`, `mirror_request_idempotency`, `mirror_apply_audit_events`)
-   - Storage: private buckets (`mirror-signed-inputs`, `mirror-backups`) met owner-scoped RLS-policies
-   - gRPC: expliciete production transport-security guard in `PrivateGrpcBackend`
-   - Dit is exceptie-niveau security-layering voor AI-features
-
-3. **Database-ontwerp is production-grade**
-   - Idempotency ledger met duidelijke state machine (`processing` → `completed|failed`) en request cache
-   - Audit trail met fingerprints (`file_set`, `applied_files`, `diff`) voor forensisch onderzoek
-   - Usage metering apart van audit voor billing en abuse-detectie
-   - Realtime scoping via topic-based broadcast (`mirror_ai_sessions:user:project:task`)
-   - Retention helpers en scheduled cleanup via pg_cron
-   - UUID FK-hardening in progress (migration 20260322)
-
-4. **Offline-first is structureel ontworpen**
-   - Outbox queuing met retry policy, jitter, circuit breaker en persistent storage
-   - Draft cache met caps (40 sessions, 80 files/session, 300KB/session, 25KB/file)
-   - Hive encryption en stale-cache fallback
-   - Replay coalescing voorkwamt duplicate efforts
-   - Offline warning propagation naar UI
-
-5. **Integratie met bestaande app sluit naadloos aan**
-   - Route guards via `mirror_route_guard_provider.dart`
-   - Deeplink handling via `mirror_route_intent.dart`
-   - Mode-keuze centraal in `mirror_mode_controller_provider.dart`
-   - Launch coordinator isoleert bootstrap logica
-   - Geen wijzigingen nodig in project/task core models
-
-6. **Scalability-eerste mindset zichtbaar**
-   - Abstract backend contract ermogelijkt cloud/local/mock swapping
-   - Contracttests voor gateway/storage/database
-   - Observability hooks (latency, retry, fallback events) al aanwezig
-   - Multi-agent team mode voorzien
-   - A/B-testing hooks gebouwd voor variant management
-
-### Zwakke punten
-
-1. **Orchestration-verantwoordelijkheden zijn te verspreid**
-   - `MirrorOrchestratorService` handelt retry/replay/invalation af
-   - `MirrorRunFlowService` doet UI-interactie + sessie-state
-   - `MirrorBackendWorkflows` bevat patch-planning + audit-persistentie
-   - `MirrorApplyAuditService` geïsoleerd voor history
-   - `MirrorApplyValidatorService` voor consistency-checks
-   - Te veel entry points, moeilijker om volledige apply-flow mentaal te modelleren
-   - **Status**: Deels verbeterd via PR1-PR5 consolidatie; meer splitsing nodig
-
-2. **Gateway overstijgt de thin-proxy intentie**
-   - Auth-validatie ✓ (appropriate)
-   - Idempotency management ✓ (appropriate)
-   - Rate limiting ✓ (arguably appropriate)
-   - Circuit breaker ✓ (arguably appropriate)
-   - **Maar ook**: request normalisatie, entitlement-checking, usage metering, audit writes
-   - Module-structuur (`modules/`) helpt, maar `/index.ts` blijft groot (~500 regels)
-
-3. **State-hydration in Flutter core is complex en race-condition-gevoelig** ⚠️
-   - Meerdere async bronnen (auth, premium, flags, runners, repo context, offline cache) hydrateren gelijktijdig
-   - Generation guards en deterministische resolver helpen, maar
-   - Late completions kunnen van racelike bugs leiden
-   - Testing vereist strakke async-sequencing control
-   - **Status**: Hardened via state hydration PR; verdient nog meer observability
-
-4. **Templates-cache fallback zonder expliciete warning**
-   - Cache slaat terug op stale data when fetch fails/times out
-   - Voor lijstdata is dit acceptabel; voor AI coding guidance is het risicant
-   - User weet niet of templates "vers" zijn
-   - **Aanbeveling**: Voeg staleness-indicator toe aan cache-fallback pad
-
-5. **project_id en task_id blijven TEXT zonder FK**
-   - Meerdere tabellen (`ai_sessions`, `mirror_apply_audit_events`, `mirror_usage_logs`)
-   - Dangling references mogelijk bij project/task verwijdering
-   - Analytics en cleanup worden zwakker
-   - **Impact**: Laag-urgent; schema-migratie 20260322 voegt UUID FK toe (nog niet gekoppeld)
-
-6. **Validatie-duplicatie tussen edge gateway en runners**
-   - Zowel `supabase/functions/mirror-gateway/index.ts` als `server/mirror-shared/lib/http_gateway.dart` valideren payloads
-   - Geen shared schema-contract tussen layers
-   - **Aanbeveling**: Centraal request-schema-validatie service
-
-### Overall score: **8.7/10**
-
-**Basisredening**: Sterk architectuurontwerp, voorbeeldige security-layering, en production-mindset op database niveau. Zwaktes zijn vooral overhead-complexiteit (orchestration spreiding, gateway omvang, state-hydration timing) in plaats van fundamentele architectuurfouten. Offline-first en integratie zijn voorbeeldig. Met de aanbevolen consolidaties (orchestration splitting, gateway modularisatie, schema-centralisatie) bereiken we 9.2+/10.
-
----
-
-## 2. Laag-voor-laag analyse
-
-### Supabase / Database laag
-**Sterke punten:**
-- **Core schema**: `ai_sessions`, `mirror_request_idempotency`, `mirror_apply_audit_events`, `mirror_templates`, `mirror_usage_logs` zijn goed getructureerd met expliciete RLS-policies, geschikte indexen en lifecycle-management
-- **Idempotency ledger**: State machine (`processing` → `completed|failed`), request cache (hash, response), expiry + cleanup scheduling via pg_cron. Dit is production-grade replay-protection
-- **Storage hardening**: Buckets zijn private, policies zijn uid-scoped (`foldername()[1] = auth.uid()`), cleanup-functies voor old artifacts. Signed URLs worden correct begrensd
-- **Audit separation**: Apply audit (`mirror_apply_audit_events`) vs usage metering (`mirror_usage_logs`) is schoon gescheiden voor compliance/billing
-- **Realtime scoping**: `mirror_ai_sessions` broadcast via topic (`user:project:task`) in plaats van broad tabel-listeners. Dit is veiliger en schaalbaarder
-- **Retention strategy**: Migrations tonen dat data lifecycle centraal is gedacht (retention pruning, status alignment, response cache alignment)
-
-**Zwakke punten:**
-- **TEXT project_id/task_id zonder FK**: Migratie 20260322 voegt UUID columns toe maar koppeling/validatie is nog in progress. Dangling references blijven mogelijk
-- **Status-fragmentatie**: `ai_sessions.status` vs `mirror_usage_logs.status` vs `mirror_request_idempotency.status` — geen single source of truth
-- **Template seed scaling**: Seed content in SQL werkt voor start, maar inlining van rijke templates in migrations is niet ideaal voor grote templates of versioning
-- **RLS-test-dekking**: Tests in `supabase/tests/` zijn minimaal; geen duidelijke contract test voor RLS-grenzen
-
-**Aanbeveling**: Voltooi UUID FK-linkage (PR in progress), harden RLS-test dekking, en verplaats template seeds naar Dart code + seeding service.
-
-### Edge Functions & gRPC backend laag
-
-**Sterke punten:**
-- **Gateway maturity**: Request identity (`requestId`, `traceId`, `idempotencyKey`), structured errors met codes, replay-safe finalization, quota enforcement, circuit breaker, usage metering hooks
-- **Beveiliging is gelaagd correct**: Auth-validatie → permission check (`use_mirror`) → entitlement RPC (cloud mode) → forwarding. Client-side mode wordt niet als authoriteitsbeslissing gebruikt
-- **Backend-abstractie is clean**: `MirrorComputeBackend` contract, `MirrorGatewayBackend` vs `PrivateGrpcBackend` split, factory injection patterns
-- **gRPC security guard**: `PrivateGrpcBackend` heeft expliciete production transport-security check (fail-closed als insecure in release mode)
-- **Runner extensibility**: `runner_service.dart` voorziet auth verifier hook, compile/apply RPC, workspace cleanup en metric snapshot callbacks voor Fly/local variants
-- **HTTP gateway contract**: Verrekeningslogica (success/failure classifiers, status mapping) is centraal en herbruikbaar
-
-**Zwakke punten:**
-- **Gateway is te omvangrijk**: ~500 regels in `/index.ts` ondanks `modules/` splitsing. Auth, normalization, rate limit, circuit breaker, forwarding, metering en audit schrijven zitten nog te dicht bij elkaar
-- **Validatie-duplicatie**: Zowel edge gateway als runners valideren payloads, maar geen shared schema-contract
-- **Module-structuur hangt in de lucht**: `modules/` directory helpt, maar `index.ts` orchestreert toch nog te veel logica. Voeg expliciete composition layer toe
-- **Geen centrale request-schema**: Compile/apply request validatie is handmatig en verspreid. Gemist kans op herbruikbare test fixtures en contract enforcement
-
-**Aanbeveling**: Extraheer centraal request-schema (@`lib/features/mirror/services/mirror_request_schema.dart` + `supabase/functions/mirror-gateway/modules/request_schema.ts`), voeg test fixtures toe voor gateway module tests en consolideer gateway index naar pure composition.
-
-### Dart/Flutter core & providers laag
-
-**Sterke punten:**
-- **Mode-keuze is centraal en policy-gedreven**: `MirrorModeController` handelt write-ownership af, `mirrorResolvedModeProvider` levert read-model, `MirrorAccessPolicy` (in pma_core) bepaalt softbeleidsregels
-- **Session state-model is rijp**: `MirrorSessionNotifier` bevat repository context, drafts, terminal logs, compile metadata met consistency-checks (`contextFingerprint`, `compileFingerprint`, `serverVersionToken`)
-- **Premium is correct als UX-hint**: `MirrorPremiumService` levert non-authoritative signaal; gateway enforceert daadwerkelijk. Dit is de juiste security-keuze
-- **Route-guard is centraal**: `mirror_route_guard_provider.dart` concentreert feature-flag + permission checks; minder bypass-risico via deeplinks
-- **Riverpod-use is overwegend best-practice**: Factories, dependency injection patterns, family notifications zijn consistent gebruikt
-- **State-hydration PR's hebben hardening aangebracht**: Generation guards, deterministische resolver, launch coordinator, timeout fallback guards
-
-**Zwakke punten:**
-- **Orchestration-verantwoordelijkheden zijn te verspreid**: 
-  - `MirrorOrchestratorService` = retry + replay + invalidatie
-  - `MirrorRunFlowService` = UI-interactie + sessie-state
-  - `MirrorBackendWorkflows` = patch planning + audit
-  - Te veel entry points; volledige apply-flow is mentaal zwaar te modelleren
-  - **PR1-PR5 hebben geholpen** (shim removal, validator extraction, workflow consolidatie) maar verdient meer splitsing
-
-- **Session hydration combineert meerdere async bronnen**:
-  - Auth state, premium hints, feature flags, runners, repository context, offline cache hydrateren gelijktijdig
-  - Generation guards en deterministische resolver helpen, maar
-  - Late completions kunnen race-like bugs introduceren
-  - Testing vereist strakke async-sequencing control
-  - **Status**: Hardened; verdient nog meer observability (source/phase metadata)
-
-- **Launch flow is nog niet puur bridges**: `ai_chat_provider.dart` doet naast launch bridging ook mode-init + team-variant refresh. Verdeling van concerns is nog niet scherp
-
-- **Side-effectful hydration in providers**: Cache-hydration, mode-refresh side effects zitten nog in providers zelf. Dit strookt niet ideaal met Riverpod filosofie van pure computation
-
-**Aanbeveling**: Splits orchestration verder via dedicated coordinator voor apply-flow, voeg expliciete phase/source metadata toe aan state voor diagnostica, isoleer side-effectful hydration in expliciete application services.
-
-### UI & UX laag (editor, dialogs, realtime)
-
-**Sterke punten:**
-- **Mirror editor screen is rijp ontworpen**: Editor, explorer, terminal, realtime en voice in één coherent scherm zonder alles in build-logica te propen
-- **Permission revocation is gracefully afgehandeld**: In plaats van crash/half-defect, schakelt sessie goed uit
-- **Production-mindset zichtbaar**: Run locks, retry feedback, terminal status lines, templates entry point, responsive layout
-- **Realtime layering is verzorgd**: Dedicated realtime service + editor controller hanteren spam, duplicate flushing en state drift
-- **Voice flow heeft al guardrails**: `MirrorVoiceDraftSanitizer` verwijdert control/zero-width chars, caps op 2000 chars
-- **Apply dialog heeft diff-rendering**: `MirrorDiffService` levert unified diff met volle context, gebruiker ziet wijzigingen voor apply
-
-**Zwakke punten:**
-- **Scherm is zwaar**: Monaco + explorer + terminal + voice + realtime in één StatefulWidget kan feature pressure opnemen over tijd
-- **Templates-cache fallback zonder expliciete warning**: Stale data zichtbaar zonder duidelijk "offline fallback" label. AI studio-context maakt dit riskanter dan normale CRUD-lijsten
-- **Voice-draft zichtbaarheid**: Sanitization werkt goed, maar draft-laag is niet altijd prominent voor gebruiker. Voor AI coding is expliciete review van voice-input kritiek
-- **Apply review is nog niet multi-file-optimized**: Huidige flow werkt per-file, maar grote refactors met 20+ patches zijn lastiger om granular te reviewen
-- **Geen stage-based rollback-UI**: Eenmaal applied, enkel undo/revert; geen "cherry-pick patches" na apply
-
-**Aanbeveling**: Splits editor-orchestration uit in dedicated service, voeg staleness-badge aan templates-fallback, en maak patched-file review granularer (skip/apply per patch).
-
-### Security, permissions & premium checks
-
-**Sterke punten:**
-- **Meerlagige verweving**: Flutter route-guards, Supabase RLS, gateway auth, entitlement RPC, signed artifact flow, gRPC transport security
-- **Route guard is centraal**: `mirror_route_guard_provider.dart` concentreert feature-flag + permission; bypass-risico minimaal
-- **Premium is non-authoritative**: `MirrorPremiumService` levert UX-hint; gateway is waarheid. Dit is de juiste verdeling van verantwoordelijkheden
-- **Signed artifact flow is degelijk**: `MirrorSecureApplyService` genereert backup + signed URLs; audit trail bevat fingerprints voor forensica
-- **Storage is eigenaar-scoped**: RLS policies enforce `auth.uid` prefix in object paden
-- **Repay protection is sluitend**: Idempotency ledger met request hash + status machine voorkomt duplicate execution
-
-**Zwakke punten:**
-- **Entitlement governance is verspreid**: Premium checks, A/B-varianten, admin bypasses zitten in providers, policy, gateway. Functioneel werkt het, maar audit trail is minder strak
-- **Logging bevat veel context**: Request metadata is nuttig voor debugging, maar discipline nodig om gevoelige data (prompts, artifacts) niet onbedoeld in logs te zetten bij toekomstige extensies
-- **Admin audit is impliciet**: geen centrale audit trail wanneer admins feature flags wijzigen. Dit is operationeel risico
-- **Geen expliciete threat model**: Survey van docs toont geen STRIDE of vergelijkbare systematische threat analyse
-
-**Aanbeveling**: Maak admin audit trail expliciet (who changed flags, when, what value), formaliseer threat model document (prompt injection, artifact leakage, privilege escalation, signed URL misbruik), en strak aanvullende logging discipline.
-
-### Offline / Hive / caching laag
-
-**Sterke punten:**
-- **Outbox replay is robuust ontworpen**: Queuing met retry policy, jitter, circuit breaker, persistent Hive storage, reconnect-triggered processing
-- **Draft cache heeft expliciete grenzen**: Sessie caps (40), file caps (80/session), char caps (300KB/session, 25KB/file). Dit voorkomt oncontroleerde groei op devices
-- **Hive is encrypted**: Local persistence is niet in plain text
-- **Offline warning propagation**: App kan offline state tonen zonder silently failing
-- **Replay coalescing**: Voorkwamt duplicate replay runs bij snelle verbindingen
-- **Stale cache fallback**: App blijft functioneel indien fetch mislukt; data is niet verloren
-
-**Zwakke punten:**
-- **Outbox entry parsing is stil**: `MirrorOutboxEntry.fromRaw()` faalt stil met `null` bij parseproblemen. Stille queue-verliesgevallen mogelijk zonder herstelinformatie
-- **Templates cache-fallback zonder expliciete waarschuwing**: Stale templates zichtbaar zonder "cache fallback" label. AI studio-context maakt dit riskanter
-- **Invalidation discipline is impliciet**: Cache TTL + serverVersion-check werkt, maar geen expliciete invalidation triggering vanuit sync events
-- **Circuit breaker state is in-memory per instance**: Meerdere app instances kunnen onafhankelijk failover/recover. Gedistribueerde circuit breaker ontbreekt
-- **Complex fallback-gedrag**: Encryptie, replay, circuit breaker in één kritiek pad; edge-case failures lastiger reproduceren
-
-**Aanbeveling**: Voeg structured logging toe aan outbox parsing (retry/drop events), voeg staleness-badge aan template fallback, maak invalidation explicieter triggerbaar, overweeg gedistribueerde circuit breaker state op test-niveau.
-
-### Integratie met bestaande app
-
-**Sterke punten:**
-- **Integratie volgt het pattern uit bestaande app**: Routes via `lib/core/routes.dart`, guard via provider, deeplink handling via `mirror_route_intent.dart`
-- **Geen wijzigingen in core models**: Project/task/auth entiteiten blijven ongewijzigd
-- **Launch coordinatie**: Entry points (projectcard, taskcard, AI bridge) convergen via centraal launch flow
-- **Permission gating is consequent**: Dezelfde `AppPermissions.useMirror` wordt overal gebruikt
-- **Feature flag integration**: Mirror kan globaal uitgeschakeld worden; keuze respecteren
-
-**Zwakke punten:**
-- **Meerdere entry points naar dezelfde editor**: Product-logisch ok, maar mode-initialisatie, routing guards, feature gating moeten echt centraal blijven
-- **Mirror heeft rijkere infra dan veel andere features**: Offline queuing, entitlement logica, team mode, gRPC runners. Dit is goed voor Mirror, maar vraagt discipline zodat het geen architecturale uitzondering wordt
-- **Geen centraal event-emitting voor Mirror-milestones**: Apply complete, compile error, etc. zijn handled lokaal. Cross-feature events zouden nuttig kunnen zijn (notification, analytics pipeline)
-
-**Aanbeveling**: Zorg dat mode-init, guard-sequencing, entitlement checks echt centraal blijven via dedicated launch coordinator. Bouw event-emitting payload in mirrors-events voor cross-feature signaling.
-
----
-
-## 3. Concrete aanbevelingen
-
-### A. Wijzigingen (met exacte bestandsnamen en wat te veranderen)
-#### 1. **supabase/functions/mirror-gateway/index.ts** – Gateway modularisatie
-   - **REFACTOR**: Splits composition logic verder. `index.ts` moet alleen:
-     - Request entry point accepteren
-     - Middleware-chain stellen: auth → idempotency → rate limit → circuit breaker → forward
-     - Response finalize
-   - **Verplaats naar `modules/`**: Auth dispatch, entitlement checking, custom rate-limit rules
-   - **Voeg toe**: Central request-schema validation VOORDAT handleidling/normality start
-
-#### 2. **lib/features/mirror/mirror_gateway_backend.dart** – Backend consolidatie
-   - **REFACTOR**: Isoleer compile/apply retry en fallback-logica in dedicated `mirror_retry_policy.dart` methods
-   - **REMOVE**: Dubbele validatie; vertrouw op centraal schema contract
-   - **ADD**: Observability hooks voor backend-specific latency/failure classification
-
-#### 3. **lib/features/mirror/private_grpc_backend.dart** – gRPC backend cleanup
-   - **KEEP**: Production TLS guard (juist)
-   - **REFACTOR**: Verplaats shared secure-apply flow naar gemeenschappelijke service (`mirror_secure_apply_service.dart`)
-   - **CONSOLIDATE**: Cloud/local backends moeten identieke apply-flow gebruiken
-
-#### 4. **lib/core/providers/mirror_mode_controller_provider.dart** – State ownership verification
-   - **VERIFY**: Dit is de **single write owner** voor Mirror mode state
-   - **ADD**: Explicit provenance metadata (source: 'explicit', 'cached', 'flag_default', 'premium_fallback') voor diagnostica
-   - **CONSOLIDATE**: Alle mode-mutaties moeten via deze controller gaan
-
-#### 5. **lib/core/providers/mirror_session_provider.dart** – Session bootstrap cleanup
-   - **SPLIT**: Repository context hydration, draft restore, editor state in aparte concerns
-   - **ADD**: Explicit lifecycle moments (run, apply, route-exit) voor persistence in plaats van alleen debounced autosave
-   - **FIX**: Voeg generation guards toe zodat late completions oude state niet kunnen overschrijven
-
-#### 6. **lib/features/mirror/providers/mirror_templates_provider.dart** – Cache staleness
-   - **ADD**: Expliciete staleness-indicator wanneer cache fallback wordt gebruikt
-   - **MAKE EXPLICIT**: Invalidation triggering vanuit sync events in plaats van alleen TTL/serverVersion
-   - **ADD**: User-facing network-error message wanneer template fetch mislukt
-
-#### 7. **lib/features/mirror/services/mirror_orchestrator_service.dart** – Orchestration splitting
-   - **SPLIT**: Compile, apply en generate zijn aparte execution paths
-   - **EXTRACT**: Consistency validation naar aparte validator service (al gedaan via PR2)
-   - **CONSOLIDATE**: Retry, replay, observability moeten gedeeld zijn
-
-#### 8. **server/mirror-shared/lib/request_validator.dart** – Server-side schema validation
-   - **CREATE**: Centraal request schema-contract zodat edge gateway en runners aligned zijn
-   - **USE**: Dit in beide `http_gateway.dart` en edge gateway modules
-
-#### 9. **supabase/migrations/20260322_mirror_context_uuid_fk_hardening.sql** (in progress)
-   - **COMPLETE**: UUID FK linkage voor project/task references
-   - **ADD**: Constraint enforcement zodat dangling references voorkomen worden
-   - **MIGRATE**: TEXT projectId/taskId naar UUID projectUuid/taskUuid in alle tabellen
-
-#### 10. **lib/features/mirror/services/mirror_apply_security_mode_service.dart** – Security mode consolidation
-   - **VERIFY**: Dit is de single source of truth voor signed vs. direct apply-flow keuze
-   - **KEEP**: Current rule hierarchy (policy → cloud sensitivity → trust score → audit → size → default)
-   - **ENSURE**: Zowel cloud gateway als private gRPC backends gebruiken dezelfde service
-
-### B. Toevoegingen (nieuwe bestanden/features)
-
-#### 1. **lib/features/mirror/services/mirror_gateway_request_schema.dart**
-   - Centrale request schema/validation laag voor Mirror compile/apply requests
-   - Herbruikbaar in edge gateway tests, runner sanity checks, en Dart serialize-tests
-   - Voelstukken: `CompileRequestSchema`, `ApplyRequestSchema` met `validate()` methods
-   - Implementatie: Zie bestaande `mirror_request_schema.dart` (al aanwezig in gateway modules)
-
-#### 2. **supabase/functions/mirror-gateway/modules/request_schema.ts**
-   - Deno-port van schema-validatie
-   - Gedeeld contract met Dart-implementatie
-   - Gebruikt in payload-normalization flow
-
-#### 3. **lib/features/mirror/services/mirror_apply_flow_coordinator.dart**
-   - Standalone coordinator voor complete apply-flow: compile → preview → validate → apply
-   - Isolates orchestration logic uit `MirrorOrchestratorService`
-   - Public interface: `executeApplyFlow({required String projectId, required String taskId, ...})`
-
-#### 4. **lib/features/mirror/widgets/mirror_patch_review_sheet.dart**
-   - Uitgebreid review UI voor multi-file apply
-   - Features: per-file skip/apply buttons, diff rendering met syntax highlighting, patch metadata
-   - Reuses `MirrorDiffService` voor diff rendering
-
-#### 5. **test/features/mirror/mirror_gateway_schema_validation_test.dart**
-   - Contract tests voor request-schema en structured error mapping
-   - Coverage: Valid payloads, missing fields, oversized values, type mismatches
-   - Validates edge gateway kan payloads accepteren
-
-#### 6. **test/features/mirror/mirror_request_idempotency_test.dart** (uitbreiding)
-   - Add tests voor: claim → processing → stale recovery → finalization
-   - Add tests voor: expired request cleanup via pg_cron
-   - Validates database contracten
-
-#### 7. **docs/mirror_operational_runbook.md**
-   - Gateway environment variables en secrets
-   - Cloud/local runner deployment-checklist
-   - Incident response procedures (timeout, auth deny, circuit breaker open)
-   - Idempotency + artifact cleanup schedules
-   - Entitlement-debugging (check premium status, feature flags, permissions)
-
-#### 8. **docs/mirror_threat_model.md**
-   - Structured threat analysis (STRIDE):
-     - **Spoofing**: JWT validation, deeplink parameter validation
-     - **Tampering**: RLS checks, signed URLs voor artifacts, idempotency ledger
-     - **Repudiation**: Audit trail (`mirror_apply_audit_events`), usage logs
-     - **Information Disclosure**: Encryption for Hive, signed URL TTL, careful logging
-     - **Denial of Service**: Rate limiting, circuit breaker, quota enforcement
-     - **Elevation of Privilege**: Feature flags, permission checks, admin audit trail
-   - Admin bypass governance + approval process
-   - AI prompt injection + artifact leakage mitigation
-
-#### 9. **supabase/functions/mirror-gateway/modules/request_identity.ts** (enhancing existing)
-   - Expand existing `routing_identity.ts` to be more explicit about correlation IDs
-   - Add validation that idempotencyKey matches request format
-
-#### 10. **lib/features/mirror/services/mirror_integration_test_helpers.dart**
-   - Shared test utilities for setting up Mirror state (session, context, cache)
-   - Factories voor mock backends, fake orchestrators, test data builders
-
-### C. Verwijderingen (wat weg kan en waarom)
-
-#### 1. **lib/features/mirror/services/mirror_editor_orchestration_service.dart** ✅ VERWIJDERD
-   - Was deprecated shim → `mirrorInteractiveRunCoordinatorProvider`
-   - Echte flow-logica zit in `mirror_run_flow_service.dart`
-   - Removed in PR1; already gone
-
-#### 2. **Dubbele validatie-paden** tussen edge gateway en runners
-   - Consolideer naar shared schema contract (zie: `mirror_request_schema.dart`)
-   - **Verwijder**: Hand-coded payload validation in beide `http_gateway.dart` en `/index.ts`
-   - Voordeel: Consistent validation, makkelijker testen
-
-#### 3. **Compat/shim-indirectie rond launch flows**
-   - `lib/core/providers/ai_chat_provider.dart` houdt te  veel orchestration logica
-   - Zodra centraal launch coordinator bestaat: dun de bridge af tot puur intent-opzetting
-   - Verwijder mode-init + team-variant refresh uit bridge (move naar coordinator)
-
-#### 4. **Ongebruikte fallback-helpers in backends**
-   - Scan `mirror_gateway_backend.dart` en `private_grpc_backend.dart` voor dead code
-   - Verwijder: Preview/apply methods die niet meer gebruikt worden
-   - Consolideer: Shared behavior naar `mirror_backend_workflows.dart`
-
-#### 5. **Legacy request-normalization code** (once schema-based validation exists)
-   - Veel manuele veld-fixup zit in `mirror_gateway_backend.dart`
-   - Zodra schema validation centraal is: kunnen we dit verwijderen
-   - Data binnengekomen via gateway moet al gevalideerd/genormaliseerd zijn
-
-#### 6. **Geen echt nodig oude feature-flag branching** in Mirror core
-   - Code paths die feature-flag legacy-code ondersteunen: verwijderen zodra all users upgraded
-   - Example: Old offline queueing format, legacy template format, old session schema
-
-### D. Prioriteitsmatrix voor implementatie
-
-| Prioriteit | Item | Impact | Effort |
-|--|--|--|--|
-| **P0** | UUID FK-hardening (migration 20260322) | Data integrity, cleanup, analytics | Medium |
-| **P0** | Centraal request-schema validatie | Sync edge/runner contracts | Low |
-| **P1** | Orchestration splitting (apply-flow coordinator) | Cognitive load, maintainability | High |
-| **P1** | Gateway modularisatie (composition refactor) | Thin-proxy intent, testablity | Medium |
-| **P1** | Session bootstrap cleanup (split hydration concerns) | Race-condition resilience | Medium |
-| **P2** | Templates staleness-indicator | Trust, UX transparency | Low |
-| **P2** | Operational runbook + threat model | Ops readiness, security audit | Medium |
-| **P2** | Multi-file apply review-UI | Usability at scale | Medium |
-| **P3** | Circuit breaker distribution (test-level) | High-availability | Low |
-
----
-
-## Samenvatting
-
-Dit rapport toont dat Mirror een **architecturaal sterke**, **security-gedreven** en **production-ready** feature is. De implementatie toont:
-- ✅ Meerlagige security (no client-only trust)
-- ✅ Production-grade database design (RLS, audit, metering)
-- ✅ Offline-first resilience
-- ✅ Clean backend abstraction
-- ✅ Naadloze app integratie
-
-De aanbevelingen adresseren overhead-complexiteit (orchestration spreiding, gateway omvang, state-hydration timing) in plaats van fundamentele architectuurfouten. Met de P0/P1-aanpassingen (schema-centralisatie, FK-hardening, orchestration splitting, session cleanup) bereiken we **9.2+/10** op architectuur-maturiteit.
-
-**Volgende stappen**:
-1. Complete UUID FK-hardening (in progress migration)
-2. Centraal request-schema + validation consolidatie
-3. Apply-flow coordinator extractie
-4. Session bootstrap clarity + generation guards
-5. Operational documentation hardening
-- Extracted write-owner controller into `lib/core/providers/mirror_mode_controller_provider.dart`: contains `MirrorState`, `MirrorModeController` (single Riverpod `Notifier` write-owner), and derived read-model providers `mirrorResolvedStateProvider`, `mirrorResolvedModeProvider`, `mirrorResolvedOfflineWarningProvider`.
-- Extracted async input snapshot providers into `lib/core/providers/mirror_hydration_inputs_provider.dart`: `currentMirrorUserIdProvider`, `mirrorPremiumSnapshotProvider`, `mirrorFeatureGateSnapshotProvider`, team/runner variant snapshot and projection providers.
-- Migrated all production callsites (`mirror_editor_screen.dart`, `mirror_launch_coordinator.dart`, `mirror_session_provider.dart`, `mirror_entitlement_provider.dart`) off shim symbols.
-- Migrated all test files off `MirrorNotifier`/`mirrorProvider`/`mirrorModeProvider`/`mirrorOfflineWarningProvider` to new canonical names.
-- Renamed `test/core/providers/mirror_provider_test.dart` → `test/core/providers/mirror_mode_controller_provider_test.dart`.
-- Updated `lib/core/providers.dart` barrel: replaced shim export with two new provider exports.
-- Flutter analyze and `get_errors` both confirm zero issues after removal.
+## Mirror Analyse
+
+Analyse datum: 22 maart 2026  
+Scope: volledige Mirror-implementatie in Flutter, Supabase, Edge Functions, gRPC-runners en integratie met de bestaande app  
+Methode: code-first review op daadwerkelijke implementatiebestanden, migrations, gateway-modules, providers, services, UI en integratiepunten
+
+### 1. Algemene beoordeling
+- Sterke punten
+   - De feature is inhoudelijk volwassen opgebouwd. De scheiding tussen datalaag, gateway, backend-contract, Riverpod-state en UI is duidelijker dan bij de meeste feature-uitbreidingen van deze omvang.
+   - Security is gelaagd en niet afhankelijk van client-only trust. De combinatie van route guards, `use_mirror` permissies, entitlement-RPC, RLS, private storage buckets en signed artifact flow is sterk.
+   - De Supabase-laag is production-minded. `ai_sessions`, `mirror_request_idempotency`, `mirror_usage_logs`, `mirror_apply_audit_events` en `mirror_templates` hebben duidelijke lifecycle- en governance-intentie.
+   - De edge gateway is inmiddels echt gemoduleerd. Oudere documentatie die nog spreekt over een te dikke monoliet klopt niet meer volledig; `supabase/functions/mirror-gateway/index.ts` composeert vooral losse modules voor auth, request-validatie, resilience en forwarding.
+   - Offline-first is serieus geïmplementeerd en niet cosmetisch. Er is een echte outbox, encrypted Hive-opslag, retry/backoff, cache fallback en replaygedrag.
+   - Integratie met de bestaande app is relatief consistent. Launch flows vanuit project- en task-context lopen via één coördinatiepad en de routeopbouw blijft netjes binnen de bestaande navigatiestructuur.
+
+- Zwakke punten
+   - De feature is functioneel sterk, maar conceptueel zwaar. Er zijn veel moving parts: mode-hydration, entitlement, team mode, outbox replay, compile/apply preview-flow, realtime updates en signed apply. Dat maakt onderhoud duurder dan nodig.
+   - Er zit nog steeds verspreiding van verantwoordelijkheden in de applicatielaag. `MirrorApplyFlowCoordinator`, `MirrorOrchestratorService`, `MirrorBackendWorkflows`, `MirrorApplyPostHooksService` en `MirrorRunFlowService` vormen samen een correct geheel, maar de mentale modelgrens is nog niet scherp genoeg.
+   - De private gRPC-runtimeconfig is uitgewerkt. `mirror_runtime_config_provider.dart` levert expliciete host/port/TLS-config met production-validatie en `mirror_entitlement_provider.dart` construeert `PrivateGrpcBackend` expliciet via deze config. Operationele rollout/secret-governance per environment is nu expliciet vastgelegd in runbook + readiness gates.
+   - Een deel van de documentatie en contextbenamingen loopt achter op de code. In de code zijn de canonieke namen `MirrorGatewayBackend`, `PrivateGrpcBackend`, `mirror-signed-inputs` en `mirror-backups`; verwijzingen naar `EdgeFunctionBackend`, `CloudFlyBackend` of `mirror_staging` zijn niet de actuele implementatie in deze repo.
+   - Sommige UX-keuzes blijven relatief generiek voor een complexe AI-studio, maar launch-denials zijn nu expliciet en breder gedifferentieerd (`featureDisabled`/`permissionDenied`/`entitlementDenied`) met centrale feedback-mapping, gelokaliseerde route/unavailable messaging en launch-result analytics-eventing.
+
+- Overall score (1-10)
+   - 8.8/10
+   - Dit is een sterke implementatie met duidelijke production-intentie, bovengemiddelde security en goede integratie. De grootste verbeterkansen zitten niet in fundamentele bugs, maar in vereenvoudiging, explicietere runtimeconfiguratie en het verder terugdringen van orchestration-complexiteit.
+
+### 2. Laag-voor-laag analyse
+- Supabase / Database laag
+   - Positief
+      - `supabase/migrations/20260310_create_ai_sessions_baseline.sql` zet `ai_sessions` degelijk neer met constraints, indexen, updated-at-trigger en RLS-activering.
+      - `supabase/migrations/20260322_mirror_context_uuid_fk_hardening.sql` is een inhoudelijk sterke hardening-migratie. Die voegt UUID-context toe, backfillt vanuit bestaande tekstkolommen, registreert migratieproblemen expliciet in `mirror_context_fk_migration_issues`, zet normalization-triggers neer en valideert FKs gefaseerd.
+      - De keuze om `ai_sessions` strict te maken en audit/metering-tabellen permissiever te houden is correct. Runtime-tabellen moeten hard failen op inconsistente context; audit en usage mogen historiek behouden.
+      - `supabase/migrations/20260309_mirror_templates_rls_and_sync.sql` maakt van `mirror_templates` een echte database-first catalogus met RLS en deterministische seed-sync, in plaats van losse client-side defaults.
+      - `supabase/migrations/20260308_mirror_storage_hardening.sql` is goed. Private buckets, owner-scoped policies en lifecycle cleanup zijn passend voor signed input en backup artifacts.
+      - Er is aantoonbare contracttest-infrastructuur aanwezig voor RLS, idempotency en storage policies in `test/supabase` en `supabase/tests`.
+   - Kritische observaties
+      - De UUID-hardening is goed ontworpen, maar introduceert ook migratie- en operatiedruk. Omdat de migratie expliciet exceptions gooit bij unresolved `ai_sessions`, is rollout alleen veilig als verificatie en cleanup-procedures strikt gevolgd worden.
+      - De feature gebruikt parallel zowel tekstkolommen (`project_id`, `task_id`) als UUID-kolommen (`project_uuid`, `task_uuid`). Dat is verdedigbaar als overgangsmodel, maar verhoogt onderhoudscomplexiteit zolang beide levensvatbaar blijven.
+      - `mirror_templates` seed-content in SQL is acceptabel voor een kleine catalogus, maar minder ideaal zodra templates rijker, versioned of redacteerbaar door niet-DB-engineers moeten worden.
+      - De analyse van de repo laat zien dat de huidige implementatie canonieke buckets `mirror-signed-inputs` en `mirror-backups` gebruikt. Als er nog operationele scripts of documentatie zijn die uitgaan van `mirror_staging`, dan is dat nu legacy-materiaal en een bron van verwarring.
+   - Beoordeling
+      - Sterke datalaag, goed beveiligd en duidelijk migration-driven.
+      - Grootste aandachtspunt is nu niet ontwerpkwaliteit, maar het afronden en operationaliseren van de overgang naar UUID-canonieke context.
+
+- Edge Functions & gRPC backend laag
+   - Positief
+      - `supabase/functions/mirror-gateway/index.ts` is actueler en beter dan oudere analyses suggereren. Het bestand fungeert primair als composition root voor request-validatie, auth, idempotency, rate limiting, circuit breaker en forwarding.
+      - De gateway-modulestructuur is volwassen: `request_schema.ts`, `auth_handler.ts`, `idempotency_flow_handler.ts`, `forward_orchestrator.ts`, `resilience_handler.ts` en `audit_logger.ts` duiden op een bewuste scheiding van concerns.
+      - `supabase/functions/mirror-gateway/modules/request_schema.ts` valideert al vroeg op payloadgrootte, JSON-shape, UUID-formaat, file-limieten en HTTPS signed URLs. Dat is precies waar deze validatie hoort.
+      - `supabase/functions/mirror-gateway/modules/auth_handler.ts` doet zowel `use_mirror`-permission checks als `has_cloud_mirror_access()`-entitlement checks. Daarmee blijft cloudgebruik server-authoritative.
+      - `lib/features/mirror/mirror_gateway_backend.dart` gebruikt request tracing, retry policy, observability en preflight-validatie. Het clientdeel is robuuster dan een simpele `http.post` wrapper.
+      - `lib/features/mirror/private_grpc_backend.dart` heeft een expliciete production guard tegen insecure transport in release/product-runtime. Dat is een goede fail-closed keuze.
+      - `server/mirror-shared/proto/mirror.proto` houdt het transportcontract klein en stabiel.
+   - Kritische observaties
+      - De codebase noemt in de praktijk geen concrete Dart-klassen `EdgeFunctionBackend` of `CloudFlyBackend`. De canonieke client-backends zijn `MirrorGatewayBackend` en `PrivateGrpcBackend`. Als architectuurdocumentatie andere namen gebruikt, moet dat worden opgeschoond.
+      - `PrivateGrpcBackend` is inhoudelijk veilig gebouwd en wordt in `lib/core/providers/mirror_entitlement_provider.dart` expliciet geconfigureerd via `mirrorPrivateGrpcRuntimeConfigProvider` (host/port/timeout/credentials). Environment-distributie en secret-governance zijn nu opgenomen als verplichte operator-validatie in runbook/checklist.
+      - De gRPC-channel lifecycle gebruikt per call een short-lived channel. Dat voorkomt resource leaks, maar kan onder hoge frequentie extra connectie-overhead geven. Voor deze use case is dat acceptabel, maar het verdient metingen als Mirror intensief gebruikt gaat worden.
+      - De gateway is dunner geworden, maar nog steeds bedrijfs-kritisch. Rate limiting, idempotency, audit logging en entitlementcontrole komen er allemaal samen. Dat is verantwoord, maar betekent ook dat regressies in gateway-modules snel blast radius krijgen.
+   - Beoordeling
+      - Architectonisch goed en veel sterker dan gemiddeld.
+      - Grootste verbeterpunt is expliciete runtimeconfiguratie en terminologische opschoning van backend-namen in documentatie en operationele workflows.
+
+- Dart/Flutter core & providers laag
+   - Positief
+      - `lib/core/providers/mirror_mode_controller_provider.dart` is een sterk punt. Die centrale controller hydrateert state, bewaakt generaties en legt provenance vast via `modeSource`, `premiumSource`, `runnerModeVariantSource`, `hydrationReasonCode` en `fallbackReason`.
+      - `lib/core/providers/mirror_session_provider.dart` is beter dan een simpele editor-state-holder. Er zijn generation-guards, debounced draft persistence, expliciete persist-momenten en bootstrapfases.
+      - `lib/core/providers/mirror_entitlement_provider.dart` kiest de backend via policy in plaats van ad-hoc UI-logica. Dat past bij clean architecture.
+      - `lib/core/services/mirror_premium_service.dart` gebruikt premium alleen als UX-hint, niet als autoritatieve securitybeslissing. Dat is correct.
+      - `lib/features/mirror/services/mirror_apply_flow_coordinator.dart` is een duidelijke verbetering ten opzichte van alles in één screen/service stoppen. De flow generate → compile → preview → validate → apply is leesbaar en testbaar.
+      - `lib/features/mirror/services/mirror_backend_workflows.dart` centraliseert patch-opbouw, apply-resultaten, secure apply en previewmetadata. Dat beperkt duplicatie tussen backends.
+   - Kritische observaties
+      - Ondanks de verbeteringen blijven er veel orchestration-lagen naast elkaar bestaan. De grens tussen interactief flow-management, backend-workflows, post-hooks en outbox replay is functioneel logisch, maar nog niet simpel.
+      - `lib/core/providers/mirror_session_provider.dart` bevat nog steeds relatief veel verantwoordelijkheid: repository bootstrap, draft restore, file editing, compile artifacts en persistence-gedrag. Dit is geen directe bug, maar wel een onderhoudsrisico.
+      - De launch-flow gebruikt nu `MirrorLaunchResult` in plaats van `null`-semantiek, waardoor deny-redenen expliciet en beter auditbaar zijn, inclusief `entitlementDenied` en launch-result analytics-eventing.
+      - `mirrorBackendProvider` combineert feature flags, premium, runner mode, admin bypass en requested mode in één resolution pad. Dat is inhoudelijk correct, maar maakt regressies waarschijnlijker als entitlementregels later veranderen.
+   - Beoordeling
+      - Sterke basis en overwegend goede Riverpod-patronen.
+      - Belangrijkste volgende stap is niet herschrijven, maar verder reduceren van cognitieve complexiteit in launch- en orchestration-paden.
+
+- UI & UX laag (editor, dialogs, realtime)
+   - Positief
+      - `lib/features/mirror/mirror_editor_screen.dart` is rijk, maar nog wel beheerst. De screen combineert editor, file explorer, terminal, voice en templates zonder pure spaghetti in één build-methode.
+      - Permission revocation wordt netjes afgehandeld en niet genegeerd. De sessie wordt uitgeschakeld en de realtime-controller wordt netjes gestopt.
+      - Realtime zit niet hardcoded in de widget, maar achter `MirrorEditorRealtimeController` en `MirrorRealtimeService`. Dat is een goede scheiding.
+      - Voice input heeft een eigen sanitizer via `mirror_voice_draft_sanitizer.dart`, wat terecht is voor een AI-code-editor.
+      - De apply-preview-flow is serieuzer dan een standaard AI-chat UX. Er is compile-preview, fingerprinting en goedkeuringsmoment voordat apply plaatsvindt.
+   - Kritische observaties
+      - `MirrorEditorScreen` is nog steeds een zware stateful screen met veel coördinatielogica, subscriptions en side effects. Het is werkbaar, maar zit dicht tegen de grens aan waarop verdere featuregroei onhandig wordt.
+      - De templates-fallback UX is zichtbaar verbeterd (banner + stale-indicator op kaarten), inclusief expliciete bronlabeling (memory/persistent) en aanvullende fallback-interactie-analytics (refresh/select-template vanuit stale state).
+      - Multi-file patch review is nog niet zichtbaar als eersteklas UX-concept. De backend ondersteunt patchsets, maar de review-ervaring lijkt nog te draaien rond een primary patch in plaats van een expliciete staged patch queue.
+      - Failure-reasons zijn nu beter gedifferentieerd in launch- en unavailable UX via centrale feedback-mapping en gelokaliseerde route-guard messaging. Verdere verfijning blijft vooral productmatig, niet contractueel.
+   - Beoordeling
+      - Goede basis en bruikbare editorervaring.
+      - Klaar voor productie-achtige interne use, maar voor brede uitrol verdient de UX meer expliciete status- en deny-reasoning.
+
+- Security, permissions & premium checks
+   - Positief
+      - Security is consequent gelaagd: app guard, provider policy, gateway auth, permission RPC, entitlement RPC, RLS en private storage policies.
+      - `use_mirror` wordt zowel client-side als server-side gebruikt. Dat is precies de juiste redundantie.
+      - `has_cloud_mirror_access()` wordt alleen server-side als autoritatieve beslissing gebruikt; de premiumservice is slechts een hint. Dat voorkomt privilege escalation via client-state manipulation.
+      - Signed input en backup flow zijn goed afgeschermd via private buckets en owner-path policies.
+      - Idempotency heeft serieuze aandacht gekregen, inclusief statuscontracten en cleanup-migraties. Dat verlaagt risico op dubbel applyen en inconsistent usage logging.
+   - Kritische observaties
+      - Operationeel is er nog een risico op documentatie-drift: als teams nog denken in termen van oude bucket- of backendnamen, kan dat security- en supportfouten veroorzaken.
+      - `MirrorLaunchCoordinator` en route-guarding geven nu typed deny-redenen door, inclusief entitlement-specifieke deny-categorieen en launch-result eventing voor betere security-auditability.
+      - De code toont geen zwakke plekken in RLS-opzet, maar wel veel afhankelijkheid van custom RPC's zoals `has_permission` en `has_cloud_mirror_access`. Productierijpheid hangt daarmee ook af van de governance en tests van die RPC's buiten de Mirror-map zelf.
+   - Beoordeling
+      - Dit is een van de sterkste onderdelen van de implementatie.
+      - Verdere verbeteringen zitten vooral in auditability, operationele duidelijkheid en governance, niet in fundamentele beveiligingsgaten.
+
+- Offline / Hive / caching laag
+   - Positief
+      - `lib/features/mirror/services/mirror_outbox_replay_service.dart` is inhoudelijk sterk. Er is echt nagedacht over in-attempt retries, deferred replay retries, jitter, circuit breaker, operation timeouts en encrypted opslag.
+      - Draft persistence in `mirror_session_provider.dart` is netjes geïntegreerd met expliciete persist-momenten zoals run start, apply en route exit.
+      - `lib/features/mirror/providers/mirror_templates_provider.dart` combineert memory cache, persistent cache, TTL, server-version checks en realtime invalidatie op `mirror_templates`. Dat is een goede balans tussen performance en coherentie.
+      - De templates-realtime invalidatie via Postgres changes voorkomt onnodig wachten op TTL-expiry.
+   - Kritische observaties
+      - `MirrorOutboxEntry.fromRaw()` rapporteert parseproblemen via reason-codes en observability-events, met expliciet recovery-beleid per reason (legacy-migratie voor recoverable payloads, quarantine voor terminale corruptie) en hersteltelemetrie.
+      - De circuit breaker is in-memory per app/gateway instance. Voor een mobiele of desktopclient is dat verdedigbaar, maar het is geen gedeeld systeembeeld en kan dus asymmetrisch gedrag opleveren.
+      - Offline fallback in templates is technisch goed, maar productmatig nog te stil. Bij AI-gebaseerde templates wil je explicieter communiceren wanneer de gebruiker met stale data werkt.
+   - Beoordeling
+      - Sterke offline-first laag, duidelijk boven het niveau van veel Flutter-features.
+      - Grootste verbetering: meer zichtbaarheid en forensische logging rond parse-, fallback- en replay-edge-cases.
+
+- Integratie met bestaande app
+   - Positief
+      - `lib/core/providers/ai_chat_provider.dart` en `lib/features/mirror/services/mirror_launch_coordinator.dart` zorgen ervoor dat launchrequests vanuit meerdere UI-bronnen via één centraal pad lopen.
+      - Integratiepunten in `lib/features/project/project_detail_screen.dart` en `lib/features/project/expandable_task_card.dart` zijn klein, begrijpelijk en netjes. Ze blijven dunne entrypoints.
+      - Routing via `AppRoutes.mirrorEditorPath(...)` houdt de editor binnen het bestaande route-systeem.
+      - Mirror forceert geen grote wijzigingen in project- of task-modellen. Dat is een sterk architectuursignaal.
+   - Kritische observaties
+      - De integratie is netjes en gebruikt nu typed launch-resultaten, maar verdere verfijning van deny-taxonomie en analytics-eventing blijft zinvol voor supportability en productinzichten.
+      - Mirror is rijker en zwaarder dan veel andere onderdelen van de app. Daardoor bestaat het risico dat Mirror een architecturale uitzondering wordt met eigen regels voor state, caching en policy. Nu is dat nog beheersbaar, maar discipline blijft nodig.
+   - Beoordeling
+      - Goede integratie, weinig invasief, logisch opgezet.
+      - Verbeterkans zit in duidelijkere contracts en betere supportability van deny-paths.
+
+### 3. Concrete aanbevelingen
+- Wijzigingen (met exacte bestandsnamen en wat te veranderen)
+   - `lib/core/providers/mirror_entitlement_provider.dart`
+      - Status: afgerond. De backendconstructie gebruikt nu expliciete runtimeconfig (`mirrorPrivateGrpcRuntimeConfigProvider`) voor host, port, timeout en credentials.
+      - Statusupdate: operationele rollout-documentatie en env-validatie zijn aangescherpt via `docs/mirror_operational_runbook.md` en `docs/mirror-production-readiness-checklist.md` met expliciete host/port/TLS-governance.
+   - `lib/features/mirror/services/mirror_launch_coordinator.dart`
+      - Status: afgerond. `openMirrorFromTask()` retourneert typed `MirrorLaunchResult` met expliciete statussen (`launched`, `launchedWithDowngrade`, `featureDisabled`, `permissionDenied`, `entitlementDenied`) en schrijft launch-result analytics-eventing.
+   - `lib/core/providers/ai_chat_provider.dart`
+      - Status: afgerond. Bridge werkt nu op typed launch-resultaten.
+      - Doel: de rest van de app weet waarom Mirror niet opent, niet alleen dát het niet opent.
+   - `lib/features/project/project_detail_screen.dart`
+      - Status: afgerond. Scherm gebruikt centrale `mirrorLaunchFailureMessage(...)` mapping op typed launch-status.
+      - Doel: gebruikersflow en supportability verbeteren zonder nieuwe businesslogica in de UI te stoppen.
+   - `lib/features/project/expandable_task_card.dart`
+      - Status: afgerond. Zelfde centrale mapping als in `project_detail_screen.dart`.
+   - `lib/features/mirror/services/mirror_outbox_replay_service.dart`
+      - Status: afgerond. Parse failures triggeren `recordOutboxCorruption(...)` met reason-codes en recovery-action/resultaat; recoverable legacy payloads worden gemigreerd en terminale corruptie gaat naar quarantine-pad.
+      - Doel: stille queue-corruptie detecteerbaar en herstelbaar maken zonder onzichtbare drops.
+   - `lib/features/mirror/providers/mirror_templates_provider.dart`
+      - Status: afgerond. Providercontract bevat nu expliciete freshness + getypeerde fallback-bron (memory/persistent/network) inclusief user-facing source-label voor stale fallback.
+      - Doel: de schermlaag hoeft fallbackreden en bron niet impliciet te reconstrueren.
+   - `lib/features/mirror/mirror_editor_screen.dart`
+      - Maak stale template state prominenter zichtbaar in de UI en niet alleen via hulpfuncties of verborgen statuslogica.
+      - Statusupdate: stale fallback is nu zichtbaar in banner + kaartniveau. Daarnaast is het templates-bottomsheet gemodulariseerd naar `lib/features/mirror/widgets/mirror_templates_sheet.dart`, is de workspace-layout/file-explorer opgesplitst naar `lib/features/mirror/widgets/mirror_editor_workspace_shell.dart`, zijn action bar + editor/terminal/live-output panelen geëxtraheerd naar `lib/features/mirror/widgets/mirror_editor_action_bar.dart` en `lib/features/mirror/widgets/mirror_editor_panels.dart`, en zijn resterende screen-helpers voor voice confirm/undo, structured-error parsing en template presentatie/formatting gedelegeerd naar `lib/features/mirror/services/mirror_voice_insert_flow.dart`, `lib/features/mirror/services/mirror_structured_error_parser.dart` en `lib/features/mirror/services/mirror_templates_ui_service.dart`. De sessie-baseline en context-fingerprint-opbouw zijn nu ook geëxtraheerd naar `lib/core/services/mirror_session_state_service.dart` met eigen unit tests.
+      - Restdoel: overgebleven screen-specifieke helperlogica alleen nog verder splitsen als nieuwe featuregroei dat rechtvaardigt.
+   - `lib/features/mirror/private_grpc_backend.dart`
+      - Status: afgerond. Host/port/credentials worden niet meer via constructor-defaults ingevuld en lopen expliciet via runtimeconfig-aanroepers.
+      - Production TLS guard blijft actief en ongewijzigd als fail-closed beveiliging.
+   - `supabase/functions/mirror-gateway/index.ts`
+      - Houd dit bestand strikt als composition root en verplaats eventuele resterende inline branching die niet puur orchestration is naar modules.
+      - De huidige staat is al goed, maar dit bestand moet niet opnieuw aangroeien.
+   - `docs/README.md`
+      - Status: afgerond voor actieve handbook-documentatie. `docs/README.md`, architectuur-, security-, operations- en runbookbestanden gebruiken canonieke termen (`MirrorGatewayBackend`, `PrivateGrpcBackend`, `mirror-signed-inputs`, `mirror-backups`).
+      - Legacy termen blijven alleen toegestaan als expliciet historisch label in analyse-/migratiecontext.
+      - Doel: documentatie gelijk trekken met de repo zoals die nu werkelijk is opgebouwd.
+
+- Toevoegingen (nieuwe bestanden/features met korte beschrijving)
+   - Nieuw bestand: `lib/features/mirror/models/mirror_launch_result.dart`
+      - Typed resultaatmodel voor launchpogingen met deny-reasons en eventueel aanbevolen fallbackmode.
+   - Nieuw bestand: `test/features/mirror/mirror_launch_coordinator_result_test.dart`
+      - Testmatrix voor launch-denials en allow-paden, zodat `null`-gedrag verdwijnt en contracten expliciet worden vastgelegd.
+   - Nieuw bestand: `lib/core/providers/mirror_runtime_config_provider.dart`
+      - Centrale provider voor private gRPC endpoint, TLS-config en eventueel backend-override per environment.
+   - Nieuw bestand: `test/features/mirror/private_grpc_backend_runtime_config_test.dart`
+      - Contracttests voor transport security guard, runtimeconfig en fail-closed gedrag in productionmode.
+   - Nieuw bestand: `test/features/mirror/mirror_outbox_corruption_recovery_test.dart`
+      - Tests die expliciet corrupte of legacy queue entries simuleren en valideren dat detectie, logging en herstelgedrag correct zijn.
+   - Nieuwe feature: expliciete stale-template banner in de editor/templates-flow
+      - Niet per se een apart bestand, maar wel een zichtbare UX-laag voor fallback-state, inclusief retry-trigger.
+   - Nieuwe feature: deny-reason analytics/eventing voor Mirror launch
+      - Nodig om te zien of blokkades door permissions, entitlement of feature flags komen.
+
+- Verwijderingen (wat weg kan en waarom)
+   - Verwijder oude terminologie in documentatie en operationele notities waarin `mirror_staging`, `EdgeFunctionBackend` of `CloudFlyBackend` als actuele canonieke implementatie worden gepresenteerd.
+      - Waarom: de repo gebruikt nu feitelijk `MirrorGatewayBackend`, `PrivateGrpcBackend`, `mirror-signed-inputs` en `mirror-backups`. Oude namen vergroten de kans op verkeerde configuratie en miscommunicatie.
+   - Verwijder de impliciete `null`-semantiek voor Mirror-launchblokkades uit `lib/features/mirror/services/mirror_launch_coordinator.dart` en `lib/core/providers/ai_chat_provider.dart`.
+      - Waarom: dit is functioneel te arm voor een feature met meerdere beleids- en entitlementlagen.
+   - Verwijder op termijn de noodzaak om zowel tekst- als UUID-contextkolommen parallel te blijven behandelen zodra de migratiefase veilig is afgerond.
+      - Waarom: dubbele representatie verhoogt complexiteit, testoppervlak en kans op inconsistentie.
+   - Verwijder de afhankelijkheid op constructor-defaults voor private gRPC-host/port zodra runtimeconfig is ingevoerd.
+      - Waarom: deployment-gedrag mag niet impliciet afhangen van localhost-defaults.
+
+   ### 4. Diepgaande analyse van zwakke punten en risico's
+   - Risico 1: Private gRPC-runtimeconfig (grotendeels gemitigeerd)
+      - Probleem
+         - Oorspronkelijk werd de private backend impliciet met localhost-defaults opgebouwd.
+         - Inmiddels loopt backendconstructie via `mirrorPrivateGrpcRuntimeConfigProvider` met expliciete host/port/timeout/TLS-credentials plus production-validatie.
+      - Waarom dit riskant is
+         - De productieguard voorkomt insecure transport in release, maar lost niet het onderliggende configuratieprobleem op.
+         - Zodra private mode buiten puur lokale developmentomgevingen gebruikt wordt, ontbreekt een expliciet en auditeerbaar configuratiepad.
+         - Deployments kunnen stuklopen door verkeerde assumpties over host, port of TLS, terwijl de fout pas laat zichtbaar wordt.
+      - Kwalitatieve perfecte oplossing
+         - Introduceer één centrale runtimeconfig-laag voor alle private runnerinstellingen.
+         - Definieer expliciet welke configuratie per environment is toegestaan: lokaal, test, staging, productie.
+         - Maak misconfiguratie fail-fast bij appstart of backendselectie, niet pas op het moment van compile/apply.
+      - Definitie van klaar
+         - Geen enkele productiecode maakt `PrivateGrpcBackend` meer aan via impliciete defaults.
+         - TLS-policy en endpoint-config zijn centraal testbaar en gedocumenteerd.
+         - Er zijn contracttests voor secure en insecure paden.
+
+   - Risico 2: Launch-contract semantiek (grotendeels gemitigeerd)
+      - Probleem
+         - Oorspronkelijk retourneerde `lib/features/mirror/services/mirror_launch_coordinator.dart` `null` voor deny-situaties.
+         - Inmiddels wordt typed `MirrorLaunchResult` gebruikt en tonen entrypoints reden-specifieke feedback.
+      - Waarom dit riskant is
+         - Support kan niet snel vaststellen of de oorzaak feature flag, permissie, entitlement of policy-downgrade is.
+         - Product-analytics ziet niet waar launch-frictie ontstaat.
+         - UX wordt onnauwkeurig, waardoor legitieme gebruikers foutief denken dat Mirror defect is.
+      - Kwalitatieve perfecte oplossing
+         - Maak een typed launch-resultaat met expliciete statussen en metadata.
+         - Scheid allow-result, deny-reason en eventuele downgrade-adviezen.
+         - Laat UI alleen presenteren; businessredenering blijft in de coordinator.
+      - Definitie van klaar
+         - Geen `null`-semantiek meer voor deny-paden.
+         - Alle entrypoints tonen reden-specifieke feedback.
+         - Tests dekken alle launch-uitkomsten af.
+
+   - Risico 3: Orchestration-complexiteit blijft hoog
+      - Probleem
+         - De interactie tussen `MirrorApplyFlowCoordinator`, `MirrorOrchestratorService`, `MirrorBackendWorkflows`, `MirrorApplyPostHooksService`, `MirrorSessionNotifier` en outbox replay is correct, maar verspreid.
+      - Waarom dit riskant is
+         - Kleine wijzigingen in één flow kunnen onbedoelde regressies veroorzaken in compile/apply/replay/persist-gedrag.
+         - Nieuwe ontwikkelaars hebben een hoge instapdrempel om de end-to-end lifecycle te begrijpen.
+         - Testdekking wordt duurder omdat meerdere lagen dezelfde businessflow beïnvloeden.
+      - Kwalitatieve perfecte oplossing
+         - Maak een expliciet interaction model per use case: launch, generate, compile, preview, apply, replay, recover.
+         - Per use case één owner-service aanwijzen en alle andere services reduceren tot helpers of infrastructuuradapters.
+         - Documenteer de flow als state machine met ownership per stap.
+      - Definitie van klaar
+         - Voor elke primaire Mirror-use-case is er één logische orchestration owner.
+         - Cross-layer side effects zijn benoemd en testbaar.
+         - De flow is te tekenen zonder verborgen provider-side-effects.
+
+   - Risico 4: Session-state heeft nog te veel verantwoordelijkheden
+      - Probleem
+         - `lib/core/providers/mirror_session_provider.dart` doet bootstrap, merge-logica, file state, draft persistence, compile artifacts en terminal/live output.
+      - Waarom dit riskant is
+         - De provider wordt een bottleneck voor onderhoud en debugging.
+         - Race-achtige fouten zijn moeilijk te verklaren als bootstrap, persistence en runtime-output elkaar beïnvloeden.
+         - File-level state en lifecycle-events zijn nog te sterk gekoppeld.
+      - Kwalitatieve perfecte oplossing
+         - Splits repository bootstrap, draft persistence en live editor state conceptueel van elkaar.
+         - Houd de provider als state-holder, maar verplaats zware merge- en herstelbeslissingen naar application services.
+         - Maak state transitions expliciet en observeerbaar.
+      - Definitie van klaar
+         - Bootstrap, merge en persist kunnen afzonderlijk getest worden.
+         - Late async completions kunnen geen verouderde sessiestate overschrijven.
+         - De provider bevat hoofdzakelijk state en eenvoudige mutaties.
+
+   - Risico 5: Template fallback is technisch goed maar productmatig te stil
+      - Probleem
+         - `lib/features/mirror/providers/mirror_templates_provider.dart` levert `staleFallback`, `reasonCode`, `fetchedAtUtc` en `cacheAge`, maar de UX benut dit nog niet voldoende.
+      - Waarom dit riskant is
+         - Gebruikers kunnen templates vertrouwen alsof ze vers zijn, terwijl ze op stale data werken.
+         - Bij AI-gegenereerde flows kan dat leiden tot achterhaalde scaffolds of foutieve verwachtingen.
+      - Kwalitatieve perfecte oplossing
+         - Maak freshness een first-class UI-state.
+         - Toon duidelijk wanneer templates uit memory cache, persistent cache of stale fallback komen.
+         - Bied expliciet retry- en refresh-gedrag met gebruikersuitleg.
+      - Definitie van klaar
+         - Elke templateweergave heeft eenduidige bron- en versheidscommunicatie.
+         - Fallbackgedrag is zichtbaar, testbaar en niet alleen telemetrisch.
+
+   - Risico 6: Outbox-corruptie is nu te stil
+      - Probleem
+         - `MirrorOutboxEntry.fromRaw()` retourneert `null` zonder diagnostiek als een queue-entry niet parsebaar is.
+      - Waarom dit riskant is
+         - Corrupte of legacy entries verdwijnen effectief uit de verwerkingsketen zonder duidelijke incidentspoor.
+         - Offline-betrouwbaarheid lijkt hoger dan ze werkelijk is omdat failure modes niet zichtbaar worden.
+      - Kwalitatieve perfecte oplossing
+         - Voeg detectie, logging en herstelstrategie toe voor corrupte entries.
+         - Classificeer parseproblemen: legacy format, partial write, invalid metadata, ongeldige datetime, ongeldige context.
+         - Maak onderscheid tussen recoverable en terminal corruption.
+      - Definitie van klaar
+         - Geen stille drops meer zonder observability event.
+         - Corrupte entries zijn telbaar, herleidbaar en testbaar.
+
+   - Risico 7: Dubbele contextrepresentatie in database verhoogt overgangsrisico
+      - Probleem
+         - `project_id` en `task_id` bestaan nog naast `project_uuid` en `task_uuid`.
+      - Waarom dit riskant is
+         - Elke schrijf- en leesroute moet overgangslogica blijven respecteren.
+         - Cleanup, analytics en operationele queries kunnen per ongeluk de oude velden blijven gebruiken.
+         - Data-integriteitsproblemen blijven langer verborgen zolang beide modellen bestaan.
+      - Kwalitatieve perfecte oplossing
+         - Maak een gecontroleerd migratiepad naar UUID als enige canonieke context.
+         - Laat alle nieuwe code UUID-first werken.
+         - Plan expliciet wanneer de oude tekstvelden alleen compat-laag zijn en wanneer ze verwijderd mogen worden.
+      - Definitie van klaar
+         - Runtime gebruikt UUID-canoniek.
+         - Oude tekstvelden zijn alleen nog compat of volledig verwijderd.
+         - Monitoring toont nul unresolved contextproblemen.
+
+   - Risico 8: Documentatie-drift rond backend- en bucketnamen
+      - Probleem
+         - Er bestaan nog historische verwijzingen naar niet-canonieke namen of oude architectuurtermen.
+      - Waarom dit riskant is
+         - Engineers, operators en reviewers trekken verschillende conclusies uit dezelfde feature.
+         - Security- en ops-procedures kunnen op verouderde aannames gebaseerd raken.
+      - Kwalitatieve perfecte oplossing
+         - Kies één canonieke woordenlijst en dwing die af in docs, runbooks en codecomments.
+         - Markeer legacy termen expliciet als verouderd in plaats van ze impliciet te laten bestaan.
+      - Definitie van klaar
+         - Alle officiële docs gebruiken dezelfde backend-, bucket- en flownamen.
+         - Legacy termen zijn óf verwijderd óf expliciet als historisch gelabeld.
+
+   - Risico 9: Realtime en editor-shell zijn functioneel sterk maar structureel zwaar
+      - Probleem
+         - `MirrorEditorScreen` blijft een grote screen met veel widget-level orchestration, subscriptions en state toggles.
+      - Waarom dit riskant is
+         - UI-regressies worden sneller geïntroduceerd naarmate meer features zoals voice, templates, terminal en diff-review tegelijk groeien.
+         - Hergebruik, testing en performance-inspectie worden moeilijker.
+      - Kwalitatieve perfecte oplossing
+         - Splits de screen in shell, session panel, explorer panel, terminal panel en template/status panel.
+         - Behoud één schermconcept, maar verminder verantwoordelijkheden per widget.
+      - Definitie van klaar
+         - Screen-level state is kleiner en overzichtelijker.
+         - Widgettests kunnen per functioneel paneel geschreven worden.
+
+   - Risico 10: Governance van security-beslissingen is nog niet volledig expliciet
+      - Probleem
+         - Mirror is technisch goed beveiligd, maar security-governance rond admin bypass, entitlementwijzigingen en operationele escalatie is nog niet overal even expliciet gedocumenteerd.
+      - Waarom dit riskant is
+         - Sterke code zonder sterke governance blijft kwetsbaar voor menselijke fouten.
+         - Audits worden lastiger als beslissingen wel enforced maar niet voldoende verklaard of gelogd worden.
+      - Kwalitatieve perfecte oplossing
+         - Maak beleid expliciet voor admin bypass, entitlement overrides, logging van gevoelige events en incident response.
+         - Veranker dit in runbook, threat model en auditeerbare events.
+      - Definitie van klaar
+         - Elke privilege-uitzondering heeft een logische eigenaar, auditspoor en operationele procedure.
+
+   ### 5. Gedetailleerde to-do lijst en workflow om de zwakke punten kwalitatief op te lossen
+   - Fase 0: Analyse bevriezen en scope aanscherpen
+      - Doel
+         - Eerst de oplossing afbakenen zodat implementatie niet tegelijk architectuur, UX en infrastructuur door elkaar verandert.
+      - Taken
+         - Bevestig de canonieke doelarchitectuur voor private versus cloud mode.
+         - Definieer welke problemen P0 zijn: runtimeconfig, launch-contract, outbox-observability, UUID-hardening.
+         - Markeer welke verbeteringen functioneel zijn en welke puur structureel zijn.
+      - Output
+         - Korte beslisnotitie met target architecture en prioriteiten.
+
+   - Fase 1: P0 stabiliteit en production-safety
+      - Werkstroom 1: private gRPC runtimeconfig harden
+         - Maak `lib/core/providers/mirror_runtime_config_provider.dart`.
+         - Verplaats host, port, TLS-vereisten en environment mapping naar die provider.
+         - Pas `lib/core/providers/mirror_entitlement_provider.dart` aan zodat `PrivateGrpcBackend` expliciet geconfigureerd wordt.
+         - Voeg tests toe voor veilige en onveilige configuraties.
+         - Acceptatiecriteria
+            - Geen productiepad gebruikt impliciete localhost-defaults.
+            - Release-configuratie faalt vroeg bij ongeldige private backend settings.
+      - Werkstroom 2: launch-result contract professionaliseren
+         - Maak `lib/features/mirror/models/mirror_launch_result.dart`.
+         - Pas `lib/features/mirror/services/mirror_launch_coordinator.dart` aan.
+         - Pas `lib/core/providers/ai_chat_provider.dart`, `lib/features/project/project_detail_screen.dart` en `lib/features/project/expandable_task_card.dart` aan.
+         - Voeg testmatrix toe voor alle deny- en success-paden.
+         - Acceptatiecriteria
+            - Elke deny-situatie heeft een expliciet typed resultaat.
+            - UI toont correcte feedback per reden.
+      - Werkstroom 3: outbox-corruptie zichtbaar maken
+         - Voeg observability events toe voor parse failures.
+         - Voeg recovery policy toe: skip with audit, quarantine, of migrate legacy format.
+         - Voeg tests toe met corrupte en legacy entries.
+         - Acceptatiecriteria
+            - Corrupte entries verdwijnen niet meer stil.
+            - Er is incidentinformatie beschikbaar zonder de app te blokkeren.
+
+   - Fase 2: P1 architectuurvereenvoudiging
+      - Werkstroom 4: orchestration ownership expliciteren
+         - Statusupdate: owner-flowmap is opgesteld in `docs/mirror_orchestration_flowmap.md` met primaire owners voor launch/generate/compile/preview/apply/replay; resterend is verdere reductie van `MirrorOrchestratorService` naar strikt resiliency/replay op codepadniveau.
+         - Maak een end-to-end flowmap voor launch, generate, compile, preview, apply en replay.
+         - Bepaal per flow de primaire owner-service.
+         - Vereenvoudig `MirrorOrchestratorService` tot resiliency- en replay-laag waar mogelijk.
+         - Houd `MirrorApplyFlowCoordinator` als owner van interactieve apply-flow.
+         - Acceptatiecriteria
+            - Iedere businessflow heeft één duidelijke owner.
+            - Helpers bevatten geen verborgen business branching meer.
+      - Werkstroom 5: session provider opschonen
+         - Statusupdate: de pure baseline/fingerprint-opbouw is geëxtraheerd naar `lib/core/services/mirror_session_state_service.dart`, persist-snapshot/replay-beslissingen naar `lib/core/services/mirror_session_persistence_service.dart`, bootstrap parse/timeout-fallback/async load/merge-assembly-beslissingen naar `lib/core/services/mirror_session_bootstrap_orchestration_service.dart`, en in-session file/log + compile-artifact mutaties naar `lib/core/services/mirror_session_state_mutation_service.dart`; expliciete persist-checkpoints delen nu één helperpad. `mirror_session_provider.dart` houdt hiermee vooral generation-guards, state-transitions en notifier-lifecycle. De state-transition matrix staat nu expliciet in `docs/mirror_session_state_transitions.md`.
+         - Maak state transitions expliciet documenteerbaar.
+         - Voeg tests toe voor race-achtige bootstrapgevallen.
+         - Acceptatiecriteria
+            - Session provider is kleiner, begrijpelijker en beter testbaar.
+            - Bootstrap, restore en persist kunnen onafhankelijk worden geverifieerd.
+
+   - Fase 3: P1/P2 UX- en transparantieverbeteringen
+      - Werkstroom 6: stale template UX first-class maken
+         - Statusupdate: stale fallback UX toont nu expliciet warning + fallback details (reason/source/age) met cache-age formattering, refresh-interactie en contracttestdekking in templates sheet.
+         - Breng `MirrorTemplatesLoadResult` zichtbaarder naar de UI.
+         - Voeg banner of statusblok toe voor stale fallback, cachebron en laatste fetchmoment.
+         - Voeg retry-knop en expliciete gebruikerstaal toe.
+         - Acceptatiecriteria
+            - Gebruiker ziet direct of templates vers of stale zijn.
+            - Widgettests dekken fresh en stale flows af.
+      - Werkstroom 7: editor-shell modulariseren
+         - Splits `MirrorEditorScreen` in duidelijke panel- of shellcomponenten.
+         - Houd orchestration in controller/services en presentatie in widgets.
+         - Statusupdate: permission-revoked weergave is losgetrokken naar `lib/features/mirror/widgets/mirror_permission_revoked_view.dart`, retry-feedback presentatie naar `lib/features/mirror/widgets/mirror_retry_feedback_card.dart`, file/language/statusline-helperlogica naar `lib/features/mirror/services/mirror_editor_file_presentation_service.dart`, retry-snackbar side effects naar `lib/features/mirror/services/mirror_run_retry_feedback_service.dart`, post-run terminal-analyse naar `lib/features/mirror/services/mirror_run_post_execution_analysis_service.dart`, terminal line mapping/parsing naar `lib/features/mirror/services/mirror_terminal_line_processing_service.dart`, run-start preflight/baseline orchestration naar `lib/features/mirror/services/mirror_run_start_service.dart`, async run-uitvoering + terminal-delta outcome naar `lib/features/mirror/services/mirror_run_execution_service.dart`, run-outcome state-resolutie naar `lib/features/mirror/services/mirror_run_outcome_resolution_service.dart`, run-UI state-transitions naar `lib/features/mirror/services/mirror_run_ui_state_transition_service.dart`, run-completion orchestration naar `lib/features/mirror/services/mirror_run_completion_service.dart`, en run-attempt dispatch/complete keten naar `lib/features/mirror/services/mirror_run_attempt_service.dart`; deze onderdelen zijn zelfstandig afgedekt met widget- en unit-tests.
+         - Afronding: werkstroom afgerond voor huidige scope; resterende verdere splitsing alleen bij nieuwe featuregroei of regressiesignalen.
+         - Acceptatiecriteria
+            - Screenbestand wordt aantoonbaar kleiner.
+            - Relevante panelen zijn los testbaar.
+
+   - Fase 4: P2 governance en documentatie-afronding
+      - Werkstroom 8: terminologie en operationele docs harmoniseren
+         - Controleer `docs/README.md`, runbooks, securitydocs en architectuurdocs op canonieke Mirror-termen.
+         - Statusupdate: actieve docs zijn geharmoniseerd; legacy namen komen alleen nog voor als expliciet historische verwijzing in analyse-/backlogtekst.
+         - Verwijder of label legacy termen expliciet.
+         - Acceptatiecriteria
+            - Geen verwarring meer tussen huidige en historische backend-/bucketnamen.
+      - Werkstroom 9: threat model en governance expliciteren
+         - Voeg een compacte maar concrete STRIDE-sectie toe aan het Mirror security/runbook materiaal.
+         - Leg admin bypass en incidentprocedure vast.
+         - Statusupdate: afgerond. `docs/mirror_threat_model.md` bevat STRIDE + admin-bypassgovernance en `docs/mirror_operational_runbook.md` bevat nu een expliciete incidentprocedure voor admin bypass/privilege exceptions.
+         - Acceptatiecriteria
+            - Security-beslissingen zijn niet alleen enforced, maar ook uitlegbaar en auditeerbaar.
+
+   - Fase 5: Datalaag afronden
+      - Werkstroom 10: UUID-hardening operationaliseren
+         - Draai verificatiequeries voor unresolved context.
+         - Los eventuele `mirror_context_fk_migration_issues` op.
+         - Maak alle nieuwe code UUID-first.
+         - Plan uitfasering van tekstcontextvelden.
+         - Statusupdate: operationeel voorbereid. Verificatie- en remediatieflow is expliciet vastgelegd via `supabase/verification/20260322_mirror_context_fk_post_migration_verification.sql`, `docs/mirror-db-performance-baseline.md`, `docs/mirror-production-readiness-checklist.md`, `docs/mirror_operational_runbook.md` (inclusief staging quick command bundles voor bash en Windows PowerShell met evidence-output), het één-commando uitvoerscript `tool/run_uuid_hardening_staging.ps1` (uitvoerbaar via `powershell -NoProfile -ExecutionPolicy Bypass -File ...`, met automatische Docker-fallback als lokale `psql` ontbreekt), en het uitvoerartifact `docs/mirror_uuid_hardening_execution_log.md` (inclusief ingevulde staging quick-start template en canonieke evidence-bestandsnamen). Daarnaast dwingt de readiness-checklist nu verplichte execution-evidencevelden af als GO-gate. Resterend: uitvoering en evidence in staging/production.
+         - Acceptatiecriteria
+            - Geen unresolved UUID-context meer in runtimekritieke tabellen.
+            - Operationele dashboards en queries gebruiken UUID-canoniek.
+
+   - Prioriteitsvolgorde
+      - P0
+         - Private gRPC runtimeconfig harden.
+         - Launch-result typed maken.
+         - Outbox corruption observability toevoegen.
+         - UUID-hardening afronden voor runtimekritieke tabellen.
+      - P1
+         - Orchestration ownership expliciteren.
+         - Session provider opschonen.
+         - Editor-shell modulariseren.
+      - P2
+         - Stale template UX verbeteren.
+         - Terminologie en documentatie harmoniseren.
+         - Threat model en governance expliciteren.
+
+   - Kwaliteitscriteria voor een perfecte oplossing
+      - Elke architectuurbeslissing heeft één duidelijke eigenaar in code.
+      - Elke deny-, fallback- en failure-state is expliciet modelleerbaar en testbaar.
+      - Configuratie is centraal, veilig en environment-aware.
+      - Offline herstelpaden zijn observeerbaar en niet stil.
+      - Documentatie gebruikt exact dezelfde canonieke termen als de code.
+      - De oplossing vermindert complexiteit in plaats van nieuwe abstracties bovenop oude toe te voegen.
+
+   - Eindadvies
+      - De juiste aanpak is niet een grote rewrite, maar een gerichte kwaliteitscampagne in vijf fasen.
+      - Eerst production-safety en contracthelderheid, daarna orchestration-vereenvoudiging, vervolgens UX-transparantie en tenslotte governance- en migratieafbouw.
+      - Als deze workflow consequent wordt uitgevoerd, verschuift Mirror van sterk en ambitieus naar echt duurzaam en excellent onderhoudbaar.

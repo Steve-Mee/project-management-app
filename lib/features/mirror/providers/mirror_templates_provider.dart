@@ -17,6 +17,13 @@ enum MirrorTemplatesFreshness {
   staleFallback,
 }
 
+enum MirrorTemplatesDataSource {
+  network,
+  memory,
+  persistent,
+  none,
+}
+
 class MirrorTemplatesLoadReasonCodes {
   const MirrorTemplatesLoadReasonCodes._();
 
@@ -32,6 +39,7 @@ class MirrorTemplatesLoadResult {
     required this.templates,
     required this.freshness,
     required this.source,
+    required this.sourceKind,
     this.reasonCode,
     this.fetchedAtUtc,
     this.cacheAge,
@@ -40,11 +48,25 @@ class MirrorTemplatesLoadResult {
   final List<MirrorTemplate> templates;
   final MirrorTemplatesFreshness freshness;
   final String source;
+  final MirrorTemplatesDataSource sourceKind;
   final String? reasonCode;
   final DateTime? fetchedAtUtc;
   final Duration? cacheAge;
 
   bool get isStaleFallback => freshness == MirrorTemplatesFreshness.staleFallback;
+
+  String get staleFallbackSourceLabel {
+    switch (sourceKind) {
+      case MirrorTemplatesDataSource.memory:
+        return 'memory cache';
+      case MirrorTemplatesDataSource.persistent:
+        return 'persistent cache';
+      case MirrorTemplatesDataSource.network:
+        return 'network';
+      case MirrorTemplatesDataSource.none:
+        return 'cache unavailable';
+    }
+  }
 }
 
 final mirrorTemplatesCacheProvider =
@@ -97,15 +119,18 @@ final mirrorTemplatesProvider =
   var cached = _MirrorTemplatesMemoryCache.snapshot;
   String? missReason;
   var cacheSource = 'none';
+  var cacheSourceKind = MirrorTemplatesDataSource.none;
 
   if (cached != null) {
     cacheSource = 'memory';
+    cacheSourceKind = MirrorTemplatesDataSource.memory;
   }
 
   if (cached == null) {
     final persisted = await persistentCache.readSnapshot();
     if (persisted != null) {
       cacheSource = 'persistent';
+      cacheSourceKind = MirrorTemplatesDataSource.persistent;
       cached = _TemplatesCacheSnapshot(
         templates: persisted.templates,
         serverVersion: persisted.serverVersion,
@@ -134,6 +159,7 @@ final mirrorTemplatesProvider =
         templates: cached.templates,
         freshness: MirrorTemplatesFreshness.fresh,
         source: cacheSource,
+        sourceKind: cacheSourceKind,
         fetchedAtUtc: cached.fetchedAtUtc,
         cacheAge: cacheAge,
       );
@@ -173,6 +199,7 @@ final mirrorTemplatesProvider =
       templates: templates,
       freshness: MirrorTemplatesFreshness.fresh,
       source: 'network',
+      sourceKind: MirrorTemplatesDataSource.network,
       fetchedAtUtc: now,
       cacheAge: Duration.zero,
     );
@@ -203,6 +230,7 @@ final mirrorTemplatesProvider =
         templates: cached.templates,
         freshness: MirrorTemplatesFreshness.staleFallback,
         source: cacheSource,
+        sourceKind: cacheSourceKind,
         reasonCode: fallbackReason,
         fetchedAtUtc: cached.fetchedAtUtc,
         cacheAge: now.difference(cached.fetchedAtUtc),

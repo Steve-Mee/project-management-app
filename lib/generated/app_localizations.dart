@@ -3201,6 +3201,12 @@ abstract class AppLocalizations {
   /// **'Mirror is not available for your account.'**
   String get mirrorPermissionDenied;
 
+  /// Snackbar message when the Mirror feature flag is disabled.
+  ///
+  /// In en, this message translates to:
+  /// **'Mirror is currently disabled by admin.'**
+  String get mirrorFeatureDisabled;
+
   /// Description shown on the permission-revoked screen after session deactivation.
   ///
   /// In en, this message translates to:

@@ -23,14 +23,28 @@ The following rules are permanent unless explicitly changed by architecture deci
 
 ## Runtime Components
 
-- `MirrorEditorScreen`: user interaction surface
-- `MirrorEditorOrchestrationService`: compile and apply orchestration
-- `MirrorEditorRunService`: run lifecycle and in-flight guards
-- `MirrorEditorRealtimeController`: realtime stream subscription and dedup
+- `MirrorEditorScreen`: user interaction surface only — no orchestration logic
+- `MirrorRunFlowService`: UI-facing run wrapper; widget concerns, dialog display, terminal line mapping
+- `MirrorApplyFlowCoordinator`: owns the full generate → compile → preview → approve → apply pipeline; no Flutter widgets or BuildContext
+- `MirrorOrchestratorService`: wraps the active compute backend with retry and outbox replay resilience
+- `MirrorBackendWorkflows`: pure stateless patch-building utility; deterministic transforms only, no side effects
+- `MirrorApplyPostHooksService`: post-apply persistence hooks (timestamps, drafts); no provider invalidation
 - `MirrorGatewayBackend`: cloud path transport and error mapping
-- `PrivateGrpcBackend`: local path transport
+- `PrivateGrpcBackend`: local path transport (config via `MirrorPrivateGrpcRuntimeConfig`)
 - `mirror-gateway`: auth validation, idempotency claim/finalization, forwarding
 - Runner services: request execution, artifacts, diagnostics
+
+## Mirror Orchestration Ownership
+
+Each Mirror service has a single ownership axis. Never mix.
+
+| Service | Owns | Does NOT own |
+|---|---|---|
+| `MirrorRunFlowService` | Widget concerns, session reads, approval dialog, terminal lines | Backend calls, pipeline logic |
+| `MirrorApplyFlowCoordinator` | generate→compile→preview→approve→apply pipeline | UI widgets, provider invalidation |
+| `MirrorOrchestratorService` | Retry policy, outbox replay, circuit-breaker wrapping | Apply flow sequencing, UI |
+| `MirrorBackendWorkflows` | Patch/plan construction (pure functions) | State, network, side effects |
+| `MirrorApplyPostHooksService` | Post-apply persistence (timestamps, drafts) | Provider invalidation, backend calls |
 
 ## End-To-End Flow
 

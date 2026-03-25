@@ -9,6 +9,7 @@ abstract final class AnalyticsEventName {
   static const String inviteSent = 'invite_sent';
 
   static const String featureFlagChanged = 'feature_flag_changed';
+  static const String mirrorLaunchResolved = 'mirror_launch_resolved';
 
   static const String projectUpdated = 'project_updated';
   static const String projectDeleted = 'project_deleted';

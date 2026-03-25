@@ -17,6 +17,7 @@ import 'package:project_management_app/features/project/requirements_icon_list_v
 import 'package:go_router/go_router.dart';
 import 'package:project_management_app/core/providers/ai_chat_provider.dart';
 import 'package:project_management_app/core/routes.dart';
+import 'package:project_management_app/features/mirror/mirror_launch_feedback.dart';
 
 // Caching integrated: projectByIdProvider uses a 5-minute TTL cache.
 
@@ -313,7 +314,7 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen>
     required String projectId,
     required String taskId,
   }) async {
-    final payload = await ref
+    final result = await ref
         .read(aiChatBridgeProvider.notifier)
         .openMirrorFromTask(
           projectId: projectId,
@@ -325,15 +326,21 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen>
       return;
     }
 
-    if (payload == null) {
+    if (!result.isSuccess || result.payload == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(AppLocalizations.of(context)!.mirrorUnavailableForAccount),
+          content: Text(
+            mirrorLaunchFailureMessage(
+              AppLocalizations.of(context)!,
+              result,
+            ),
+          ),
         ),
       );
       return;
     }
 
+    final payload = result.payload!;
     context.push(
       AppRoutes.mirrorEditorPath(payload.projectId, payload.taskId),
     );

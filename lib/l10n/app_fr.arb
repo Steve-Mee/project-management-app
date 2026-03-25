@@ -1183,6 +1183,10 @@
   "@mirrorPermissionDenied": {
     "description": "Screen-level message when user lacks use_mirror permission."
   },
+  "mirrorFeatureDisabled": "Mirror est actuellement désactivé par l'administrateur.",
+  "@mirrorFeatureDisabled": {
+    "description": "Snackbar message when the Mirror feature flag is disabled."
+  },
   "mirrorPermissionRevokedSessionDisabled": "Votre session d'éditeur Mirror a été désactivée parce que vos autorisations ont changé. Fermez cet écran pour continuer en toute sécurité.",
   "@mirrorPermissionRevokedSessionDisabled": {
     "description": "Description shown on the permission-revoked screen after session deactivation."

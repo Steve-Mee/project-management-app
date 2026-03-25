@@ -226,6 +226,7 @@ class AppRoutes {
             final projectId =
                 state.pathParameters['projectId'] ?? '';
             final taskId = state.pathParameters['taskId'] ?? '';
+            final l10n = AppLocalizations.of(context)!;
 
             return Consumer(
               builder: (context, ref, _) {
@@ -236,8 +237,8 @@ class AppRoutes {
                   ),
                   error: (_, __) => Scaffold(
                     appBar: AppBar(),
-                    body: const Center(
-                      child: Text('Mirror is currently unavailable.'),
+                    body: Center(
+                      child: Text(l10n.mirrorUnavailableForAccount),
                     ),
                   ),
                   data: (guard) {
@@ -263,17 +264,15 @@ class AppRoutes {
                       case MirrorRouteGuardResult.featureDisabled:
                         return Scaffold(
                           appBar: AppBar(),
-                          body: const Center(
-                            child: Text('Mirror is currently disabled.'),
+                          body: Center(
+                            child: Text(l10n.mirrorFeatureDisabled),
                           ),
                         );
                       case MirrorRouteGuardResult.permissionDenied:
                         return Scaffold(
                           appBar: AppBar(),
-                          body: const Center(
-                            child: Text(
-                              'You do not have access to Mirror.',
-                            ),
+                          body: Center(
+                            child: Text(l10n.mirrorPermissionDenied),
                           ),
                         );
                       case MirrorRouteGuardResult.loading:

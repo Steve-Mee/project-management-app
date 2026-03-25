@@ -1721,6 +1721,10 @@ class AppLocalizationsNl extends AppLocalizations {
       'Mirror is niet beschikbaar voor je account.';
 
   @override
+  String get mirrorFeatureDisabled =>
+      'Mirror is momenteel uitgeschakeld door de beheerder.';
+
+  @override
   String get mirrorPermissionRevokedSessionDisabled =>
       'Je Mirror-editorsessie is uitgeschakeld omdat je rechten zijn gewijzigd. Sluit dit scherm om veilig verder te gaan.';
 

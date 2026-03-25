@@ -1702,6 +1702,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get mirrorPermissionDenied => 'Mirror 不适用于您的帐户。';
 
   @override
+  String get mirrorFeatureDisabled => 'Mirror 目前已被管理员禁用。';
+
+  @override
   String get mirrorPermissionRevokedSessionDisabled =>
       '你的 Mirror 编辑器会话已被禁用，因为你的权限已更改。关闭此屏幕以安全继续。';
 

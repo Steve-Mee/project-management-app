@@ -1704,6 +1704,9 @@ class AppLocalizationsKo extends AppLocalizations {
   String get mirrorPermissionDenied => 'Mirror는 귀하의 계정에서 사용할 수 없습니다.';
 
   @override
+  String get mirrorFeatureDisabled => 'Mirror가 현재 관리자에 의해 비활성화되어 있습니다.';
+
+  @override
   String get mirrorPermissionRevokedSessionDisabled =>
       '권한이 변경되어 Mirror 편집기 세션이 비활성화되었습니다. 안전하게 계속하려면 이 화면을 닫으세요.';
 

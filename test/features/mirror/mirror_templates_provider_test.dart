@@ -218,6 +218,8 @@ void main() {
         result.reasonCode,
         MirrorTemplatesLoadReasonCodes.networkError,
       );
+      expect(result.sourceKind, MirrorTemplatesDataSource.memory);
+      expect(result.staleFallbackSourceLabel, 'memory cache');
       expect(result.cacheAge, isNotNull);
     });
 
@@ -243,6 +245,8 @@ void main() {
         result.reasonCode,
         MirrorTemplatesLoadReasonCodes.networkError,
       );
+      expect(result.sourceKind, MirrorTemplatesDataSource.persistent);
+      expect(result.staleFallbackSourceLabel, 'persistent cache');
       expect(result.cacheAge, isNotNull);
     });
 
@@ -263,6 +267,7 @@ void main() {
       final result = await container.read(mirrorTemplatesProvider.future);
       expect(result.isStaleFallback, isTrue);
       expect(result.reasonCode, MirrorTemplatesLoadReasonCodes.timeout);
+      expect(result.sourceKind, MirrorTemplatesDataSource.memory);
     });
 
     test('classifies version mismatch fallback reason for diagnostics', () {

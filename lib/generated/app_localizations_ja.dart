@@ -1704,6 +1704,9 @@ class AppLocalizationsJa extends AppLocalizations {
   String get mirrorPermissionDenied => 'Mirror はご使用のアカウントでは利用できません。';
 
   @override
+  String get mirrorFeatureDisabled => 'Mirror は現在、管理者によって無効化されています。';
+
+  @override
   String get mirrorPermissionRevokedSessionDisabled =>
       '権限が変更されたため、Mirror エディターのセッションは無効化されました。安全に続行するにはこの画面を閉じてください。';
 

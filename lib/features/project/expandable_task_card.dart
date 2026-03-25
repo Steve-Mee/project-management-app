@@ -11,6 +11,7 @@ import 'package:project_management_app/features/project/task_help_dialog.dart';
 import 'package:go_router/go_router.dart';
 import 'package:project_management_app/core/providers/ai_chat_provider.dart';
 import 'package:project_management_app/core/routes.dart';
+import 'package:project_management_app/features/mirror/mirror_launch_feedback.dart';
 
 /// Expandable task card with sub-tasks and assignment functionality
 class ExpandableTaskCard extends ConsumerStatefulWidget {
@@ -275,7 +276,7 @@ class _ExpandableTaskCardState extends ConsumerState<ExpandableTaskCard> {
   }
 
   Future<void> _openMirrorEditor() async {
-    final payload = await ref
+    final result = await ref
         .read(aiChatBridgeProvider.notifier)
         .openMirrorFromTask(
           projectId: widget.task.projectId,
@@ -287,15 +288,21 @@ class _ExpandableTaskCardState extends ConsumerState<ExpandableTaskCard> {
       return;
     }
 
-    if (payload == null) {
+    if (!result.isSuccess || result.payload == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(AppLocalizations.of(context)!.mirrorUnavailableForAccount),
+          content: Text(
+            mirrorLaunchFailureMessage(
+              AppLocalizations.of(context)!,
+              result,
+            ),
+          ),
         ),
       );
       return;
     }
 
+    final payload = result.payload!;
     context.push(
       AppRoutes.mirrorEditorPath(payload.projectId, payload.taskId),
     );

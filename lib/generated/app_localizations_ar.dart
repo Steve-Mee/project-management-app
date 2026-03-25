@@ -1710,6 +1710,10 @@ class AppLocalizationsAr extends AppLocalizations {
   String get mirrorPermissionDenied => 'Mirror غير متاح لحسابك.';
 
   @override
+  String get mirrorFeatureDisabled =>
+      'ميزة Mirror معطلة حالياً من قِبل المشرف.';
+
+  @override
   String get mirrorPermissionRevokedSessionDisabled =>
       'تم تعطيل جلسة محرر Mirror لأن صلاحياتك تغيّرت. أغلق هذه الشاشة للمتابعة بأمان.';
 

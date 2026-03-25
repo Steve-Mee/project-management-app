@@ -1,4 +1,4 @@
-import 'dart:async';
+﻿import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -76,6 +76,10 @@ Future<void> _waitUntil(bool Function() predicate) async {
     await Future<void>.delayed(const Duration(milliseconds: 10));
   }
 }
+
+bool _isBootstrapTerminal(MirrorSessionBootstrapPhase phase) =>
+    phase == MirrorSessionBootstrapPhase.ready ||
+    phase == MirrorSessionBootstrapPhase.degraded;
 
 ProviderContainer _buildContainer({
   required MirrorDraftCacheService draftCacheService,
@@ -315,6 +319,120 @@ void main() {
       await _waitUntil(() => drafts.writes.isNotEmpty);
 
       expect(drafts.writes.last.files['lib/main.dart'], 'debounced-change');
+    });
+  });
+
+  group('MirrorSessionNotifier bootstrap race conditions', () {
+    test('repository timeout does not discard concurrent draft files', () async {
+      final drafts = _RecordingDraftCacheService();
+
+      // Use a direct ProviderContainer to override the timeout duration.
+      final container = ProviderContainer(
+        overrides: [
+          mirrorDraftCacheServiceProvider.overrideWith((ref) => drafts),
+          mirrorResolvedModeProvider.overrideWith((ref) => 'private'),
+          mirrorResolvedOfflineWarningProvider.overrideWith((ref) => null),
+          mirrorSessionRepositoryBootstrapTimeoutProvider
+              .overrideWith((ref) => const Duration(milliseconds: 10)),
+          mirrorSessionDraftBootstrapProvider.overrideWith(
+            (ref, sessionKey) async => const MirrorSessionBootstrapDraft(
+              files: <String, String>{
+                'lib/main.dart': 'draft-after-timeout',
+              },
+              selectedFile: 'lib/main.dart',
+              contextVersion: 2,
+            ),
+          ),
+          mirrorSessionRepositoryBootstrapProvider.overrideWith(
+            (ref, sessionKey) async {
+              // Intentionally slower than the 10ms timeout override above.
+              await Future<void>.delayed(const Duration(milliseconds: 200));
+              return null;
+            },
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      final sub = container.listen<MirrorSessionState>(
+        mirrorSessionProvider('project-1::task-1'),
+        (_, __) {},
+        fireImmediately: true,
+      );
+      addTearDown(sub.close);
+
+      // Repository timeout produces a degraded (not ready) phase.
+      await _waitUntil(
+        () => _isBootstrapTerminal(
+          container
+              .read(mirrorSessionProvider('project-1::task-1'))
+              .bootstrapPhase,
+        ),
+      );
+
+      final session =
+          container.read(mirrorSessionProvider('project-1::task-1'));
+      expect(
+        session.files['lib/main.dart'],
+        'draft-after-timeout',
+        reason: 'Draft must survive a repository load timeout',
+      );
+      expect(
+        session.bootstrapSource,
+        contains('draft'),
+        reason: 'Bootstrap source should report draft origin',
+      );
+    });
+
+    test('repository error does not discard draft files', () async {
+      final drafts = _RecordingDraftCacheService();
+
+      final container = _buildContainer(
+        draftCacheService: drafts,
+        draftLoader: (_) async => const MirrorSessionBootstrapDraft(
+          files: <String, String>{
+            'lib/app.dart': 'error-path-draft',
+          },
+          selectedFile: 'lib/app.dart',
+          contextVersion: 1,
+        ),
+        repositoryLoader: (_) async => const MirrorSessionBootstrapRepository(
+          files: <String, String>{},
+          preferredSelectedFile: '',
+          errorMessage: 'repository load failed',
+          reasonCode: MirrorSessionBootstrapReasonCodes.repositoryError,
+        ),
+      );
+      addTearDown(container.dispose);
+
+      final sub = container.listen<MirrorSessionState>(
+        mirrorSessionProvider('project-1::task-1'),
+        (_, __) {},
+        fireImmediately: true,
+      );
+      addTearDown(sub.close);
+
+      // Repository error produces a degraded (not ready) phase.
+      await _waitUntil(
+        () => _isBootstrapTerminal(
+          container
+              .read(mirrorSessionProvider('project-1::task-1'))
+              .bootstrapPhase,
+        ),
+      );
+
+      final session =
+          container.read(mirrorSessionProvider('project-1::task-1'));
+      expect(
+        session.files['lib/app.dart'],
+        'error-path-draft',
+        reason: 'Draft must survive a repository load error',
+      );
+      expect(
+        session.terminalLog,
+        contains('repository load failed'),
+        reason: 'Repository error message must appear in terminal log',
+      );
     });
   });
 }

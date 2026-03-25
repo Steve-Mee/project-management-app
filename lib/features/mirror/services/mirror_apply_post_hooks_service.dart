@@ -21,7 +21,14 @@ final mirrorApplyPostHooksServiceProvider =
   (ref) => const MirrorApplyPostHooksService(),
 );
 
-/// Service for non-provider state cleanup after apply (timestamps, drafts only).
+/// Post-apply persistence side-effect hooks.
+///
+/// Ownership boundary: this service owns ONLY the persistence callbacks that
+/// run after a successful apply — persisting session snapshots, updating apply
+/// timestamps, and clearing pending draft content. It does NOT invalidate
+/// Riverpod providers (that is the UI layer's responsibility) and performs no
+/// backend calls. The `const` constructor is intentional; no mutable state
+/// belongs here.
 class MirrorApplyPostHooksService {
   const MirrorApplyPostHooksService({
     Future<SharedPreferences> Function()? prefsLoader,

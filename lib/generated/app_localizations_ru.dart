@@ -1716,6 +1716,10 @@ class AppLocalizationsRu extends AppLocalizations {
       'Mirror недоступен для вашей учётной записи.';
 
   @override
+  String get mirrorFeatureDisabled =>
+      'Mirror в настоящее время отключён администратором.';
+
+  @override
   String get mirrorPermissionRevokedSessionDisabled =>
       'Сессия редактора Mirror была отключена, потому что ваши права изменились. Закройте этот экран, чтобы безопасно продолжить.';
 

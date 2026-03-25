@@ -1812,6 +1812,10 @@
   "@mirrorPermissionDenied": {
     "description": "Screen-level message when user lacks use_mirror permission."
   },
+  "mirrorFeatureDisabled": "Mirror is momenteel uitgeschakeld door de beheerder.",
+  "@mirrorFeatureDisabled": {
+    "description": "Snackbar message when the Mirror feature flag is disabled."
+  },
   "mirrorPermissionRevokedSessionDisabled": "Je Mirror-editorsessie is uitgeschakeld omdat je rechten zijn gewijzigd. Sluit dit scherm om veilig verder te gaan.",
   "@mirrorPermissionRevokedSessionDisabled": {
     "description": "Description shown on the permission-revoked screen after session deactivation."

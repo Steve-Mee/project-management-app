@@ -3,16 +3,25 @@ library;
 import 'dart:async';
 import 'dart:convert';
 
-import 'package:crypto/crypto.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pma_core/models/project_model.dart';
 import 'package:pma_core/models/task_model.dart';
 import 'package:pma_core/providers/project/project_providers.dart';
 import 'package:pma_core/providers/task/task_providers.dart';
 
+import '../services/mirror_session_bootstrap_orchestration_service.dart';
+import '../services/mirror_session_persistence_service.dart';
+import '../services/mirror_session_state_mutation_service.dart';
+import '../services/mirror_session_state_service.dart';
 import '../../features/mirror/services/mirror_draft_cache_service.dart';
 import 'mirror_mode_controller_provider.dart';
 import 'mirror_session_bootstrap.dart';
+
+const _mirrorSessionStateService = MirrorSessionStateService();
+const _mirrorSessionBootstrapOrchestrationService =
+  MirrorSessionBootstrapOrchestrationService();
+const _mirrorSessionPersistenceService = MirrorSessionPersistenceService();
+const _mirrorSessionStateMutationService = MirrorSessionStateMutationService();
 
 final mirrorDraftCacheServiceProvider = Provider<MirrorDraftCacheService>((ref) {
   return const MirrorDraftCacheService();
@@ -91,17 +100,20 @@ class MirrorSessionState {
     required String projectId,
     required String taskId,
   }) {
-    final defaultFiles = _defaultFiles(projectId: projectId, taskId: taskId);
+    final baseline = _mirrorSessionStateService.buildBaseline(
+      projectId: projectId,
+      taskId: taskId,
+    );
 
     return MirrorSessionState(
       projectId: projectId,
       taskId: taskId,
-      files: Map<String, String>.from(defaultFiles),
-      selectedFile: 'lib/main.dart',
+      files: Map<String, String>.from(baseline.files),
+      selectedFile: baseline.selectedFile,
       liveOutput: <String>[],
       terminalLog: <String>[],
-      contextFingerprint: _computeContextFingerprint(defaultFiles),
-      contextVersion: _draftContextVersion,
+      contextFingerprint: baseline.contextFingerprint,
+      contextVersion: baseline.contextVersion,
       compileFingerprint: null,
       compileServerVersionToken: null,
       bootstrapPhase: MirrorSessionBootstrapPhase.initial,
@@ -109,37 +121,26 @@ class MirrorSessionState {
       bootstrapReasonCode: null,
     );
   }
-
-  static Map<String, String> _defaultFiles({
-    required String projectId,
-    required String taskId,
-  }) {
-    return <String, String>{
-      'README.md': '# Mirror Session\n\nProject: $projectId\nTask: $taskId\n',
-      'lib/main.dart':
-          "void main() {\n  print('Mirror session: $projectId::$taskId');\n}\n",
-    };
-  }
 }
 
-const int _draftContextVersion = 1;
-
-String _computeContextFingerprint(Map<String, String> files) {
-  final entries = files.entries.toList(growable: false)
-    ..sort((a, b) => a.key.compareTo(b.key));
-
-  final buffer = StringBuffer();
-  for (final entry in entries) {
-    buffer
-      ..write(entry.key)
-      ..write('::')
-      ..write(entry.value)
-      ..write('\n');
-  }
-
-  return sha256.convert(utf8.encode(buffer.toString())).toString();
-}
-
+/// Riverpod notifier that manages the in-editor Mirror session lifecycle.
+///
+/// Ownership axes (do not mix):
+///  1. **Bootstrap orchestration** — `_bootstrapSession` reads draft-cache and
+///     repository FutureProviders concurrently, applies a repository-load
+///     timeout for responsiveness, then delegates the merge decision to the
+///     pure `resolveMirrorSessionBootstrap()` function.
+///  2. **In-session state mutations** — selectFile, updateSelectedFileContent,
+///     upsertFileContent, appendLiveOutput, appendTerminalLine, and
+///     setCompileValidationArtifacts each call `_replaceState` which bumps
+///     `_stateGeneration` so stale persist work can be detected.
+///  3. **Draft persistence lifecycle** — every mutation schedules a debounced
+///     write; explicit checkpoints (persistOnRunStart, persistOnApply,
+///     persistOnRouteExit) flush immediately. The dispose callback flushes
+///     using a captured service reference to remain safe after `ref` teardown.
+///  4. **Race-condition generation guards** — `_bootstrapGeneration` prevents
+///     stale async bootstrap results from overwriting newer state; `_stateGeneration`
+///     ensures a busy-write retry uses the latest snapshot.
 class MirrorSessionNotifier
     extends AutoDisposeFamilyNotifier<MirrorSessionState, String> {
   static const Duration _draftPersistDebounce = Duration(milliseconds: 500);
@@ -187,20 +188,21 @@ class MirrorSessionNotifier
       unawaited(Future<void>.microtask(() => _bootstrapSession(sessionKey)));
     }
 
-    final parts = sessionKey.split('::');
-    final projectId = parts.isNotEmpty ? parts[0] : '';
-    final taskId = parts.length > 1 ? parts[1] : '';
-    return MirrorSessionState.initial(projectId: projectId, taskId: taskId);
+    final keyParts =
+        _mirrorSessionBootstrapOrchestrationService.parseSessionKey(sessionKey);
+    return MirrorSessionState.initial(
+      projectId: keyParts.projectId,
+      taskId: keyParts.taskId,
+    );
   }
 
   Future<void> _bootstrapSession(String sessionKey) async {
     final generation = ++_bootstrapGeneration;
-    final parts = sessionKey.split('::');
-    final projectId = parts.isNotEmpty ? parts[0] : '';
-    final taskId = parts.length > 1 ? parts[1] : '';
+    final keyParts =
+        _mirrorSessionBootstrapOrchestrationService.parseSessionKey(sessionKey);
     final baseline = MirrorSessionState.initial(
-      projectId: projectId,
-      taskId: taskId,
+      projectId: keyParts.projectId,
+      taskId: keyParts.taskId,
     );
 
     _replaceState(
@@ -215,148 +217,137 @@ class MirrorSessionNotifier
         ref.read(mirrorSessionDraftBootstrapProvider(sessionKey).future);
     final repositoryFuture =
         ref.read(mirrorSessionRepositoryBootstrapProvider(sessionKey).future);
-    final repositoryTimeout =
-      ref.read(mirrorSessionRepositoryBootstrapTimeoutProvider);
+    final repositoryTimeout = ref.read(
+      mirrorSessionRepositoryBootstrapTimeoutProvider,
+    );
 
-    final repository = await repositoryFuture.timeout(
-      repositoryTimeout,
-      onTimeout: () => const MirrorSessionBootstrapRepository(
-        files: <String, String>{},
-        preferredSelectedFile: '',
-        errorMessage: MirrorSessionBootstrapMessages.repositoryTimeout,
-        reasonCode: MirrorSessionBootstrapReasonCodes.repositoryTimeout,
-      ),
+    final loaded = await _mirrorSessionBootstrapOrchestrationService
+        .loadBootstrapData(
+      draftFuture: draftFuture,
+      repositoryFuture: repositoryFuture,
+      repositoryTimeout: repositoryTimeout,
     );
     if (!_isCurrentBootstrap(generation, sessionKey)) {
       return;
     }
-
-    final draft = await draftFuture;
-    if (!_isCurrentBootstrap(generation, sessionKey)) {
-      return;
-    }
+    final draft = loaded.draft;
+    final repository = loaded.repository;
 
     _replaceState(
       state.copyWith(
         bootstrapPhase: MirrorSessionBootstrapPhase.merging,
-        bootstrapSource:
-            draft != null && draft.files.isNotEmpty ? 'draft' : 'baseline',
+        bootstrapSource: _mirrorSessionBootstrapOrchestrationService
+            .resolveMergingBootstrapSource(draft),
       ),
     );
 
-    final bootstrap = resolveMirrorSessionBootstrap(
+    final bootstrapAssembly =
+        _mirrorSessionBootstrapOrchestrationService.buildFinalAssembly(
       baselineFiles: baseline.files,
       baselineSelectedFile: baseline.selectedFile,
-      baselineContextVersion: baseline.contextVersion ?? _draftContextVersion,
+      baselineContextVersion:
+          baseline.contextVersion ?? mirrorDraftContextVersion,
       draft: draft,
       repository: repository,
     );
 
     _replaceState(
       baseline.copyWith(
-        files: bootstrap.files,
-        selectedFile: bootstrap.selectedFile,
-        contextFingerprint: _computeContextFingerprint(bootstrap.files),
-        contextVersion: bootstrap.contextVersion,
-        terminalLog: bootstrap.terminalLines,
-        bootstrapPhase: bootstrap.phase,
-        bootstrapSource: bootstrap.sourceSummary,
-        bootstrapReasonCode: bootstrap.reasonCode,
+        files: bootstrapAssembly.files,
+        selectedFile: bootstrapAssembly.selectedFile,
+        contextFingerprint: bootstrapAssembly.contextFingerprint,
+        contextVersion: bootstrapAssembly.contextVersion,
+        terminalLog: bootstrapAssembly.terminalLog,
+        bootstrapPhase: bootstrapAssembly.phase,
+        bootstrapSource: bootstrapAssembly.source,
+        bootstrapReasonCode: bootstrapAssembly.reasonCode,
       ),
     );
   }
 
   void selectFile(String path) {
-    if (!state.files.containsKey(path)) {
+    final next = _mirrorSessionStateMutationService.selectFile(state, path);
+    if (next == null) {
       return;
     }
-    _replaceState(state.copyWith(selectedFile: path));
+    _replaceState(next);
     _scheduleDraftPersist();
   }
 
   void updateSelectedFileContent(String content) {
-    final updatedFiles = Map<String, String>.from(state.files);
-    updatedFiles[state.selectedFile] = content;
-    _replaceState(state.copyWith(
-      files: updatedFiles,
-      contextFingerprint: _computeContextFingerprint(updatedFiles),
-      contextVersion: _draftContextVersion,
-    ));
+    _replaceState(
+      _mirrorSessionStateMutationService.updateSelectedFileContent(
+        state,
+        content,
+      ),
+    );
     _scheduleDraftPersist();
   }
 
   void upsertFileContent({required String path, required String content}) {
-    final updatedFiles = Map<String, String>.from(state.files);
-    updatedFiles[path] = content;
-    _replaceState(state.copyWith(
-      files: updatedFiles,
-      contextFingerprint: _computeContextFingerprint(updatedFiles),
-      contextVersion: _draftContextVersion,
-    ));
+    _replaceState(
+      _mirrorSessionStateMutationService.upsertFileContent(
+        state,
+        path: path,
+        content: content,
+      ),
+    );
     _scheduleDraftPersist();
   }
 
   void appendLiveOutput(List<String> lines, {int maxLines = 500}) {
-    if (lines.isEmpty) {
+    final next = _mirrorSessionStateMutationService.appendLiveOutput(
+      state,
+      lines,
+      maxLines: maxLines,
+    );
+    if (next == null) {
       return;
     }
-    final merged = <String>[...state.liveOutput, ...lines];
-    final capped = merged.length <= maxLines
-        ? merged
-        : merged.sublist(merged.length - maxLines);
-    _replaceState(state.copyWith(liveOutput: capped));
+    _replaceState(next);
   }
 
   void appendTerminalLine(String line, {int maxLines = 1000}) {
-    if (line.trim().isEmpty) {
+    final next = _mirrorSessionStateMutationService.appendTerminalLine(
+      state,
+      line,
+      maxLines: maxLines,
+    );
+    if (next == null) {
       return;
     }
-    final merged = <String>[...state.terminalLog, line];
-    final capped = merged.length <= maxLines
-        ? merged
-        : merged.sublist(merged.length - maxLines);
-    _replaceState(state.copyWith(terminalLog: capped));
+    _replaceState(next);
   }
 
   void setCompileValidationArtifacts({
     required String compileFingerprint,
     String? serverVersionToken,
   }) {
-    final normalizedFingerprint = compileFingerprint.trim();
-    if (normalizedFingerprint.isEmpty) {
+    final next = _mirrorSessionStateMutationService.setCompileValidationArtifacts(
+      state,
+      compileFingerprint: compileFingerprint,
+      serverVersionToken: serverVersionToken,
+    );
+    if (next == null) {
       return;
     }
-
-    final normalizedToken = serverVersionToken?.trim();
-    _replaceState(state.copyWith(
-      compileFingerprint: normalizedFingerprint,
-      compileServerVersionToken:
-          (normalizedToken == null || normalizedToken.isEmpty)
-              ? null
-              : normalizedToken,
-    ));
+    _replaceState(next);
     _scheduleDraftPersist();
   }
 
   Future<void> persistOnRunStart() async {
-    final sessionKey = _activeSessionKey;
-    if (sessionKey == null || sessionKey.isEmpty) {
-      return;
-    }
-    _draftPersistTimer?.cancel();
-    await _persistDraftNow(sessionKey, generation: _stateGeneration);
+    await _persistCheckpointNow();
   }
 
   Future<void> persistOnApply() async {
-    final sessionKey = _activeSessionKey;
-    if (sessionKey == null || sessionKey.isEmpty) {
-      return;
-    }
-    _draftPersistTimer?.cancel();
-    await _persistDraftNow(sessionKey, generation: _stateGeneration);
+    await _persistCheckpointNow();
   }
 
   Future<void> persistOnRouteExit() async {
+    await _persistCheckpointNow();
+  }
+
+  Future<void> _persistCheckpointNow() async {
     final sessionKey = _activeSessionKey;
     if (sessionKey == null || sessionKey.isEmpty) {
       return;
@@ -383,10 +374,6 @@ class MirrorSessionNotifier
     required int generation,
     MirrorDraftCacheService? draftCacheServiceOverride,
   }) async {
-    if (state.files.isEmpty) {
-      return;
-    }
-
     if (!_isCurrentPersistTarget(generation, sessionKey)) {
       return;
     }
@@ -397,23 +384,31 @@ class MirrorSessionNotifier
 
     _persistInFlight = true;
 
-    final files = Map<String, String>.from(state.files);
-    final selectedFile = state.selectedFile;
-    final contextFingerprint =
-        state.contextFingerprint ?? _computeContextFingerprint(files);
-    final contextVersion = state.contextVersion ?? _draftContextVersion;
+    final snapshot = _mirrorSessionPersistenceService.buildPersistSnapshot(
+      sessionKey: sessionKey,
+      files: state.files,
+      selectedFile: state.selectedFile,
+      mode: _lastMode,
+      offlineWarningKey: _lastOfflineWarningKey,
+      contextFingerprint: state.contextFingerprint,
+      contextVersion: state.contextVersion,
+    );
+    if (snapshot == null) {
+      _persistInFlight = false;
+      return;
+    }
 
     try {
       final MirrorDraftCacheService draftCacheService =
           draftCacheServiceOverride ?? ref.read(mirrorDraftCacheServiceProvider);
       await draftCacheService.writeDraft(
-        sessionKey: sessionKey,
-        files: files,
-        selectedFile: selectedFile,
-        mode: _lastMode,
-        offlineWarningKey: _lastOfflineWarningKey,
-        contextFingerprint: contextFingerprint,
-        contextVersion: contextVersion,
+        sessionKey: snapshot.sessionKey,
+        files: snapshot.files,
+        selectedFile: snapshot.selectedFile,
+        mode: snapshot.mode,
+        offlineWarningKey: snapshot.offlineWarningKey,
+        contextFingerprint: snapshot.contextFingerprint,
+        contextVersion: snapshot.contextVersion,
       );
     } catch (_) {
       // Keep editing responsive when draft persistence is unavailable.
@@ -422,13 +417,16 @@ class MirrorSessionNotifier
 
       final latestSessionKey = _activeSessionKey;
       final shouldReplayPersist =
-          latestSessionKey != null &&
-          latestSessionKey == sessionKey &&
-          generation != _stateGeneration;
+          _mirrorSessionPersistenceService.shouldReplayPersist(
+        latestSessionKey: latestSessionKey,
+        sessionKey: sessionKey,
+        generation: generation,
+        currentGeneration: _stateGeneration,
+      );
       if (shouldReplayPersist) {
         unawaited(
           _persistDraftNow(
-            latestSessionKey,
+            latestSessionKey!,
             generation: _stateGeneration,
             draftCacheServiceOverride: draftCacheServiceOverride,
           ),
@@ -469,7 +467,7 @@ final mirrorSessionDraftBootstrapProvider =
     return MirrorSessionBootstrapDraft(
       files: Map<String, String>.from(snapshot.files),
       selectedFile: selectedFile,
-      contextVersion: snapshot.contextVersion ?? _draftContextVersion,
+      contextVersion: snapshot.contextVersion ?? mirrorDraftContextVersion,
     );
   } catch (_) {
     return null;

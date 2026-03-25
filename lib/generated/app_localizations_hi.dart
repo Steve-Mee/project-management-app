@@ -1713,6 +1713,10 @@ class AppLocalizationsHi extends AppLocalizations {
       'Mirror आपके खाते के लिए उपलब्ध नहीं है।';
 
   @override
+  String get mirrorFeatureDisabled =>
+      'Mirror वर्तमान में व्यवस्थापक द्वारा अक्षम किया गया है।';
+
+  @override
   String get mirrorPermissionRevokedSessionDisabled =>
       'आपकी अनुमति बदलने के कारण आपका Mirror एडिटर सत्र अक्षम कर दिया गया है। सुरक्षित रूप से जारी रखने के लिए इस स्क्रीन को बंद करें।';
 
