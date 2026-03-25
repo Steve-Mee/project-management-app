@@ -1,3 +1,9 @@
+## [1.51.0](https://github.com/Steve-Mee/project-management-app/compare/v1.50.1...v1.51.0) (2026-03-25)
+
+### Features
+
+* **mirror:** complete Mirror quality campaign phases 1-4 ([6f6425c](https://github.com/Steve-Mee/project-management-app/commit/6f6425c20b38903b858802fbc1de8d1cc80e5645))
+
 ## [1.50.1](https://github.com/Steve-Mee/project-management-app/compare/v1.50.0...v1.50.1) (2026-03-22)
 
 ### Bug Fixes
