@@ -1,3 +1,9 @@
+## [1.51.1](https://github.com/Steve-Mee/project-management-app/compare/v1.51.0...v1.51.1) (2026-03-25)
+
+### Bug Fixes
+
+* **mirror:** resolve follow-up diagnostics in tests, tooling, and windows cmake setup ([b737dbc](https://github.com/Steve-Mee/project-management-app/commit/b737dbca78881f7aef66f8329a5e8d64b3339073))
+
 ## [1.51.0](https://github.com/Steve-Mee/project-management-app/compare/v1.50.1...v1.51.0) (2026-03-25)
 
 ### Features
