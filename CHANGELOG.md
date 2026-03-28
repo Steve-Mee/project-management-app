@@ -1,3 +1,9 @@
+## [1.52.0](https://github.com/Steve-Mee/project-management-app/compare/v1.51.1...v1.52.0) (2026-03-28)
+
+### Features
+
+* integrate 3D visualization flow with render credits and analytics ([ea6a7e1](https://github.com/Steve-Mee/project-management-app/commit/ea6a7e19e354caf8fa6461ce155213e99f0f8824))
+
 ## [1.51.1](https://github.com/Steve-Mee/project-management-app/compare/v1.51.0...v1.51.1) (2026-03-25)
 
 ### Bug Fixes
