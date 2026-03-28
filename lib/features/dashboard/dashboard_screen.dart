@@ -11,12 +11,18 @@ import 'package:animate_do/animate_do.dart';
 import 'package:intl/intl.dart';
 import 'package:project_management_app/generated/app_localizations.dart';
 import 'package:pma_core/auth/permissions.dart';
+import 'package:pma_core/core/feature_flags/feature_flag_resolver.dart';
+import 'package:pma_core/core/providers/feature_flag_provider.dart';
 import 'package:pma_core/models/models.dart' hide ProjectFilter;
 import 'package:pma_core/repository/models/project_models.dart' show ProjectFilterConditions;
 import 'package:project_management_app/features/dashboard/providers/index.dart';
 import '../../core/theme.dart';
+import '../../core/config/feature_flags.dart';
 import '../../models/project_sort.dart';
 import '../ai_chat/ai_chat_modal.dart';
+import '../three_d_visualization/presentation/widgets/three_d_preview_widget.dart';
+import '../three_d_visualization/presentation/widgets/three_d_visualize_assistant.dart';
+import '../three_d_visualization/providers/three_d_visualization_providers.dart';
 import 'widgets/error_state_widget.dart';
 import 'widgets/loading_more_widget.dart';
 import 'widgets/project_card_widget.dart';
@@ -1033,6 +1039,26 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     final l10n = AppLocalizations.of(context)!;
     final filter = ref.watch(persistentProjectFilterProvider);
     final canUseAi = ref.watch(hasPermissionProvider(AppPermissions.useAi));
+    final featureFlags = ref.watch(featureFlagProvider);
+    final isThreeDEnabled = featureFlags.maybeWhen(
+      data: (flags) => FeatureFlagResolver.isEnabled(
+        flags,
+        AppFeatureFlags.threeDVisualizationEnabled,
+        defaultValue: true,
+      ),
+      orElse: () => true,
+    );
+    final selectedProjectForThreeD = _projects.isNotEmpty ? _projects.first : null;
+    final threeDAssetsAsync = selectedProjectForThreeD == null || !isThreeDEnabled
+        ? const AsyncValue<List<GeneratedAsset>>.data(<GeneratedAsset>[])
+        : ref.watch(
+            generatedAssetsProvider(
+              GeneratedAssetsQuery(
+                projectId: selectedProjectForThreeD.id,
+                limit: 12,
+              ),
+            ),
+          );
 
     // watch paginated filtered projects data
     final params = FilteredPaginationParams(
@@ -1134,24 +1160,147 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                 },
               ),
               _buildFilterBar(context, filter),
+              if (isThreeDEnabled && selectedProjectForThreeD != null)
+                SizedBox(
+                  height: 220,
+                  child: threeDAssetsAsync.when(
+                    data: (assets) {
+                      if (assets.isEmpty) {
+                        return const SizedBox.shrink();
+                      }
+
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Padding(
+                            padding: EdgeInsets.fromLTRB(16.w, 10.h, 16.w, 6.h),
+                            child: Text(
+                              '3D Assets',
+                              style: Theme.of(context).textTheme.titleMedium,
+                            ),
+                          ),
+                          Expanded(
+                            child: ListView.separated(
+                              padding: EdgeInsets.symmetric(horizontal: 16.w),
+                              scrollDirection: Axis.horizontal,
+                              itemCount: assets.length,
+                              separatorBuilder: (_, __) => SizedBox(width: 10.w),
+                              itemBuilder: (context, index) {
+                                final asset = assets[index];
+                                return SizedBox(
+                                  width: 280,
+                                  child: Card(
+                                    child: Padding(
+                                      padding: const EdgeInsets.all(10),
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            asset.prompt.isEmpty ? asset.id : asset.prompt,
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                          const SizedBox(height: 8),
+                                          if (asset.format == GeneratedAssetFormat.glb &&
+                                              asset.fileUrl.isNotEmpty)
+                                            Expanded(
+                                              child: ThreeDPreviewWidget(
+                                                glbUrl: asset.fileUrl,
+                                                height: 150,
+                                                showControls: false,
+                                              ),
+                                            )
+                                          else
+                                            Expanded(
+                                              child: Center(
+                                                child: Text(
+                                                  '${asset.format.name.toUpperCase()} preview unavailable',
+                                                ),
+                                              ),
+                                            ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
+                          ),
+                        ],
+                      );
+                    },
+                    loading: () => const Center(child: CircularProgressIndicator()),
+                    error: (error, _) => Center(child: Text('3D assets failed: $error')),
+                  ),
+                ),
               Expanded(child: bodyContent),
             ],
           ),
         ),
       ),
       floatingActionButton: canUseAi
-          ? Tooltip(
-              message: l10n.aiChatWithProjectFilesTooltip,
-              child: FloatingActionButton.extended(
-                onPressed: () {
-                  showDialog(
-                    context: context,
-                    builder: (context) => const AiChatModal(),
-                  );
-                },
-                icon: const Icon(Icons.smart_toy),
-                label: Text(l10n.aiAssistantLabel),
-              ),
+          ? Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                if (isThreeDEnabled)
+                  FloatingActionButton.extended(
+                  heroTag: 'dashboard-3d-fab',
+                  onPressed: () {
+                    final selectedProject = _projects.isNotEmpty ? _projects.first : null;
+                    if (selectedProject == null) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Select or load a project first.')),
+                      );
+                      return;
+                    }
+
+                    final taskCandidates = ref.read(tasksProvider).valueOrNull ?? const <Task>[];
+                    final contextTask = taskCandidates.where((task) {
+                      return task.projectId == selectedProject.id;
+                    }).cast<Task?>().firstWhere(
+                          (task) => task != null,
+                          orElse: () => null,
+                        );
+
+                    showModalBottomSheet<void>(
+                      context: context,
+                      isScrollControlled: true,
+                      builder: (context) {
+                        return FractionallySizedBox(
+                          heightFactor: 0.9,
+                          child: Padding(
+                            padding: const EdgeInsets.all(12),
+                            child: ThreeDVisualizeAssistant(
+                              projectId: selectedProject.id,
+                              taskId: contextTask?.id,
+                              taskDescription: contextTask?.description,
+                              attachments: contextTask?.attachments ?? const <String>[],
+                            ),
+                          ),
+                        );
+                      },
+                    );
+                  },
+                  icon: const Icon(Icons.view_in_ar_outlined),
+                  label: const Text('3D Visualize'),
+                  ),
+                if (isThreeDEnabled) const SizedBox(height: 10),
+                Tooltip(
+                  message: l10n.aiChatWithProjectFilesTooltip,
+                  child: FloatingActionButton.extended(
+                    heroTag: 'dashboard-ai-fab',
+                    onPressed: () {
+                      showDialog(
+                        context: context,
+                        builder: (context) => const AiChatModal(),
+                      );
+                    },
+                    icon: const Icon(Icons.smart_toy),
+                    label: Text(l10n.aiAssistantLabel),
+                  ),
+                ),
+              ],
             )
           : null,
     );

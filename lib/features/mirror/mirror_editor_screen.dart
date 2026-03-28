@@ -5,15 +5,21 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pma_core/auth/permissions.dart';
+import 'package:pma_core/core/feature_flags/feature_flag_resolver.dart';
+import 'package:pma_core/core/providers.dart';
+import 'package:pma_core/models/models.dart';
 import 'package:pma_core/providers/auth/auth_providers.dart';
+import 'package:pma_core/providers/task/task_providers.dart';
 import 'package:xterm/xterm.dart';
 import '../../generated/app_localizations.dart';
 
+import '../../core/config/feature_flags.dart';
 import '../../core/providers/mirror_entitlement_provider.dart';
 import '../../core/providers/mirror_mode_controller_provider.dart';
 import '../../core/providers/mirror_premium_provider.dart';
 import '../../core/providers/mirror_session_provider.dart';
 import '../../core/providers/supabase_client_provider.dart';
+import '../three_d_visualization/providers/three_d_visualization_providers.dart';
 import 'models/mirror_template.dart';
 import 'models/mirror_structured_error.dart';
 import 'providers/mirror_editor_orchestration_provider.dart';
@@ -428,6 +434,14 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
     }
 
     final preflightState = ref.read(mirrorSessionProvider(_sessionKey));
+    final selectedContent =
+        preflightState.files[preflightState.selectedFile] ?? '';
+    final visualizePrompt = _extractVisualizePrompt(selectedContent);
+    if (visualizePrompt != null) {
+      unawaited(_runVisualizeCommand(visualizePrompt));
+      return;
+    }
+
     final budgetService = ref.read(mirrorContextBudgetServiceProvider);
     final startPreparation = _runStartService.prepare(
       budgetService: budgetService,
@@ -497,6 +511,90 @@ class _MirrorEditorScreenState extends ConsumerState<MirrorEditorScreen> {
         );
       }
     });
+  }
+
+  String? _extractVisualizePrompt(String content) {
+    final lines = content.split(RegExp(r'\r?\n'));
+    for (final raw in lines) {
+      final line = raw.trim();
+      if (line.isEmpty) {
+        continue;
+      }
+      if (!line.startsWith('/')) {
+        return null;
+      }
+      if (line == '/visualize') {
+        return '';
+      }
+      if (line.startsWith('/visualize ')) {
+        return line.substring('/visualize'.length).trim();
+      }
+      return null;
+    }
+    return null;
+  }
+
+  Future<void> _runVisualizeCommand(String promptOverride) async {
+    _appendTerminalLine('Mirror command detected: /visualize');
+
+    final featureFlags = ref.read(featureFlagProvider);
+    final isThreeDEnabled = featureFlags.maybeWhen(
+      data: (flags) => FeatureFlagResolver.isEnabled(
+        flags,
+        AppFeatureFlags.threeDVisualizationEnabled,
+        defaultValue: true,
+      ),
+      orElse: () => true,
+    );
+    if (!isThreeDEnabled) {
+      _appendTerminalLine(
+        '3D visualization is disabled by feature flag '
+        '(${AppFeatureFlags.threeDVisualizationEnabled}).',
+      );
+      return;
+    }
+
+    try {
+      final taskRepository = await ref.read(taskRepositoryProvider.future);
+      final tasks = taskRepository.getTasksForProject(widget.projectId);
+      Task? selectedTask;
+      for (final task in tasks) {
+        if (task.id == widget.taskId) {
+          selectedTask = task;
+          break;
+        }
+      }
+
+      final description = selectedTask?.description.trim();
+      final attachments = selectedTask?.attachments ?? const <String>[];
+      final prompt = promptOverride.trim().isNotEmpty
+          ? promptOverride.trim()
+          : description != null && description.isNotEmpty
+              ? 'Generate a production-ready 3D asset for this task.\n'
+                  'Task context: $description'
+              : 'Generate a production-ready 3D asset for task ${widget.taskId}.';
+
+      final request = ThreeDGenerationRequest(
+        projectId: widget.projectId,
+        taskId: widget.taskId,
+        prompt: prompt,
+        metadata: <String, dynamic>{
+          'source': 'mirror_slash_visualize',
+          'mirror_session_key': _sessionKey,
+          if (description != null && description.isNotEmpty)
+            'task_description': description,
+          if (attachments.isNotEmpty) 'attachments': attachments,
+        },
+      );
+
+      final job = await ref
+          .read(threeDGenerationProvider.notifier)
+          .generate(request);
+      final jobId = job?.jobId ?? 'unknown';
+      _appendTerminalLine('3D generation queued successfully. Job ID: $jobId');
+    } catch (error) {
+      _appendTerminalLine('3D generation request failed: $error');
+    }
   }
 
 }

@@ -12,6 +12,13 @@ import 'package:go_router/go_router.dart';
 import 'package:project_management_app/core/providers/ai_chat_provider.dart';
 import 'package:project_management_app/core/routes.dart';
 import 'package:project_management_app/features/mirror/mirror_launch_feedback.dart';
+import 'package:project_management_app/features/three_d_visualization/presentation/widgets/three_d_preview_widget.dart';
+import 'package:project_management_app/features/three_d_visualization/presentation/widgets/three_d_visualize_assistant.dart';
+import 'package:project_management_app/features/three_d_visualization/providers/three_d_visualization_providers.dart';
+import 'package:pma_core/core/feature_flags/feature_flag_resolver.dart';
+import 'package:pma_core/core/providers/feature_flag_provider.dart';
+import 'package:pma_core/models/generated_asset.dart';
+import 'package:project_management_app/core/config/feature_flags.dart';
 
 /// Expandable task card with sub-tasks and assignment functionality
 class ExpandableTaskCard extends ConsumerStatefulWidget {
@@ -36,6 +43,27 @@ class _ExpandableTaskCardState extends ConsumerState<ExpandableTaskCard> {
     final isExpanded = ref.watch(taskExpansionProvider.select((state) => state[widget.task.id] ?? false));
     final subTasksAsync = ref.watch(subTasksByTaskProvider(widget.task.id));
     final generationState = ref.watch(subTaskGenerationProvider.select((state) => state[widget.task.id]));
+    final featureFlags = ref.watch(featureFlagProvider);
+    final isThreeDEnabled = featureFlags.maybeWhen(
+      data: (flags) => FeatureFlagResolver.isEnabled(
+        flags,
+        AppFeatureFlags.threeDVisualizationEnabled,
+        defaultValue: true,
+      ),
+      orElse: () => true,
+    );
+    final generatedAssetsAsync = ref.watch(
+      generatedAssetsProvider(
+        GeneratedAssetsQuery(
+          projectId: widget.task.projectId,
+          taskId: widget.task.id,
+          limit: 1,
+        ),
+      ),
+    );
+    final previewAsset = generatedAssetsAsync.valueOrNull == null
+        ? null
+        : _firstGlbAsset(generatedAssetsAsync.valueOrNull!);
 
     return Card(
       margin: const EdgeInsets.only(bottom: 8),
@@ -76,6 +104,15 @@ class _ExpandableTaskCardState extends ConsumerState<ExpandableTaskCard> {
             onTap: widget.onTap,
           ),
 
+          if (previewAsset != null)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+              child: ThreeDPreviewWidget(
+                glbUrl: previewAsset.fileUrl,
+                height: 180,
+              ),
+            ),
+
           // Expanded content
           if (isExpanded) ...[
             const Divider(),
@@ -107,6 +144,38 @@ class _ExpandableTaskCardState extends ConsumerState<ExpandableTaskCard> {
                         ),
                     ],
                   ),
+                  if (isThreeDEnabled)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 8, bottom: 8),
+                      child: Align(
+                        alignment: Alignment.centerLeft,
+                        child: FloatingActionButton.extended(
+                          heroTag: 'visualize-task-${widget.task.id}',
+                          onPressed: () {
+                            showModalBottomSheet<void>(
+                              context: context,
+                              isScrollControlled: true,
+                              builder: (context) {
+                                return FractionallySizedBox(
+                                  heightFactor: 0.9,
+                                  child: Padding(
+                                    padding: const EdgeInsets.all(12),
+                                    child: ThreeDVisualizeAssistant(
+                                      projectId: widget.task.projectId,
+                                      taskId: widget.task.id,
+                                      taskDescription: widget.task.description,
+                                      attachments: widget.task.attachments,
+                                    ),
+                                  ),
+                                );
+                              },
+                            );
+                          },
+                          icon: const Icon(Icons.view_in_ar_outlined),
+                          label: const Text('Visualiseer deze taak'),
+                        ),
+                      ),
+                    ),
                   const SizedBox(height: 8),
 
                   // Generation loading/error state
@@ -151,6 +220,15 @@ class _ExpandableTaskCardState extends ConsumerState<ExpandableTaskCard> {
         ],
       ),
     );
+  }
+
+  GeneratedAsset? _firstGlbAsset(List<GeneratedAsset> assets) {
+    for (final asset in assets) {
+      if (asset.format == GeneratedAssetFormat.glb && asset.fileUrl.isNotEmpty) {
+        return asset;
+      }
+    }
+    return null;
   }
 
   Widget _buildSubTaskItem(SubTask subTask) {

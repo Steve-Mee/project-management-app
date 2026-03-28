@@ -46,6 +46,10 @@ class FeatureFlagService implements FeatureFlagServiceBase {
   static const String _flagsCacheKey = 'flags';
   static const String _lastFetchKey = 'last_fetch';
   static const Duration defaultCacheTtl = Duration(minutes: 30);
+  static const Map<String, bool> _defaultBootstrapFlags =
+      <String, bool>{
+        'three_d_visualization_enabled': true,
+      };
 
   bool _initialized = false;
 
@@ -96,19 +100,25 @@ class FeatureFlagService implements FeatureFlagServiceBase {
     final rows = _remoteFetchOverride != null
         ? await _remoteFetchOverride!()
         : _normalizeRows(await _supabase.from('feature_flags').select());
+    final mergedRows = _mergeDefaultFlags(rows);
 
-    await _box.put(_flagsCacheKey, rows);
+    await _box.put(_flagsCacheKey, mergedRows);
     await _box.put(_lastFetchKey, DateTime.now().toIso8601String());
 
-    AppLogger.event('feature_flags_fetched', params: {'count': rows.length});
-    return rows;
+    AppLogger.event('feature_flags_fetched', params: {'count': mergedRows.length});
+    return mergedRows;
   }
 
   /// Returns cached rows from Hive without making a network request.
   @override
   Future<List<Map>> getCachedFeatureFlags() async {
     await initialize();
-    return _readCachedFlags();
+    final cached = _readCachedFlags();
+    final merged = _mergeDefaultFlags(cached);
+    if (merged.length != cached.length) {
+      await _box.put(_flagsCacheKey, merged);
+    }
+    return merged;
   }
 
   /// Returns cached feature flags keyed by flag `key`.
@@ -329,6 +339,29 @@ class FeatureFlagService implements FeatureFlagServiceBase {
       }
     }
     return rows;
+  }
+
+  List<Map> _mergeDefaultFlags(List<Map> rows) {
+    if (_defaultBootstrapFlags.isEmpty) {
+      return rows;
+    }
+
+    final merged = rows
+      .map(Map<String, dynamic>.from)
+        .toList(growable: true);
+
+    for (final entry in _defaultBootstrapFlags.entries) {
+      final exists = merged.any((row) => row['key'] == entry.key);
+      if (!exists) {
+        merged.add(<String, dynamic>{
+          'key': entry.key,
+          'enabled': entry.value,
+          'updated_at': DateTime.now().toIso8601String(),
+        });
+      }
+    }
+
+    return merged;
   }
 
   bool? _resolveFlagFromRows(List<Map> rows, String key) {

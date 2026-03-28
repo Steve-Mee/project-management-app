@@ -7,7 +7,9 @@ import 'package:pma_core/core/feature_flags/feature_flag_resolver.dart';
 import 'package:pma_core/models/models.dart';
 import 'package:pma_core/core/providers.dart';
 import 'package:project_management_app/features/projects/providers/index.dart';
+import 'package:project_management_app/features/three_d_visualization/presentation/widgets/three_d_visualize_assistant.dart';
 import 'package:pma_core/widgets/modern_gantt_chart.dart';
+import 'package:project_management_app/core/config/feature_flags.dart';
 import 'package:project_management_app/generated/app_localizations.dart';
 
 /// Gantt chart view for projects and tasks
@@ -23,6 +25,34 @@ class _ProjectGanttViewState extends ConsumerState<ProjectGanttView> {
   DateTime _endDate = DateTime.now().add(const Duration(days: 90));
   double _zoomLevel = 1.0;
 
+  Future<void> _openQuickThreeDRender({
+    required ProjectModel project,
+    required Task task,
+  }) async {
+    if (!mounted) {
+      return;
+    }
+
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      builder: (context) {
+        return FractionallySizedBox(
+          heightFactor: 0.9,
+          child: Padding(
+            padding: const EdgeInsets.all(12),
+            child: ThreeDVisualizeAssistant(
+              projectId: project.id,
+              taskId: task.id,
+              taskDescription: task.description,
+              attachments: task.attachments,
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
@@ -32,6 +62,14 @@ class _ProjectGanttViewState extends ConsumerState<ProjectGanttView> {
     final isGanttEnabled = featureFlags.maybeWhen(
       data: (flags) =>
           FeatureFlagResolver.isEnabled(flags, 'gantt_chart_enabled', defaultValue: true),
+      orElse: () => true,
+    );
+    final isThreeDEnabled = featureFlags.maybeWhen(
+      data: (flags) => FeatureFlagResolver.isEnabled(
+        flags,
+        AppFeatureFlags.threeDVisualizationEnabled,
+        defaultValue: true,
+      ),
       orElse: () => true,
     );
 
@@ -86,7 +124,8 @@ class _ProjectGanttViewState extends ConsumerState<ProjectGanttView> {
         ],
       ),
       body: projectsAsync.when(
-        data: (projects) => _buildGanttView(context, projects, l10n),
+        data: (projects) =>
+            _buildGanttView(context, projects, l10n, isThreeDEnabled),
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (error, stack) => Center(
           child: Text('Error loading projects: $error'),
@@ -95,7 +134,12 @@ class _ProjectGanttViewState extends ConsumerState<ProjectGanttView> {
     );
   }
 
-  Widget _buildGanttView(BuildContext context, List<ProjectModel> projects, AppLocalizations l10n) {
+  Widget _buildGanttView(
+    BuildContext context,
+    List<ProjectModel> projects,
+    AppLocalizations l10n,
+    bool isThreeDEnabled,
+  ) {
     final validProjects = projects.where((p) => p.startDate != null && p.dueDate != null).toList();
 
     if (validProjects.isEmpty) {
@@ -127,12 +171,22 @@ class _ProjectGanttViewState extends ConsumerState<ProjectGanttView> {
       itemCount: validProjects.length,
       itemBuilder: (context, index) {
         final project = validProjects[index];
-        return _buildProjectTimeline(context, project, l10n);
+        return _buildProjectTimeline(
+          context,
+          project,
+          l10n,
+          isThreeDEnabled,
+        );
       },
     );
   }
 
-  Widget _buildProjectTimeline(BuildContext context, ProjectModel project, AppLocalizations l10n) {
+  Widget _buildProjectTimeline(
+    BuildContext context,
+    ProjectModel project,
+    AppLocalizations l10n,
+    bool isThreeDEnabled,
+  ) {
     final projectStart = project.startDate!;
     final projectEnd = project.dueDate!;
     final taskRepository = ref.watch(taskRepositoryProvider).value;
@@ -207,6 +261,11 @@ class _ProjectGanttViewState extends ConsumerState<ProjectGanttView> {
                     newEndDate,
                   );
                 },
+                onTaskLongPress: isThreeDEnabled
+                    ? (task) {
+                        _openQuickThreeDRender(project: project, task: task);
+                      }
+                    : null,
               ),
           ],
         ),

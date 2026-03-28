@@ -6,14 +6,18 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:project_management_app/generated/app_localizations.dart';
 import 'package:pma_core/auth/permissions.dart';
+import 'package:pma_core/core/feature_flags/feature_flag_resolver.dart';
 import 'package:project_management_app/features/project/providers/index.dart';
+import 'package:pma_core/core/providers.dart';
 import 'package:pma_core/services/project_file_service.dart';
 import 'package:pma_core/models/models.dart';
+import 'package:project_management_app/core/config/feature_flags.dart';
 import 'package:project_management_app/features/project/ai_chat_bottom_sheet.dart';
 import 'package:project_management_app/features/project/expandable_task_card.dart';
 import 'package:project_management_app/features/project/project_chat.dart';
 import 'package:project_management_app/features/project/task_help_dialog.dart';
 import 'package:project_management_app/features/project/requirements_icon_list_view.dart';
+import 'package:project_management_app/features/three_d_visualization/presentation/widgets/three_d_visualize_assistant.dart';
 import 'package:go_router/go_router.dart';
 import 'package:project_management_app/core/providers/ai_chat_provider.dart';
 import 'package:project_management_app/core/routes.dart';
@@ -50,7 +54,7 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    _tabController = TabController(length: 3, vsync: this);
+    _tabController = TabController(length: 4, vsync: this);
     _initializeKanbanScrollControllers();
     // Load tasks for the project
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -192,6 +196,15 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen>
   Widget build(BuildContext context) {
     final projectAsync = ref.watch(projectByIdProvider(widget.projectId));
     final isFromCache = ref.watch(projectIsCachedProvider(widget.projectId));
+    final featureFlags = ref.watch(featureFlagProvider);
+    final isThreeDEnabled = featureFlags.maybeWhen(
+      data: (flags) => FeatureFlagResolver.isEnabled(
+        flags,
+        AppFeatureFlags.threeDVisualizationEnabled,
+        defaultValue: true,
+      ),
+      orElse: () => true,
+    );
 
     return projectAsync.when(
       loading: () => const Scaffold(
@@ -218,10 +231,51 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen>
                   },
                 ),
               ),
-              floatingActionButton: FloatingActionButton(
-                onPressed: () => _showChatBottomSheet(context),
-                tooltip: 'Project AI Assistant',
-                child: const Icon(Icons.chat),
+              floatingActionButton: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  if (isThreeDEnabled)
+                    FloatingActionButton.extended(
+                      heroTag: 'project-detail-3d-fab',
+                      onPressed: () {
+                        final tasks = _filterTasks(
+                          ref.read(tasksProvider).value ?? const <Task>[],
+                        );
+                        final contextTask = tasks.isNotEmpty ? tasks.first : null;
+
+                        showModalBottomSheet<void>(
+                          context: context,
+                          isScrollControlled: true,
+                          builder: (context) {
+                            return FractionallySizedBox(
+                              heightFactor: 0.9,
+                              child: Padding(
+                                padding: const EdgeInsets.all(12),
+                                child: ThreeDVisualizeAssistant(
+                                  projectId: widget.projectId,
+                                  taskId: contextTask?.id,
+                                  taskDescription: contextTask?.description,
+                                  attachments:
+                                      contextTask?.attachments ?? const <String>[],
+                                ),
+                              ),
+                            );
+                          },
+                        );
+                      },
+                      tooltip: 'Visualiseer deze taak',
+                      icon: const Icon(Icons.view_in_ar_outlined),
+                      label: const Text('Visualiseer deze taak'),
+                    ),
+                  if (isThreeDEnabled) const SizedBox(height: 10),
+                  FloatingActionButton(
+                    heroTag: 'project-detail-chat-fab',
+                    onPressed: () => _showChatBottomSheet(context),
+                    tooltip: 'Project AI Assistant',
+                    child: const Icon(Icons.chat),
+                  ),
+                ],
               ),
             ),
     );
@@ -385,6 +439,8 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen>
     final screenWidth = MediaQuery.of(context).size.width;
     final isCompact = screenWidth < 360;
     final tabPadding = EdgeInsets.all(isCompact ? 8.w : 12.w);
+    final tasks = _filterTasks(ref.watch(tasksProvider).value ?? const <Task>[]);
+    final contextTask = tasks.isNotEmpty ? tasks.first : null;
 
     return Column(
       children: [
@@ -411,6 +467,12 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen>
                 style: TextStyle(fontSize: isCompact ? 12.sp : 14.sp),
               ),
             ),
+            Tab(
+              child: Text(
+                '3D',
+                style: TextStyle(fontSize: isCompact ? 12.sp : 14.sp),
+              ),
+            ),
           ],
         ),
         // Tab views
@@ -430,6 +492,16 @@ class _ProjectDetailScreenState extends ConsumerState<ProjectDetailScreen>
               ),
               // Chat tab
               ProjectChat(projectId: widget.projectId),
+              // 3D visualization tab
+              Padding(
+                padding: tabPadding,
+                child: ThreeDVisualizeAssistant(
+                  projectId: widget.projectId,
+                  taskId: contextTask?.id,
+                  taskDescription: contextTask?.description,
+                  attachments: contextTask?.attachments ?? const <String>[],
+                ),
+              ),
             ],
           ),
         ),

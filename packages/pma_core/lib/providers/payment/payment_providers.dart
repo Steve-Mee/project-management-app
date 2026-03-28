@@ -202,3 +202,75 @@ class PaymentNotifier extends StateNotifier<AsyncValue<PaymentStatus>> {
 final paymentProvider = StateNotifierProvider<PaymentNotifier, AsyncValue<PaymentStatus>>((ref) {
   return PaymentNotifier(ref);
 });
+
+/// Provider for render credits tied to Stripe/Premium subscription state.
+///
+/// Primary source: `user_tokens.render_credits`.
+/// Fallback source: cached subscription level from settings.
+final renderCreditsProvider = FutureProvider<int>((ref) async {
+  final supabase = Supabase.instance.client;
+  final userId = supabase.auth.currentUser?.id;
+
+  if (userId == null) {
+    return 0;
+  }
+
+  try {
+    final row = await supabase
+        .from('user_tokens')
+        .select('render_credits')
+        .eq('user_id', userId)
+        .maybeSingle();
+
+    final credits = _coerceInt(row?['render_credits']);
+    if (credits != null) {
+      return credits;
+    }
+  } catch (error, stackTrace) {
+    AppLogger.instance.w(
+      'render_credits_primary_lookup_failed',
+      error: error,
+      stackTrace: stackTrace,
+    );
+  }
+
+  try {
+    final settings = await ref.watch(settingsRepositoryProvider.future);
+    final subscriptionLevel = settings.getSubscriptionLevel();
+    return _defaultRenderCreditsForSubscription(subscriptionLevel);
+  } catch (error, stackTrace) {
+    AppLogger.instance.w(
+      'render_credits_fallback_lookup_failed',
+      error: error,
+      stackTrace: stackTrace,
+    );
+    return _defaultRenderCreditsForSubscription(null);
+  }
+});
+
+int _defaultRenderCreditsForSubscription(String? subscriptionLevel) {
+  final normalized = (subscriptionLevel ?? 'free').trim().toLowerCase();
+  switch (normalized) {
+    case 'premiumplus':
+    case 'premium_plus':
+      return 300;
+    case 'premium':
+      return 75;
+    case 'free':
+    default:
+      return 10;
+  }
+}
+
+int? _coerceInt(Object? value) {
+  if (value is int) {
+    return value;
+  }
+  if (value is double) {
+    return value.round();
+  }
+  if (value is String) {
+    return int.tryParse(value.trim());
+  }
+  return null;
+}

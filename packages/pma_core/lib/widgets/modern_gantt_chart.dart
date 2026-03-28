@@ -24,6 +24,9 @@ typedef TaskReschedulePreviewCallback = void Function(
   DateTime previewEndDate,
 );
 
+/// Called when a task bar/row is long-pressed.
+typedef TaskLongPressCallback = void Function(Task task);
+
 /// Optional progress resolver for task rows.
 ///
 /// Return value is clamped to 0..1.
@@ -59,6 +62,7 @@ class ModernGanttChart extends ConsumerStatefulWidget {
     this.onTaskRescheduled,
     this.onTaskReschedulePreview,
     this.onTaskRescheduleCommit,
+    this.onTaskLongPress,
     this.taskProgressResolver,
     this.showControls = true,
     this.onExportCsv,
@@ -96,6 +100,9 @@ class ModernGanttChart extends ConsumerStatefulWidget {
 
   /// Called once when drag ends and a day shift occurred.
   final TaskRescheduleCallback? onTaskRescheduleCommit;
+
+  /// Called when user long-presses a task row or bar.
+  final TaskLongPressCallback? onTaskLongPress;
 
   /// Optional resolver for per-task progress (0..1).
   /// If omitted, progress is inferred from [Task.status].
@@ -280,7 +287,7 @@ class _ModernGanttChartState extends ConsumerState<ModernGanttChart> {
               final task = taskEvent?.task;
               final progress = taskEvent?.progress ?? 0;
 
-              return Container(
+              final rowContent = Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                 decoration: BoxDecoration(
                   color: colorScheme.surfaceContainerLow,
@@ -327,6 +334,16 @@ class _ModernGanttChartState extends ConsumerState<ModernGanttChart> {
                   },
                 ),
               );
+
+              if (task == null || widget.onTaskLongPress == null) {
+                return rowContent;
+              }
+
+              return GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onLongPress: () => widget.onTaskLongPress!(task),
+                child: rowContent,
+              );
             },
             eventCellPerDayBuilder: (context, eventStart, eventEnd, isHoliday,
                 event, day, eventColor) {
@@ -370,7 +387,15 @@ class _ModernGanttChartState extends ConsumerState<ModernGanttChart> {
               );
 
               if (!widget.enableDragReschedule || task == null || !inRange) {
-                return bar;
+                if (task == null || widget.onTaskLongPress == null) {
+                  return bar;
+                }
+
+                return GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onLongPress: () => widget.onTaskLongPress!(task),
+                  child: bar,
+                );
               }
 
               return GestureDetector(
@@ -382,6 +407,11 @@ class _ModernGanttChartState extends ConsumerState<ModernGanttChart> {
                   _handleDragEnd(task);
                   _dragDxAccumulator.remove(task.id);
                   _dragDayShiftAccumulator.remove(task.id);
+                },
+                onLongPress: () {
+                  if (widget.onTaskLongPress != null) {
+                    widget.onTaskLongPress!(task);
+                  }
                 },
                 child: MouseRegion(
                   cursor: SystemMouseCursors.grab,

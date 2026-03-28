@@ -6,6 +6,7 @@ export 'ai_usage_record.dart';
 export 'chat_message_model.dart';
 export 'comment_model.dart';
 export 'dashboard_types.dart';
+export 'generated_asset.dart';
 export 'project_filter.dart';
 export 'project_invitation.dart';
 export 'project_meta.dart';
