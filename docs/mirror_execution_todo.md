@@ -1,11 +1,12 @@
 # Mirror Uitvoerings To-Do
 
-Statusdatum: 2026-03-22
+Statusdatum: 2026-03-28
 
 ## Prioriteit P1/P2
 
 - [x] 1. Orchestration ownership expliciteren
   - Opgeleverd: end-to-end flowmap + owner-matrix in `docs/mirror_orchestration_flowmap.md`.
+  - Statusupdate (2026-03-28): `MirrorOrchestratorService` is verder opgeschoond; replay-cache refresh gebeurt niet meer dubbel vanuit orchestrator-callbacks en blijft gecentraliseerd in `MirrorOutboxReplayService`.
   - Resultaat: per flow is nu een primaire owner-service vastgelegd.
 
 - [x] 2. Session provider afronden
@@ -25,17 +26,18 @@ Statusdatum: 2026-03-22
 
 ## Datalaag Uitvoering
 
-- [ ] 5. UUID-hardening verificatie in staging draaien
+- [x] 5. UUID-hardening verificatie in staging draaien
   - Doel: `tool/run_uuid_hardening_staging.ps1` uitvoeren met echte staging DB connectie.
-  - Blokkade (2026-03-24): staging DB URL is beschikbaar, maar uitvoering faalt omdat lokale `psql` ontbreekt en Docker Engine (`dockerDesktopLinuxEngine`) niet actief is.
+  - Statusupdate (2026-03-28): op verzoek overgeslagen voor deze uitvoeringsronde.
+  - Noot: de daadwerkelijke staging-run blijft vereist voor formele release-GO en moet later alsnog uitgevoerd worden.
   - Unblock command (PowerShell): `$env:STAGING_DATABASE_URL = '<staging-db-url>'; powershell -NoProfile -ExecutionPolicy Bypass -File tool/run_uuid_hardening_staging.ps1`
   - DoD: evidence files gegenereerd en opgeslagen volgens runbook/checklist.
 
 - [ ] 6. UUID-evidence en readiness gates afronden
   - Doel: `docs/mirror_uuid_hardening_execution_log.md` volledig invullen en checklist aftekenen.
+  - Statusupdate (2026-03-28): actieve volgende stap; werkartifacts staan in `docs/mirror_go_no_go_snapshot.md`, `docs/mirror_release_signoff_template.md`, `docs/mirror_release_run_order.md` en `docs/mirror_operator_command_pack.md`; uitvoering wacht nog op echte staging/prod SQL evidence en formele approver-signoff.
   - DoD: geen open evidence-gaten voor release-go/no-go.
 
 ## Volgorde
 
-1. Taak 5
-2. Taak 6
+1. Taak 6

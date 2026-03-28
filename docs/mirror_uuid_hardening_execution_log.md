@@ -65,6 +65,12 @@ $env:STAGING_DATABASE_URL = '<staging-db-url>'; powershell -NoProfile -Execution
 - Evidence folder created: `docs/evidence/uuid-hardening/staging/20260324-215217/`
 - Next action: start Docker Desktop/Engine of installeer lokale `psql`, daarna script opnieuw uitvoeren.
 
+### Workflow Note (2026-03-28)
+
+- Staging execution stap is in deze ronde overgeslagen op expliciet verzoek.
+- Deze skip verandert de release-eis niet: voor een formele GO moeten echte environment-uitvoer en evidence-bestanden nog steeds worden toegevoegd.
+- Actieve vervolgstap is afronding van readiness-evidence zodra staging of production execution beschikbaar is.
+
 ## Run Metadata
 
 - Environment: __________________________

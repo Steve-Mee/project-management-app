@@ -30,6 +30,10 @@ This handbook is the single entry point for Mirror documentation. Use it to navi
 - [mirror-db-performance-baseline.md](mirror-db-performance-baseline.md)
 - [mirror-production-readiness-checklist.md](mirror-production-readiness-checklist.md)
 - [mirror_uuid_hardening_execution_log.md](mirror_uuid_hardening_execution_log.md)
+- [mirror_go_no_go_snapshot.md](mirror_go_no_go_snapshot.md)
+- [mirror_release_signoff_template.md](mirror_release_signoff_template.md)
+- [mirror_release_run_order.md](mirror_release_run_order.md)
+- [mirror_operator_command_pack.md](mirror_operator_command_pack.md)
 
 ### Implementation References
 
@@ -69,6 +73,10 @@ This handbook is the single entry point for Mirror documentation. Use it to navi
 - [mirror-db-performance-baseline.md](mirror-db-performance-baseline.md)
 - [mirror-production-readiness-checklist.md](mirror-production-readiness-checklist.md)
 - [mirror_uuid_hardening_execution_log.md](mirror_uuid_hardening_execution_log.md)
+- [mirror_go_no_go_snapshot.md](mirror_go_no_go_snapshot.md)
+- [mirror_release_signoff_template.md](mirror_release_signoff_template.md)
+- [mirror_release_run_order.md](mirror_release_run_order.md)
+- [mirror_operator_command_pack.md](mirror_operator_command_pack.md)
 - [security.md](security.md)
 - [mirror_threat_model.md](mirror_threat_model.md)
 - [troubleshooting.md](troubleshooting.md)

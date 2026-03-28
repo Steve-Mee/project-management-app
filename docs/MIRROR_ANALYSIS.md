@@ -384,7 +384,7 @@ Methode: code-first review op daadwerkelijke implementatiebestanden, migrations,
 
    - Fase 2: P1 architectuurvereenvoudiging
       - Werkstroom 4: orchestration ownership expliciteren
-         - Statusupdate: owner-flowmap is opgesteld in `docs/mirror_orchestration_flowmap.md` met primaire owners voor launch/generate/compile/preview/apply/replay; resterend is verdere reductie van `MirrorOrchestratorService` naar strikt resiliency/replay op codepadniveau.
+         - Statusupdate: owner-flowmap is opgesteld in `docs/mirror_orchestration_flowmap.md` met primaire owners voor launch/generate/compile/preview/apply/replay; `MirrorOrchestratorService` is verder gereduceerd tot resiliency/replay door replay-side cache-refresh side effects uit de orchestrator te verwijderen en centraal in `MirrorOutboxReplayService` te houden.
          - Maak een end-to-end flowmap voor launch, generate, compile, preview, apply en replay.
          - Bepaal per flow de primaire owner-service.
          - Vereenvoudig `MirrorOrchestratorService` tot resiliency- en replay-laag waar mogelijk.

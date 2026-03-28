@@ -21,14 +21,19 @@ Status legend:
 
 ## Release Metadata
 
-- Environment: __________________________
-- Release owner: ________________________
-- Backend approver: _____________________
-- Flutter approver: _____________________
-- SRE approver: _________________________
-- Security approver: ____________________
-- Change window: ________________________
-- Rollback owner: _______________________
+- Environment: staging verification -> production rollout
+- Release owner: TBD
+- Backend approver: TBD
+- Flutter approver: TBD
+- SRE approver: TBD
+- Security approver: TBD
+- Change window: TBD
+- Rollback owner: TBD
+
+Prefill note (2026-03-28):
+- Repository-level implementation and local test gates are complete.
+- Remaining gates are execution or approval gates in staging/production.
+- Use this sheet as the single signoff artifact during release window.
 
 ## 1. Code And Test Gate
 
@@ -114,6 +119,20 @@ Use [mirror_uuid_hardening_execution_log.md](mirror_uuid_hardening_execution_log
 - [ ] Security approval recorded
 - [ ] Final GO for production rollout recorded
 
+### Ready-To-Fill Signoff Block
+
+Complete this block in the release window after execution evidence is attached.
+
+- Final decision timestamp (UTC): __________________
+- Final decision: [ ] GO  [ ] NO-GO
+- Decision owner: __________________
+- Backend approval reference: __________________
+- Flutter approval reference: __________________
+- SRE approval reference: __________________
+- Security approval reference: __________________
+- Linked evidence folder: __________________
+- Ticket or release comment link: __________________
+
 ## Notes
 
 - This checklist is intentionally evidence-driven. Do not mark items complete without a concrete command result, SQL output, dashboard review, or named approver.
@@ -124,3 +143,5 @@ Use [mirror_uuid_hardening_execution_log.md](mirror_uuid_hardening_execution_log
 As of 2026-03-22, the repository-preparable portion of this checklist is complete. The remaining unchecked items require execution or approval in staging or production environments.
 
 Operational note (2026-03-24): staging DB URL is now available, but UUID verification execution remains blocked because Docker Engine (`dockerDesktopLinuxEngine`) is not running and local `psql` is not installed.
+
+Operational note (2026-03-28): de staging-run stap is voor deze werksessie op verzoek overgeslagen; mandatory execution-evidence en approvals blijven ongewijzigd verplicht voor production GO.

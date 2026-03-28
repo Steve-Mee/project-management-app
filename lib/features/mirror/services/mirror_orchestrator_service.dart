@@ -3,8 +3,6 @@ import 'dart:async';
 import 'dart:math';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:pma_core/providers/task/task_providers.dart';
-import 'package:pma_core/services/app_logger.dart';
 
 import '../../../core/providers/mirror_session_provider.dart';
 import '../mirror_signed_inputs_backend.dart';
@@ -135,7 +133,7 @@ class MirrorOrchestratorService implements MirrorExecutionOrchestrator {
   //
   // Drains the outbox before executing, then retries the operation. On failure
   // the operation is enqueued for later replay while a background drain fires.
-  // Cache invalidation after a replayed apply is handled inline below.
+  // Replay-side cache refresh is owned by MirrorOutboxReplayService.
 
   Future<T> _runWithOutbox<T>({
     required String operationName,
@@ -159,23 +157,9 @@ class MirrorOrchestratorService implements MirrorExecutionOrchestrator {
       return _replayPath.execute(entry);
     }
 
-    Future<void> replaySuccessCallback(MirrorOutboxEntry entry) async {
-      if (entry.operation != 'apply') return;
-      try {
-        await _refreshCachesForReplay(
-          ref: ref,
-          context: entry.context,
-          sessionKey: entry.sessionKey,
-        );
-      } catch (_) {
-        // Provider scope may already be disposed.
-      }
-    }
-
     await _replayService(ref).replayDueEntries(
       reason: 'pre_$operationName',
       operationExecutor: replayExecutor,
-      onReplaySuccess: replaySuccessCallback,
     );
     // Emit the foreground status only after older queued work had a chance to
     // drain, so terminal output reflects the current attempt in order.
@@ -208,7 +192,6 @@ class MirrorOrchestratorService implements MirrorExecutionOrchestrator {
       unawaited(_replayService(ref).replayDueEntries(
         reason: 'post_${operationName}_failure',
         operationExecutor: replayExecutor,
-        onReplaySuccess: replaySuccessCallback,
       ));
       _emitStatus(ref, sessionKey,
           terminalLine:
@@ -217,36 +200,6 @@ class MirrorOrchestratorService implements MirrorExecutionOrchestrator {
     }
 
     return result;
-  }
-
-  // ── Cache invalidation (outbox replay path only) ─────────────────────────
-  //
-  // Interactive apply cache refresh is owned by MirrorApplyFlowCoordinator.
-
-  Future<void> _refreshCachesForReplay({
-    required WidgetRef ref,
-    required ProjectContext context,
-    required String sessionKey,
-  }) async {
-    final parts = sessionKey.split('::');
-    final projectId = context.projectId.isNotEmpty
-        ? context.projectId
-        : (parts.isNotEmpty ? parts.first : '');
-    final taskId = context.taskId.isNotEmpty
-        ? context.taskId
-        : (parts.length > 1 ? parts[1] : '');
-
-    if (projectId.isEmpty) return;
-
-    try {
-      await ref.read(tasksProvider.notifier).loadTasks(projectId);
-      if (taskId.isNotEmpty) ref.invalidate(subTasksByTaskProvider(taskId));
-    } catch (error) {
-      AppLogger.instance.w(
-        'Mirror outbox replay: task/subtask cache refresh failed',
-        error: error,
-      );
-    }
   }
 
   Future<T> _withRetries<T>({
